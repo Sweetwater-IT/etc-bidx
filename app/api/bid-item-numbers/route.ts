@@ -3,15 +3,18 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const [bidRes, saleRes, rentalRes] = await Promise.all([
+    const [bidRes, saleRes, rentalRes, mptRes, permanentSignRes] = await Promise.all([
       supabase.from('bid_item_numbers').select('*').eq('is_custom', false),
       supabase.from('sale_items').select('*'),
-      supabase.from('rental_items').select('*')
+      supabase.from('rental_items').select('*'),
+      supabase.from('mpt_items').select('*'),
+      supabase.from('permanent_sign_items').select('*')
     ]);
 
-    if (bidRes.error || saleRes.error || rentalRes.error) {
+    if (bidRes.error || saleRes.error || rentalRes.error || mptRes.error || permanentSignRes.error) {
       throw new Error(
-        bidRes.error?.message || saleRes.error?.message || rentalRes.error?.message
+        bidRes.error?.message || saleRes.error?.message || rentalRes.error?.message ||
+        mptRes.error?.message || permanentSignRes.error?.message
       );
     }
 
@@ -35,12 +38,32 @@ export async function GET() {
       notes: i.notes
     }));
 
+    const mptItems = (mptRes.data ?? []).map(i => ({
+      id: i.id,
+      item_number: i.item_number,
+      description: i.description,
+      uom: i.uom_1,
+      is_custom: false,
+      notes: i.notes
+    }));
+
+    const permanentSignItems = (permanentSignRes.data ?? []).map(i => ({
+      id: i.id,
+      item_number: i.item_number,
+      description: i.description,
+      uom: i.uom_1,
+      is_custom: false,
+      notes: i.notes
+    }));
+
     const res = NextResponse.json({
       status: 200,
       data: {
         bidItems,
         saleItems,
         rentalItems,
+        mptItems,
+        permanentSignItems,
       },
     });
 

@@ -36,6 +36,7 @@ interface Product {
   name: string
   price: number
   category: string
+  notes: string
 }
 
 export default function CreateQuote({ onBack }: CreateQuoteProps) {
@@ -300,7 +301,26 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     unitPrice: 0,
     applyTax: "no" as "yes" | "no",
     notes: "",
+    variables: {} as Record<string, string>,
   })
+
+  // Function to parse square bracket placeholders from notes
+  const parseSquareBrackets = (notes: string) => {
+    const regex = /\[([^\]]+)\]/g
+    const placeholders: string[] = []
+    let match
+    while ((match = regex.exec(notes)) !== null) {
+      placeholders.push(match[1])
+    }
+    return placeholders
+  }
+
+  // Function to replace square brackets with variable values
+  const replaceSquareBrackets = (notes: string, variables: Record<string, string>) => {
+    return notes.replace(/\[([^\]]+)\]/g, (match, key) => {
+      return variables[key] || match
+    })
+  }
 
   // Validation functions
   const getCustomerInfoProgress = () => {
@@ -349,19 +369,36 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // We'll need to get pricing from a different source
-            category: 'bid'
+            category: 'bid',
+            notes: item.notes || ''
           })),
           ...result.data.saleItems.map((item: any) => ({
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // Same here
-            category: 'sale'
+            category: 'sale',
+            notes: item.notes || ''
           })),
           ...result.data.rentalItems.map((item: any) => ({
             id: item.id.toString(),
             name: `${item.description} - ${item.item_number}`,
             price: 0, // And here
-            category: 'rental'
+            category: 'rental',
+            notes: item.notes || ''
+          })),
+          ...(result.data.mptItems || []).map((item: any) => ({
+            id: item.id.toString(),
+            name: `${item.description} - ${item.item_number}`,
+            price: 0,
+            category: 'mpt',
+            notes: item.notes || ''
+          })),
+          ...(result.data.permanentSignItems || []).map((item: any) => ({
+            id: item.id.toString(),
+            name: `${item.description} - ${item.item_number}`,
+            price: 0,
+            category: 'permanent_sign',
+            notes: item.notes || ''
           }))
         ]
 
@@ -429,6 +466,24 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       toast.error("Please select a product")
       return
     }
+
+    // Check if selected product has square bracket placeholders
+    const product = products.find(p => p.id === selectedProductId)
+    if (product) {
+      const placeholders = parseSquareBrackets(product.notes)
+      if (placeholders.length > 0) {
+        // Item has variables - initialize variables object
+        const initialVariables: Record<string, string> = {}
+        placeholders.forEach(placeholder => {
+          initialVariables[placeholder] = ""
+        })
+        setItemConfig(prev => ({ ...prev, variables: initialVariables }))
+      } else {
+        // Item has no variables - clear variables
+        setItemConfig(prev => ({ ...prev, variables: {} }))
+      }
+    }
+
     setShowItemConfig(true)
   }
 
@@ -769,7 +824,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                       onClick={() => {
                         setShowItemConfig(false)
                         setItemConfigStep('basic')
-                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "" })
+                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "", variables: {} })
                       }}
                       className="flex-1"
                     >
@@ -787,80 +842,148 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
               ) : (
                 // Step 2: Notes Configuration
                 <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Item Notes</Label>
-                    <Textarea
-                      value={itemConfig.notes}
-                      onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Enter any additional notes for this item..."
-                      className="min-h-[120px]"
-                      maxLength={1000}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {1000 - itemConfig.notes.length} characters remaining
-                    </p>
-                  </div>
+                  {(() => {
+                    const product = products.find(p => p.id === selectedProductId)
+                    const hasVariables = product ? parseSquareBrackets(product.notes).length > 0 : false
 
-                  {/* Notes Variables Section */}
-                  <div>
-                    <Label className="text-sm font-semibold mb-2 block">Quick Insert Variables</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {CUSTOMER_NAME}" }))}
-                        className="text-xs"
-                      >
-                        Customer Name
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {JOB_ADDRESS}" }))}
-                        className="text-xs"
-                      >
-                        Job Address
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {QUANTITY}" }))}
-                        className="text-xs"
-                      >
-                        Quantity
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {UOM}" }))}
-                        className="text-xs"
-                      >
-                        Unit of Measure
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {START_DATE}" }))}
-                        className="text-xs"
-                      >
-                        Start Date
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {END_DATE}" }))}
-                        className="text-xs"
-                      >
-                        End Date
-                      </Button>
-                    </div>
-                  </div>
+                    if (hasVariables) {
+                      // MPT/Permanent Sign items with variables
+                      const placeholders = parseSquareBrackets(product!.notes)
+
+                      return (
+                        <>
+                          {/* Template Preview */}
+                          <div>
+                            <Label className="text-sm font-semibold mb-2 block">Template Preview</Label>
+                            <div className="p-3 bg-muted/50 rounded-md text-sm">
+                              {replaceSquareBrackets(product!.notes, itemConfig.variables)}
+                            </div>
+                          </div>
+
+                          {/* Variable Inputs */}
+                          <div>
+                            <Label className="text-sm font-semibold mb-2 block">Configure Variables</Label>
+                            <div className="space-y-3">
+                              {placeholders.map((placeholder) => (
+                                <div key={placeholder}>
+                                  <Label className="text-xs font-medium text-muted-foreground">
+                                    {placeholder.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                                  </Label>
+                                  <Input
+                                    value={itemConfig.variables[placeholder] || ""}
+                                    onChange={(e) => setItemConfig(prev => ({
+                                      ...prev,
+                                      variables: {
+                                        ...prev.variables,
+                                        [placeholder]: e.target.value
+                                      }
+                                    }))}
+                                    placeholder={`Enter ${placeholder.toLowerCase().replace(/_/g, ' ')}`}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Additional Notes */}
+                          <div>
+                            <Label className="text-sm font-semibold mb-2 block">Additional Notes</Label>
+                            <Textarea
+                              value={itemConfig.notes}
+                              onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
+                              placeholder="Enter any additional notes..."
+                              className="min-h-[80px]"
+                              maxLength={1000}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {1000 - itemConfig.notes.length} characters remaining
+                            </p>
+                          </div>
+                        </>
+                      )
+                    } else {
+                      // Regular items without variables
+                      return (
+                        <>
+                          <div>
+                            <Label className="text-sm font-semibold mb-2 block">Item Notes</Label>
+                            <Textarea
+                              value={itemConfig.notes}
+                              onChange={(e) => setItemConfig(prev => ({ ...prev, notes: e.target.value }))}
+                              placeholder="Enter any additional notes for this item..."
+                              className="min-h-[120px]"
+                              maxLength={1000}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {1000 - itemConfig.notes.length} characters remaining
+                            </p>
+                          </div>
+
+                          {/* Notes Variables Section */}
+                          <div>
+                            <Label className="text-sm font-semibold mb-2 block">Quick Insert Variables</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {CUSTOMER_NAME}" }))}
+                                className="text-xs"
+                              >
+                                Customer Name
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {JOB_ADDRESS}" }))}
+                                className="text-xs"
+                              >
+                                Job Address
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {QUANTITY}" }))}
+                                className="text-xs"
+                              >
+                                Quantity
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {UOM}" }))}
+                                className="text-xs"
+                              >
+                                Unit of Measure
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {START_DATE}" }))}
+                                className="text-xs"
+                              >
+                                Start Date
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setItemConfig(prev => ({ ...prev, notes: prev.notes + " {END_DATE}" }))}
+                                className="text-xs"
+                              >
+                                End Date
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                      )
+                    }
+                  })()}
 
                   <div className="flex gap-3 mt-6">
                     <Button
@@ -874,10 +997,40 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                     <Button
                       type="button"
                       onClick={() => {
-                        addItem()
+                        // Process the item before adding
+                        const product = products.find(p => p.id === selectedProductId)
+                        if (product) {
+                          const placeholders = parseSquareBrackets(product.notes)
+                          let finalNotes = itemConfig.notes
+
+                          if (placeholders.length > 0) {
+                            // For items with variables, combine template with additional notes
+                            const templateNotes = replaceSquareBrackets(product.notes, itemConfig.variables)
+                            finalNotes = templateNotes + (itemConfig.notes ? `\n\n${itemConfig.notes}` : '')
+                          }
+
+                          // Update itemConfig with final notes
+                          const finalItemConfig = { ...itemConfig, notes: finalNotes }
+                          setItemConfig(finalItemConfig)
+
+                          // Add item with processed notes
+                          const newItem: QuoteItem = {
+                            id: Math.random().toString(),
+                            sku: product.name.split(" - ")[1] || "",
+                            description: product.name.split(" - ")[0] || "",
+                            uom: finalItemConfig.uom,
+                            qty: finalItemConfig.qty,
+                            unitPrice: finalItemConfig.unitPrice,
+                            discount: 0,
+                            applyTax: finalItemConfig.applyTax === "yes",
+                          }
+
+                          setItems([...items, newItem])
+                        }
+
                         setShowItemConfig(false)
                         setItemConfigStep('basic')
-                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "" })
+                        setItemConfig({ uom: "EA", qty: 1, unitPrice: 0, applyTax: "no", notes: "", variables: {} })
                       }}
                       className="flex-1"
                     >
@@ -1069,6 +1222,19 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                     <Users className="h-4 w-4" />
                     Search Customers
                   </Button>
+                </div>
+
+                <div>
+                  <Label htmlFor="customer-name" className="text-sm font-semibold">
+                    Customer Name
+                  </Label>
+                  <Input
+                    id="customer-name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                    className="mt-2"
+                  />
                 </div>
 
                 <div>
@@ -1470,59 +1636,47 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
           <Card className="p-4 bg-card border-border">
             <Label className="text-sm font-semibold block mb-3">Add Items</Label>
             <div className="space-y-3">
-              {/* Searchable Product Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search products..."
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Product Search Results */}
-              {selectedProduct && (
-                <div className="max-h-40 overflow-y-auto border border-border rounded-md">
-                  {loadingProducts ? (
-                    <div className="p-3 text-sm text-muted-foreground">Loading products...</div>
-                  ) : productsError ? (
-                    <div className="p-3 text-sm text-red-500">Error loading products</div>
-                  ) : (
-                    products
-                      .filter(product =>
-                        product.name.toLowerCase().includes(selectedProduct.toLowerCase())
-                      )
-                      .slice(0, 10) // Limit results
-                      .map((product) => (
-                        <button
-                          key={product.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProduct(product.name)
-                            setSelectedProductId(product.id)
-                          }}
-                          className="w-full text-left p-3 hover:bg-muted/50 border-b border-border last:border-b-0 transition-colors"
-                        >
-                          <div className="text-sm font-medium truncate">
-                            {product.name}
-                          </div>
-                        </button>
-                      ))
-                  )}
-                  {selectedProduct && !loadingProducts && !productsError &&
-                    products.filter(product =>
-                      product.name.toLowerCase().includes(selectedProduct.toLowerCase())
-                    ).length === 0 && (
-                    <div className="p-3 text-sm text-muted-foreground">No products found</div>
-                  )}
-                </div>
+              {/* Product Dropdown */}
+              {loadingProducts ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">Loading products...</div>
+              ) : productsError ? (
+                <div className="p-3 text-sm text-red-500 text-center">Error loading products</div>
+              ) : (
+                <Select
+                  value={selectedProductId || ""}
+                  onValueChange={(value) => {
+                    setSelectedProductId(value)
+                    const product = products.find(p => p.id === value)
+                    if (product) {
+                      setSelectedProduct(product.name)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{product.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {product.category === 'mpt' ? 'MPT Equipment' :
+                             product.category === 'permanent_sign' ? 'Permanent Sign' :
+                             product.category === 'rental' ? 'Rental Item' :
+                             product.category === 'sale' ? 'Sale Item' : 'Bid Item'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               <Button
                 type="button"
                 onClick={handleAddItemClick}
-                disabled={!selectedProduct || loadingProducts}
+                disabled={!selectedProductId || loadingProducts}
                 className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
