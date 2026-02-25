@@ -4,9 +4,9 @@ import { useState } from "react"
 import { Plus, Eye, Edit3, Menu, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import CreateQuote from "@/components/quotes/create-quote"
-import ViewQuotes from "@/components/quotes/view-quotes"
-import EditQuote from "@/components/quotes/edit-quote"
+import CreateQuote from "../components/quotes/create-quote"
+import ViewQuotes from "../components/quotes/view-quotes"
+import EditQuote from "../components/quotes/edit-quote"
 
 // Mock data - replace with real data from your backend
 const mockQuotes = [
