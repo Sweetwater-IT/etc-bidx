@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import type { ScheduleOfValuesItem } from "@/types/job";
+import type { ScheduleOfValuesItem, JobFromDB } from "@/types/job";
 import { useParams, useRouter } from "next/navigation";
-import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -79,7 +78,8 @@ const ProjectDetail = () => {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const router = useRouter();
-  const { data: dbJob, isLoading: jobLoading } = useJobFromDB(id);
+  const [dbJob, setDbJob] = useState<JobFromDB | null>(null);
+  const [jobLoading, setJobLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const [signOrderCounts, setSignOrderCounts] = useState({ submitted: 0, in_production: 0, complete: 0, closed: 0 });
@@ -93,31 +93,48 @@ const ProjectDetail = () => {
   const [editExtensionDate, setEditExtensionDate] = useState("");
   const [editJobSaving, setEditJobSaving] = useState(false);
 
+  // Fetch job data on mount
   useEffect(() => {
     if (!id) return;
-    const fetchCounts = async () => {
-      const { data } = await supabase
-        .from("sign_orders")
-        .select("status")
-        .eq("job_id", id);
-      if (data) {
-        const counts = { submitted: 0, in_production: 0, complete: 0, closed: 0 };
-        data.forEach((o: any) => {
-          if (o.status === "submitted" || o.status === "draft") counts.submitted++;
-          else if (o.status === "in_production" || o.status === "partial_complete") counts.in_production++;
-          else if (o.status === "complete") counts.complete++;
-          else if (o.status === "closed") counts.closed++;
-        });
-        setSignOrderCounts(counts);
+
+    const fetchJob = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${id}`);
+        if (response.ok) {
+          const jobData = await response.json();
+          setDbJob(jobData);
+        } else {
+          console.error('Failed to fetch job');
+        }
+      } catch (error) {
+        console.error('Error fetching job:', error);
+      } finally {
+        setJobLoading(false);
       }
     };
-    fetchCounts();
 
-    const channel = supabase
-      .channel(`sign-orders-job-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "sign_orders", filter: `job_id=eq.${id}` }, () => fetchCounts())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    fetchJob();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchCounts = async () => {
+      try {
+        const response = await fetch(`/api/l/sign-orders/job/${id}/counts`);
+        if (response.ok) {
+          const counts = await response.json();
+          setSignOrderCounts(counts);
+        } else {
+          console.error('Failed to fetch sign order counts');
+        }
+      } catch (error) {
+        console.error('Error fetching sign order counts:', error);
+      }
+    };
+
+    fetchCounts();
+    // Removed realtime subscription for now
   }, [id]);
 
   if (jobLoading) {
@@ -578,26 +595,19 @@ const ManufacturingStatusPanel = ({
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("sign_orders")
-        .select("id, order_number, status, submitted_date")
-        .eq("job_id", jobId)
-        .order("created_at", { ascending: false });
-      if (data) {
-        const ids = data.map((o: any) => o.id);
-        const countMap = new Map<string, number>();
-        if (ids.length > 0) {
-          const { data: items } = await supabase
-            .from("sign_order_items")
-            .select("sign_order_id")
-            .in("sign_order_id", ids);
-          (items || []).forEach((i: any) => {
-            countMap.set(i.sign_order_id, (countMap.get(i.sign_order_id) || 0) + 1);
-          });
+      try {
+        const response = await fetch(`/api/l/sign-orders/job/${jobId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data);
+        } else {
+          console.error('Failed to fetch sign orders');
         }
-        setOrders(data.map((o: any) => ({ ...o, item_count: countMap.get(o.id) || 0 })));
+      } catch (error) {
+        console.error('Error fetching sign orders:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchOrders();
   }, [jobId]);
