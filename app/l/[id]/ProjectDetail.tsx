@@ -460,7 +460,7 @@ const ProjectDetail = () => {
                 />
               ) : (
                 <div className="flex-1 overflow-y-auto text-sm text-foreground whitespace-pre-wrap">
-                  {info.otherNotes ? info.otherNotes : <span className="text-muted-foreground italic text-xs">No notes yet. Use "Add Note" to get started.</span>}
+                  {info.otherNotes ? info.otherNotes : <span className="text-muted-foreground italic text-xs">No notes yet. Use \"Add Note\" to get started.</span>}
                 </div>
               )}
             </div>
@@ -735,7 +735,7 @@ const TabPlaceholder = ({
         <Icon className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
         <p className="text-sm text-muted-foreground font-medium">No data yet</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Click "Add" to create your first entry.
+          Click \"Add\" to create your first entry.
         </p>
       </div>
     </div>
