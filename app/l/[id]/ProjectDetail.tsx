@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import type { ScheduleOfValuesItem } from "@/types/job";
-import type { ContractDocumentMeta } from "@/types/document";
-import { FORWARDED_CATEGORIES } from "@/types/document";
-import { BRANCHES } from "@/data/branches";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { MaterialTakeoff } from "@/components/MaterialTakeoff";
-import { DispatchSchedule } from "@/components/DispatchSchedule";
-import { CustomerAdminInfo } from "@/components/CustomerAdminInfo";
 import { toast } from "sonner";
 
 import {
@@ -85,8 +77,7 @@ type Job360Tab =
 
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const router = useRouter();
   const { data: dbJob, isLoading: jobLoading } = useJobFromDB(id);
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
@@ -141,7 +132,7 @@ const ProjectDetail = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Job not found. It may not have been saved to the database yet.</p>
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button variant="outline" onClick={() => router.push("/")}>
             Back to Job List
           </Button>
         </div>
@@ -185,7 +176,7 @@ const ProjectDetail = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/")}
+                onClick={() => router.push("/")}
                 className="shrink-0 h-8 w-8"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -362,7 +353,12 @@ const ProjectDetail = () => {
                 </div>
                 {totalDays > 0 && (
                   <div className="pt-1">
-                    <Progress value={Math.min(100, (elapsedDays / totalDays) * 100)} className="h-1.5" />
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div
+                        className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (elapsedDays / totalDays) * 100)}%` }}
+                      />
+                    </div>
                     <span className="text-[10px] text-muted-foreground mt-1 block">{Math.min(100, Math.round((elapsedDays / totalDays) * 100))}% elapsed</span>
                   </div>
                 )}
