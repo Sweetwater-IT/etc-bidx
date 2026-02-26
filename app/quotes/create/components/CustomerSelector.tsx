@@ -11,6 +11,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CustomerContactForm } from '@/components/customer-contact-form'
+import { CustomerProvider } from '@/contexts/customer-context'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { Loader, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -181,6 +182,15 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                 <CommandList>
                                     <CommandEmpty>No contacts found.</CommandEmpty>
                                     <CommandGroup>
+                                        <CommandItem
+                                            value="__new__"
+                                            onSelect={() => {
+                                                openModal("contact");
+                                                setOpenContact(false);
+                                            }}
+                                        >
+                                            ➕ Add new contact
+                                        </CommandItem>
                                         {filteredContacts.length ? (
                                             filteredContacts.map(cc => (
                                                 <CommandItem
@@ -196,17 +206,8 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                                 </CommandItem>
                                             ))
                                         ) : (
-                                            <p className="p-2 text-sm text-gray-500">There are no contacts</p>
+                                            <p className="p-2 text-sm text-gray-500">No existing contacts</p>
                                         )}
-                                        <CommandItem
-                                            value="__new__"
-                                            onSelect={() => {
-                                                openModal("contact");
-                                                setOpenContact(false);
-                                            }}
-                                        >
-                                            ➕ Add new contact
-                                        </CommandItem>
                                     </CommandGroup>
                                 </CommandList>
                             </Command>
@@ -217,22 +218,44 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
 
             {/* Customer Contact Form */}
             {selectedCustomer && isContactFormOpen && (
-                <CustomerContactForm
-                    customerId={selectedCustomer.id}
-                    isOpen={isContactFormOpen}
-                    onClose={() => setIsContactFormOpen(false)}
-                    onSuccess={handleContactSuccess}
-                    customer={{
-                        name: selectedCustomer.name,
-                        displayName: selectedCustomer.name, // Use name as displayName
-                        address: selectedCustomer.address,
-                        city: selectedCustomer.city,
-                        state: selectedCustomer.state,
-                        zip: selectedCustomer.zip,
-                        paymentTerms: "", // Default empty
-                        url: "" // Default empty
-                    }}
-                />
+                <CustomerProvider initialCustomer={{
+                    id: selectedCustomer.id,
+                    name: selectedCustomer.name,
+                    displayName: selectedCustomer.name,
+                    emails: [],
+                    phones: [],
+                    roles: [],
+                    names: [],
+                    contactIds: selectedCustomer.customer_contacts?.map(c => c.id) || [],
+                    address: selectedCustomer.address,
+                    city: selectedCustomer.city,
+                    state: selectedCustomer.state,
+                    zip: selectedCustomer.zip,
+                    customerNumber: 0, // Default
+                    mainPhone: selectedCustomer.main_phone || "",
+                    paymentTerms: "",
+                    url: "",
+                    created: "",
+                    updated: "",
+                    lastOrdered: null
+                }}>
+                    <CustomerContactForm
+                        customerId={selectedCustomer.id}
+                        isOpen={isContactFormOpen}
+                        onClose={() => setIsContactFormOpen(false)}
+                        onSuccess={handleContactSuccess}
+                        customer={{
+                            name: selectedCustomer.name,
+                            displayName: selectedCustomer.name, // Use name as displayName
+                            address: selectedCustomer.address,
+                            city: selectedCustomer.city,
+                            state: selectedCustomer.state,
+                            zip: selectedCustomer.zip,
+                            paymentTerms: "", // Default empty
+                            url: "" // Default empty
+                        }}
+                    />
+                </CustomerProvider>
             )}
         </div>
     )
