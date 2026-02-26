@@ -1,13 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import React from 'react';
+import { create } from 'zustand';
 import { supabase } from "@/lib/supabase";
 import type { Job, JobFromDB, JobProjectInfo } from "@/types/job";
 
-export function useJobFromDB(id: string | undefined) {
-  return useQuery({
-    queryKey: ["job-detail", id],
-    queryFn: async (): Promise<JobFromDB | null> => {
-      if (!id) return null;
+interface JobState {
+  data: JobFromDB | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchJob: (id: string) => Promise<void>;
+}
 
+export const useJobStore = create<JobState>((set, get) => ({
+  data: null,
+  isLoading: false,
+  error: null,
+
+  fetchJob: async (id: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
       const { data, error } = await supabase
         .from("jobs_l")
         .select("*")
@@ -16,10 +27,14 @@ export function useJobFromDB(id: string | undefined) {
 
       if (error) {
         console.error("Error fetching job:", error);
-        return null;
+        set({ error: error.message, isLoading: false });
+        return;
       }
 
-      if (!data) return null;
+      if (!data) {
+        set({ data: null, isLoading: false });
+        return;
+      }
 
       // Transform the database job into the expected format
       const job: Job = data;
@@ -41,11 +56,34 @@ export function useJobFromDB(id: string | undefined) {
         otherNotes: job.additional_notes,
       };
 
-      return {
+      const jobFromDB: JobFromDB = {
         projectInfo,
         ...job,
       };
-    },
-    enabled: !!id,
-  });
+
+      set({ data: jobFromDB, isLoading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  }
+}));
+
+export function useJobFromDB(id: string | undefined) {
+  const { data, isLoading, error, fetchJob } = useJobStore();
+
+  // Auto-fetch when id changes
+  React.useEffect(() => {
+    if (id) {
+      fetchJob(id);
+    } else {
+      useJobStore.setState({ data: null, isLoading: false, error: null });
+    }
+  }, [id, fetchJob]);
+
+  return {
+    data,
+    isLoading,
+    error,
+    refetch: () => id && fetchJob(id)
+  };
 }
