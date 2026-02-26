@@ -76,7 +76,7 @@ export const data = {
         },
         {
           title: "Job List",
-          url: "/jobs/active-jobs",
+          url: "/l/jobs",
         },
       ],
     },
@@ -277,7 +277,7 @@ export const quickActions = [
   {
     label: "Job",
     icon: IconBuilding,
-    route: "/jobs/active-jobs",
+    route: "/l/jobs",
     withSeparator: true,
   },
   {
