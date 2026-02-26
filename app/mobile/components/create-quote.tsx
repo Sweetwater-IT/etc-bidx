@@ -49,31 +49,7 @@ enum UOM_TYPES {
   HR = "HR",
 }
 
-// Utility functions from web version
-function formatDecimal(value: number): string {
-  if (isNaN(value)) return "0.00";
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
-function handleNextDigits(
-  current: string,
-  inputType: string,
-  data: string
-): string {
-  let digits = current;
-
-  if (inputType === "insertText" && /\d/.test(data)) {
-    const candidate = current + data;
-    digits = candidate;
-  } else if (inputType === "deleteContentBackward") {
-    digits = current.slice(0, -1);
-  }
-
-  return digits.padStart(3, "0");
-}
 
 export default function CreateQuote({ onBack }: CreateQuoteProps) {
   const { user } = useAuth()
@@ -337,12 +313,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
     applyTax: "no" as "yes" | "no",
   })
 
-  // Digit-based input state for unit price (like web version)
-  const [digits, setDigits] = useState({
-    unitPrice: itemConfig.unitPrice
-      ? (itemConfig.unitPrice * 100).toString().padStart(3, "0")
-      : "000",
-  })
+
 
 
 
@@ -739,17 +710,12 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                   <InputGroup>
                     <InputGroupButton className="px-3">$</InputGroupButton>
                     <Input
-                      type="text"
-                      value={formatDecimal(parseInt(digits.unitPrice) / 100)}
-                      onChange={(e) => {
-                        const inputType = (e.nativeEvent as any).inputType;
-                        const data = e.target.value.replace(/[^\d]/g, '');
-                        const newDigits = handleNextDigits(digits.unitPrice, inputType, data);
-                        setDigits(prev => ({ ...prev, unitPrice: newDigits }));
-                        const newValue = parseInt(newDigits) / 100;
-                        setItemConfig(prev => ({ ...prev, unitPrice: newValue }));
-                      }}
+                      type="number"
+                      value={itemConfig.unitPrice}
+                      onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
                       onFocus={(e) => e.target.select()}
+                      step="0.01"
+                      min="0"
                       inputMode="decimal"
                       placeholder="0.00"
                       className="flex-1 no-spinner text-right"
