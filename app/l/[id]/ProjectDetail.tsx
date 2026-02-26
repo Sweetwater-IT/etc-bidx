@@ -76,7 +76,8 @@ type Job360Tab =
   | "purchase-orders";
 
 const ProjectDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
+  const id = params?.id as string;
   const router = useRouter();
   const { data: dbJob, isLoading: jobLoading } = useJobFromDB(id);
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
