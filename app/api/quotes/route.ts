@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       // Direct mapping from segment names to email addresses
       const userEmailMap: Record<string, string> = {
         'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Eric': 'efrye@establishedtraffic.com',
         'Rad': 'rbodkin@establishedtraffic.com',
         'Ken': 'kaustin@establishedtraffic.com',
         'Turner': 'jturner@establishedtraffic.com',
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       // Direct mapping from segment names to email addresses
       const userEmailMap: Record<string, string> = {
         'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Eric': 'efrye@establishedtraffic.com',
         'Rad': 'rbodkin@establishedtraffic.com',
         'Ken': 'kaustin@establishedtraffic.com',
         'Turner': 'jturner@establishedtraffic.com',
@@ -229,7 +229,7 @@ export async function GET(request: NextRequest) {
       // Direct mapping from segment names to email addresses
       const userEmailMap: Record<string, string> = {
         'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'eric@establishedtraffic.com', // TODO: Update with correct email
+        'Eric': 'efrye@establishedtraffic.com',
         'Rad': 'rbodkin@establishedtraffic.com',
         'Ken': 'kaustin@establishedtraffic.com',
         'Turner': 'jturner@establishedtraffic.com',
