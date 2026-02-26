@@ -10,7 +10,7 @@ import {
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import CreateModal from './CreateModal'
+import { CustomerContactForm } from '@/components/customer-contact-form'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { Loader, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,8 +19,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
-    const [modalOpen, setModalOpen] = useState(false)
-    const [modalType, setModalType] = useState<'customer' | 'contact' | null>(null)
+    const [isContactFormOpen, setIsContactFormOpen] = useState(false)
     const [openCustomer, setOpenCustomer] = useState(false)
     const [openContact, setOpenContact] = useState(false)
 
@@ -59,48 +58,20 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     }, [selectedCustomer, selectedContact]);
 
     const openModal = (type: 'customer' | 'contact') => {
-        setModalType(type)
-        setModalOpen(true)
+        if (type === 'contact') {
+            setIsContactFormOpen(true)
+        }
+        // Customer creation modal logic removed - keeping for future use if needed
     }
 
-    const handleConfirm = async (data: Record<string, string>) => {
-        if (modalType === 'customer') {
-            const resp = await fetch('/api/contractors/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: data.name,
-                    address: data.address || null,
-                    url: data.url || null,
-                    city: data.city || null,
-                    state: data.state || null,
-                    zip: data.zip || null,
-                    phone: data.phone || null,
-                    customerNumber: data.customerNumber || null
-                })
-            })
-            const result = await resp.json()
-            if (result.success) addCustomer(result.data)
+    const handleContactSuccess = (newContactId?: number, newContactData?: any) => {
+        setIsContactFormOpen(false);
+        if (newContactData) {
+            addContact(newContactData);
+            // Auto-select the newly created contact
+            selectContact(newContactData.id.toString());
         }
-
-        if (modalType === 'contact') {
-            const resp = await fetch('/api/customer-contacts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contractor_id: selectedCustomer?.id,
-                    name: data.name,
-                    role: data.role || null,
-                    email: data.email,
-                    phone: data.phone || null,
-                }),
-            })
-            const result = await resp.json()
-            if (result.success) addContact(result.data)
-        }
-
-        setModalOpen(false)
-    }
+    };
 
     const handleContactClick = (contactId: string) => {
         const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === contactId);
@@ -244,43 +215,25 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                 </div>
             </div>
 
-            <CreateModal
-                open={modalOpen}
-                title={modalType === 'customer' ? 'Create Customer' : 'Create Contact'}
-                fields={
-                    modalType === 'customer'
-                        ? [
-                            { name: 'name', label: 'Name', placeholder: 'Enter customer name' },
-                            { name: 'address', label: 'Address', placeholder: 'Enter address' },
-                            { name: 'url', label: 'Website', placeholder: 'Enter website URL' },
-                            { name: 'city', label: 'City', placeholder: 'Enter city' },
-                            { name: 'state', label: 'State', placeholder: 'Enter state' },
-                            { name: 'zip', label: 'Zip', placeholder: 'Enter ZIP code' },
-                            { name: 'phone', label: 'Phone', placeholder: 'Enter phone number' },
-                            { name: 'customerNumber', label: 'Customer Number', type: 'number', placeholder: 'Enter customer number' }
-                        ]
-                        : [
-                            { name: 'name', label: 'Name', placeholder: 'Enter contact name' },
-                            { name: 'email', label: 'Email', type: 'email', placeholder: 'Enter contact email' },
-                            {
-                                name: 'role',
-                                label: 'Role',
-                                type: 'select',
-                                options: [
-                                    'ESTIMATOR',
-                                    'PROJECT MANAGER',
-                                    'ADMIN',
-                                    'FIELD / SUPERVISOR',
-                                    'OTHER'
-                                ],
-                                placeholder: 'Select role'
-                            },
-                            { name: 'phone', label: 'Phone', placeholder: 'Enter phone number' },
-                        ]
-                }
-                onClose={() => setModalOpen(false)}
-                onConfirm={handleConfirm}
-            />
+            {/* Customer Contact Form */}
+            {selectedCustomer && (
+                <CustomerContactForm
+                    customerId={selectedCustomer.id}
+                    isOpen={isContactFormOpen}
+                    onClose={() => setIsContactFormOpen(false)}
+                    onSuccess={handleContactSuccess}
+                    customer={{
+                        name: selectedCustomer.name,
+                        displayName: selectedCustomer.name, // Use name as displayName
+                        address: selectedCustomer.address,
+                        city: selectedCustomer.city,
+                        state: selectedCustomer.state,
+                        zip: selectedCustomer.zip,
+                        paymentTerms: "", // Default empty
+                        url: "" // Default empty
+                    }}
+                />
+            )}
         </div>
     )
 }
