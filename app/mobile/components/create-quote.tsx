@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, Save, X, Trash2, Plus, Eye, Edit3, ChevronDown, Check, MoreVertical, Minus, Search, Users } from "lucide-react"
+import { ChevronLeft, Save, X, Trash2, Plus, Eye, Edit3, ChevronDown, Check, MoreVertical, MoreHorizontal, Minus, Search, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -699,12 +699,19 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                       type="number"
                       value={itemConfig.unitPrice}
                       onChange={(e) => setItemConfig(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                      onFocus={(e) => e.target.select()}
+                      onFocus={(e) => {
+                        e.target.select()
+                        // Set cursor to end for right-to-left input behavior
+                        setTimeout(() => {
+                          e.target.setSelectionRange(e.target.value.length, e.target.value.length)
+                        }, 0)
+                      }}
                       step="0.01"
                       min="0"
                       inputMode="decimal"
                       placeholder="0.00"
-                      className="flex-1"
+                      className="flex-1 text-right"
+                      style={{ direction: 'rtl' }}
                     />
                   </InputGroup>
                 </div>
@@ -1538,7 +1545,7 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                                 className="h-6 w-6 p-0"
                                 onClick={() => setOpenActionMenuId(openActionMenuId === item.id ? null : item.id)}
                               >
-                                <MoreVertical className="h-4 w-4" />
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </td>
                           </tr>
@@ -1563,12 +1570,16 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      toast.info("Tax applied to item")
+                                      const currentItem = items.find(item => item.id === openActionMenuId)
+                                      if (currentItem) {
+                                        updateItem(openActionMenuId, "applyTax", !currentItem.applyTax)
+                                        toast.success(currentItem.applyTax ? "Tax removed from item" : "Tax applied to item")
+                                      }
                                       setOpenActionMenuId(null)
                                     }}
                                     className="text-xs h-8"
                                   >
-                                    Add Tax
+                                    {items.find(item => item.id === openActionMenuId)?.applyTax ? "Remove Tax" : "Add Tax"}
                                   </Button>
                                   <Button
                                     type="button"
