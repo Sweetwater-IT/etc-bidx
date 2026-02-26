@@ -556,8 +556,8 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
       return
     }
 
-    if (!etcPOC || !etcEmail || !etcPhone) {
-      toast.error("All ETC Information fields are required (POC, Email, Phone)")
+    if (!etcPOC || !etcEmail) {
+      toast.error("ETC Point of Contact and Email are required")
       return
     }
 
