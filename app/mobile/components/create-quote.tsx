@@ -1415,19 +1415,75 @@ export default function CreateQuote({ onBack }: CreateQuoteProps) {
                     <SelectValue placeholder="Select a product..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{product.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {product.category === 'mpt' ? 'MPT Equipment' :
-                             product.category === 'permanent_sign' ? 'Permanent Sign' :
-                             product.category === 'rental' ? 'Rental Item' :
-                             product.category === 'sale' ? 'Sale Item' : 'Bid Item'}
-                          </span>
+                    {/* Service Items */}
+                    {products.filter(p => p.category === 'bid').length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          Service Items
                         </div>
-                      </SelectItem>
-                    ))}
+                        {products.filter(p => p.category === 'bid').map((product) => (
+                          <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
+                            <span className="font-medium">{product.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Sale Items */}
+                    {products.filter(p => p.category === 'sale').length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          Sale Items
+                        </div>
+                        {products.filter(p => p.category === 'sale').map((product) => (
+                          <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
+                            <span className="font-medium">{product.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Rental Items */}
+                    {products.filter(p => p.category === 'rental').length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          Rental Items
+                        </div>
+                        {products.filter(p => p.category === 'rental').map((product) => (
+                          <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
+                            <span className="font-medium">{product.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+
+                    {/* MPT Equipment */}
+                    {products.filter(p => p.category === 'mpt').length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          MPT Equipment
+                        </div>
+                        {products.filter(p => p.category === 'mpt').map((product) => (
+                          <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
+                            <span className="font-medium">{product.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Permanent Signs */}
+                    {products.filter(p => p.category === 'permanent_sign').length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          Permanent Signs
+                        </div>
+                        {products.filter(p => p.category === 'permanent_sign').map((product) => (
+                          <SelectItem key={product.id} value={product.name.split(" - ")[1]}>
+                            <span className="font-medium">{product.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               )}
