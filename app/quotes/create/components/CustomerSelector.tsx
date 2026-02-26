@@ -216,7 +216,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             </div>
 
             {/* Customer Contact Form */}
-            {selectedCustomer && (
+            {selectedCustomer && isContactFormOpen && (
                 <CustomerContactForm
                     customerId={selectedCustomer.id}
                     isOpen={isContactFormOpen}
