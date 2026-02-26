@@ -65,13 +65,14 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             quantity: Number(item.quantity) || 0,
             unitPrice: Number(item.unit_price || item.unitPrice) || 0,
             total: (Number(item.quantity) || 0) * (Number(item.unit_price || item.unitPrice) || 0),
-        
+
             tax: item.tax != null ? Number(item.tax) : 0,
             is_tax_percentage: Boolean(item.is_tax_percentage),
-        
+
             confirmed: item.confirmed ? "YES" : "NO",
             itemNumber: item.item_number || "",
             notes: item.notes || "",
+            uom: item.uom,
           })) ?? [],
         });
       } catch (err) {
