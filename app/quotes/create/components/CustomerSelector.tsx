@@ -76,10 +76,15 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
 
     const handleContactSuccess = (newContactId?: number, newContactData?: any) => {
         setIsContactFormOpen(false);
-        if (newContactData) {
-            addContact(newContactData);
+        if (newContactData && newContactId) {
+            // Include the id in the contact data for addContact function
+            const contactWithId = {
+                ...newContactData,
+                id: newContactId
+            };
+            addContact(contactWithId);
             // Auto-select the newly created contact
-            selectContact(newContactData.id.toString());
+            selectContact(newContactId.toString());
         }
     };
 
