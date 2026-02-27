@@ -187,9 +187,9 @@ const ProjectDetail = () => {
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
       {/* ─── TOP HEADER BAR ─── */}
       <header className="border-b bg-card shrink-0">
-        <div className="max-w-[1800px] mx-auto px-6 py-3">
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-6 min-w-0">
+        <div className="w-full px-6 py-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -198,42 +198,42 @@ const ProjectDetail = () => {
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-8 text-xs">
-                <div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 text-xs min-w-0">
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Job Name</span>
-                  <span className="text-sm font-bold text-foreground">{info.projectName || "Untitled"}</span>
+                  <span className="text-sm font-bold text-foreground truncate block">{info.projectName || "Untitled"}</span>
                 </div>
                 {info.etcJobNumber && (
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">ETC Job #</span>
-                    <span className="text-sm font-mono font-bold text-primary">{info.etcJobNumber}</span>
+                    <span className="text-sm font-mono font-bold text-primary truncate block">{info.etcJobNumber}</span>
                   </div>
                 )}
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer</span>
-                  <span className="text-sm text-foreground">{info.customerName || "—"}</span>
+                  <span className="text-sm text-foreground truncate block">{info.customerName || "—"}</span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer Job #</span>
-                  <span className="text-sm font-mono text-foreground">{info.customerJobNumber || "—"}</span>
+                  <span className="text-sm font-mono text-foreground truncate block">{info.customerJobNumber || "—"}</span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer PM</span>
-                  <span className="text-sm text-foreground">{info.customerPM || "—"}</span>
+                  <span className="text-sm text-foreground truncate block">{info.customerPM || "—"}</span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Project Owner</span>
-                  <span className="text-sm text-foreground">{info.projectOwner || "—"}</span>
+                  <span className="text-sm text-foreground truncate block">{info.projectOwner || "—"}</span>
                 </div>
                 {info.contractNumber && (
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Contract #</span>
-                    <span className="text-sm font-mono text-foreground">{info.contractNumber}</span>
+                    <span className="text-sm font-mono text-foreground truncate block">{info.contractNumber}</span>
                   </div>
                 )}
-                <div>
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">County</span>
-                  <span className="text-sm text-foreground">{info.county || "—"}</span>
+                  <span className="text-sm text-foreground truncate block">{info.county || "—"}</span>
                 </div>
               </div>
             </div>
