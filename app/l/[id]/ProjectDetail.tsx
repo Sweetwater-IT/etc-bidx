@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import type { ScheduleOfValuesItem, JobFromDB } from "@/types/job";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -450,14 +449,29 @@ const ProjectDetail = () => {
                       className="h-6 w-6"
                       onClick={async () => {
                         if (id) {
-                          const { error } = await supabase
-                            .from("jobs_l")
-                            .update({ additional_notes: notesValue })
-                            .eq("id", id);
-                          if (error) {
+                          try {
+                            const response = await fetch(`/api/l/jobs/${id}/notes`, {
+                              method: 'PATCH',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({ additional_notes: notesValue }),
+                            });
+
+                            if (response.ok) {
+                              toast.success("Notes saved");
+                              // Refresh the job data to show updated notes
+                              const jobResponse = await fetch(`/api/l/jobs/${id}`);
+                              if (jobResponse.ok) {
+                                const jobData = await jobResponse.json();
+                                setDbJob(jobData);
+                              }
+                            } else {
+                              toast.error("Failed to save notes");
+                            }
+                          } catch (error) {
+                            console.error('Error saving notes:', error);
                             toast.error("Failed to save notes");
-                          } else {
-                            toast.success("Notes saved");
                           }
                         }
                         setEditingNotes(false);
