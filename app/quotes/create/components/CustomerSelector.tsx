@@ -8,21 +8,29 @@ import {
     CommandItem,
 } from '@/components/ui/command'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
+import { createCustomer } from '@/hooks/use-customers-swr'
 import { Loader, Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
     const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
     const [isContactFormOpen, setIsContactFormOpen] = useState(false)
+    const [isCustomerFormOpen, setIsCustomerFormOpen] = useState(false)
     const [openCustomer, setOpenCustomer] = useState(false)
     const [openContact, setOpenContact] = useState(false)
+    const [newCustomerName, setNewCustomerName] = useState('')
+    const [newCustomerDisplayName, setNewCustomerDisplayName] = useState('')
+    const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
 
     useEffect(() => {
         if (!data.customer || customers.length === 0) return;
@@ -61,8 +69,9 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     const openModal = (type: 'customer' | 'contact') => {
         if (type === 'contact') {
             setIsContactFormOpen(true)
+        } else if (type === 'customer') {
+            setIsCustomerFormOpen(true)
         }
-        // Customer creation modal logic removed - keeping for future use if needed
     }
 
     const handleContactSuccess = (newContactId?: number, newContactData?: any) => {
@@ -71,6 +80,62 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             addContact(newContactData);
             // Auto-select the newly created contact
             selectContact(newContactData.id.toString());
+        }
+    };
+
+    const handleCreateCustomer = async () => {
+        if (!newCustomerName.trim()) {
+            toast.error('Company legal name is required');
+            return;
+        }
+
+        setIsCreatingCustomer(true);
+        try {
+            const customerData = {
+                name: newCustomerName.trim(),
+                display_name: newCustomerDisplayName.trim() || newCustomerName.trim(),
+                customer_number: '',
+                payment_terms: 'NET30',
+                address: '',
+                city: '',
+                state: '',
+                zip: '',
+                main_phone: '',
+                url: '',
+                personOrderingName: '',
+                personOrderingTitle: '',
+                primaryContactName: '',
+                primaryContactPhone: '',
+                primaryContactEmail: '',
+                primaryContactSameAsPersonOrdering: false,
+                projectManagerName: '',
+                projectManagerPhone: '',
+                projectManagerEmail: '',
+                billToSameAsMain: true,
+                bill_to_street_address: '',
+                bill_to_city: '',
+                bill_to_state: '',
+                bill_to_zip_code: '',
+                would_like_to_apply_for_credit: false
+            };
+
+            const result = await createCustomer(customerData);
+            if (result) {
+                // Add the new customer to the list
+                addCustomer(result);
+                // Auto-select the newly created customer
+                selectCustomer(result.id.toString());
+                // Close the modal and reset form
+                setIsCustomerFormOpen(false);
+                setNewCustomerName('');
+                setNewCustomerDisplayName('');
+                toast.success('Customer created successfully!');
+            }
+        } catch (error: any) {
+            console.error('Error creating customer:', error);
+            toast.error(`Error creating customer: ${error.message || 'Unknown error'}`);
+        } finally {
+            setIsCreatingCustomer(false);
         }
     };
 
@@ -130,20 +195,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                 <CommandList>
                                     <CommandEmpty>No customers found.</CommandEmpty>
                                     <CommandGroup>
-                                        {filteredCustomers.map(c => (
-                                            <CommandItem
-                                                key={c.id}
-                                                value={c.name.toString().toLocaleLowerCase()}
-                                                onSelect={() => {
-                                                    if (c.id.toString() === "__new__") return openModal("customer");
-                                                    selectCustomer(c.id.toString());
-                                                    setOpenCustomer(false);
-                                                }}
-                                            >
-                                                <Check className={cn("mr-2 h-4 w-4", selectedCustomer?.id === c.id ? "opacity-100" : "opacity-0")} />
-                                                {c.name}
-                                            </CommandItem>
-                                        ))}
                                         <CommandItem
                                             value="__new__"
                                             onSelect={() => {
@@ -153,6 +204,19 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                         >
                                             ➕ Add new customer
                                         </CommandItem>
+                                        {filteredCustomers.map(c => (
+                                            <CommandItem
+                                                key={c.id}
+                                                value={c.name.toString().toLocaleLowerCase()}
+                                                onSelect={() => {
+                                                    selectCustomer(c.id.toString());
+                                                    setOpenCustomer(false);
+                                                }}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", selectedCustomer?.id === c.id ? "opacity-100" : "opacity-0")} />
+                                                {c.name}
+                                            </CommandItem>
+                                        ))}
                                     </CommandGroup>
                                 </CommandList>
                             </Command>
@@ -257,6 +321,68 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                     />
                 </CustomerProvider>
             )}
+
+            {/* Customer Creation Modal */}
+            <Dialog open={isCustomerFormOpen} onOpenChange={setIsCustomerFormOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Create New Customer</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="customer-name" className="text-right">
+                                Legal Name *
+                            </Label>
+                            <Input
+                                id="customer-name"
+                                value={newCustomerName}
+                                onChange={(e) => setNewCustomerName(e.target.value)}
+                                className="col-span-3"
+                                placeholder="Enter company legal name"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="customer-display-name" className="text-right">
+                                Display Name
+                            </Label>
+                            <Input
+                                id="customer-display-name"
+                                value={newCustomerDisplayName}
+                                onChange={(e) => setNewCustomerDisplayName(e.target.value)}
+                                className="col-span-3"
+                                placeholder="Display name (optional)"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsCustomerFormOpen(false);
+                                setNewCustomerName('');
+                                setNewCustomerDisplayName('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleCreateCustomer}
+                            disabled={isCreatingCustomer || !newCustomerName.trim()}
+                        >
+                            {isCreatingCustomer ? (
+                                <>
+                                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    Creating...
+                                </>
+                            ) : (
+                                'Create Customer'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
