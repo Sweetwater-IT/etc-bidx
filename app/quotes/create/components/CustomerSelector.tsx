@@ -120,11 +120,22 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             };
 
             const result = await createCustomer(customerData);
-            if (result) {
+            if (result && result.customer) {
+                // Transform the raw database data to match the Customer interface expected by addCustomer
+                const transformedCustomer = {
+                    id: result.customer.id,
+                    name: result.customer.name,
+                    email: '', // Default empty since no contacts created
+                    main_phone: result.customer.main_phone || '',
+                    address: result.customer.address || '',
+                    city: result.customer.city || '',
+                    state: result.customer.state || '',
+                    zip: result.customer.zip || '',
+                    customer_contacts: [] // No contacts created in this simple modal
+                };
+
                 // Add the new customer to the list
-                addCustomer(result);
-                // Auto-select the newly created customer
-                selectCustomer(result.id.toString());
+                addCustomer(transformedCustomer);
                 // Close the modal and reset form
                 setIsCustomerFormOpen(false);
                 setNewCustomerName('');
