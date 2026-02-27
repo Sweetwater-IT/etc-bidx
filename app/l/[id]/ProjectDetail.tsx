@@ -280,7 +280,7 @@ const ProjectDetail = () => {
       </header>
 
       {/* ─── QUICK ACTIONS ─── */}
-      <div className="max-w-[1800px] mx-auto w-full px-6 pt-4">
+      <div className="w-full px-6 pt-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick Actions</span>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
@@ -316,7 +316,7 @@ const ProjectDetail = () => {
       </div>
 
       {/* ─── MAP + SIDE CARDS ─── */}
-      <div className="max-w-[1800px] mx-auto w-full px-6 pt-4">
+      <div className="w-full px-6 pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 rounded-lg border bg-card overflow-hidden" style={{ height: 500 }}>
             <iframe
@@ -501,7 +501,7 @@ const ProjectDetail = () => {
       </div>
 
       {/* ─── SECTION B: TABBED CONTENT ─── */}
-      <div className="max-w-[1800px] mx-auto w-full px-6 py-6 flex-1">
+      <div className="w-full px-6 py-6 flex-1">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Job360Tab)}>
           <div className="border-b bg-card rounded-t-lg px-1">
             <TabsList className="bg-transparent h-11 gap-0">
