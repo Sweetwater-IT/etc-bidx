@@ -227,9 +227,9 @@ const JobList = () => {
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <main className="max-w-[1600px] mx-auto px-6 py-6">
+          <main className="w-full px-6 py-6">
             {/* PM Selector */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 {allPMs.length > 0 ? (
@@ -249,7 +249,7 @@ const JobList = () => {
                   <span className="text-xs text-muted-foreground">No PMs assigned yet</span>
                 )}
               </div>
-              <Button onClick={() => router.push("/contract/new")} className="gap-2">
+              <Button onClick={() => router.push("/contract/new")} className="gap-2 w-full sm:w-auto">
                 <Plus className="h-4 w-4" />
                 New Contract
               </Button>
