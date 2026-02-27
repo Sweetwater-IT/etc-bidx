@@ -198,7 +198,7 @@ const ProjectDetail = () => {
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 text-xs min-w-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 text-xs min-w-0">
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Job Name</span>
                   <span className="text-sm font-bold text-foreground truncate block">{info.projectName || "Untitled"}</span>
