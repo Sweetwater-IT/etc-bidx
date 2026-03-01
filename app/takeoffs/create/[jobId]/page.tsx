@@ -1,11 +1,12 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 
 export default function CreateTakeoffPage() {
   const params = useParams();
-  const jobId = Array.isArray(params.jobId) ? params.jobId[0] : params.jobId;
+  const router = useRouter();
+  const jobId = params ? (Array.isArray(params.jobId) ? params.jobId[0] : params.jobId) : null;
 
   if (!jobId) {
     return (
@@ -17,5 +18,9 @@ export default function CreateTakeoffPage() {
     );
   }
 
-  return <CreateTakeoffForm jobId={jobId} />;
+  const handleBack = () => {
+    router.push(`/l/${jobId}`);
+  };
+
+  return <CreateTakeoffForm jobId={jobId} onBack={handleBack} />;
 }
