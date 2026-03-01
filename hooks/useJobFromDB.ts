@@ -1,6 +1,5 @@
 import React from 'react';
 import { create } from 'zustand';
-import { supabase } from "@/lib/supabase";
 import type { Job, JobFromDB, JobProjectInfo } from "@/types/job";
 
 interface JobState {
@@ -19,17 +18,15 @@ export const useJobStore = create<JobState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase
-        .from("jobs_l")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching job:", error);
-        set({ error: error.message, isLoading: false });
+      const response = await fetch(`/api/l/jobs/${id}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error fetching job:", errorText);
+        set({ error: `Failed to fetch job: ${response.status}`, isLoading: false });
         return;
       }
+
+      const data = await response.json();
 
       if (!data) {
         set({ data: null, isLoading: false });

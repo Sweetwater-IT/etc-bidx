@@ -6,7 +6,7 @@ import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 export default function CreateTakeoffPage() {
   const params = useParams();
   const router = useRouter();
-  const jobId = params ? (Array.isArray(params.jobId) ? params.jobId[0] : params.jobId) : null;
+  const jobId = params ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
 
   if (!jobId) {
     return (

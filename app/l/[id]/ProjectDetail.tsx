@@ -287,7 +287,7 @@ const ProjectDetail = () => {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs h-7"
-            onClick={() => router.push(`/takeoffs/create/${id}`)}
+            onClick={() => router.push(`/l/${id}/takeoffs/create`)}
           >
             <ClipboardList className="h-3 w-3" /> Create Takeoff
           </Button>
