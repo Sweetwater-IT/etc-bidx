@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,25 +49,30 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase
-        .from("takeoffs_l")
-        .insert({
-          job_id: jobId,
-          title: title.trim(),
-          work_type: workType,
-          notes: notes.trim() || null,
-          status: "draft",
-        })
-        .select()
-        .single();
+      const response = await fetch('/api/takeoffs/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+          title,
+          workType,
+          notes,
+        }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create takeoff');
+      }
 
       toast.success(`Takeoff "${title}" created successfully`);
       router.push(`/l/${jobId}`);
     } catch (error) {
       console.error("Error saving takeoff:", error);
-      toast.error("Failed to save takeoff");
+      toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
     } finally {
       setSaving(false);
     }
