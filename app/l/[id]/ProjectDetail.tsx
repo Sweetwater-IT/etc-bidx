@@ -283,7 +283,12 @@ const ProjectDetail = () => {
       <div className="w-full px-6 pt-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick Actions</span>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs h-7"
+            onClick={() => router.push(`/takeoffs/create/${id}`)}
+          >
             <ClipboardList className="h-3 w-3" /> Create Takeoff
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
