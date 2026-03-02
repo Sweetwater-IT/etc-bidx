@@ -2,8 +2,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Search, Settings } from "lucide-react";
+import { Plus, Trash2, Search, Settings, GripVertical } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export type MPTSignRow = {
   id: string;
@@ -45,6 +64,74 @@ const B_LIGHT_OPTIONS = [
   { value: 'white', label: 'White' },
 ];
 
+// Sortable table row component
+const SortableRow = ({
+  row,
+  columns,
+  renderCell,
+  removeRow,
+  disabled,
+  orderable,
+}: {
+  row: MPTSignRow;
+  columns: { key: string; label: string; width: string }[];
+  renderCell: (row: MPTSignRow, column: { key: string; label: string; width: string }) => React.ReactNode;
+  removeRow: (id: string) => void;
+  disabled: boolean;
+  orderable: boolean;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={`hover:bg-muted/20 ${isDragging ? 'opacity-50' : ''}`}
+    >
+      {orderable && (
+        <td className="px-2 py-1 border-r">
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex items-center justify-center cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </td>
+      )}
+      {columns.map(column => (
+        <td key={column.key} className="px-2 py-1 border-r last:border-r-0">
+          {renderCell(row, column)}
+        </td>
+      ))}
+      {!disabled && (
+        <td className="px-2 py-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => removeRow(row.id)}
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </Button>
+        </td>
+      )}
+    </tr>
+  );
+};
+
 export const MPTSignTable = ({
   sectionTitle,
   structureOptions,
@@ -54,6 +141,33 @@ export const MPTSignTable = ({
   disabled = false,
   defaultMaterial,
 }: MPTSignTableProps) => {
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = rows.findIndex((row) => row.id === active.id);
+      const newIndex = rows.findIndex((row) => row.id === over.id);
+
+      const reorderedRows = arrayMove(rows, oldIndex, newIndex);
+
+      // Update load order numbers based on new positions
+      const updatedRows = reorderedRows.map((row, index) => ({
+        ...row,
+        loadOrder: index + 1,
+      }));
+
+      onRowsChange(updatedRows);
+    }
+  };
 
   // Determine column layout based on section
   const getColumns = (sectionKey: string) => {
@@ -326,6 +440,47 @@ export const MPTSignTable = ({
               Click Add Sign or Custom Sign to start building your {sectionTitle.toLowerCase()} takeoff.
             </p>
           </div>
+        ) : orderable ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={rows.map(row => row.id)} strategy={verticalListSortingStrategy}>
+              <div className="rounded-lg border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/30">
+                      <tr>
+                        <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-12">
+                          {/* Drag handle column */}
+                        </th>
+                        {columns.map(column => (
+                          <th key={column.key} className={`px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r last:border-r-0 ${column.width}`}>
+                            {column.label}
+                          </th>
+                        ))}
+                        {!disabled && <th className="px-2 py-2 w-12"></th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {rows.map(row => (
+                        <SortableRow
+                          key={row.id}
+                          row={row}
+                          columns={columns}
+                          renderCell={renderCell}
+                          removeRow={removeRow}
+                          disabled={disabled}
+                          orderable={orderable}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="rounded-lg border overflow-hidden">
             <div className="overflow-x-auto">
