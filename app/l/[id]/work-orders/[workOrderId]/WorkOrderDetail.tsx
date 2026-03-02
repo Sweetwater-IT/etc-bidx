@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useDispatchByWorkOrder, useCreateDispatch } from "@/hooks/useWorkOrders";
 import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -1158,23 +1159,27 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                 onClick={async () => {
                   if (!workOrderId) return;
                   const nextSort = woItems.length > 0 ? Math.max(...woItems.map(i => i.sort_order)) + 1 : 0;
-                  const { data, error } = await supabase
-                    .from("work_order_items")
-                    .insert({
-                      work_order_id: workOrderId,
-                      item_number: "",
-                      description: "",
-                      contract_quantity: 1,
-                      work_order_quantity: 1,
-                      uom: "EA",
-                      sort_order: nextSort,
-                    })
-                    .select("*")
-                    .single();
-                  if (error) {
-                    toast.error("Failed to add item");
-                  } else if (data) {
-                    setWoItems((prev) => [...prev, data as WOItem]);
+                  const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      action: 'create',
+                      itemData: {
+                        item_number: "",
+                        description: "",
+                        contract_quantity: 1,
+                        work_order_quantity: 1,
+                        uom: "EA",
+                        sort_order: nextSort,
+                      },
+                    }),
+                  });
+                  if (!response.ok) {
+                    const error = await response.json();
+                    toast.error(error.error || "Failed to add item");
+                  } else {
+                    const data = await response.json();
+                    setWoItems((prev) => [...prev, data.item as WOItem]);
                   }
                 }}
               >
