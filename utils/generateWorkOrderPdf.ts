@@ -1,6 +1,6 @@
 'use client';
 
-import PDFDocument from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 import { supabase } from '@/lib/supabase';
 
 interface WorkOrderItem {
