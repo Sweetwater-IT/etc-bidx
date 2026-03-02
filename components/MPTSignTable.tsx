@@ -93,6 +93,9 @@ const B_LIGHT_OPTIONS = [
   { value: '1y', label: '1 Yellow' },
   { value: '1r', label: '1 Red' },
   { value: '1w', label: '1 White' },
+  { value: '2y', label: '2 Yellow' },
+  { value: '2r', label: '2 Red' },
+  { value: '2w', label: '2 White' },
 ];
 
 // Sortable table row component
