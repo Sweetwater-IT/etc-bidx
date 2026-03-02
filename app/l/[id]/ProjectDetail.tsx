@@ -298,9 +298,33 @@ const ProjectDetail = () => {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs h-7"
-            onClick={() => {
-              // Work orders require takeoffs, so navigate to takeoffs tab
-              setActiveTab("takeoffs");
+            onClick={async () => {
+              try {
+                // Fetch takeoffs for this job
+                const response = await fetch(`/api/l/jobs/${id}/takeoffs`);
+                if (response.ok) {
+                  const takeoffs = await response.json();
+                  if (takeoffs.length > 0) {
+                    // Create work order from first takeoff
+                    const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffs[0].id}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userEmail: user?.email || 'unknown@example.com' })
+                    });
+                    if (woResponse.ok) {
+                      const result = await woResponse.json();
+                      router.push(`/l/${id}/work-orders/${result.workOrder.id}`);
+                    } else {
+                      toast.error('Failed to create work order');
+                    }
+                  } else {
+                    toast.error('No takeoffs found. Create a takeoff first.');
+                    setActiveTab("takeoffs");
+                  }
+                }
+              } catch (error) {
+                toast.error('Error creating work order');
+              }
             }}
           >
             <Wrench className="h-3 w-3" /> Create Work Order
