@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Search, Settings } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 
@@ -56,8 +54,6 @@ export const MPTSignTable = ({
   disabled = false,
   defaultMaterial,
 }: MPTSignTableProps) => {
-  const [showAddSignDialog, setShowAddSignDialog] = useState(false);
-  const [showCustomSignDialog, setShowCustomSignDialog] = useState(false);
 
   // Determine column layout based on section
   const getColumns = (sectionKey: string) => {
@@ -74,17 +70,14 @@ export const MPTSignTable = ({
       { key: 'cover', label: 'Cover', width: 'w-16' },
     ];
 
-    if (sectionTitle.toLowerCase().includes('trailblazer')) {
-      // Trailblazers: Add Load Order at the end
-      return [...baseColumns, { key: 'loadOrder', label: 'Load Order', width: 'w-20' }];
-    } else if (sectionTitle.toLowerCase().includes('type iii')) {
+    if (sectionTitle.toLowerCase().includes('type iii')) {
       // Type IIIs: Load Order first, then others
       return [
         { key: 'loadOrder', label: 'Load Order', width: 'w-20' },
         ...baseColumns,
       ];
     } else {
-      // Sign Stands: Base columns without Load Order
+      // Trailblazers and Sign Stands: Base columns without Load Order
       return baseColumns;
     }
   };
@@ -308,7 +301,7 @@ export const MPTSignTable = ({
               size="sm"
               variant="outline"
               className="gap-1.5 h-7 text-xs"
-              onClick={() => setShowCustomSignDialog(true)}
+              onClick={addCustomSign}
             >
               <Settings className="h-3 w-3" />
               Custom Sign
@@ -317,7 +310,7 @@ export const MPTSignTable = ({
               size="sm"
               variant="outline"
               className="gap-1.5 h-7 text-xs"
-              onClick={() => setShowAddSignDialog(true)}
+              onClick={addSign}
             >
               <Plus className="h-3 w-3" />
               Add Sign
@@ -377,51 +370,6 @@ export const MPTSignTable = ({
         </div>
       )}
 
-      {/* Add Sign Dialog Placeholder */}
-      {showAddSignDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Add Sign from Database</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Sign selection modal will be integrated here. For now, click Add Blank Row to add an empty sign entry.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowAddSignDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                addSign();
-                setShowAddSignDialog(false);
-              }}>
-                Add Blank Row
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Sign Dialog Placeholder */}
-      {showCustomSignDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Create Custom Sign</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Custom sign creation modal will be integrated here. For now, click Add Custom Row to add an empty custom sign entry.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowCustomSignDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                addCustomSign();
-                setShowCustomSignDialog(false);
-              }}>
-                Add Custom Row
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
