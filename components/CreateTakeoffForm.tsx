@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Save, Download, Send, ArrowLeft } from "lucide-react";
+import { ClipboardList, Save, Download, Send, ArrowLeft } from "lucide-react";
 
 interface Props {
   jobId: string;
@@ -107,7 +107,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Plus className="h-5 w-5 text-primary" />
+            <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground leading-tight">
@@ -375,7 +375,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
         <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
           <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-            <Plus className="h-3 w-3" /> Add Item
+            <ClipboardList className="h-3 w-3" /> Add Item
           </Button>
         </div>
         <div className="p-5">
