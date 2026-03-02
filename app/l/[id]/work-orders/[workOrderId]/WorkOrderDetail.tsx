@@ -396,7 +396,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           });
 
           // For PU work orders, also update pickup date on ALL takeoffs for this job
-          if (isPickupWO && editPickupDate) {
+          if (isPickupWO && editPickupDate && workOrder?.job_id) {
             const { data: allJobTakeoffs } = await supabase
               .from("takeoffs")
               .select("id")
