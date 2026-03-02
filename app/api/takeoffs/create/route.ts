@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // Verify the job exists
     const { data: job, error: jobError } = await supabase
-      .from('jobs')
+      .from('jobs_l')
       .select('id')
       .eq('id', jobId)
       .single();
