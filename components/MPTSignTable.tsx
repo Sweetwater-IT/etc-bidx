@@ -2,8 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Search, Settings, GripVertical } from "lucide-react";
+import { Plus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   DndContext,
   closestCenter,
@@ -23,6 +36,24 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { createClient } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+interface SignDesignation {
+  id: string;
+  designation: string;
+  description: string;
+  category: string;
+  sizes: string[];
+  sheeting: string;
+  image_url?: string;
+  dimensions: { width: number; height: number }[];
+}
 
 export type MPTSignRow = {
   id: string;
@@ -141,6 +172,45 @@ export const MPTSignTable = ({
   disabled = false,
   defaultMaterial,
 }: MPTSignTableProps) => {
+  // Sign selection state
+  const [signs, setSigns] = useState<SignDesignation[]>([]);
+  const [signsLoading, setSignsLoading] = useState(false);
+
+  // Fetch signs from database
+  useEffect(() => {
+    const fetchSigns = async () => {
+      setSignsLoading(true);
+      try {
+        const { data: signsDataRaw } = await supabase
+          .from('signs_all')
+          .select('id, designation, description, category, sizes, sheeting, image_url')
+          .order('designation');
+
+        const signsData: SignDesignation[] = (signsDataRaw || []).map((sign: any) => {
+          const dimensions = (sign.sizes || []).map((sizeStr: string) => {
+            const [widthStr, heightStr] = sizeStr.split(' x ');
+            const width = parseFloat(widthStr);
+            const height = parseFloat(heightStr);
+            return !isNaN(width) && !isNaN(height) ? { width, height } : null;
+          }).filter((dim): dim is { width: number; height: number } => dim !== null);
+
+          return {
+            ...sign,
+            dimensions: dimensions.length > 0 ? dimensions : [{ width: 0, height: 0 }],
+          };
+        });
+
+        setSigns(signsData);
+      } catch (err) {
+        console.error('Error fetching signs:', err);
+      } finally {
+        setSignsLoading(false);
+      }
+    };
+
+    fetchSigns();
+  }, []);
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -260,13 +330,77 @@ export const MPTSignTable = ({
     switch (column.key) {
       case 'designation':
         return (
-          <Input
-            className="h-8 text-xs"
-            value={row.signDesignation}
-            onChange={(e) => updateRow(row.id, { signDesignation: e.target.value })}
-            placeholder="Enter designation"
-            disabled={disabled}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-8 w-full justify-start text-left font-normal text-xs"
+                disabled={disabled}
+              >
+                <span className="truncate">
+                  {row.signDesignation || 'Select designation...'}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search signs..." className="h-9" />
+                <CommandList>
+                  <CommandEmpty>No signs found.</CommandEmpty>
+                  <CommandGroup>
+                    {signs.map((sign) => (
+                      <CommandItem
+                        key={sign.id}
+                        value={sign.designation}
+                        onSelect={() => {
+                          updateRow(row.id, {
+                            signDesignation: sign.designation,
+                            signDescription: sign.description,
+                            sheeting: sign.sheeting,
+                          });
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="w-8 h-8 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {sign.image_url ? (
+                            <img
+                              src={sign.image_url}
+                              alt={sign.designation}
+                              className="w-full h-full object-contain p-1"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
+                                  fallback.textContent = sign.designation.substring(0, 2).toUpperCase();
+                                  parent.appendChild(fallback);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-xs font-medium">
+                              {sign.designation.substring(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{sign.designation}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {sign.description || '-'}
+                          </div>
+                        </div>
+                        {row.signDesignation === sign.designation && (
+                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         );
       case 'legend':
         return (
