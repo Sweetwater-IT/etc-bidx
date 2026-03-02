@@ -165,7 +165,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
   const { data: dispatch } = useDispatchByWorkOrder(workOrderId);
   const createDispatch = useCreateDispatch();
   const createPickupWO = useCreatePickupWorkOrder();
-  const { deleteWorkOrder, deleting: deletingWO } = useDeleteWorkOrder();
+  const { mutateAsync: deleteWorkOrder } = useDeleteWorkOrder();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [job, setJob] = useState<JobInfo | null>(null);
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
@@ -375,10 +375,10 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           title: editTitle,
           description: editDescription,
           notes: editNotes,
-          scheduledDate: editScheduledDate || null,
-          assignedTo: editAssignedTo,
-          contractedOrAdditional: editContractedOrAdditional,
-          customerPocPhone: editCustomerPocPhone,
+          scheduled_date: editScheduledDate || null,
+          assigned_to: editAssignedTo,
+          contracted_or_additional: editContractedOrAdditional,
+          customer_poc_phone: editCustomerPocPhone,
         },
       });
       // Also sync install/pickup dates to linked takeoff(s)
@@ -897,7 +897,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             )}
             {/* Delete Draft Work Order */}
             {canEdit && isDraft && (
-              <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setShowDeleteDialog(true)} disabled={deletingWO}>
+              <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setShowDeleteDialog(true)}>
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
             )}
@@ -1747,10 +1747,9 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" disabled={deletingWO} onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              disabled={deletingWO}
               onClick={async () => {
                 if (!workOrderId) return;
                 const result = await deleteWorkOrder(workOrderId);
@@ -1761,8 +1760,8 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                 setShowDeleteDialog(false);
               }}
             >
-              {deletingWO ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
-              {deletingWO ? "Deleting…" : "Delete Work Order"}
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete Work Order
             </Button>
           </DialogFooter>
         </DialogContent>

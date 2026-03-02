@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React from 'react';
+import { create } from 'zustand';
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -44,13 +45,46 @@ interface Dispatch {
   updated_at: string;
 }
 
-// Hook to fetch a single work order
-export function useWorkOrder(workOrderId: string | undefined) {
-  return useQuery({
-    queryKey: ["work-order", workOrderId],
-    queryFn: async () => {
-      if (!workOrderId) return null;
+interface WorkOrderState {
+  workOrder: WorkOrder | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchWorkOrder: (workOrderId: string) => Promise<void>;
+  updateWorkOrder: (workOrderId: string, patch: Partial<WorkOrder>) => Promise<WorkOrder>;
+  deleteWorkOrder: (workOrderId: string) => Promise<{ success: boolean; jobId?: string }>;
+}
 
+interface BuildRequestsState {
+  buildRequests: BuildRequest[];
+  isLoading: boolean;
+  error: string | null;
+  fetchBuildRequests: (workOrderId: string) => Promise<void>;
+  createBuildRequest: (workOrderId: string) => Promise<BuildRequest>;
+}
+
+interface DispatchState {
+  dispatch: Dispatch | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchDispatch: (workOrderId: string) => Promise<void>;
+  createDispatch: (workOrderId: string, scheduledDate: string) => Promise<Dispatch>;
+}
+
+interface PickupWorkOrderState {
+  isCreating: boolean;
+  error: string | null;
+  createPickupWorkOrder: (parentWorkOrderId: string) => Promise<{ workOrder: WorkOrder; takeoffId: string }>;
+}
+
+// Work Order Store
+export const useWorkOrderStore = create<WorkOrderState>((set, get) => ({
+  workOrder: null,
+  isLoading: false,
+  error: null,
+
+  fetchWorkOrder: async (workOrderId: string) => {
+    set({ isLoading: true, error: null });
+    try {
       const { data, error } = await supabase
         .from("work_orders")
         .select("*")
@@ -58,18 +92,15 @@ export function useWorkOrder(workOrderId: string | undefined) {
         .single();
 
       if (error) throw error;
-      return data as WorkOrder;
-    },
-    enabled: !!workOrderId,
-  });
-}
+      set({ workOrder: data as WorkOrder, isLoading: false });
+    } catch (error) {
+      console.error("Error fetching work order:", error);
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
 
-// Hook to update a work order
-export function useUpdateWorkOrder() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ workOrderId, patch }: { workOrderId: string; patch: Partial<WorkOrder> }) => {
+  updateWorkOrder: async (workOrderId: string, patch: Partial<WorkOrder>) => {
+    try {
       const { data, error } = await supabase
         .from("work_orders")
         .update(patch)
@@ -78,25 +109,19 @@ export function useUpdateWorkOrder() {
         .single();
 
       if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["work-order", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["work-orders", data.job_id] });
+
+      // Update local state
+      set({ workOrder: data as WorkOrder });
       toast.success("Work order updated");
-    },
-    onError: (error: any) => {
+      return data as WorkOrder;
+    } catch (error: any) {
       toast.error(`Failed to update work order: ${error.message}`);
-    },
-  });
-}
+      throw error;
+    }
+  },
 
-// Hook to delete a work order
-export function useDeleteWorkOrder() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (workOrderId: string) => {
+  deleteWorkOrder: async (workOrderId: string) => {
+    try {
       const { data: workOrder } = await supabase
         .from("work_orders")
         .select("job_id")
@@ -109,55 +134,100 @@ export function useDeleteWorkOrder() {
         .eq("id", workOrderId);
 
       if (error) throw error;
-      return { success: true, jobId: workOrder?.job_id };
-    },
-    onSuccess: (data) => {
-      if (data.jobId) {
-        queryClient.invalidateQueries({ queryKey: ["work-orders", data.jobId] });
-      }
+
+      set({ workOrder: null });
       toast.success("Work order deleted");
-    },
-    onError: (error: any) => {
+      return { success: true, jobId: workOrder?.job_id };
+    } catch (error: any) {
       toast.error(`Failed to delete work order: ${error.message}`);
-    },
-  });
-}
+      throw error;
+    }
+  },
+}));
 
-// Hook to create build request (placeholder - not hooked up)
-export function useCreateBuildRequest() {
-  const queryClient = useQueryClient();
+// Build Requests Store
+export const useBuildRequestsStore = create<BuildRequestsState>((set, get) => ({
+  buildRequests: [],
+  isLoading: false,
+  error: null,
 
-  return useMutation({
-    mutationFn: async ({ workOrderId }: { workOrderId: string }) => {
+  fetchBuildRequests: async (workOrderId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Placeholder - return empty array for now
+      set({ buildRequests: [], isLoading: false });
+    } catch (error) {
+      console.error("Error fetching build requests:", error);
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
+
+  createBuildRequest: async (workOrderId: string) => {
+    try {
       // Placeholder implementation - build shop not connected yet
       console.log("Build request creation placeholder for work order:", workOrderId);
       toast.info("Build shop integration coming soon");
-      return { id: "placeholder", workOrderId, status: "pending" };
-    },
-    onSuccess: () => {
-      // queryClient.invalidateQueries({ queryKey: ["build-requests"] });
-    },
-  });
-}
+      const placeholder: BuildRequest = { id: "placeholder", work_order_id: workOrderId, status: "pending", build_required: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      set({ buildRequests: [placeholder] });
+      return placeholder;
+    } catch (error: any) {
+      toast.error(`Failed to create build request: ${error.message}`);
+      throw error;
+    }
+  },
+}));
 
-// Hook to fetch build requests by work order (placeholder)
-export function useBuildRequestsByWorkOrder(workOrderId: string | undefined) {
-  return useQuery({
-    queryKey: ["build-requests", workOrderId],
-    queryFn: async () => {
-      // Placeholder - return empty array for now
-      return [] as BuildRequest[];
-    },
-    enabled: !!workOrderId,
-  });
-}
+// Dispatch Store
+export const useDispatchStore = create<DispatchState>((set, get) => ({
+  dispatch: null,
+  isLoading: false,
+  error: null,
 
-// Hook to create pickup work order
-export function useCreatePickupWorkOrder() {
-  const queryClient = useQueryClient();
+  fetchDispatch: async (workOrderId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      // Placeholder - return null for now
+      set({ dispatch: null, isLoading: false });
+    } catch (error) {
+      console.error("Error fetching dispatch:", error);
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
 
-  return useMutation({
-    mutationFn: async (parentWorkOrderId: string) => {
+  createDispatch: async (workOrderId: string, scheduledDate: string) => {
+    try {
+      // Placeholder implementation - dispatch system not connected yet
+      console.log("Dispatch creation placeholder for work order:", workOrderId, "on date:", scheduledDate);
+      toast.info("Dispatch system integration coming soon");
+      const placeholder = {
+        id: "placeholder",
+        work_order_id: workOrderId,
+        scheduled_date: scheduledDate,
+        status: "scheduled",
+        crew_notes: null,
+        customer_not_on_site: false,
+        customer_signature_name: null,
+        signed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      set({ dispatch: placeholder });
+      return placeholder;
+    } catch (error: any) {
+      toast.error(`Failed to create dispatch: ${error.message}`);
+      throw error;
+    }
+  },
+}));
+
+// Pickup Work Order Store
+export const usePickupWorkOrderStore = create<PickupWorkOrderState>((set, get) => ({
+  isCreating: false,
+  error: null,
+
+  createPickupWorkOrder: async (parentWorkOrderId: string) => {
+    set({ isCreating: true, error: null });
+    try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
@@ -173,49 +243,116 @@ export function useCreatePickupWorkOrder() {
         throw new Error(body?.details || body?.error || resp.error.message);
       }
 
-      return resp.data as { workOrder: WorkOrder; takeoffId: string };
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["work-orders", data.workOrder.job_id] });
-      queryClient.invalidateQueries({ queryKey: ["work-order", data.workOrder.parent_work_order_id] });
+      set({ isCreating: false });
       toast.success("Pickup work order created");
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to create pickup WO: ${err.message}`);
-    },
-  });
+      return resp.data as { workOrder: WorkOrder; takeoffId: string };
+    } catch (error: any) {
+      set({ error: error.message, isCreating: false });
+      toast.error(`Failed to create pickup WO: ${error.message}`);
+      throw error;
+    }
+  },
+}));
+
+// Hook wrappers to match existing API
+export function useWorkOrder(workOrderId: string | undefined) {
+  const { workOrder, isLoading, error, fetchWorkOrder } = useWorkOrderStore();
+
+  React.useEffect(() => {
+    if (workOrderId && workOrderId !== workOrder?.id) {
+      fetchWorkOrder(workOrderId);
+    }
+  }, [workOrderId, fetchWorkOrder, workOrder?.id]);
+
+  return {
+    data: workOrder,
+    isLoading,
+    error,
+    refetch: () => workOrderId ? fetchWorkOrder(workOrderId) : Promise.resolve(),
+  };
 }
 
-// Hook to fetch dispatch by work order (placeholder)
+export function useUpdateWorkOrder() {
+  const updateWorkOrder = useWorkOrderStore((state) => state.updateWorkOrder);
+
+  return {
+    mutateAsync: async ({ workOrderId, patch }: { workOrderId: string; patch: Partial<WorkOrder> }) => {
+      return await updateWorkOrder(workOrderId, patch);
+    },
+  };
+}
+
+export function useDeleteWorkOrder() {
+  const deleteWorkOrder = useWorkOrderStore((state) => state.deleteWorkOrder);
+
+  return {
+    mutateAsync: async (workOrderId: string) => {
+      return await deleteWorkOrder(workOrderId);
+    },
+    deleting: false, // Zustand doesn't track this state the same way
+  };
+}
+
+export function useCreateBuildRequest() {
+  const createBuildRequest = useBuildRequestsStore((state) => state.createBuildRequest);
+
+  return {
+    mutateAsync: async ({ workOrderId }: { workOrderId: string }) => {
+      return await createBuildRequest(workOrderId);
+    },
+  };
+}
+
+export function useBuildRequestsByWorkOrder(workOrderId: string | undefined) {
+  const { buildRequests, isLoading, error, fetchBuildRequests } = useBuildRequestsStore();
+
+  React.useEffect(() => {
+    if (workOrderId) {
+      fetchBuildRequests(workOrderId);
+    }
+  }, [workOrderId, fetchBuildRequests]);
+
+  return {
+    data: buildRequests,
+    isLoading,
+    error,
+  };
+}
+
+export function useCreatePickupWorkOrder() {
+  const { createPickupWorkOrder, isCreating } = usePickupWorkOrderStore();
+
+  return {
+    mutateAsync: async (parentWorkOrderId: string) => {
+      return await createPickupWorkOrder(parentWorkOrderId);
+    },
+    isPending: isCreating,
+  };
+}
+
 export function useDispatchByWorkOrder(workOrderId: string | undefined) {
-  return useQuery({
-    queryKey: ["dispatch", workOrderId],
-    queryFn: async () => {
-      // Placeholder - return null for now
-      return null as Dispatch | null;
-    },
-    enabled: !!workOrderId,
-  });
+  const { dispatch, isLoading, error, fetchDispatch } = useDispatchStore();
+
+  React.useEffect(() => {
+    if (workOrderId) {
+      fetchDispatch(workOrderId);
+    }
+  }, [workOrderId, fetchDispatch]);
+
+  return {
+    data: dispatch,
+    isLoading,
+    error,
+  };
 }
 
-// Hook to create dispatch (placeholder)
 export function useCreateDispatch() {
-  const queryClient = useQueryClient();
+  const createDispatch = useDispatchStore((state) => state.createDispatch);
 
-  return useMutation({
-    mutationFn: async ({ workOrderId, scheduledDate }: { workOrderId: string; scheduledDate: string }) => {
-      // Placeholder implementation - dispatch system not connected yet
-      console.log("Dispatch creation placeholder for work order:", workOrderId, "on date:", scheduledDate);
-      toast.info("Dispatch system integration coming soon");
-      return {
-        id: "placeholder",
-        workOrderId,
-        scheduledDate,
-        status: "scheduled"
-      };
+  return {
+    mutateAsync: async ({ workOrderId, scheduledDate }: { workOrderId: string; scheduledDate: string }) => {
+      return await createDispatch(workOrderId, scheduledDate);
     },
-    onSuccess: () => {
-      // queryClient.invalidateQueries({ queryKey: ["dispatches"] });
-    },
-  });
+    isPending: false, // Zustand doesn't track this state the same way
+  };
 }

@@ -299,8 +299,8 @@ const ProjectDetail = () => {
             size="sm"
             className="gap-1.5 text-xs h-7"
             onClick={() => {
-              // Work orders require takeoffs, so navigate to takeoff creation
-              router.push(`/l/${id}/takeoffs/create`);
+              // Work orders require takeoffs, so navigate to takeoffs tab
+              setActiveTab("takeoffs");
             }}
           >
             <Wrench className="h-3 w-3" /> Create Work Order
