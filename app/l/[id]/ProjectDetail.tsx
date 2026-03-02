@@ -294,7 +294,15 @@ const ProjectDetail = () => {
           >
             <ClipboardList className="h-3 w-3" /> Create Takeoff
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs h-7"
+            onClick={() => {
+              // Work orders require takeoffs, so navigate to takeoff creation
+              router.push(`/l/${id}/takeoffs/create`);
+            }}
+          >
             <Wrench className="h-3 w-3" /> Create Work Order
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
