@@ -30,6 +30,12 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
   const [title, setTitle] = useState("");
   const [workType, setWorkType] = useState("");
+  const [workOrderNumber, setWorkOrderNumber] = useState("");
+  const [contractedOrAdditional, setContractedOrAdditional] = useState("contracted");
+  const [installDate, setInstallDate] = useState("");
+  const [pickupDate, setPickupDate] = useState("");
+  const [neededByDate, setNeededByDate] = useState("");
+  const [priority, setPriority] = useState("standard");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -58,6 +64,12 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           jobId,
           title,
           workType,
+          workOrderNumber,
+          contractedOrAdditional,
+          installDate,
+          pickupDate,
+          neededByDate,
+          priority,
           notes,
         }),
       });
@@ -141,33 +153,97 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
         <div className="px-5 py-3 border-b bg-muted/30">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Details</h2>
         </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Title *</Label>
-            <Input
-              className="mt-1"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Phase 1 MPT Setup"
-            />
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title *</Label>
+              <Input
+                className="text-sm"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Phase 1 MPT Setup"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type *</Label>
+              <Select value={workType} onValueChange={setWorkType}>
+                <SelectTrigger className="text-sm mt-0">
+                  <SelectValue placeholder="Choose Work Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORK_TYPES.map((wt) => (
+                    <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
+              <Input
+                className="text-sm"
+                value={workOrderNumber || "Save takeoff first"}
+                disabled
+                placeholder="Save takeoff first"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</Label>
+              <Select value={contractedOrAdditional} onValueChange={setContractedOrAdditional}>
+                <SelectTrigger className="text-sm mt-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contracted">Contracted Work</SelectItem>
+                  <SelectItem value="additional">Additional Work</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+              <Input
+                type="date"
+                className="text-sm"
+                value={installDate}
+                onChange={(e) => setInstallDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
+              <Input
+                type="date"
+                className="text-sm"
+                value={pickupDate}
+                onChange={(e) => setPickupDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
+              <Input
+                type="date"
+                className="text-sm"
+                value={neededByDate}
+                onChange={(e) => setNeededByDate(e.target.value)}
+              />
+              <span className="text-[9px] text-muted-foreground mt-1 block">Internal suspense date for build/sign shop prioritization</span>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="text-sm mt-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Work Type *</Label>
-            <Select value={workType} onValueChange={setWorkType}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Choose Work Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {WORK_TYPES.map((wt) => (
-                  <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</Label>
+          <div className="mt-6">
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Notes</Label>
             <Textarea
-              className="mt-1"
+              className="text-sm"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional notes..."
@@ -178,33 +254,79 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
       </div>
 
       {/* Work Type Specific Content */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {workType ? WORK_TYPES.find(wt => wt.value === workType)?.label : "Select Work Type Above"}
-          </h2>
+      {workType && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {WORK_TYPES.find(wt => wt.value === workType)?.label} Configuration
+            </h2>
+          </div>
+          <div className="p-5">
+            {(workType === "MPT" || workType === "PERMANENT_SIGNS") && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Select signs from the MUTCD database or choose from pre-configured kits.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium">Individual Signs</h3>
+                    <p className="text-xs text-muted-foreground">Choose specific signs with custom dimensions and quantities.</p>
+                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Sign selection will be integrated here</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium">Sign Kits</h3>
+                    <p className="text-xs text-muted-foreground">Select pre-configured kits with multiple signs.</p>
+                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Kit selection will be integrated here</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Configure vehicles and rolling stock for {workType === "FLAGGING" ? "flagging operations" : "lane closure operations"}.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium">Vehicles</h3>
+                    <p className="text-xs text-muted-foreground">Select trucks and vehicles for the operation.</p>
+                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Vehicle selection will be added here</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium">Rolling Stock</h3>
+                    <p className="text-xs text-muted-foreground">Choose cones, barrels, signs, and other equipment.</p>
+                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Equipment selection will be added here</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(workType === "SERVICE" || workType === "DELIVERY" || workType === "RENTAL") && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Configure additional items for {workType.toLowerCase()} work.</p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Additional Items</h3>
+                  <p className="text-xs text-muted-foreground">Select equipment, materials, or services needed for this work type.</p>
+                  <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground">Item selection will be added here</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="p-5">
-          {workType === "MPT" && (
-            <p className="text-sm text-muted-foreground">MPT configuration will be added here. Signs will be selected from the signs_all database.</p>
-          )}
-          {workType === "PERMANENT_SIGNS" && (
-            <p className="text-sm text-muted-foreground">Permanent signs configuration will be added here. Signs will be selected from the signs_all database.</p>
-          )}
-          {workType === "FLAGGING" && (
-            <p className="text-sm text-muted-foreground">Flagging configuration will be added here with vehicles and rolling stock.</p>
-          )}
-          {workType === "LANE_CLOSURE" && (
-            <p className="text-sm text-muted-foreground">Lane closure configuration will be added here with vehicles and rolling stock.</p>
-          )}
-          {(workType === "SERVICE" || workType === "DELIVERY" || workType === "RENTAL") && (
-            <p className="text-sm text-muted-foreground">Additional items configuration will be added here.</p>
-          )}
-          {!workType && (
-            <p className="text-sm text-muted-foreground">Select a work type above to see configuration options.</p>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={onBack}>Cancel</Button>
