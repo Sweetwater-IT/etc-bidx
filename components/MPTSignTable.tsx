@@ -332,7 +332,7 @@ export const MPTSignTable = ({
           <Search className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground font-medium">No signs added yet</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Click "Add Sign" or "Custom Sign" to start building your {sectionTitle.toLowerCase()} takeoff.
+            Click Add Sign or Custom Sign to start building your {sectionTitle.toLowerCase()} takeoff.
           </p>
         </div>
       ) : (
@@ -383,7 +383,7 @@ export const MPTSignTable = ({
           <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2">Add Sign from Database</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Sign selection modal will be integrated here. For now, click "Add Blank Row" to add an empty sign entry.
+              Sign selection modal will be integrated here. For now, click Add Blank Row to add an empty sign entry.
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowAddSignDialog(false)}>
@@ -406,7 +406,7 @@ export const MPTSignTable = ({
           <div className="bg-card p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-2">Create Custom Sign</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Custom sign creation modal will be integrated here. For now, click "Add Custom Row" to add an empty custom sign entry.
+              Custom sign creation modal will be integrated here. For now, click Add Custom Row to add an empty custom sign entry.
             </p>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowCustomSignDialog(false)}>
