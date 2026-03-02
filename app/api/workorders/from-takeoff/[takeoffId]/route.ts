@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Create the work order
     const { data: workOrder, error: insertError } = await supabase
-      .from('work_orders')
+      .from('work_orders_l')
       .insert({
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
