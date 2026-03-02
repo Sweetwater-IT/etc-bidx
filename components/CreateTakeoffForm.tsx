@@ -75,6 +75,85 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
     toast.success(`All signs set to ${defaultSignMaterial}`);
   };
 
+  const handleCreateWorkOrder = async () => {
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    if (!workType) {
+      toast.error("Work Type is required");
+      return;
+    }
+    if (!dbJob) {
+      toast.error("This contract has not been saved to the database yet. Please create it via the Contract Wizard first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // First save the takeoff if it hasn't been saved yet
+      const saveResponse = await fetch('/api/takeoffs/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+          title,
+          workType,
+          workOrderNumber,
+          contractedOrAdditional,
+          installDate,
+          pickupDate,
+          neededByDate,
+          priority,
+          notes,
+          crewNotes,
+          buildShopNotes,
+          pmNotes,
+          activeSections,
+          signRows,
+          defaultSignMaterial,
+        }),
+      });
+
+      const saveData = await saveResponse.json();
+
+      if (!saveResponse.ok) {
+        throw new Error(saveData.error || 'Failed to save takeoff');
+      }
+
+      const takeoffId = saveData.takeoff.id;
+
+      // Now create the work order from the takeoff
+      const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: title,
+          description: notes,
+          contractedOrAdditional,
+        }),
+      });
+
+      const woData = await woResponse.json();
+
+      if (!woResponse.ok) {
+        throw new Error(woData.error || 'Failed to create work order');
+      }
+
+      toast.success(`Work order "${title}" created successfully`);
+      router.push(`/l/${jobId}/work-orders/${woData.workOrder.id}`);
+    } catch (error) {
+      console.error("Error creating work order:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create work order");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Title is required");
@@ -171,6 +250,10 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           <Button size="sm" variant="outline" className="gap-1.5">
             <Download className="h-3.5 w-3.5" />
             Download PDF
+          </Button>
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
+            <ClipboardList className="h-3.5 w-3.5" />
+            {saving ? "Creating…" : "Generate Work Order"}
           </Button>
           <Button size="sm" variant="secondary" className="gap-1.5">
             <Send className="h-3.5 w-3.5" />
