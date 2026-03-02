@@ -3,10 +3,12 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }   // ← correct: context object with params
+  { params }: { params: Promise<{ id: string }> }  // ← correct: params is a Promise in Next.js 15+
 ) {
   try {
-    const takeoffId = context.params.id;  // ← access via context.params.id
+    // Await the params Promise (required in Next.js 15+ for dynamic routes)
+    const { id: takeoffId } = await params;
+
     if (!takeoffId) {
       return NextResponse.json(
         { error: 'Takeoff ID is required' },
@@ -37,7 +39,7 @@ export async function GET(
 
     if (jobError) {
       console.error('Error fetching job:', jobError);
-      // Don't fail if job fetch fails
+      // Don't fail if job fetch fails, just return null for job
     }
 
     return NextResponse.json({
