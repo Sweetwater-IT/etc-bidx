@@ -2,28 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Package } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
+import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 
-export type MPTSignRow = {
-  id: string;
-  isCustom: boolean;
-  signDesignation: string;
-  signDescription: string;
-  width: number;
-  height: number;
-  dimensionLabel: string;
-  signLegend: string;
-  sheeting: string;
-  structureType: string;
-  bLights: 'none' | 'yellow' | 'red' | 'white';
-  sqft: number;
-  totalSqft: number;
-  quantity: number;
-  needsOrder: boolean;
-  cover: boolean;
-  loadOrder: number;
-  material: SignMaterial;
-  secondarySigns: any[];
-};
+// Re-export for convenience
+export type { MPTSignRow };
 
 interface MPTSignConfigurationProps {
   activeSections: string[];
@@ -156,20 +138,15 @@ export const MPTSignConfiguration = ({
               const section = MPT_SECTIONS.find((s) => s.key === sectionKey)!;
               return (
                 <div key={sectionKey} className="mb-6">
-                  {/* Placeholder for MPTSignTable - will be implemented next */}
-                  <div className="rounded-lg border bg-background p-4">
-                    <h3 className="text-sm font-medium mb-3">{section.label}</h3>
-                    <div className="text-xs text-muted-foreground">
-                      MPTSignTable component will be integrated here for {section.label}
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {section.structures.map((structure) => (
-                        <div key={structure} className="text-xs p-2 bg-muted/30 rounded">
-                          {structure}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <MPTSignTable
+                    sectionTitle={section.label}
+                    structureOptions={section.structures}
+                    rows={signRows[sectionKey] || []}
+                    onRowsChange={(rows) => onSignRowsChange(sectionKey, rows)}
+                    orderable={sectionKey === "type_iii"}
+                    disabled={disabled}
+                    defaultMaterial={defaultSignMaterial}
+                  />
                 </div>
               );
             })
