@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
-    const workOrderId = params.id;
+    const resolvedParams = await context.params;
+    const workOrderId = resolvedParams.id;
 
     const { data: workOrder, error } = await supabase
       .from('work_orders_l')
@@ -28,10 +29,11 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
-    const workOrderId = params.id;
+    const resolvedParams = await context.params;
+    const workOrderId = resolvedParams.id;
     const patch = await request.json();
 
     const { data: workOrder, error } = await supabase
@@ -55,10 +57,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
-    const workOrderId = params.id;
+    const resolvedParams = await context.params;
+    const workOrderId = resolvedParams.id;
 
     // Get the job_id before deleting
     const { data: workOrder } = await supabase
