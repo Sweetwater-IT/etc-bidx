@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const takeoffId = params.id;
+    const { id: takeoffId } = await context.params;
 
     if (!takeoffId) {
       return NextResponse.json({ error: "Takeoff ID is required" }, { status: 400 });
