@@ -282,16 +282,6 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
               </Select>
             </div>
           </div>
-          <div className="mt-6">
-            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Notes</Label>
-            <Textarea
-              className="text-sm"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes..."
-              rows={3}
-            />
-          </div>
         </div>
       </div>
 
