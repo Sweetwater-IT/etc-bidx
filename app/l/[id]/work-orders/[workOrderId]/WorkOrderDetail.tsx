@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder } from "@/hooks/useWorkOrders";
-import { useCreateBuildRequest, useBuildRequestsByWorkOrder } from "@/hooks/useWorkOrders";
-import { useCreatePickupWorkOrder } from "@/hooks/useWorkOrders";
 import { useAuth } from "@/contexts/auth-context";
-import { useDispatchByWorkOrder, useCreateDispatch } from "@/hooks/useWorkOrders";
 import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
@@ -157,14 +153,12 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
   const isAdmin = !!user;
   const isPM = !!user; // Assume PM if authenticated for now
   const canCreateTakeoffs = !!user; // Assume can create if authenticated
-  const { data: workOrder, isLoading, refetch } = useWorkOrder(workOrderId);
-  const updateWO = useUpdateWorkOrder();
-  const createBuildRequest = useCreateBuildRequest();
-  const { data: buildRequests = [] } = useBuildRequestsByWorkOrder(workOrderId);
-  const { data: dispatch } = useDispatchByWorkOrder(workOrderId);
-  const createDispatch = useCreateDispatch();
-  const createPickupWO = useCreatePickupWorkOrder();
-  const { mutateAsync: deleteWorkOrder } = useDeleteWorkOrder();
+
+  // Local state for work order data
+  const [workOrder, setWorkOrder] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [buildRequests, setBuildRequests] = useState<any[]>([]);
+  const [dispatch, setDispatch] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [job, setJob] = useState<JobInfo | null>(null);
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
@@ -242,6 +236,69 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
   // Combined readiness
   const readyToSchedule = hasTakeoff && hasWoItems && buildComplete;
 
+  // Fetch work order data
+  useEffect(() => {
+    const fetchWorkOrder = async () => {
+      if (!workOrderId) return;
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/workorders/${workOrderId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setWorkOrder(data);
+        } else {
+          console.error('Failed to fetch work order');
+        }
+      } catch (error) {
+        console.error('Error fetching work order:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWorkOrder();
+  }, [workOrderId]);
+
+  // Fetch build requests
+  useEffect(() => {
+    const fetchBuildRequests = async () => {
+      if (!workOrderId) return;
+      try {
+        const response = await fetch(`/api/workorders/${workOrderId}/build-requests`);
+        if (response.ok) {
+          const data = await response.json();
+          setBuildRequests(data);
+        } else {
+          console.error('Failed to fetch build requests');
+        }
+      } catch (error) {
+        console.error('Error fetching build requests:', error);
+      }
+    };
+
+    fetchBuildRequests();
+  }, [workOrderId]);
+
+  // Fetch dispatch data
+  useEffect(() => {
+    const fetchDispatch = async () => {
+      if (!workOrderId) return;
+      try {
+        const response = await fetch(`/api/workorders/${workOrderId}/dispatch`);
+        if (response.ok) {
+          const data = await response.json();
+          setDispatch(data);
+        } else {
+          console.error('Failed to fetch dispatch');
+        }
+      } catch (error) {
+        console.error('Error fetching dispatch:', error);
+      }
+    };
+
+    fetchDispatch();
+  }, [workOrderId]);
+
   // Fetch related data from API
   const fetchRelated = useCallback(async () => {
     if (!workOrderId) return;
@@ -293,9 +350,10 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
     if (!workOrderId) return;
     setSaving(true);
     try {
-      await updateWO.mutateAsync({
-        workOrderId,
-        patch: {
+      const response = await fetch(`/api/workorders/${workOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: editTitle,
           description: editDescription,
           notes: editNotes,
@@ -303,8 +361,14 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           assigned_to: editAssignedTo,
           contracted_or_additional: editContractedOrAdditional,
           customer_poc_phone: editCustomerPocPhone,
-        },
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update work order');
+      }
+
       // Also sync install/pickup dates to linked takeoff(s)
       if (takeoffs.length > 0) {
         const takeoffId = takeoffs[0].id;
@@ -333,10 +397,15 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
         }
       }
       setLastSavedAt(new Date());
-      refetch();
+      // Refetch work order data
+      const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
+      if (workOrderResponse.ok) {
+        const data = await workOrderResponse.json();
+        setWorkOrder(data);
+      }
       fetchRelated();
     } catch (err: any) {
-      // toast already shown by hook
+      toast.error(err.message || 'Failed to save work order');
     } finally {
       setSaving(false);
     }
@@ -366,13 +435,25 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
     }
 
     try {
-      await updateWO.mutateAsync({
-        workOrderId,
-        patch: { status: newStatus },
+      const response = await fetch(`/api/workorders/${workOrderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
-      refetch();
-    } catch {
-      // toast shown by hook
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update status');
+      }
+
+      // Refetch work order data
+      const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
+      if (workOrderResponse.ok) {
+        const data = await workOrderResponse.json();
+        setWorkOrder(data);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
     }
   };
 
@@ -856,15 +937,28 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                 size="sm"
                 variant="secondary"
                 className="gap-1.5"
-                disabled={createPickupWO.isPending}
                 onClick={async () => {
                   if (!workOrderId) return;
-                  const result = await createPickupWO.mutateAsync(workOrderId);
-                  router.push(`/work-order/${result.workOrder.id}`);
+                  try {
+                    const response = await fetch(`/api/workorders/from-takeoff/${workOrder.takeoff_id}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ is_pickup: true, userEmail: user?.email || 'unknown@example.com' })
+                    });
+                    if (response.ok) {
+                      const result = await response.json();
+                      router.push(`/l/${workOrder.job_id}/work-orders/${result.workOrder.id}`);
+                    } else {
+                      const error = await response.json();
+                      toast.error(error.error || 'Failed to create pickup work order');
+                    }
+                  } catch (err) {
+                    toast.error('Failed to create pickup work order');
+                  }
                 }}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                {createPickupWO.isPending ? "Creating…" : "Create Pickup WO"}
+                Create Pickup WO
               </Button>
             )}
             {/* Link to existing Pickup WO */}
@@ -1076,10 +1170,27 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                     className="text-xs gap-1.5"
                     onClick={async () => {
                       try {
-                        await updateWO.mutateAsync({ workOrderId: workOrderId!, patch: { status: "completed" } });
+                        const response = await fetch(`/api/workorders/${workOrderId}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status: "completed" }),
+                        });
+
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || 'Failed to update status');
+                        }
+
                         toast.success("Marked as sent to billing");
-                        refetch();
-                      } catch {}
+                        // Refetch work order data
+                        const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
+                        if (workOrderResponse.ok) {
+                          const data = await workOrderResponse.json();
+                          setWorkOrder(data);
+                        }
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to send to billing');
+                      }
                     }}
                   >
                     <DollarSign className="h-3.5 w-3.5" /> Send to Billing
@@ -1619,17 +1730,33 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
             <Button
-              disabled={!scheduleDate || createDispatch.isPending}
+              disabled={!scheduleDate}
               onClick={async () => {
                 if (!workOrderId || !scheduleDate) return;
                 try {
-                  await createDispatch.mutateAsync({ workOrderId, scheduledDate: scheduleDate });
+                  const response = await fetch(`/api/workorders/${workOrderId}/dispatch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scheduledDate: scheduleDate }),
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to schedule dispatch');
+                  }
+
                   setShowScheduleDialog(false);
-                  refetch();
-                } catch {}
+                  // Refetch dispatch data
+                  const dispatchResponse = await fetch(`/api/workorders/${workOrderId}/dispatch`);
+                  if (dispatchResponse.ok) {
+                    const data = await dispatchResponse.json();
+                    setDispatch(data);
+                  }
+                } catch (err: any) {
+                  toast.error(err.message || 'Failed to schedule dispatch');
+                }
               }}
             >
-              {createDispatch.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Schedule
             </Button>
           </DialogFooter>
@@ -1752,10 +1879,21 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
               variant="destructive"
               onClick={async () => {
                 if (!workOrderId) return;
-                const result = await deleteWorkOrder(workOrderId);
-                if (result.success) {
+                try {
+                  const response = await fetch(`/api/workorders/${workOrderId}`, {
+                    method: 'DELETE',
+                  });
+
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete work order');
+                  }
+
+                  const result = await response.json();
                   toast.success("Work order deleted");
                   router.push(result.jobId ? `/l/${result.jobId}` : "/");
+                } catch (err: any) {
+                  toast.error(err.message || 'Failed to delete work order');
                 }
                 setShowDeleteDialog(false);
               }}
