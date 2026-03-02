@@ -37,24 +37,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
-    // Process sign rows → work order items (your logic looks solid)
-    const signRows = takeoff.sign_rows ?? []; // safer nullish coalescing
+    // Process sign rows → work order items
+    // sign_rows is now a proper JSON object: { "sectionName": MPTSignRow[] }
+    const signRowsData = takeoff.sign_rows || {};
     const workOrderItems: WorkOrderItem[] = [];
 
-    for (const row of signRows) {
-      const description = [
-        row.signDesignation || 'Custom Sign',
-        row.signDescription || '',
-        row.dimensionLabel ? `(${row.dimensionLabel})` : '',
-        row.signLegend ? `- ${row.signLegend}` : ''
-      ].filter(Boolean).join(' ').trim();
+    // Flatten all sign rows from all sections
+    for (const sectionName of Object.keys(signRowsData)) {
+      const sectionRows = signRowsData[sectionName] || [];
+      for (const row of sectionRows) {
+        const description = [
+          row.signDesignation || 'Custom Sign',
+          row.signDescription || '',
+          row.dimensionLabel ? `(${row.dimensionLabel})` : '',
+          row.signLegend ? `- ${row.signLegend}` : ''
+        ].filter(Boolean).join(' ').trim();
 
-      const quantity = row.quantity || 1;
-      const unit = row.sqft > 0 ? 'sqft' : 'each';
-      const unitPrice = row.sqft > 0 ? 5.00 : 50.00; // placeholder — consider pulling from config/DB later
-      const total = unit === 'sqft' ? (row.sqft * quantity * unitPrice) : (quantity * unitPrice);
+        const quantity = row.quantity || 1;
+        const unit = row.sqft > 0 ? 'sqft' : 'each';
+        const unitPrice = row.sqft > 0 ? 5.00 : 50.00; // placeholder — consider pulling from config/DB later
+        const total = unit === 'sqft' ? (row.sqft * quantity * unitPrice) : (quantity * unitPrice);
 
-      workOrderItems.push({ description, quantity, unit, unit_price: unitPrice, total });
+        workOrderItems.push({ description, quantity, unit, unit_price: unitPrice, total });
+      }
     }
 
     // Create the work order
