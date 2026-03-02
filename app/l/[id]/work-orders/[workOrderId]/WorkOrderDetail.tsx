@@ -1,5 +1,7 @@
+'use client';
+
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder } from "@/hooks/useWorkOrders";
 import { useCreateBuildRequest, useBuildRequestsByWorkOrder } from "@/hooks/useWorkOrders";
@@ -159,9 +161,8 @@ const AdminField = ({ label, value, mono }: { label: string; value: string; mono
   </div>
 );
 
-const WorkOrderDetail = () => {
-  const { workOrderId } = useParams<{ workOrderId: string }>();
-  const navigate = useNavigate();
+const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
+  const router = useRouter();
   const { isAdmin, isPM, canCreateTakeoffs } = usePermissions();
   const { data: workOrder, isLoading, refetch } = useWorkOrder(workOrderId);
   const updateWO = useUpdateWorkOrder();
@@ -691,7 +692,7 @@ const WorkOrderDetail = () => {
         <div className="text-center space-y-3">
           <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto" />
           <p className="text-sm text-muted-foreground">Work order not found</p>
-          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
             Go Back
           </Button>
         </div>
@@ -734,7 +735,7 @@ const WorkOrderDetail = () => {
                 Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={() => job ? navigate(`/l/${job.id}`) : navigate(-1)}>Back</Button>
+            <Button variant="outline" size="sm" onClick={() => job ? router.push(`/l/${job.id}`) : router.back()}>Back</Button>
             {canEdit && (
               <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -968,7 +969,7 @@ const WorkOrderDetail = () => {
                 onClick={async () => {
                   if (!workOrderId) return;
                   const result = await createPickupWO.mutateAsync(workOrderId);
-                  navigate(`/work-order/${result.workOrder.id}`);
+                  router.push(`/work-order/${result.workOrder.id}`);
                 }}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -977,7 +978,7 @@ const WorkOrderDetail = () => {
             )}
             {/* Link to existing Pickup WO */}
             {pickupWO && (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate(`/work-order/${pickupWO.id}`)}>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/work-order/${pickupWO.id}`)}>
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
               </Button>
             )}
@@ -992,7 +993,7 @@ const WorkOrderDetail = () => {
               <span><strong>Takeoff Required.</strong> This work order cannot proceed beyond draft until a takeoff is attached.</span>
             </div>
             {canCreateTakeoffs && job && (
-              <Button size="sm" className="text-xs gap-1.5 shrink-0" onClick={() => navigate(`/l/${job.id}/takeoffs/create`)}>
+              <Button size="sm" className="text-xs gap-1.5 shrink-0" onClick={() => router.push(`/l/${job.id}/takeoffs/create`)}>
                 <Plus className="h-3.5 w-3.5" /> Create Takeoff
               </Button>
             )}
@@ -1174,7 +1175,7 @@ const WorkOrderDetail = () => {
                   </Button>
                 )}
                 {dispatch && (
-                  <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => navigate(`/dispatch/${dispatch.id}`)}>
+                  <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => router.push(`/dispatch/${dispatch.id}`)}>
                     <Truck className="h-3.5 w-3.5" /> View Dispatch
                   </Button>
                 )}
@@ -1209,7 +1210,7 @@ const WorkOrderDetail = () => {
               <Badge variant="secondary" className="text-[10px] ml-1">{takeoffs.length}</Badge>
             </div>
             {canCreateTakeoffs && job && (
-              <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => navigate(`/l/${job.id}/takeoffs/create`)}>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${job.id}/takeoffs/create`)}>
                 <Plus className="h-3 w-3" /> New Takeoff
               </Button>
             )}
@@ -1250,7 +1251,7 @@ const WorkOrderDetail = () => {
                           <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => navigate(`/l/${job?.id}/takeoff/${t.id}`)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push(`/l/${job?.id}/takeoff/${t.id}`)}>
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </TableCell>
@@ -1624,7 +1625,7 @@ const WorkOrderDetail = () => {
               Cancel
             </Button>
             {blockingModalType === "takeoff" && canCreateTakeoffs && job && (
-              <Button className="gap-1.5" onClick={() => { setBlockingModalOpen(false); setPendingStatusTransition(null); navigate(`/l/${job.id}/takeoffs/create`); }}>
+              <Button className="gap-1.5" onClick={() => { setBlockingModalOpen(false); setPendingStatusTransition(null); router.push(`/l/${job.id}/takeoffs/create`); }}>
                 <Plus className="h-3.5 w-3.5" /> Create Takeoff
               </Button>
             )}
@@ -1813,7 +1814,7 @@ const WorkOrderDetail = () => {
                 const result = await deleteWorkOrder(workOrderId);
                 if (result.success) {
                   toast.success("Work order deleted");
-                  navigate(result.jobId ? `/l/${result.jobId}` : "/");
+                  router.push(result.jobId ? `/l/${result.jobId}` : "/");
                 }
                 setShowDeleteDialog(false);
               }}
