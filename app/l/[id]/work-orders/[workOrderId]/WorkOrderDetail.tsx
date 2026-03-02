@@ -258,7 +258,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
       const takeoffList: TakeoffSummary[] = [];
       if (takeoffRes.data) {
         const takeoffIds = takeoffRes.data.map((t: any) => t.id);
-        let itemCounts = new Map<string, number>();
+        const itemCounts = new Map<string, number>();
         if (takeoffIds.length > 0) {
           const { data: items } = await supabase
             .from("takeoff_items")
