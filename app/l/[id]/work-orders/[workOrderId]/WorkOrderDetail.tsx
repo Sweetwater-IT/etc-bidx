@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { useDispatchByWorkOrder, useCreateDispatch } from "@/hooks/useWorkOrders";
 import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -727,11 +726,17 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                   try {
                     const takeoffId = workOrder.takeoff_id;
                     if (!takeoffId) return;
-                    const [tRes, tiRes] = await Promise.all([
-                      supabase.from("takeoffs").select("*").eq("id", takeoffId).single(),
-                      supabase.from("takeoff_items").select("*").eq("takeoff_id", takeoffId).order("created_at"),
-                    ]);
-                    if (!tRes.data) { toast.error("Takeoff not found"); return; }
+                    const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+                    if (!response.ok) {
+                      const error = await response.json();
+                      toast.error(error.error || "Failed to fetch takeoff data");
+                      return;
+                    }
+                    const data = await response.json();
+                    if (!data.takeoff) {
+                      toast.error("Takeoff not found");
+                      return;
+                    }
                     const { generateTakeoffPdf } = await import("@/utils/generateTakeoffPdf");
                     generateTakeoffPdf(takeoffId);
                   } catch (err) {
@@ -789,11 +794,17 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                     if (!woBytes) { toast.error("Failed to generate work order PDF"); return; }
 
                     // Fetch takeoff data and generate takeoff PDF as bytes
-                    const [tRes, tiRes] = await Promise.all([
-                      supabase.from("takeoffs").select("*").eq("id", takeoffId).single(),
-                      supabase.from("takeoff_items").select("*").eq("takeoff_id", takeoffId).order("created_at"),
-                    ]);
-                    if (!tRes.data) { toast.error("Takeoff not found"); return; }
+                    const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+                    if (!response.ok) {
+                      const error = await response.json();
+                      toast.error(error.error || "Failed to fetch takeoff data");
+                      return;
+                    }
+                    const data = await response.json();
+                    if (!data.takeoff) {
+                      toast.error("Takeoff not found");
+                      return;
+                    }
 
                     const { generateTakeoffPdf } = await import("@/utils/generateTakeoffPdf");
                     const takeoffBytes = await generateTakeoffPdf(takeoffId);
