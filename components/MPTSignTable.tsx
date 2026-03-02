@@ -90,9 +90,9 @@ interface MPTSignTableProps {
 const SHEETING_OPTIONS = ["HI", "ENG", "FL", "DG", "EG"];
 const B_LIGHT_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: 'yellow', label: 'Yellow' },
-  { value: 'red', label: 'Red' },
-  { value: 'white', label: 'White' },
+  { value: '1y', label: '1 Yellow' },
+  { value: '1r', label: '1 Red' },
+  { value: '1w', label: '1 White' },
 ];
 
 // Sortable table row component
