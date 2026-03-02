@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
+import { Plus, Trash2, Search, Settings, GripVertical, Check, Save, FileOutput, Loader2 } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import {
   Popover,
@@ -172,6 +172,12 @@ export const MPTSignTable = ({
   disabled = false,
   defaultMaterial,
 }: MPTSignTableProps) => {
+  // Save/Generate state
+  const [savedTakeoffId, setSavedTakeoffId] = useState<string | null>(null);
+  const [linkedWO, setLinkedWO] = useState<{ id: string; woNumber: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [generatingWO, setGeneratingWO] = useState(false);
+
   // Sign selection state
   const [signs, setSigns] = useState<SignDesignation[]>([]);
   const [signsLoading, setSignsLoading] = useState(false);
@@ -324,6 +330,40 @@ export const MPTSignTable = ({
 
   const removeRow = (id: string) => {
     onRowsChange(rows.filter(row => row.id !== id));
+  };
+
+  // Save draft functionality
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    try {
+      // Simulate saving - in real implementation this would call an API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const newTakeoffId = crypto.randomUUID();
+      setSavedTakeoffId(newTakeoffId);
+      console.log('Draft saved with ID:', newTakeoffId);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Generate work order functionality
+  const handleGenerateWorkOrder = async () => {
+    if (!savedTakeoffId) return;
+
+    setGeneratingWO(true);
+    try {
+      // Simulate generating work order - in real implementation this would call an API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const woNumber = `WO-${Date.now().toString().slice(-6)}`;
+      setLinkedWO({ id: crypto.randomUUID(), woNumber });
+      console.log('Work order generated:', woNumber);
+    } catch (error) {
+      console.error('Error generating work order:', error);
+    } finally {
+      setGeneratingWO(false);
+    }
   };
 
   const renderCell = (row: MPTSignRow, column: { key: string; label: string; width: string }) => {
@@ -562,6 +602,33 @@ export const MPTSignTable = ({
               <Plus className="h-3 w-3" />
               Add Sign
             </Button>
+            <Button
+              size="sm"
+              className="gap-1.5 h-7 text-xs"
+              onClick={handleSaveDraft}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              {saving ? "Saving…" : "Save Draft"}
+            </Button>
+            {savedTakeoffId && !linkedWO && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-1.5 h-7 text-xs"
+                onClick={handleGenerateWorkOrder}
+                disabled={generatingWO}
+              >
+                {generatingWO ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileOutput className="h-3 w-3" />}
+                {generatingWO ? "Generating…" : "Generate Work Order"}
+              </Button>
+            )}
+            {linkedWO && (
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded text-xs font-mono text-green-700">
+                <Check className="h-3 w-3" />
+                {linkedWO.woNumber}
+              </div>
+            )}
           </div>
         )}
       </div>
