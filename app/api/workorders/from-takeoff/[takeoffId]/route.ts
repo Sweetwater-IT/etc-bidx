@@ -12,6 +12,17 @@ interface WorkOrderItem {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get current authenticated user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Extract takeoffId from the URL path (bypasses params Promise entirely)
     const url = new URL(request.url);
     const segments = url.pathname.split('/').filter(Boolean); // remove empty parts
@@ -40,9 +51,18 @@ export async function POST(request: NextRequest) {
     // Process sign rows → work order items
     // sign_rows is now a proper JSON object: { "sectionName": MPTSignRow[] }
     const signRowsData = takeoff.sign_rows || {};
-    const workOrderItems: WorkOrderItem[] = [];
+    const workOrderItems: Array<{
+      work_order_id: string | null;
+      item_number: number;
+      description: string;
+      contract_quantity: number;
+      work_order_quantity: number;
+      uom: string;
+      sort_order: number;
+    }> = [];
 
     // Flatten all sign rows from all sections
+    let itemNumber = 1;
     for (const sectionName of Object.keys(signRowsData)) {
       const sectionRows = signRowsData[sectionName] || [];
       for (const row of sectionRows) {
@@ -54,24 +74,29 @@ export async function POST(request: NextRequest) {
         ].filter(Boolean).join(' ').trim();
 
         const quantity = row.quantity || 1;
-        const unit = row.sqft > 0 ? 'sqft' : 'each';
-        const unitPrice = row.sqft > 0 ? 5.00 : 50.00; // placeholder — consider pulling from config/DB later
-        const total = unit === 'sqft' ? (row.sqft * quantity * unitPrice) : (quantity * unitPrice);
+        const uom = row.sqft > 0 ? 'sqft' : 'each';
 
-        workOrderItems.push({ description, quantity, unit, unit_price: unitPrice, total });
+        workOrderItems.push({
+          work_order_id: null, // will be set after work order creation
+          item_number: itemNumber++,
+          description,
+          contract_quantity: quantity,
+          work_order_quantity: quantity,
+          uom,
+          sort_order: itemNumber - 1,
+        });
       }
     }
 
-    // Create the work order
+    // Create the work order header
     const { data: workOrder, error: insertError } = await supabase
       .from('work_orders_l')
       .insert({
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
         title: takeoff.title,
-        work_type: takeoff.work_type,
-        items: workOrderItems,
-        status: 'pending'
+        created_by: user.id,
+        status: 'draft'
       })
       .select()
       .single();
@@ -81,12 +106,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create work order', details: insertError }, { status: 500 });
     }
 
+    // Create work order items
+    if (workOrderItems.length > 0) {
+      const itemsWithWorkOrderId = workOrderItems.map(item => ({
+        ...item,
+        work_order_id: workOrder.id
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('work_order_items_l')
+        .insert(itemsWithWorkOrderId);
+
+      if (itemsError) {
+        console.error('Work order items insert error:', itemsError);
+        // Don't fail the whole request, but log the error
+      }
+    }
+
     return NextResponse.json({
       success: true,
       workOrder: {
         id: workOrder.id,
         title: workOrder.title,
-        items: workOrderItems // or just return workOrder if items are stored
+        itemCount: workOrderItems.length
       }
     });
   } catch (error) {
