@@ -1,26 +1,29 @@
-"use client";
+import { Suspense } from "react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import CreateTakeoffPageContent from "./CreateTakeoffPageContent";
 
-import { useParams, useRouter } from "next/navigation";
-import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
+export default async function CreateTakeoffPage({ params }: any) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
 
-export default function CreateTakeoffPage() {
-  const params = useParams();
-  const router = useRouter();
-  const jobId = params ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
-
-  if (!jobId) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">Invalid job ID</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleBack = () => {
-    router.push(`/l/${jobId}`);
-  };
-
-  return <CreateTakeoffForm jobId={jobId} onBack={handleBack} />;
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <Suspense fallback={null}>
+          <CreateTakeoffPageContent jobId={id} />
+        </Suspense>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }
