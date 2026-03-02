@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Save, Download, Send, ArrowLeft } from "lucide-react";
 
 interface Props {
   jobId: string;
@@ -103,9 +103,44 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
   return (
     <div className="space-y-6">
+      {/* Page Header - Salesforce Style */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">New Material Takeoff</h1>
-        <Button variant="outline" onClick={onBack}>Back</Button>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Plus className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground leading-tight">
+              New Material Takeoff
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Second iteration of the workflow · 102026001
+            </p>
+          </div>
+          {workType && (
+            <span className="ml-2 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700">
+              {WORK_TYPES.find(wt => wt.value === workType)?.label || workType}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          <Button variant="outline" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+            Back
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <Save className="h-3.5 w-3.5" />
+            Save Draft
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <Download className="h-3.5 w-3.5" />
+            Download PDF
+          </Button>
+          <Button size="sm" variant="secondary" className="gap-1.5">
+            <Send className="h-3.5 w-3.5" />
+            Send to Build Shop
+          </Button>
+        </div>
       </div>
 
       {/* Project Info */}
@@ -390,12 +425,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onBack}>Cancel</Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Takeoff"}
-        </Button>
-      </div>
+
     </div>
   );
 };
