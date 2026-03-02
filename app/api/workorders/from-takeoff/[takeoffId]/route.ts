@@ -12,15 +12,10 @@ interface WorkOrderItem {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get current authenticated user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { userEmail } = await request.json();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userEmail) {
+      return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
     }
 
     // Extract takeoffId from the URL path (bypasses params Promise entirely)
@@ -95,7 +90,7 @@ export async function POST(request: NextRequest) {
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
         title: takeoff.title,
-        created_by: user.id,
+        created_by: userEmail,
         status: 'draft'
       })
       .select()

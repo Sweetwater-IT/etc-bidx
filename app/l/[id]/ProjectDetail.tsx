@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/auth-context";
 
 import {
   Sheet,
@@ -78,6 +79,7 @@ const ProjectDetail = () => {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const router = useRouter();
+  const { user } = useAuth();
   const [dbJob, setDbJob] = useState<JobFromDB | null>(null);
   const [jobLoading, setJobLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
@@ -529,7 +531,7 @@ const ProjectDetail = () => {
             </TabsContent>
 
             <TabsContent value="takeoffs" className="m-0 p-6">
-              <TakeoffsList jobId={id || ""} />
+              <TakeoffsList jobId={id || ""} userEmail={user?.email} />
             </TabsContent>
 
             <TabsContent value="customer-admin" className="m-0 p-6">
@@ -734,7 +736,7 @@ interface TakeoffSummary {
   work_order_number: string | null;
 }
 
-const TakeoffsList = ({ jobId }: { jobId: string }) => {
+const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string }) => {
   const router = useRouter();
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -835,7 +837,15 @@ const TakeoffsList = ({ jobId }: { jobId: string }) => {
                       className="h-7 px-2 text-xs"
                       onClick={async () => {
                         try {
-                          const response = await fetch(`/api/workorders/from-takeoff/${takeoff.id}`, { method: 'POST' });
+                          const response = await fetch(`/api/workorders/from-takeoff/${takeoff.id}`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              userEmail: userEmail || 'unknown@example.com'
+                            })
+                          });
                           if (response.ok) {
                             toast.success('Work order generated!');
                             // Refresh list
