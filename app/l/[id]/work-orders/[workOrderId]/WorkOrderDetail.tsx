@@ -1252,7 +1252,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             </div>
           ) : woItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              No line items yet. Click "Add Line Item" to begin.
+              No line items yet. Click Add Line Item to begin.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1708,7 +1708,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
               <AlertTriangle className="h-5 w-5 text-amber-500" /> Change Order Required
             </DialogTitle>
             <DialogDescription>
-              This item ({pendingCustomItem?.itemNumber}) is not in the contract's Schedule of Values.
+              This item ({pendingCustomItem?.itemNumber}) is not in the contract Schedule of Values.
               By adding it, you are confirming that a change order has been submitted or will be submitted for this additional work.
             </DialogDescription>
           </DialogHeader>
