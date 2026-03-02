@@ -92,7 +92,7 @@ export const MPTSignConfiguration = ({
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Default Material:</span>
             <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
-              {SIGN_MATERIALS.map((m) => (
+              {SIGN_MATERIALS.filter(m => m.value === "PLASTIC" || m.value === "ALUMINUM").map((m) => (
                 <button
                   key={m.value}
                   onClick={() => onDefaultMaterialChange(m.value)}
