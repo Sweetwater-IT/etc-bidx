@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ClipboardList, Save, Download, Send, ArrowLeft } from "lucide-react";
+import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
+import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 
 interface Props {
   jobId: string;
@@ -42,6 +44,36 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const [buildShopNotes, setBuildShopNotes] = useState("");
   const [pmNotes, setPmNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // MPT Configuration State
+  const [activeSections, setActiveSections] = useState<string[]>([]);
+  const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
+  const [defaultSignMaterial, setDefaultSignMaterial] = useState<SignMaterial>(DEFAULT_SIGN_MATERIAL);
+
+  // MPT Configuration Handlers
+  const handleToggleSection = (key: string) => {
+    if (activeSections.includes(key)) {
+      setActiveSections((prev) => prev.filter((s) => s !== key));
+    } else {
+      setActiveSections((prev) => [...prev, key]);
+      if (!signRows[key]) {
+        setSignRows((prev) => ({ ...prev, [key]: [] }));
+      }
+    }
+  };
+
+  const handleSignRowsChange = (sectionKey: string, rows: MPTSignRow[]) => {
+    setSignRows((prev) => ({ ...prev, [sectionKey]: rows }));
+  };
+
+  const handleApplyMaterialToAll = () => {
+    const newSignRows = { ...signRows };
+    for (const key of Object.keys(newSignRows)) {
+      newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultSignMaterial }));
+    }
+    setSignRows(newSignRows);
+    toast.success(`All signs set to ${defaultSignMaterial}`);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -294,7 +326,19 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
             </h2>
           </div>
           <div className="p-5">
-            {(workType === "MPT" || workType === "PERMANENT_SIGNS") && (
+            {workType === "MPT" && (
+              <MPTSignConfiguration
+                activeSections={activeSections}
+                signRows={signRows}
+                defaultSignMaterial={defaultSignMaterial}
+                onToggleSection={handleToggleSection}
+                onSignRowsChange={handleSignRowsChange}
+                onDefaultMaterialChange={setDefaultSignMaterial}
+                onApplyMaterialToAll={handleApplyMaterialToAll}
+              />
+            )}
+
+            {workType === "PERMANENT_SIGNS" && (
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
                   <p>Select signs from the MUTCD database or choose from pre-configured kits.</p>
