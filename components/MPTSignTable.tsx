@@ -291,10 +291,9 @@ export const MPTSignTable = ({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Section Header with Action Buttons */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">{sectionTitle}</h3>
+    <div className="rounded-lg border bg-card shadow-sm">
+      <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{sectionTitle}</h2>
         {!disabled && (
           <div className="flex gap-2">
             <Button
@@ -318,58 +317,57 @@ export const MPTSignTable = ({
           </div>
         )}
       </div>
-
-      {/* Table */}
-      {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <Search className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground font-medium">No signs added yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Click Add Sign or Custom Sign to start building your {sectionTitle.toLowerCase()} takeoff.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/30">
-                <tr>
-                  {columns.map(column => (
-                    <th key={column.key} className={`px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r last:border-r-0 ${column.width}`}>
-                      {column.label}
-                    </th>
-                  ))}
-                  {!disabled && <th className="px-2 py-2 w-12"></th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {rows.map(row => (
-                  <tr key={row.id} className="hover:bg-muted/20">
-                    {columns.map(column => (
-                      <td key={column.key} className="px-2 py-1 border-r last:border-r-0">
-                        {renderCell(row, column)}
-                      </td>
-                    ))}
-                    {!disabled && (
-                      <td className="px-2 py-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => removeRow(row.id)}
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="p-5">
+        {rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <Search className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground font-medium">No signs added yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Click Add Sign or Custom Sign to start building your {sectionTitle.toLowerCase()} takeoff.
+            </p>
           </div>
-        </div>
-      )}
-
+        ) : (
+          <div className="rounded-lg border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/30">
+                  <tr>
+                    {columns.map(column => (
+                      <th key={column.key} className={`px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r last:border-r-0 ${column.width}`}>
+                        {column.label}
+                      </th>
+                    ))}
+                    {!disabled && <th className="px-2 py-2 w-12"></th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {rows.map(row => (
+                    <tr key={row.id} className="hover:bg-muted/20">
+                      {columns.map(column => (
+                        <td key={column.key} className="px-2 py-1 border-r last:border-r-0">
+                          {renderCell(row, column)}
+                        </td>
+                      ))}
+                      {!disabled && (
+                        <td className="px-2 py-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeRow(row.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
