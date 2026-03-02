@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -528,12 +531,7 @@ const ProjectDetail = () => {
             </TabsContent>
 
             <TabsContent value="takeoffs" className="m-0 p-6">
-              <TabPlaceholder
-                icon={ClipboardList}
-                title="Takeoffs"
-                description="Material takeoffs and quantity calculations for this project."
-                columns={["Material", "Quantity", "Unit", "Unit Price", "Total"]}
-              />
+              <TakeoffsList jobId={id || ""} />
             </TabsContent>
 
             <TabsContent value="customer-admin" className="m-0 p-6">
@@ -725,6 +723,149 @@ const TabBtn = ({
     {label}
   </TabsTrigger>
 );
+
+interface TakeoffSummary {
+  id: string;
+  title: string;
+  work_type: string;
+  status: string;
+  created_at: string;
+  install_date: string | null;
+  pickup_date: string | null;
+  needed_by_date: string | null;
+  work_order_number: string | null;
+}
+
+const TakeoffsList = ({ jobId }: { jobId: string }) => {
+  const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTakeoffs = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/takeoffs`);
+        if (response.ok) {
+          const data = await response.json();
+          setTakeoffs(data);
+        }
+      } catch (error) {
+        console.error('Error fetching takeoffs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (jobId) {
+      fetchTakeoffs();
+    }
+  }, [jobId]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin mr-2" />Loading takeoffs...</div>;
+  }
+
+  if (takeoffs.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ClipboardList className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+        <p className="text-lg font-medium text-muted-foreground mb-2">No takeoffs yet</p>
+        <p className="text-sm text-muted-foreground mb-6">Create your first takeoff to get started.</p>
+        <Button onClick={() => router.push(`/l/${jobId}/takeoffs/create`)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Create Takeoff
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <ClipboardList className="h-5 w-5" />
+          Takeoffs ({takeoffs.length})
+        </h3>
+        <Button variant="outline" size="sm" onClick={() => router.push(`/l/${jobId}/takeoffs/create`)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Takeoff
+        </Button>
+      </div>
+      <div className="rounded-lg border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Work Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Install</TableHead>
+              <TableHead>Pickup</TableHead>
+              <TableHead>WO #</TableHead>
+              <TableHead className="w-[160px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {takeoffs.map((takeoff) => (
+              <TableRow key={takeoff.id}>
+                <TableCell className="font-medium">{takeoff.title}</TableCell>
+                <TableCell className="capitalize">{takeoff.work_type}</TableCell>
+                <TableCell>
+                  <Badge variant={takeoff.status === 'draft' ? 'secondary' : 'default'}>
+                    {takeoff.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm">{new Date(takeoff.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{takeoff.install_date ? new Date(takeoff.install_date).toLocaleDateString() : '—'}</TableCell>
+                <TableCell>{takeoff.pickup_date ? new Date(takeoff.pickup_date).toLocaleDateString() : '—'}</TableCell>
+                <TableCell className="font-mono">{takeoff.work_order_number || '—'}</TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      asChild
+                    >
+                      <a href={`/api/takeoffs/${takeoff.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                        PDF
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/workorders/from-takeoff/${takeoff.id}`, { method: 'POST' });
+                          if (response.ok) {
+                            toast.success('Work order generated!');
+                            // Refresh list
+                            const refresh = await fetch(`/api/l/jobs/${jobId}/takeoffs`);
+                            if (refresh.ok) {
+                              const data = await refresh.json();
+                              setTakeoffs(data);
+                            }
+                          } else {
+                            const err = await response.json();
+                            toast.error(err.error || 'Failed to generate WO');
+                          }
+                        } catch (error) {
+                          toast.error('Error generating WO');
+                        }
+                      }}
+                    >
+                      Gen WO
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
 
 /* ─── Tab Placeholder ─── */
 const TabPlaceholder = ({
