@@ -12,11 +12,11 @@ interface WorkOrderItem {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ takeoffId: string }> }
+  context: { params: Promise<{ takeoffId: string }> }
 ) {
   try {
-    const resolvedParams = await params;
-    const { takeoffId } = resolvedParams;
+    const params = await context.params;
+    const { takeoffId } = params;
 
     // Fetch the takeoff data
     const { data: takeoff, error: takeoffError } = await supabase
