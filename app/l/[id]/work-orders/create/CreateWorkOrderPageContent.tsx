@@ -73,7 +73,7 @@ export default function CreateWorkOrderPageContent({ jobId }: { jobId: string })
   const searchParams = useSearchParams();
 
   // Support both route param and query param for takeoffId
-  const takeoffId = params.takeoffId || searchParams.get("takeoffId");
+  const takeoffId = params?.takeoffId || searchParams?.get("takeoffId");
 
   const [takeoff, setTakeoff] = useState<TakeoffData | null>(null);
   const [job, setJob] = useState<JobData | null>(null);

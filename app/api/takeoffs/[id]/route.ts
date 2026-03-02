@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Fetch job (optional – continue even if fails)
-    let job = null;
+    let job: any = null;
     if (takeoff.job_id) {
       const { data, error: jobError } = await supabase
         .from('jobs_l')
@@ -44,7 +44,7 @@ export async function GET(
         .eq('id', takeoff.job_id)
         .single();
 
-      if (!jobError) {
+      if (!jobError && data) {
         job = data;
       } else {
         console.error('Job fetch error:', jobError);
