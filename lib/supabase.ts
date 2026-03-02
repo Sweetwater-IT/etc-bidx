@@ -8,13 +8,18 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const createSupabaseClient = () => {
   if (!supabaseUrl || !supabaseKey) {
     // Return a mock client for build time
+    const mockQueryBuilder = {
+      select: () => mockQueryBuilder,
+      insert: () => mockQueryBuilder,
+      update: () => mockQueryBuilder,
+      delete: () => mockQueryBuilder,
+      eq: () => mockQueryBuilder,
+      maybeSingle: <T = any>() => ({ data: null, error: null }),
+      single: <T = any>() => ({ data: null, error: null }),
+    };
+
     return {
-      from: () => ({
-        select: () => ({ eq: () => ({ single: () => ({ data: null, error: null }) }) }),
-        insert: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) }),
-        update: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) }) }),
-        delete: () => ({ eq: () => ({ data: null, error: null }) }),
-      }),
+      from: () => mockQueryBuilder,
       rpc: () => ({ data: null, error: null }),
       auth: {
         getUser: () => ({ data: { user: null }, error: null }),
