@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 
 interface Props {
   jobId: string;
@@ -37,6 +38,9 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const [neededByDate, setNeededByDate] = useState("");
   const [priority, setPriority] = useState("standard");
   const [notes, setNotes] = useState("");
+  const [crewNotes, setCrewNotes] = useState("");
+  const [buildShopNotes, setBuildShopNotes] = useState("");
+  const [pmNotes, setPmNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -71,6 +75,9 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           neededByDate,
           priority,
           notes,
+          crewNotes,
+          buildShopNotes,
+          pmNotes,
         }),
       });
 
@@ -327,6 +334,61 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           </div>
         </div>
       )}
+
+      {/* Additional Items */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
+          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
+            <Plus className="h-3 w-3" /> Add Item
+          </Button>
+        </div>
+        <div className="p-5">
+          <div className="text-center text-xs text-muted-foreground">No additional items.</div>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</h2>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Crew Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={crewNotes}
+              onChange={(e) => setCrewNotes(e.target.value)}
+              placeholder="Notes for the road crew…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Visible to road crew on dispatches</span>
+          </div>
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Build Shop Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={buildShopNotes}
+              onChange={(e) => setBuildShopNotes(e.target.value)}
+              placeholder="Internal notes for the build shop…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Sent with the build request submission</span>
+          </div>
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={pmNotes}
+              onChange={(e) => setPmNotes(e.target.value)}
+              placeholder="Personal notes (PM only)…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Private notes for your reference only</span>
+          </div>
+        </div>
+      </div>
 
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={onBack}>Cancel</Button>
