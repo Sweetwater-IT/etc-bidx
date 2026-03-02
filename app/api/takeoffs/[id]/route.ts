@@ -3,11 +3,10 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }   // ← correct: context object with params
 ) {
   try {
-    const takeoffId = params.id;
-
+    const takeoffId = context.params.id;  // ← access via context.params.id
     if (!takeoffId) {
       return NextResponse.json(
         { error: 'Takeoff ID is required' },
@@ -38,7 +37,7 @@ export async function GET(
 
     if (jobError) {
       console.error('Error fetching job:', jobError);
-      // Don't fail if job fetch fails, just return null for job
+      // Don't fail if job fetch fails
     }
 
     return NextResponse.json({
