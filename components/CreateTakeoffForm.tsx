@@ -110,6 +110,10 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           crewNotes,
           buildShopNotes,
           pmNotes,
+          // Include MPT sign data
+          activeSections,
+          signRows,
+          defaultSignMaterial,
         }),
       });
 
@@ -119,8 +123,8 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
         throw new Error(data.error || 'Failed to create takeoff');
       }
 
-      toast.success(`Takeoff "${title}" created successfully`);
-      router.push(`/l/${jobId}`);
+      toast.success(`Takeoff "${title}" saved successfully`);
+      // Don't navigate away - stay on the page for further editing
     } catch (error) {
       console.error("Error saving takeoff:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
@@ -160,9 +164,9 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Back
           </Button>
-          <Button size="sm" variant="outline" className="gap-1.5">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSave} disabled={saving}>
             <Save className="h-3.5 w-3.5" />
-            Save Draft
+            {saving ? "Saving…" : "Save Draft"}
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5">
             <Download className="h-3.5 w-3.5" />
