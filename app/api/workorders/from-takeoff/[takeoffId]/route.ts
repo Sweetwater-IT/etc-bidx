@@ -10,15 +10,22 @@ interface WorkOrderItem {
   total: number;
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ takeoffId: string }> }
-) {
+export async function POST(request: NextRequest) {
   try {
-    const params = await context.params;
-    const { takeoffId } = params;
+    // Extract takeoffId from the URL path (bypasses params Promise entirely)
+    const url = new URL(request.url);
+    const segments = url.pathname.split('/').filter(Boolean); // remove empty parts
+    // Route is /api/workorders/from-takeoff/{takeoffId}
+    // So segments: ['api', 'workorders', 'from-takeoff', '{takeoffId}']
+    const takeoffId = segments[segments.length - 1]; // last segment = takeoffId
 
-    // Fetch the takeoff data
+    if (!takeoffId || takeoffId === 'from-takeoff') {
+      return NextResponse.json({ error: 'Missing or invalid takeoffId' }, { status: 400 });
+    }
+
+    console.log('Extracted takeoffId:', takeoffId); // ← add for debugging
+
+    // Fetch the takeoff
     const { data: takeoff, error: takeoffError } = await supabase
       .from('takeoffs_l')
       .select('*')
@@ -27,33 +34,30 @@ export async function POST(
 
     if (takeoffError || !takeoff) {
       console.error('Takeoff fetch error:', takeoffError);
-      return NextResponse.json(
-        { error: 'Takeoff not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
-    // Process sign rows into work order items
-    const signRows = takeoff.sign_rows || [];
+    // Process sign rows → work order items (your logic looks solid)
+    const signRows = takeoff.sign_rows ?? []; // safer nullish coalescing
     const workOrderItems: WorkOrderItem[] = [];
 
     for (const row of signRows) {
-      const description = `${row.signDesignation || 'Custom Sign'} - ${row.signDescription || ''} ${row.dimensionLabel ? `(${row.dimensionLabel})` : ''} ${row.signLegend ? `- ${row.signLegend}` : ''}`.trim();
+      const description = [
+        row.signDesignation || 'Custom Sign',
+        row.signDescription || '',
+        row.dimensionLabel ? `(${row.dimensionLabel})` : '',
+        row.signLegend ? `- ${row.signLegend}` : ''
+      ].filter(Boolean).join(' ').trim();
+
       const quantity = row.quantity || 1;
       const unit = row.sqft > 0 ? 'sqft' : 'each';
-      const unitPrice = row.sqft > 0 ? 5.00 : 50.00; // Default pricing - can be adjusted
+      const unitPrice = row.sqft > 0 ? 5.00 : 50.00; // placeholder — consider pulling from config/DB later
       const total = unit === 'sqft' ? (row.sqft * quantity * unitPrice) : (quantity * unitPrice);
 
-      workOrderItems.push({
-        description,
-        quantity,
-        unit,
-        unit_price: unitPrice,
-        total
-      });
+      workOrderItems.push({ description, quantity, unit, unit_price: unitPrice, total });
     }
 
-    // Create work order
+    // Create the work order
     const { data: workOrder, error: insertError } = await supabase
       .from('work_orders')
       .insert({
@@ -69,10 +73,7 @@ export async function POST(
 
     if (insertError || !workOrder) {
       console.error('Work order insert error:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to create work order' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to create work order', details: insertError }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -80,14 +81,11 @@ export async function POST(
       workOrder: {
         id: workOrder.id,
         title: workOrder.title,
-        items: workOrderItems
+        items: workOrderItems // or just return workOrder if items are stored
       }
     });
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Unexpected error in work order generation:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
