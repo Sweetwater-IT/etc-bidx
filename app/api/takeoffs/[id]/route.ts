@@ -7,8 +7,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    console.log('API: Fetching takeoff with ID:', id);
 
     if (!id) {
+      console.log('API: No takeoff ID provided');
       return NextResponse.json({ error: 'Takeoff ID is required' }, { status: 400 });
     }
 
@@ -40,13 +42,20 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Error fetching takeoff:', error);
+      console.error('API: Error fetching takeoff:', error);
+      console.error('API: Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
+    console.log('API: Successfully fetched takeoff:', data);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('API: Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

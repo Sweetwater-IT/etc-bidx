@@ -40,12 +40,20 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
+        console.log('Loading takeoff with ID:', takeoffId);
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
+        console.log('API response status:', response.status);
+        console.log('API response ok:', response.ok);
+
         if (!response.ok) {
-          throw new Error('Failed to load takeoff');
+          const errorText = await response.text();
+          console.log('API error response:', errorText);
+          throw new Error(`Failed to load takeoff: ${response.status} ${errorText}`);
         }
+
         const data = await response.json();
-        setTakeoff(data.takeoff);
+        console.log('API response data:', data);
+        setTakeoff(data);
       } catch (error) {
         console.error('Error loading takeoff:', error);
         toast.error('Failed to load takeoff');
