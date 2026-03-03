@@ -1281,7 +1281,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               <Badge variant="secondary" className="text-[10px] ml-1">{takeoffs.length}</Badge>
             </div>
             <div className="flex items-center gap-2">
-              {canCreateTakeoffs && dbJob && (
+              {canCreateTakeoffs && dbJob && takeoffs.length === 0 && (
                 <>
                   <Button
                     variant="outline"
@@ -2069,10 +2069,10 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                             }
                           } else {
                             // For existing work orders, link the takeoff via API
-                            const response = await fetch(`/api/workorders/${workOrderId}/takeoffs`, {
-                              method: 'POST',
+                            const response = await fetch(`/api/workorders/${workOrderId}`, {
+                              method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ takeoffId: takeoff.id }),
+                              body: JSON.stringify({ takeoff_id: takeoff.id }),
                             });
 
                             if (!response.ok) {
