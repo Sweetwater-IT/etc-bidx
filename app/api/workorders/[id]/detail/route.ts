@@ -79,7 +79,7 @@ export async function GET(
       takeoffId ? supabase.from("takeoffs_l").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
 
       // Work order items
-      supabase.from("work_order_items").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
+      supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
 
       // SOV items for picklist — try dedicated table first, fall back to JSONB column
       supabase.from("sov_items").select("id, item_number, description, quantity, uom").eq("job_id", jobId).order("sort_order", { ascending: true }),
