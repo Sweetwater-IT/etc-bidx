@@ -81,62 +81,35 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   };
 
   const handleCreateWorkOrder = async () => {
-    if (!title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    if (!workType) {
-      toast.error("Work Type is required");
-      return;
-    }
-    if (!dbJob) {
-      toast.error("This contract has not been saved to the database yet. Please create it via the Contract Wizard first.");
+    if (!savedTakeoffId) {
+      toast.error("Please save the takeoff first before generating a work order");
       return;
     }
 
     setSaving(true);
     try {
-      // First save the takeoff if it hasn't been saved yet
-      const saveResponse = await fetch('/api/takeoffs/create', {
+      // Create work order from the saved takeoff
+      const woResponse = await fetch(`/api/workorders/from-takeoff/${savedTakeoffId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          jobId,
-          title,
-          workType,
-          workOrderNumber,
-          contractedOrAdditional,
-          installDate,
-          pickupDate,
-          neededByDate,
-          priority,
-          notes,
-          crewNotes,
-          buildShopNotes,
-          pmNotes,
-          activeSections,
-          signRows,
-          defaultSignMaterial,
-        }),
+          userEmail: user?.email || 'unknown@example.com'
+        })
       });
 
-      const saveData = await saveResponse.json();
-
-      if (!saveResponse.ok) {
-        throw new Error(saveData.error || 'Failed to save takeoff');
+      if (woResponse.ok) {
+        const result = await woResponse.json();
+        toast.success('Work order generated successfully!');
+        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}`);
+      } else {
+        const err = await woResponse.json();
+        toast.error(err.error || 'Failed to generate work order');
       }
-
-      const takeoffId = saveData.takeoff.id;
-
-      // Navigate to work order detail page with takeoff ID as query parameter
-      // The work order will be created when the user clicks "Save" on the work order detail page
-      toast.success(`Takeoff "${title}" saved. Navigate to work order detail page.`);
-      router.push(`/l/${jobId}/work-orders/new?takeoffId=${takeoffId}`);
     } catch (error) {
-      console.error("Error saving takeoff:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
+      console.error("Error generating work order:", error);
+      toast.error("Failed to generate work order");
     } finally {
       setSaving(false);
     }
