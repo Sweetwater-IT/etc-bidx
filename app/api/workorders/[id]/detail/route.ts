@@ -70,13 +70,44 @@ export async function GET(
     const isPickup = workOrder.is_pickup;
     const takeoffId = workOrder.takeoff_id;
 
+    // Helper function to fetch takeoff with retry logic
+    const fetchTakeoffWithRetry = async (takeoffId: string, maxRetries = 5) => {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const { data: takeoff, error } = await supabase
+            .from("takeoffs_l")
+            .select("id, title, status, work_type, install_date, pickup_date")
+            .eq("id", takeoffId)
+            .single();
+
+          if (takeoff && !error) {
+            return { data: [takeoff], error: null };
+          }
+
+          // If takeoff not found and this isn't the last attempt, wait and retry
+          if (attempt < maxRetries - 1) {
+            console.log(`Takeoff ${takeoffId} not found on attempt ${attempt + 1}, retrying in ${500 * (attempt + 1)}ms...`);
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+          } else {
+            console.error(`Takeoff ${takeoffId} not found after ${maxRetries} attempts`);
+          }
+        } catch (err) {
+          console.error(`Error fetching takeoff ${takeoffId} on attempt ${attempt + 1}:`, err);
+          if (attempt < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+          }
+        }
+      }
+      return { data: null, error: { message: 'Takeoff not found after retries' } };
+    };
+
     // Fetch all related data in parallel
     const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
-      // Takeoffs linked to this work order (by takeoff_id)
-      takeoffId ? supabase.from("takeoffs_l").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
+      // Takeoffs linked to this work order (by takeoff_id) - with retry logic
+      takeoffId ? fetchTakeoffWithRetry(takeoffId) : Promise.resolve({ data: null }),
 
       // Work order items
       supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
