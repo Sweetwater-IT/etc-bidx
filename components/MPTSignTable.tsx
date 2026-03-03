@@ -5,19 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -38,6 +25,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
+import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
+import { PrimarySign } from "@/types/MPTEquipment";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -178,6 +167,25 @@ export const MPTSignTable = ({
   // Sign selection state
   const [signs, setSigns] = useState<SignDesignation[]>([]);
   const [signsLoading, setSignsLoading] = useState(false);
+
+  // DesignationSearcher state
+  const [designationSearcherSign, setDesignationSearcherSign] = useState<PrimarySign>({
+    id: '',
+    designation: '',
+    width: 0,
+    height: 0,
+    quantity: 1,
+    sheeting: 'HI',
+    associatedStructure: 'Loose' as any,
+    displayStructure: 'Loose' as any,
+    bLights: 'none' as any,
+    cover: false,
+    isCustom: false,
+    bLightsColor: 'Yellow' as any,
+    description: '',
+    substrate: 'Aluminum' as any,
+    stiffener: false as any,
+  });
 
   // Fetch signs from database
   useEffect(() => {
@@ -329,81 +337,48 @@ export const MPTSignTable = ({
     onRowsChange(rows.filter(row => row.id !== id));
   };
 
+  // Handle designation selection from DesignationSearcher
+  const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
+    // Find the row that triggered the designation search (we'll need to track this)
+    // For now, we'll update based on the current designationSearcherSign state
+    const currentRowId = designationSearcherSign.id;
+    if (currentRowId) {
+      updateRow(currentRowId, {
+        signDesignation: updatedSign.designation,
+        signDescription: updatedSign.description || '',
+        width: updatedSign.width,
+        height: updatedSign.height,
+        dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}x${updatedSign.height}` : '',
+        sheeting: updatedSign.sheeting as any,
+        sqft: (updatedSign.width * updatedSign.height) / 144, // Convert to square feet
+        quantity: updatedSign.quantity,
+        cover: updatedSign.cover,
+        // Map bLights from the searcher format to our format
+        bLights: !updatedSign.bLights || updatedSign.bLights === 'none' ? 'none' :
+                (updatedSign.bLightsColor === 'Yellow' ? 'yellow' :
+                 updatedSign.bLightsColor === 'Red' ? 'red' : 'white'),
+      });
+    }
+  };
+
   const renderCell = (row: MPTSignRow, column: { key: string; label: string; width: string }) => {
     switch (column.key) {
       case 'designation':
         return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="h-8 w-full justify-start text-left font-normal text-xs"
-                disabled={disabled}
-              >
-                <span className="truncate">
-                  {row.signDesignation || 'Select designation...'}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search signs..." className="h-9" />
-                <CommandList>
-                  <CommandEmpty>No signs found.</CommandEmpty>
-                  <CommandGroup>
-                    {signs.map((sign) => (
-                      <CommandItem
-                        key={sign.id}
-                        value={sign.designation}
-                        onSelect={() => {
-                          updateRow(row.id, {
-                            signDesignation: sign.designation,
-                            signDescription: sign.description,
-                            sheeting: sign.sheeting,
-                          });
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="w-8 h-8 rounded border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {sign.image_url ? (
-                            <img
-                              src={sign.image_url}
-                              alt={sign.designation}
-                              className="w-full h-full object-contain p-1"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const fallback = document.createElement('div');
-                                  fallback.className = 'w-full h-full flex items-center justify-center text-muted-foreground text-xs';
-                                  fallback.textContent = sign.designation.substring(0, 2).toUpperCase();
-                                  parent.appendChild(fallback);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span className="text-muted-foreground text-xs font-medium">
-                              {sign.designation.substring(0, 2).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{sign.designation}</div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {sign.description || '-'}
-                          </div>
-                        </div>
-                        {row.signDesignation === sign.designation && (
-                          <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <DesignationSearcher
+            localSign={{
+              designation: row.signDesignation,
+              width: row.width,
+              height: row.height,
+              sheeting: row.sheeting,
+              description: row.signDescription,
+            }}
+            setLocalSign={(sign) => {
+              // Set the current row ID for the designation searcher
+              setDesignationSearcherSign(prev => ({ ...prev, id: row.id }));
+            }}
+            onDesignationSelected={handleDesignationSelected}
+          />
         );
       case 'legend':
         return (

@@ -67,8 +67,8 @@ export const MPTSignConfiguration = ({
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm">
-      <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+    <div className="rounded-lg border bg-card shadow-sm max-h-[600px] flex flex-col">
+      <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">MPT Sign Configuration</h2>
         {!disabled && (
           <div className="flex items-center gap-3">
@@ -99,8 +99,8 @@ export const MPTSignConfiguration = ({
           </div>
         )}
       </div>
-      <div className="flex">
-        <div className="w-[200px] shrink-0 border-r p-4">
+      <div className="flex flex-1 min-h-0">
+        <div className="w-[200px] shrink-0 border-r p-4 overflow-y-auto">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Structure Types</h4>
           <div className="space-y-2">
             {MPT_SECTIONS.map((section) => {
@@ -124,7 +124,7 @@ export const MPTSignConfiguration = ({
             })}
           </div>
         </div>
-        <div className="flex-1 min-w-0 p-4">
+        <div className="flex-1 min-w-0 p-4 overflow-y-auto">
           {activeSections.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
               <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
