@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { ClipboardList, Save, Download, Send, ArrowLeft } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
-import { generateTakeoffPdf } from "@/utils/generateTakeoffPdf";
 
 interface Props {
   jobId: string;
@@ -151,10 +150,12 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
     setGeneratingPdf(true);
     try {
-      const pdfBytes = await generateTakeoffPdf(savedTakeoffId);
+      const response = await fetch(`/api/takeoffs/${savedTakeoffId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
 
-      // Create a blob and download it
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

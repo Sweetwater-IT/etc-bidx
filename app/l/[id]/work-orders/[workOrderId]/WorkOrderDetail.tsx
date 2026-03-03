@@ -2150,6 +2150,69 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                               }];
                             });
 
+                            // After successfully linking the takeoff, populate work order items
+                            const takeoffDataResponse = await fetch(`/api/takeoffs/${takeoff.id}/data`);
+                            if (takeoffDataResponse.ok) {
+                              const takeoffData = await takeoffDataResponse.json();
+                              if (takeoffData.takeoff?.sign_rows) {
+                                const signRowsData = takeoffData.takeoff.sign_rows || {};
+                                const workOrderItems: WOItem[] = [];
+
+                                // Flatten all sign rows from all sections
+                                let itemNumber = 1;
+                                for (const sectionName of Object.keys(signRowsData)) {
+                                  const sectionRows = signRowsData[sectionName] || [];
+                                  for (const row of sectionRows) {
+                                    const description = [
+                                      row.signDesignation || 'Custom Sign',
+                                      row.signDescription || '',
+                                      row.dimensionLabel ? `(${row.dimensionLabel})` : '',
+                                      row.signLegend ? `- ${row.signLegend}` : ''
+                                    ].filter(Boolean).join(' ').trim();
+
+                                    const quantity = row.quantity || 1;
+                                    const uom = row.sqft > 0 ? 'sqft' : 'each';
+
+                                    workOrderItems.push({
+                                      id: `temp-${Date.now()}-${itemNumber}`,
+                                      item_number: itemNumber.toString(),
+                                      description,
+                                      contract_quantity: quantity,
+                                      work_order_quantity: quantity,
+                                      uom,
+                                      sort_order: itemNumber - 1,
+                                    });
+                                    itemNumber++;
+                                  }
+                                }
+
+                                // Only populate if we have items and work order currently has no items
+                                if (workOrderItems.length > 0 && woItems.length === 0) {
+                                  // Create the work order items via API
+                                  for (const item of workOrderItems) {
+                                    await fetch(`/api/workorders/${workOrderId}/items`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        action: 'create',
+                                        itemData: {
+                                          item_number: item.item_number,
+                                          description: item.description,
+                                          contract_quantity: item.contract_quantity,
+                                          work_order_quantity: item.work_order_quantity,
+                                          uom: item.uom,
+                                          sort_order: item.sort_order,
+                                        },
+                                      }),
+                                    });
+                                  }
+
+                                  // Update local state
+                                  setWoItems(workOrderItems);
+                                }
+                              }
+                            }
+
                             toast.success(`Takeoff "${takeoff.title}" linked successfully`);
                             setShowLinkTakeoffModal(false);
 
