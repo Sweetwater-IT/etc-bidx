@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ClipboardList, Save, Download, Send, ArrowLeft } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
+import { generateTakeoffPdf } from "@/utils/generateTakeoffPdf";
 
 interface Props {
   jobId: string;
@@ -47,6 +48,8 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const [pmNotes, setPmNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [takeoffSaved, setTakeoffSaved] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [savedTakeoffId, setSavedTakeoffId] = useState<string | null>(null);
 
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
@@ -140,6 +143,36 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!savedTakeoffId) {
+      toast.error("Please save the takeoff first before downloading PDF");
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const pdfBytes = await generateTakeoffPdf(savedTakeoffId);
+
+      // Create a blob and download it
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `takeoff-${title || 'untitled'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Title is required");
@@ -190,6 +223,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
       toast.success(`Takeoff "${title}" saved successfully`);
       setTakeoffSaved(true);
+      setSavedTakeoffId(data.takeoff.id);
       // Don't navigate away - stay on the page for further editing
     } catch (error) {
       console.error("Error saving takeoff:", error);
@@ -234,9 +268,9 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
             <Save className="h-3.5 w-3.5" />
             {saving ? "Saving…" : "Save Draft"}
           </Button>
-          <Button size="sm" variant="outline" className="gap-1.5">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
             <Download className="h-3.5 w-3.5" />
-            Download PDF
+            {generatingPdf ? "Generating…" : "Download PDF"}
           </Button>
           <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving || !takeoffSaved}>
             <ClipboardList className="h-3.5 w-3.5" />
