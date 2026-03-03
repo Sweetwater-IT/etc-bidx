@@ -8,7 +8,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     .from('takeoffs_l')
     .select(`
       *,
-      jobs_l:job_id (
+      jobs_l!takeoffs_l_job_id_fkey (
         id,
         project_name,
         customer_name,
@@ -99,7 +99,7 @@ export async function getBillingPacketData(workOrderId: string) {
     .from('work_orders')
     .select(`
       *,
-      jobs_l:job_id (
+      jobs_l!work_orders_job_id_fkey (
         id,
         project_name,
         customer_name,
