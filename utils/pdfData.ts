@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
 
 export async function getTakeoffPdfData(takeoffId: string) {
+  console.log('getTakeoffPdfData: Called with takeoffId:', takeoffId);
+
   // Fetch takeoff with job and customer data
   const { data: takeoff, error: takeoffError } = await supabase
     .from('takeoffs_l')
@@ -22,7 +24,12 @@ export async function getTakeoffPdfData(takeoffId: string) {
     .eq('id', takeoffId)
     .single();
 
+  console.log('getTakeoffPdfData: Supabase query result - error:', takeoffError);
+  console.log('getTakeoffPdfData: Supabase query result - data exists:', !!takeoff);
+  console.log('getTakeoffPdfData: takeoff data:', takeoff);
+
   if (takeoffError || !takeoff) {
+    console.log('getTakeoffPdfData: Throwing error - takeoffError:', takeoffError, 'takeoff:', takeoff);
     throw new Error('Takeoff not found');
   }
 

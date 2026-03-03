@@ -8,9 +8,12 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    console.log('PDF Route: Received takeoff ID:', id);
 
     // Fetch structured takeoff data
+    console.log('PDF Route: Calling getTakeoffPdfData with ID:', id);
     const takeoffData = await getTakeoffPdfData(id);
+    console.log('PDF Route: getTakeoffPdfData returned:', takeoffData ? 'data' : 'null/undefined');
 
     // Generate PDF
     const pdfBytes = await generateTakeoffPdf(takeoffData);
