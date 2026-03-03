@@ -973,7 +973,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           </div>
         </div>
 
-        {/* Takeoff Required Alert */}
+        {/* Takeoff Required Alert - only show if no takeoff is linked */}
         {!hasTakeoff && !loadingRelated && (
           <div className="rounded-lg border px-4 py-3 flex items-center justify-between text-sm bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20">
             <div className="flex items-center gap-3">
@@ -982,7 +982,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             </div>
             {canCreateTakeoffs && dbJob && (
               <Button size="sm" className="text-xs gap-1.5 shrink-0" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
-                <Plus className="h-3.5 w-3.5" /> Create Takeoff
+                <Plus className="h-3.5 w-3.5" /> Create or Attach Takeoff
               </Button>
             )}
           </div>

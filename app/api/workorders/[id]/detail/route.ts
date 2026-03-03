@@ -55,10 +55,10 @@ export async function GET(
       return NextResponse.json({ error: 'Work order ID is required' }, { status: 400 });
     }
 
-    // Get work order to get job_id
+    // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, is_pickup')
+      .select('job_id, is_pickup, takeoff_id')
       .eq('id', id)
       .single();
 
@@ -68,14 +68,15 @@ export async function GET(
 
     const jobId = workOrder.job_id;
     const isPickup = workOrder.is_pickup;
+    const takeoffId = workOrder.takeoff_id;
 
     // Fetch all related data in parallel
     const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
-      // Takeoffs linked to this work order
-      supabase.from("takeoffs").select("id, title, status, work_type, install_date, pickup_date").eq("work_order_id", id).order("created_at", { ascending: true }),
+      // Takeoffs linked to this work order (by takeoff_id)
+      takeoffId ? supabase.from("takeoffs").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
 
       // Work order items
       supabase.from("work_order_items").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
