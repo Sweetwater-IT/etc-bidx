@@ -886,7 +886,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete the takeoff "{takeoffToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete the takeoff {takeoffToDelete?.title}? This action cannot be undone.
             </p>
           </div>
           <div className="flex justify-end gap-2">
