@@ -234,6 +234,11 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
   const [showChangeOrderConfirm, setShowChangeOrderConfirm] = useState(false);
   const [pendingCustomItem, setPendingCustomItem] = useState<{ rowId: string; itemNumber: string; description: string; uom: string; qty: number } | null>(null);
 
+  // Link Takeoff modal state
+  const [showLinkTakeoffModal, setShowLinkTakeoffModal] = useState(false);
+  const [availableTakeoffs, setAvailableTakeoffs] = useState<TakeoffSummary[]>([]);
+  const [loadingTakeoffs, setLoadingTakeoffs] = useState(false);
+
   const hasTakeoff = takeoffs.length > 0;
   const hasWoItems = woItems.length > 0;
 
@@ -1275,11 +1280,37 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               </h2>
               <Badge variant="secondary" className="text-[10px] ml-1">{takeoffs.length}</Badge>
             </div>
-            {canCreateTakeoffs && dbJob && (
-              <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
-                <Plus className="h-3 w-3" /> New Takeoff
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {canCreateTakeoffs && dbJob && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs gap-1.5 h-7"
+                    onClick={() => {
+                      setLoadingTakeoffs(true);
+                      setShowLinkTakeoffModal(true);
+                      // Fetch available takeoffs for this job
+                      fetch(`/api/l/jobs/${dbJob.id}/takeoffs`)
+                        .then(res => res.json())
+                        .then(data => {
+                          setAvailableTakeoffs(data);
+                        })
+                        .catch(err => {
+                          console.error('Failed to fetch takeoffs:', err);
+                          toast.error('Failed to load takeoffs');
+                        })
+                        .finally(() => setLoadingTakeoffs(false));
+                    }}
+                  >
+                    <Package className="h-3 w-3" /> Link Takeoff
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
+                    <Plus className="h-3 w-3" /> New Takeoff
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
           <div className="p-5">
             {loadingRelated ? (
@@ -1966,6 +1997,121 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Delete Work Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Takeoff Modal */}
+      <Dialog open={showLinkTakeoffModal} onOpenChange={setShowLinkTakeoffModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Link Takeoff to Work Order
+            </DialogTitle>
+            <DialogDescription>
+              Select a takeoff to link to this work order. This will add the takeoff to the linked list and populate work order items with items from the takeoff.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {loadingTakeoffs ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+                Loading takeoffs...
+              </div>
+            ) : availableTakeoffs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No takeoffs available for this job.</p>
+                <p className="text-sm mt-1">Create a takeoff first to link it to this work order.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {availableTakeoffs.map((takeoff) => {
+                  const isAlreadyLinked = takeoffs.some(t => t.id === takeoff.id);
+                  const ts = TAKEOFF_STATUSES[takeoff.status] || { label: takeoff.status, color: "bg-muted text-muted-foreground" };
+                  return (
+                    <div
+                      key={takeoff.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors",
+                        isAlreadyLinked && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={async () => {
+                        if (isAlreadyLinked) return;
+
+                        try {
+                          // For new work orders, we need to handle this differently
+                          if (isNewWorkOrder) {
+                            // For new work orders, we just add the takeoff to the list and populate items
+                            // This will be handled when the work order is created
+                            setTakeoffs(prev => [...prev, takeoff]);
+                            toast.success(`Takeoff "${takeoff.title}" linked successfully`);
+                            setShowLinkTakeoffModal(false);
+
+                            // Fetch takeoff items and add them to work order items
+                            const response = await fetch(`/api/takeoffs/${takeoff.id}/data`);
+                            if (response.ok) {
+                              const data = await response.json();
+                              if (data.takeoff?.items) {
+                                const newItems = data.takeoff.items.map((item: any, index: number) => ({
+                                  id: `temp-${Date.now()}-${index}`,
+                                  item_number: item.item_number || "",
+                                  description: item.description || "",
+                                  contract_quantity: item.quantity || 1,
+                                  work_order_quantity: item.quantity || 1,
+                                  uom: item.uom || "EA",
+                                  sort_order: woItems.length + index,
+                                }));
+                                setWoItems(prev => [...prev, ...newItems]);
+                              }
+                            }
+                          } else {
+                            // For existing work orders, link the takeoff via API
+                            const response = await fetch(`/api/workorders/${workOrderId}/takeoffs`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ takeoffId: takeoff.id }),
+                            });
+
+                            if (!response.ok) {
+                              const error = await response.json();
+                              throw new Error(error.error || 'Failed to link takeoff');
+                            }
+
+                            toast.success(`Takeoff "${takeoff.title}" linked successfully`);
+                            setShowLinkTakeoffModal(false);
+                            fetchRelated(); // Refresh the data
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to link takeoff');
+                        }
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{takeoff.title}</span>
+                          <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Type: {takeoff.work_type}</span>
+                          <span>Items: {takeoff.item_count}</span>
+                          {takeoff.install_date && <span>Install: {new Date(takeoff.install_date).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                      {isAlreadyLinked && (
+                        <span className="text-xs text-muted-foreground">Already linked</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLinkTakeoffModal(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
