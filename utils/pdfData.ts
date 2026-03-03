@@ -6,7 +6,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     .from('takeoffs_l')
     .select(`
       *,
-      jobs:job_id (
+      jobs_l:job_id (
         id,
         project_name,
         customer_name,
@@ -29,7 +29,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     throw new Error('Takeoff not found');
   }
 
-  const job = takeoff.jobs;
+  const job = takeoff.jobs_l;
 
   // Transform sign_rows into items array
   const items: any[] = [];
@@ -95,7 +95,7 @@ export async function getBillingPacketData(workOrderId: string) {
     .from('work_orders')
     .select(`
       *,
-      jobs:job_id (
+      jobs_l:job_id (
         id,
         project_name,
         customer_name,
@@ -117,7 +117,7 @@ export async function getBillingPacketData(workOrderId: string) {
     throw new Error('Work order not found');
   }
 
-  const job = workOrder.jobs;
+  const job = workOrder.jobs_l;
 
   // Get work order items
   const { data: woItems, error: itemsError } = await supabase
