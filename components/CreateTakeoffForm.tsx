@@ -30,6 +30,7 @@ const WORK_TYPES = [
 export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
+  const { user } = useAuth();
   const info = dbJob?.projectInfo;
 
   const [title, setTitle] = useState("");
@@ -134,6 +135,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          userEmail: user?.email,
           title: title,
           description: notes,
           contractedOrAdditional,
