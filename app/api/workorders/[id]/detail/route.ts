@@ -71,8 +71,8 @@ export async function GET(
 
     // Fetch all related data in parallel
     const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
-      // Job info
-      supabase.from("jobs_l").select("id, project_name, etc_job_number, etc_branch, customer_name, customer_job_number, customer_pm, project_owner, county, etc_project_manager, contract_number").eq("id", jobId).single(),
+      // Job info (fetch all fields like jobs API)
+      supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
       // Takeoffs linked to this work order
       supabase.from("takeoffs").select("id, title, status, work_type, install_date, pickup_date").eq("work_order_id", id).order("created_at", { ascending: true }),
@@ -90,10 +90,31 @@ export async function GET(
       !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),
     ]);
 
-    // Process job data
-    let job: JobInfo | null = null;
+    // Process job data (transform like jobs API)
+    let job = null;
     if (jobRes.data) {
-      job = jobRes.data as JobInfo;
+      const jobData = jobRes.data;
+      const projectInfo = {
+        projectName: jobData.project_name,
+        etcJobNumber: jobData.etc_job_number,
+        customerName: jobData.customer_name,
+        customerJobNumber: jobData.customer_job_number,
+        customerPM: jobData.customer_pm,
+        customerPMEmail: jobData.customer_pm_email,
+        customerPMPhone: jobData.customer_pm_phone,
+        projectOwner: jobData.project_owner,
+        contractNumber: jobData.contract_number,
+        county: jobData.county,
+        projectStartDate: jobData.project_start_date,
+        projectEndDate: jobData.project_end_date,
+        extensionDate: jobData.extension_date,
+        otherNotes: jobData.additional_notes,
+      };
+
+      job = {
+        projectInfo,
+        ...jobData,
+      };
     }
 
     // Process takeoff data with item counts
