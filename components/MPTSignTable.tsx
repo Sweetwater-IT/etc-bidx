@@ -26,7 +26,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
-import { PrimarySign } from "@/types/MPTEquipment";
+import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -169,23 +169,7 @@ export const MPTSignTable = ({
   const [signsLoading, setSignsLoading] = useState(false);
 
   // DesignationSearcher state
-  const [designationSearcherSign, setDesignationSearcherSign] = useState<PrimarySign>({
-    id: '',
-    designation: '',
-    width: 0,
-    height: 0,
-    quantity: 1,
-    sheeting: 'HI',
-    associatedStructure: 'Loose' as any,
-    displayStructure: 'Loose' as any,
-    bLights: 'none' as any,
-    cover: false,
-    isCustom: false,
-    bLightsColor: 'Yellow' as any,
-    description: '',
-    substrate: 'Aluminum' as any,
-    stiffener: false as any,
-  });
+  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
 
   // Fetch signs from database
   useEffect(() => {
@@ -340,10 +324,9 @@ export const MPTSignTable = ({
   // Handle designation selection from DesignationSearcher
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
     // Find the row that triggered the designation search (we'll need to track this)
-    // For now, we'll update based on the current designationSearcherSign state
-    const currentRowId = designationSearcherSign.id;
-    if (currentRowId) {
-      updateRow(currentRowId, {
+    // For now, we'll update based on the current localSign state
+    if (localSign) {
+      updateRow(localSign.id, {
         signDesignation: updatedSign.designation,
         signDescription: updatedSign.description || '',
         width: updatedSign.width,
@@ -358,6 +341,8 @@ export const MPTSignTable = ({
                 (updatedSign.bLightsColor === 'Yellow' ? 'yellow' :
                  updatedSign.bLightsColor === 'Red' ? 'red' : 'white'),
       });
+      // Reset localSign after selection
+      setLocalSign(undefined);
     }
   };
 
@@ -365,20 +350,44 @@ export const MPTSignTable = ({
     switch (column.key) {
       case 'designation':
         return (
-          <DesignationSearcher
-            localSign={{
-              designation: row.signDesignation,
-              width: row.width,
-              height: row.height,
-              sheeting: row.sheeting,
-              description: row.signDescription,
-            }}
-            setLocalSign={(sign) => {
-              // Set the current row ID for the designation searcher
-              setDesignationSearcherSign(prev => ({ ...prev, id: row.id }));
-            }}
-            onDesignationSelected={handleDesignationSelected}
-          />
+          <>
+            <Button
+              variant="outline"
+              className="h-8 w-full justify-start text-left font-normal text-xs"
+              onClick={() => {
+                // Create a proper PrimarySign object for the designation searcher
+                const primarySign: PrimarySign = {
+                  id: row.id,
+                  designation: row.signDesignation || '',
+                  width: row.width || 0,
+                  height: row.height || 0,
+                  quantity: row.quantity || 1,
+                  sheeting: row.sheeting as any,
+                  associatedStructure: 'none',
+                  displayStructure: 'LOOSE',
+                  bLights: 0,
+                  cover: row.cover || false,
+                  isCustom: row.isCustom || false,
+                  bLightsColor: undefined,
+                  description: row.signDescription || '',
+                  substrate: 'Plastic',
+                };
+                setLocalSign(primarySign);
+              }}
+              disabled={disabled}
+            >
+              <span className="truncate">
+                {row.signDesignation || 'Select designation...'}
+              </span>
+            </Button>
+            {localSign && localSign.id === row.id && (
+              <DesignationSearcher
+                localSign={localSign}
+                setLocalSign={setLocalSign}
+                onDesignationSelected={handleDesignationSelected}
+              />
+            )}
+          </>
         );
       case 'legend':
         return (
