@@ -2186,8 +2186,8 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                                   }
                                 }
 
-                                // Only populate if we have items and work order currently has no items
-                                if (workOrderItems.length > 0 && woItems.length === 0) {
+                                // Populate work order items from takeoff sign rows
+                                if (workOrderItems.length > 0) {
                                   // Create the work order items via API
                                   for (const item of workOrderItems) {
                                     await fetch(`/api/workorders/${workOrderId}/items`, {
