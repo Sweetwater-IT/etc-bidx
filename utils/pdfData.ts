@@ -16,10 +16,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
         county,
         etc_branch,
         etc_project_manager,
-        etc_job_number,
-        install_date,
-        pickup_date,
-        needed_by_date
+        etc_job_number
       )
     `)
     .eq('id', takeoffId)
@@ -68,9 +65,9 @@ export async function getTakeoffPdfData(takeoffId: string) {
     title: takeoff.title || '',
     workType: takeoff.work_type || '',
     status: takeoff.status || '',
-    installDate: job?.install_date || null,
-    pickupDate: job?.pickup_date || null,
-    neededByDate: job?.needed_by_date || null,
+    installDate: takeoff.install_date || null,
+    pickupDate: takeoff.pickup_date || null,
+    neededByDate: takeoff.needed_by_date || null,
     notes: takeoff.notes || null,
     workOrderNumber: takeoff.work_order_number || null,
     contractedOrAdditional: takeoff.contracted_or_additional || 'contracted',
@@ -105,9 +102,7 @@ export async function getBillingPacketData(workOrderId: string) {
         county,
         etc_branch,
         etc_project_manager,
-        etc_job_number,
-        install_date,
-        pickup_date
+        etc_job_number
       )
     `)
     .eq('id', workOrderId)
@@ -154,8 +149,8 @@ export async function getBillingPacketData(workOrderId: string) {
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
-    installDate: job?.install_date || '',
-    pickupDate: job?.pickup_date || '',
+    installDate: workOrder.install_date || '',
+    pickupDate: workOrder.pickup_date || '',
     items,
     crewNotes: workOrder.crew_notes || '',
     customerNotOnSite: workOrder.customer_not_on_site || false,
