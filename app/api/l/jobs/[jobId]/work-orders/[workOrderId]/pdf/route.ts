@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateWorkOrderPdf } from '@/utils/generateWorkOrderPdf';
+import { generateBillingPacketPdf } from '@/utils/generateBillingPacketPdf';
+import { getBillingPacketData } from '@/utils/pdfData';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ workOrderId: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { workOrderId } = await params;
 
-    const pdfBytes = await generateWorkOrderPdf(id);
+    // Fetch structured work order data
+    const woData = await getBillingPacketData(workOrderId);
+
+    // Generate PDF
+    const pdfBytes = await generateBillingPacketPdf(woData);
+
+    if (!pdfBytes) {
+      return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
+    }
 
     return new Response(pdfBytes, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=work-order-${id}.pdf`,
+        'Content-Disposition': `attachment; filename=billing-packet-${woData.woNumber || workOrderId}.pdf`,
       },
     });
   } catch (error) {
