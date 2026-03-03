@@ -4,19 +4,19 @@ import type { Job, JobFromDB, JobProjectInfo } from '@/types/job';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { jobId } = await params;
 
-    if (!id) {
+    if (!jobId) {
       return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
     }
 
     const { data, error } = await supabase
       .from('jobs_l')
       .select('*')
-      .eq('id', id)
+      .eq('id', jobId)
       .single();
 
     if (error) {
