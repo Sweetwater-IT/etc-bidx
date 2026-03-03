@@ -827,39 +827,65 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
           New Takeoff
         </Button>
       </div>
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Work Order</TableHead>
-              <TableHead>Work Type</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Need By</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-[60px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="rounded-md border overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-muted/30">
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Title
+              </th>
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Work Order
+              </th>
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Work Type
+              </th>
+              <th className="px-4 py-2.5 text-center font-semibold text-muted-foreground uppercase tracking-wider">
+                Items
+              </th>
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Need By
+              </th>
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
+                Created
+              </th>
+              <th className="px-4 py-2.5 text-center font-semibold text-muted-foreground uppercase tracking-wider w-[60px]">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
             {takeoffs.map((takeoff) => (
-              <TableRow
-                key={takeoff.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}
-              >
-                <TableCell className="font-medium">{takeoff.title}</TableCell>
-                <TableCell className="font-mono">{takeoff.work_order_number || '—'}</TableCell>
-                <TableCell className="capitalize">{takeoff.work_type}</TableCell>
-                <TableCell>{takeoff.items_count || '—'}</TableCell>
-                <TableCell>{takeoff.needed_by_date ? new Date(takeoff.needed_by_date).toLocaleDateString() : '—'}</TableCell>
-                <TableCell>
-                  <Badge variant={takeoff.status === 'draft' ? 'secondary' : 'default'}>
+              <tr key={takeoff.id} className="cursor-pointer hover:bg-muted/20" onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}>
+                <td className="px-4 py-2.5 font-medium">{takeoff.title}</td>
+                <td className="px-4 py-2.5 font-mono">{takeoff.work_order_number || '—'}</td>
+                <td className="px-4 py-2.5 capitalize">{takeoff.work_type}</td>
+                <td className="px-4 py-2.5 text-center">{takeoff.items_count || '—'}</td>
+                <td className="px-4 py-2.5">
+                  {takeoff.needed_by_date
+                    ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "—"}
+                </td>
+                <td className="px-4 py-2.5">
+                  <Badge variant="secondary" className="text-[10px]">
                     {takeoff.status}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-sm">{new Date(takeoff.created_at).toLocaleDateString()}</TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                </td>
+                <td className="px-4 py-2.5">
+                  {new Date(takeoff.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </td>
+                <td className="px-4 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -871,11 +897,11 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* Delete Confirmation Dialog */}
