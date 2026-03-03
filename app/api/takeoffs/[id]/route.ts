@@ -20,11 +20,21 @@ export async function GET(
         work_type,
         status,
         created_at,
+        updated_at,
         install_date,
         pickup_date,
         needed_by_date,
         work_order_number,
-        job_id
+        job_id,
+        contracted_or_additional,
+        priority,
+        notes,
+        crew_notes,
+        build_shop_notes,
+        pm_notes,
+        active_sections,
+        sign_rows,
+        default_sign_material
       `)
       .eq('id', id)
       .single();
