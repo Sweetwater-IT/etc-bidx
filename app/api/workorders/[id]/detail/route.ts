@@ -76,7 +76,7 @@ export async function GET(
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
       // Takeoffs linked to this work order (by takeoff_id)
-      takeoffId ? supabase.from("takeoffs").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
+      takeoffId ? supabase.from("takeoffs_l").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
 
       // Work order items
       supabase.from("work_order_items").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
