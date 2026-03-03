@@ -128,15 +128,34 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
   };
 
   if (loading || isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
+        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-sm text-muted-foreground">Loading takeoff...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!takeoff) {
-    return <div className="p-6">Takeoff not found</div>;
+    return (
+      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
+        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">Takeoff not found</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
+      <div className="w-full px-6 py-6 flex-1">
+        <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -349,6 +368,8 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
