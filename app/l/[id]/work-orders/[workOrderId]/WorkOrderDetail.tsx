@@ -366,7 +366,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
       setEditNotes(workOrder.notes || "");
       setEditScheduledDate(workOrder.scheduled_date || "");
       setEditAssignedTo(workOrder.assigned_to || "");
-      setEditContractedOrAdditional((workOrder as any).contracted_or_additional || "contracted");
+      setEditContractedOrAdditional(workOrder?.contracted_or_additional || "contracted");
       setEditCustomerPocPhone(workOrder.customer_poc_phone || "");
     }
   }, [workOrder]);
@@ -776,9 +776,9 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
     );
   }
 
-  const statusConfig = getStatusConfig(workOrder.status);
+  const statusConfig = getStatusConfig(workOrder?.status || "draft");
   const canEdit = isAdmin || isPM;
-  const isDraft = workOrder.status === "draft";
+  const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
@@ -791,17 +791,17 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground leading-tight">
-                {(workOrder as any).is_pickup ? "Pickup Work Order" : "Work Order"}
+                {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
-                {workOrder.wo_number && <span className="ml-2 font-semibold">· {workOrder.wo_number}</span>}
+                {workOrder?.wo_number && <span className="ml-2 font-semibold">· {workOrder.wo_number}</span>}
               </p>
             </div>
             <Badge className={`ml-2 text-[10px] font-bold ${statusConfig.color}`}>
               {statusConfig.label}
             </Badge>
-            {(workOrder as any).is_pickup && (
+            {(workOrder?.is_pickup) && (
               <Badge className="ml-1 text-[10px] font-bold bg-orange-500/15 text-orange-700">Pickup</Badge>
             )}
           </div>
@@ -869,7 +869,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 className="gap-1.5"
                 onClick={async () => {
                   try {
-                    const takeoffId = workOrder.takeoff_id;
+                    const takeoffId = workOrder?.takeoff_id;
                     if (!takeoffId) return;
                     const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
                     if (!response.ok) {
@@ -900,7 +900,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 className="gap-1.5"
                 onClick={async () => {
                   try {
-                    const takeoffId = workOrder.takeoff_id;
+                    const takeoffId = workOrder?.takeoff_id;
                     if (!takeoffId) return;
 
                     // Generate WO PDF as bytes
@@ -996,7 +996,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               </Button>
             )}
             {/* Create Pickup WO — only for MPT/Rental parent WOs */}
-            {canEdit && !(workOrder as any).is_pickup && hasTakeoff && !pickupWO && takeoffs.some(t => ["MPT", "RENTAL"].includes(t.work_type)) && (
+            {canEdit && !workOrder?.is_pickup && hasTakeoff && !pickupWO && takeoffs.some(t => ["MPT", "RENTAL"].includes(t.work_type)) && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -1011,7 +1011,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                     });
                     if (response.ok) {
                       const result = await response.json();
-                      router.push(`/l/${workOrder.job_id}/work-orders/${result.workOrder.id}`);
+                      router.push(`/l/${workOrder?.job_id}/work-orders/${result.workOrder.id}`);
                     } else {
                       const error = await response.json();
                       toast.error(error.error || 'Failed to create pickup work order');
@@ -1081,19 +1081,19 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {canEdit ? (
                   <Input className="h-9 text-sm" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Work order title" />
                 ) : (
-                  <span className="text-sm text-foreground">{workOrder.title || "—"}</span>
+                  <span className="text-sm text-foreground">{workOrder?.title || "—"}</span>
                 )}
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">WO Number</label>
                 <div className="h-9 flex items-center px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground font-mono">
-                  {workOrder.wo_number || "—"}
+                  {workOrder?.wo_number || "—"}
                 </div>
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Status</label>
                 {canEdit ? (
-                  <Select value={workOrder.status} onValueChange={handleStatusChange}>
+                  <Select value={workOrder?.status || "draft"} onValueChange={handleStatusChange}>
                     <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {WO_STATUSES.map((s) => (
@@ -1126,7 +1126,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {canEdit ? (
                   <Input className="h-9 text-sm" value={editAssignedTo} onChange={(e) => setEditAssignedTo(e.target.value)} placeholder="Name or team" />
                 ) : (
-                  <span className="text-sm text-foreground">{workOrder.assigned_to || "—"}</span>
+                  <span className="text-sm text-foreground">{workOrder?.assigned_to || "—"}</span>
                 )}
               </div>
               <div>
@@ -1134,12 +1134,12 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {canEdit ? (
                   <Input className="h-9 text-sm" value={editCustomerPocPhone} onChange={(e) => setEditCustomerPocPhone(e.target.value)} placeholder="(555) 123-4567" />
                 ) : (
-                  <span className="text-sm text-foreground">{workOrder.customer_poc_phone || "—"}</span>
+                  <span className="text-sm text-foreground">{workOrder?.customer_poc_phone || "—"}</span>
                 )}
               </div>
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</label>
-                {canEdit && !(workOrder as any).is_pickup ? (
+                {canEdit && !workOrder?.is_pickup ? (
                   <Input type="date" className="h-9 text-sm" value={editInstallDate} onChange={(e) => setEditInstallDate(e.target.value)} />
                 ) : (
                   <span className="text-sm text-foreground">{editInstallDate || "—"}</span>
@@ -1160,7 +1160,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {canEdit ? (
                   <Textarea rows={2} className="text-sm" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Describe the work that will be performed by the crew..." />
                 ) : (
-                  <span className="text-sm text-foreground">{workOrder.description || "—"}</span>
+                  <span className="text-sm text-foreground">{workOrder?.description || "—"}</span>
                 )}
               </div>
               <div>
@@ -1168,7 +1168,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {canEdit ? (
                   <Textarea rows={2} className="text-sm" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Internal notes..." />
                 ) : (
-                  <span className="text-sm text-muted-foreground">{workOrder.notes || "—"}</span>
+                  <span className="text-sm text-muted-foreground">{workOrder?.notes || "—"}</span>
                 )}
               </div>
             </div>
@@ -1201,9 +1201,9 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                {workOrder.status === "completed" ? <Truck className="h-3.5 w-3.5 text-emerald-600" /> : <Truck className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className={workOrder.status === "completed" ? "text-emerald-700" : "text-muted-foreground"}>
-                  {workOrder.status === "completed" ? "Complete" : "Not complete"}
+                {(workOrder?.status === "completed") ? <Truck className="h-3.5 w-3.5 text-emerald-600" /> : <Truck className="h-3.5 w-3.5 text-muted-foreground" />}
+                <span className={workOrder?.status === "completed" ? "text-emerald-700" : "text-muted-foreground"}>
+                  {workOrder?.status === "completed" ? "Complete" : "Not complete"}
                 </span>
               </div>
             </div>
@@ -1707,10 +1707,12 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
         </div>
 
         {/* Timestamps */}
-        <div className="flex items-center gap-6 text-xs text-muted-foreground px-1">
-          <span>Created: {new Date(workOrder.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-          <span>Updated: {new Date(workOrder.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-        </div>
+        {workOrder && (
+          <div className="flex items-center gap-6 text-xs text-muted-foreground px-1">
+            <span>Created: {new Date(workOrder.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+            <span>Updated: {new Date(workOrder.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+          </div>
+        )}
       </div>
 
       {/* ─── Dialogs ─── */}
