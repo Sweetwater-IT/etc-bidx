@@ -997,7 +997,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
               <AdminField label="Branch" value={dbJob?.etc_branch || "—"} />
               <AdminField label="ETC Project Manager" value={dbJob?.etc_project_manager || "—"} />
-              <AdminField label="ETC Job #" value={dbJob?.projectInfo?.etcJobNumber || "—"} mono />
+              <AdminField label="ETC Job #" value={String(dbJob?.projectInfo?.etcJobNumber || "—")} mono />
               <AdminField label="County" value={dbJob?.projectInfo?.county || "—"} />
               <AdminField label="Customer" value={dbJob?.projectInfo?.customerName || "—"} />
               <AdminField label="Customer PM / POC" value={dbJob?.projectInfo?.customerPM || "—"} />
@@ -1149,7 +1149,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             {/* Quick actions row */}
             {canEdit && (
               <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                {isDraft && !hasTakeoff && canCreateTakeoffs && job && null}
+                {isDraft && !hasTakeoff && canCreateTakeoffs && dbJob && null}
                 {workOrder.status === "ready" && (
                   <Button
                     size="sm"
@@ -1672,8 +1672,8 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
             <Button variant="outline" onClick={() => { setBlockingModalOpen(false); setPendingStatusTransition(null); }}>
               Cancel
             </Button>
-            {blockingModalType === "takeoff" && canCreateTakeoffs && job && (
-              <Button className="gap-1.5" onClick={() => { setBlockingModalOpen(false); setPendingStatusTransition(null); router.push(`/l/${job.id}/takeoffs/create`); }}>
+            {blockingModalType === "takeoff" && canCreateTakeoffs && dbJob && (
+              <Button className="gap-1.5" onClick={() => { setBlockingModalOpen(false); setPendingStatusTransition(null); router.push(`/l/${dbJob.id}/takeoffs/create`); }}>
                 <Plus className="h-3.5 w-3.5" /> Create Takeoff
               </Button>
             )}
