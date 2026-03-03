@@ -906,7 +906,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 className="gap-1.5"
                 onClick={async () => {
                   try {
-                    const takeoffId = workOrder?.takeoff_id;
+                    const takeoffId = takeoffs[0]?.id;
                     if (!takeoffId) return;
                     const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
                     if (!response.ok) {
@@ -920,7 +920,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                       return;
                     }
                     const { generateTakeoffPdf } = await import("@/utils/generateTakeoffPdf");
-                    generateTakeoffPdf(takeoffId);
+                    generateTakeoffPdf(data.takeoff);
                   } catch (err) {
                     toast.error("Failed to generate takeoff PDF");
                   }
