@@ -15,6 +15,7 @@ import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 interface Props {
   jobId: string;
   onBack: () => void;
+  draftTakeoff?: any;
 }
 
 const WORK_TYPES = [
@@ -27,7 +28,7 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
-export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
+export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const { user } = useAuth();
@@ -54,6 +55,28 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const [activeSections, setActiveSections] = useState<string[]>([]);
   const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
   const [defaultSignMaterial, setDefaultSignMaterial] = useState<SignMaterial>(DEFAULT_SIGN_MATERIAL);
+
+  // Load draft takeoff data when provided
+  useEffect(() => {
+    if (draftTakeoff) {
+      setTitle(draftTakeoff.title || "");
+      setWorkType(draftTakeoff.work_type || "");
+      setWorkOrderNumber(draftTakeoff.work_order_number || "");
+      setContractedOrAdditional(draftTakeoff.contracted_or_additional || "contracted");
+      setInstallDate(draftTakeoff.install_date || "");
+      setPickupDate(draftTakeoff.pickup_date || "");
+      setNeededByDate(draftTakeoff.needed_by_date || "");
+      setPriority(draftTakeoff.priority || "standard");
+      setNotes(draftTakeoff.notes || "");
+      setCrewNotes(draftTakeoff.crew_notes || "");
+      setBuildShopNotes(draftTakeoff.build_shop_notes || "");
+      setPmNotes(draftTakeoff.pm_notes || "");
+      setActiveSections(draftTakeoff.active_sections || []);
+      setSignRows(draftTakeoff.sign_rows || {});
+      setDefaultSignMaterial(draftTakeoff.default_sign_material || DEFAULT_SIGN_MATERIAL);
+      setSavedTakeoffId(draftTakeoff.id);
+    }
+  }, [draftTakeoff]);
 
   // MPT Configuration Handlers
   const handleToggleSection = (key: string) => {
@@ -186,6 +209,8 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
           activeSections,
           signRows,
           defaultSignMaterial,
+          // Include takeoffId for updates
+          takeoffId: savedTakeoffId,
         }),
       });
 

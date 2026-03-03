@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       activeSections,
       signRows,
       defaultSignMaterial,
+      takeoffId, // For updates
     } = await request.json();
 
     if (!jobId || !title || !workType) {
@@ -43,37 +44,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the takeoff
-    const { data: takeoff, error: takeoffError } = await supabase
-      .from('takeoffs_l')
-      .insert({
-        job_id: jobId,
-        title: title.trim(),
-        work_type: workType,
-        work_order_number: workOrderNumber || null,
-        contracted_or_additional: contractedOrAdditional || 'contracted',
-        install_date: installDate || null,
-        pickup_date: pickupDate || null,
-        needed_by_date: neededByDate || null,
-        priority: priority || 'standard',
-        notes: notes?.trim() || null,
-        crew_notes: crewNotes?.trim() || null,
-        build_shop_notes: buildShopNotes?.trim() || null,
-        pm_notes: pmNotes?.trim() || null,
-        active_sections: activeSections || [],
-        sign_rows: signRows || {},
-        default_sign_material: defaultSignMaterial || 'PLASTIC',
-        status: 'draft',
-      })
-      .select()
-      .single();
+    const takeoffData = {
+      job_id: jobId,
+      title: title.trim(),
+      work_type: workType,
+      work_order_number: workOrderNumber || null,
+      contracted_or_additional: contractedOrAdditional || 'contracted',
+      install_date: installDate || null,
+      pickup_date: pickupDate || null,
+      needed_by_date: neededByDate || null,
+      priority: priority || 'standard',
+      notes: notes?.trim() || null,
+      crew_notes: crewNotes?.trim() || null,
+      build_shop_notes: buildShopNotes?.trim() || null,
+      pm_notes: pmNotes?.trim() || null,
+      active_sections: activeSections || [],
+      sign_rows: signRows || {},
+      default_sign_material: defaultSignMaterial || 'PLASTIC',
+      status: 'draft',
+    };
 
-    if (takeoffError) {
-      console.error('Error creating takeoff:', takeoffError);
-      return NextResponse.json(
-        { error: 'Failed to create takeoff' },
-        { status: 500 }
-      );
+    let takeoff;
+
+    if (takeoffId) {
+      // Update existing takeoff
+      const { data: updatedTakeoff, error: updateError } = await supabase
+        .from('takeoffs_l')
+        .update(takeoffData)
+        .eq('id', takeoffId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating takeoff:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update takeoff' },
+          { status: 500 }
+        );
+      }
+
+      takeoff = updatedTakeoff;
+    } else {
+      // Create new takeoff
+      const { data: newTakeoff, error: createError } = await supabase
+        .from('takeoffs_l')
+        .insert(takeoffData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating takeoff:', createError);
+        return NextResponse.json(
+          { error: 'Failed to create takeoff' },
+          { status: 500 }
+        );
+      }
+
+      takeoff = newTakeoff;
     }
 
     return NextResponse.json({
@@ -82,7 +109,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error in takeoff creation:', error);
+    console.error('Unexpected error in takeoff creation/update:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
