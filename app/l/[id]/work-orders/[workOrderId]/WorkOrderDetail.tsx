@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
@@ -160,11 +161,13 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
   const [buildRequests, setBuildRequests] = useState<any[]>([]);
   const [dispatch, setDispatch] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [job, setJob] = useState<JobInfo | null>(null);
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
   const [woItems, setWoItems] = useState<WOItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [pickupWO, setPickupWO] = useState<{ id: string; wo_number: string | null; status: string } | null>(null);
+
+  // Get job data using the hook
+  const { data: dbJob, isLoading: jobLoading } = useJobFromDB(workOrder?.job_id);
 
   // Documents state
   const [documents, setDocuments] = useState<WODocument[]>([]);
@@ -310,7 +313,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
       }
       const data = await response.json();
 
-      setJob(data.job);
+      // Job data is now fetched via useJobFromDB hook
       setTakeoffs(data.takeoffs || []);
       setWoItems(data.woItems || []);
       setSovItems(data.sovItems || []);
@@ -526,15 +529,15 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
         etcAssignedTo: workOrder.assigned_to || "",
         contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
         customerPocPhone: workOrder.customer_poc_phone || "",
-        projectName: job?.project_name || "",
-        etcJobNumber: job?.etc_job_number || "",
-        customerName: job?.customer_name || "",
-        customerJobNumber: job?.customer_job_number || "",
-        customerPM: job?.customer_pm || "",
-        projectOwner: job?.project_owner || "",
-        county: job?.county || "",
-        etcBranch: job?.etc_branch || "",
-        etcProjectManager: job?.etc_project_manager || "",
+                      projectName: dbJob?.projectInfo?.projectName || "",
+                      etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
+                      customerName: dbJob?.projectInfo?.customerName || "",
+                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
+                      customerPM: dbJob?.projectInfo?.customerPM || "",
+                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                      county: dbJob?.projectInfo?.county || "",
+                      etcBranch: dbJob?.etc_branch || "",
+                      etcProjectManager: dbJob?.etc_project_manager || "",
         installDate: takeoffs[0]?.install_date || "",
         pickupDate: takeoffs[0]?.pickup_date || "",
         items: woItems.map(i => ({
@@ -730,7 +733,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                 {(workOrder as any).is_pickup ? "Pickup Work Order" : "Work Order"}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {job?.project_name || "Untitled Project"} · {job?.etc_job_number || "—"}
+                {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
                 {workOrder.wo_number && <span className="ml-2 font-semibold">· {workOrder.wo_number}</span>}
               </p>
             </div>
@@ -747,7 +750,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                 Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={() => job ? router.push(`/l/${job.id}`) : router.back()}>Back</Button>
+            <Button variant="outline" size="sm" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
             {canEdit && (
               <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -769,15 +772,15 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                     etcAssignedTo: workOrder.assigned_to || "",
                     contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
                     customerPocPhone: workOrder.customer_poc_phone || "",
-                    projectName: job?.project_name || "",
-                    etcJobNumber: job?.etc_job_number || "",
-                    customerName: job?.customer_name || "",
-                    customerJobNumber: job?.customer_job_number || "",
-                    customerPM: job?.customer_pm || "",
-                    projectOwner: job?.project_owner || "",
-                    county: job?.county || "",
-                    etcBranch: job?.etc_branch || "",
-                    etcProjectManager: job?.etc_project_manager || "",
+                    projectName: dbJob?.projectInfo?.projectName || "",
+                    etcJobNumber: dbJob?.projectInfo?.etcJobNumber || "",
+                    customerName: dbJob?.projectInfo?.customerName || "",
+                    customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
+                    customerPM: dbJob?.projectInfo?.customerPM || "",
+                    projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                    county: dbJob?.projectInfo?.county || "",
+                    etcBranch: dbJob?.etc_branch || "",
+                    etcProjectManager: dbJob?.etc_project_manager || "",
                     installDate: takeoffs[0]?.install_date || "",
                     pickupDate: takeoffs[0]?.pickup_date || "",
                     items: woItems.map(i => ({
@@ -848,15 +851,15 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                       etcAssignedTo: workOrder.assigned_to || "",
                       contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
                       customerPocPhone: workOrder.customer_poc_phone || "",
-                      projectName: job?.project_name || "",
-                      etcJobNumber: job?.etc_job_number || "",
-                      customerName: job?.customer_name || "",
-                      customerJobNumber: job?.customer_job_number || "",
-                      customerPM: job?.customer_pm || "",
-                      projectOwner: job?.project_owner || "",
-                      county: job?.county || "",
-                      etcBranch: job?.etc_branch || "",
-                      etcProjectManager: job?.etc_project_manager || "",
+                      projectName: dbJob?.projectInfo?.projectName || "",
+                      etcJobNumber: dbJob?.projectInfo?.etcJobNumber || "",
+                      customerName: dbJob?.projectInfo?.customerName || "",
+                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
+                      customerPM: dbJob?.projectInfo?.customerPM || "",
+                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                      county: dbJob?.projectInfo?.county || "",
+                      etcBranch: dbJob?.etc_branch || "",
+                      etcProjectManager: dbJob?.etc_project_manager || "",
                       installDate: takeoffs[0]?.install_date || "",
                       pickupDate: takeoffs[0]?.pickup_date || "",
                       items: woItems.map(i => ({
@@ -977,8 +980,8 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span><strong>Takeoff Required.</strong> This work order cannot proceed beyond draft until a takeoff is attached.</span>
             </div>
-            {canCreateTakeoffs && job && (
-              <Button size="sm" className="text-xs gap-1.5 shrink-0" onClick={() => router.push(`/l/${job.id}/takeoffs/create`)}>
+            {canCreateTakeoffs && dbJob && (
+              <Button size="sm" className="text-xs gap-1.5 shrink-0" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
                 <Plus className="h-3.5 w-3.5" /> Create Takeoff
               </Button>
             )}
@@ -992,15 +995,15 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
           </div>
           <div className="p-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-              <AdminField label="Branch" value={job?.etc_branch || "—"} />
-              <AdminField label="ETC Project Manager" value={job?.etc_project_manager || "—"} />
-              <AdminField label="ETC Job #" value={job?.etc_job_number || "—"} mono />
-              <AdminField label="County" value={job?.county || "—"} />
-              <AdminField label="Customer" value={job?.customer_name || "—"} />
-              <AdminField label="Customer PM / POC" value={job?.customer_pm || "—"} />
-              <AdminField label="Customer Job #" value={job?.customer_job_number || "—"} />
-              <AdminField label="Owner" value={job?.project_owner || "—"} />
-              <AdminField label="Owner Contract #" value={job?.contract_number || "—"} />
+              <AdminField label="Branch" value={dbJob?.etc_branch || "—"} />
+              <AdminField label="ETC Project Manager" value={dbJob?.etc_project_manager || "—"} />
+              <AdminField label="ETC Job #" value={dbJob?.projectInfo?.etcJobNumber || "—"} mono />
+              <AdminField label="County" value={dbJob?.projectInfo?.county || "—"} />
+              <AdminField label="Customer" value={dbJob?.projectInfo?.customerName || "—"} />
+              <AdminField label="Customer PM / POC" value={dbJob?.projectInfo?.customerPM || "—"} />
+              <AdminField label="Customer Job #" value={dbJob?.projectInfo?.customerJobNumber || "—"} />
+              <AdminField label="Owner" value={dbJob?.projectInfo?.projectOwner || "—"} />
+              <AdminField label="Owner Contract #" value={dbJob?.projectInfo?.contractNumber || "—"} />
             </div>
           </div>
         </div>
@@ -1211,8 +1214,8 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
               </h2>
               <Badge variant="secondary" className="text-[10px] ml-1">{takeoffs.length}</Badge>
             </div>
-            {canCreateTakeoffs && job && (
-              <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${job.id}/takeoffs/create`)}>
+            {canCreateTakeoffs && dbJob && (
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
                 <Plus className="h-3 w-3" /> New Takeoff
               </Button>
             )}
@@ -1253,7 +1256,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                           <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push(`/l/${job?.id}/takeoff/${t.id}`)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push(`/l/${dbJob?.id}/takeoff/${t.id}`)}>
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </TableCell>
