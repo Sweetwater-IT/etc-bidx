@@ -3,15 +3,16 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string; workOrderId: string } }
+  { params }: { params: Promise<{ jobId: string; workOrderId: string }> }
 ) {
   try {
+    const { jobId, workOrderId } = await params;
 
     // Get dispatch data for this work order
     const { data: dispatch, error } = await supabase
       .from('work_order_dispatches')
       .select('*')
-      .eq('work_order_id', params.workOrderId)
+      .eq('work_order_id', workOrderId)
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -28,9 +29,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { jobId: string; workOrderId: string } }
+  { params }: { params: Promise<{ jobId: string; workOrderId: string }> }
 ) {
   try {
+    const { jobId, workOrderId } = await params;
     const { scheduledDate } = await request.json();
 
     if (!scheduledDate) {
@@ -41,7 +43,7 @@ export async function POST(
     const { data: existingDispatch } = await supabase
       .from('work_order_dispatches')
       .select('id')
-      .eq('work_order_id', params.workOrderId)
+      .eq('work_order_id', workOrderId)
       .single();
 
     if (existingDispatch) {
@@ -52,7 +54,7 @@ export async function POST(
     const { data: dispatch, error } = await supabase
       .from('work_order_dispatches')
       .insert({
-        work_order_id: params.workOrderId,
+        work_order_id: workOrderId,
         scheduled_date: scheduledDate,
         status: 'scheduled',
         created_at: new Date().toISOString(),
