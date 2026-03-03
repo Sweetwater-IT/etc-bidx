@@ -57,7 +57,7 @@ export async function GET(
 
     // Get work order to get job_id
     const { data: workOrder, error: woError } = await supabase
-      .from('work_orders')
+      .from('work_orders_l')
       .select('job_id, is_pickup')
       .eq('id', id)
       .single();
@@ -72,7 +72,7 @@ export async function GET(
     // Fetch all related data in parallel
     const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
       // Job info
-      supabase.from("jobs").select("id, project_name, etc_job_number, etc_branch, customer_name, customer_job_number, customer_pm, project_owner, county, etc_project_manager, contract_number").eq("id", jobId).single(),
+      supabase.from("jobs_l").select("id, project_name, etc_job_number, etc_branch, customer_name, customer_job_number, customer_pm, project_owner, county, etc_project_manager, contract_number").eq("id", jobId).single(),
 
       // Takeoffs linked to this work order
       supabase.from("takeoffs").select("id, title, status, work_type, install_date, pickup_date").eq("work_order_id", id).order("created_at", { ascending: true }),
@@ -87,7 +87,7 @@ export async function GET(
       supabase.from("documents").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
 
       // Pickup work order if this is a parent
-      !isPickup ? supabase.from("work_orders").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),
+      !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),
     ]);
 
     // Process job data
@@ -132,7 +132,7 @@ export async function GET(
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
       const { data: jobFull } = await supabase
-        .from("jobs")
+        .from("jobs_l")
         .select("sov_items")
         .eq("id", jobId)
         .single();

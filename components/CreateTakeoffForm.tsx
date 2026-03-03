@@ -45,6 +45,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
   const [buildShopNotes, setBuildShopNotes] = useState("");
   const [pmNotes, setPmNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [takeoffSaved, setTakeoffSaved] = useState(false);
 
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
@@ -204,6 +205,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
       }
 
       toast.success(`Takeoff "${title}" saved successfully`);
+      setTakeoffSaved(true);
       // Don't navigate away - stay on the page for further editing
     } catch (error) {
       console.error("Error saving takeoff:", error);
@@ -252,7 +254,7 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
             <Download className="h-3.5 w-3.5" />
             Download PDF
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving || !takeoffSaved}>
             <ClipboardList className="h-3.5 w-3.5" />
             {saving ? "Creating…" : "Generate Work Order"}
           </Button>
