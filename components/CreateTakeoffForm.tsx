@@ -198,7 +198,8 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
       toast.success(`Takeoff "${title}" saved successfully`);
       setTakeoffSaved(true);
       setSavedTakeoffId(data.takeoff.id);
-      // Don't navigate away - stay on the page for further editing
+      // Navigate to the view page
+      router.push(`/l/${jobId}/takeoffs/create/${data.takeoff.id}`);
     } catch (error) {
       console.error("Error saving takeoff:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save takeoff");

@@ -1,0 +1,346 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { ClipboardList, Download, Send, ArrowLeft, FileText } from "lucide-react";
+import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
+
+interface Props {
+  jobId: string;
+  takeoffId: string;
+}
+
+const WORK_TYPES = [
+  { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
+  { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
+  { value: "FLAGGING", label: "Flagging" },
+  { value: "LANE_CLOSURE", label: "Lane Closure" },
+  { value: "SERVICE", label: "Service" },
+  { value: "DELIVERY", label: "Delivery" },
+  { value: "RENTAL", label: "Rental" },
+];
+
+export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
+  const router = useRouter();
+  const { data: dbJob, isLoading } = useJobFromDB(jobId);
+  const info = dbJob?.projectInfo;
+
+  const [takeoff, setTakeoff] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Load takeoff data
+  useEffect(() => {
+    const loadTakeoff = async () => {
+      try {
+        const response = await fetch(`/api/takeoffs/${takeoffId}`);
+        if (!response.ok) {
+          throw new Error('Failed to load takeoff');
+        }
+        const data = await response.json();
+        setTakeoff(data.takeoff);
+      } catch (error) {
+        console.error('Error loading takeoff:', error);
+        toast.error('Failed to load takeoff');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (takeoffId) {
+      loadTakeoff();
+    }
+  }, [takeoffId]);
+
+  const handleBack = () => {
+    router.push(`/l/${jobId}`);
+  };
+
+  const handleDownloadPdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const response = await fetch(`/api/takeoffs/${takeoffId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `takeoff-${takeoff?.title || 'untitled'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleCreateWorkOrder = async () => {
+    setLoading(true);
+    try {
+      const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: 'unknown@example.com' // You might want to get this from auth context
+        })
+      });
+
+      if (woResponse.ok) {
+        const result = await woResponse.json();
+        toast.success('Work order generated successfully!');
+        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}`);
+      } else {
+        const err = await woResponse.json();
+        toast.error(err.error || 'Failed to generate work order');
+      }
+    } catch (error) {
+      console.error("Error generating work order:", error);
+      toast.error("Failed to generate work order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  if (!takeoff) {
+    return <div className="p-6">Takeoff not found</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground leading-tight">
+              {takeoff.title}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Takeoff ID: {takeoff.id}
+            </p>
+          </div>
+          {takeoff.work_type && (
+            <span className="ml-2 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700">
+              {WORK_TYPES.find(wt => wt.value === takeoff.work_type)?.label || takeoff.work_type}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          <Button variant="outline" size="sm" onClick={handleBack}>
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+            Back
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+            <Download className="h-3.5 w-3.5" />
+            {generatingPdf ? "Generating…" : "Download PDF"}
+          </Button>
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
+            <ClipboardList className="h-3.5 w-3.5" />
+            {loading ? "Creating…" : "Generate Work Order"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Project Info */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Information</h2>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
+              <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
+              <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
+              <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
+              <span className="text-sm font-medium">{info?.county || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
+              <span className="text-sm font-medium">{info?.customerName || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
+              <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
+              <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
+              <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
+              <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Takeoff Details */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Details</h2>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</Label>
+              <div className="text-sm font-medium">{takeoff.title}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</Label>
+              <div className="text-sm font-medium">{WORK_TYPES.find(wt => wt.value === takeoff.work_type)?.label || takeoff.work_type}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
+              <div className="text-sm font-medium font-mono">{takeoff.work_order_number || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</Label>
+              <div className="text-sm font-medium capitalize">{takeoff.contracted_or_additional}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+              <div className="text-sm font-medium">{takeoff.install_date || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
+              <div className="text-sm font-medium">{takeoff.pickup_date || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
+              <div className="text-sm font-medium">{takeoff.needed_by_date || "—"}</div>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</Label>
+              <div className="text-sm font-medium capitalize">{takeoff.priority}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Work Type Specific Content */}
+      {takeoff.work_type && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {WORK_TYPES.find(wt => wt.value === takeoff.work_type)?.label} Configuration
+            </h2>
+          </div>
+          <div className="p-5">
+            {takeoff.work_type === "MPT" && (
+              <MPTSignConfiguration
+                activeSections={takeoff.active_sections || []}
+                signRows={takeoff.sign_rows || {}}
+                defaultSignMaterial={takeoff.default_sign_material || 'PLASTIC'}
+                onToggleSection={() => {}} // Read-only
+                onSignRowsChange={() => {}} // Read-only
+                onDefaultMaterialChange={() => {}} // Read-only
+                onApplyMaterialToAll={() => {}} // Read-only
+                disabled={true}
+              />
+            )}
+
+            {takeoff.work_type === "PERMANENT_SIGNS" && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Permanent signs configuration would be displayed here.</p>
+                </div>
+              </div>
+            )}
+
+            {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Vehicle and equipment configuration would be displayed here.</p>
+                </div>
+              </div>
+            )}
+
+            {(takeoff.work_type === "SERVICE" || takeoff.work_type === "DELIVERY" || takeoff.work_type === "RENTAL") && (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Additional items configuration would be displayed here.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {(takeoff.notes || takeoff.crew_notes || takeoff.build_shop_notes || takeoff.pm_notes) && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</h2>
+          </div>
+          <div className="p-5 space-y-4">
+            {takeoff.crew_notes && (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Crew Notes</Label>
+                <div className="text-sm">{takeoff.crew_notes}</div>
+                <span className="text-[10px] text-muted-foreground mt-1 block">Visible to road crew on dispatches</span>
+              </div>
+            )}
+            {takeoff.build_shop_notes && (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Build Shop Notes</Label>
+                <div className="text-sm">{takeoff.build_shop_notes}</div>
+                <span className="text-[10px] text-muted-foreground mt-1 block">Sent with the build request submission</span>
+              </div>
+            )}
+            {takeoff.pm_notes && (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Notes</Label>
+                <div className="text-sm">{takeoff.pm_notes}</div>
+                <span className="text-[10px] text-muted-foreground mt-1 block">Private notes for your reference only</span>
+              </div>
+            )}
+            {takeoff.notes && (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">General Notes</Label>
+                <div className="text-sm">{takeoff.notes}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,5 +1,3 @@
-'use client';
-
 import { PDFDocument } from 'pdf-lib';
 import { supabase } from '@/lib/supabase';
 
@@ -7,6 +5,9 @@ interface SignRow {
   designation: string;
   quantity: number;
   material: string;
+  structure: string;
+  dimensions: string;
+  sheeting: string;
 }
 
 export async function generateTakeoffPdf(takeoffId: string): Promise<Uint8Array> {
@@ -55,16 +56,39 @@ export async function generateTakeoffPdf(takeoffId: string): Promise<Uint8Array>
     y,
     size: 12,
   });
+  y -= 25;
+
+  page.drawText(`Work Type: ${takeoff.work_type}`, {
+    x: margin,
+    y,
+    size: 12,
+  });
   y -= 40;
 
-  // Parse sign_rows
-  const signRows: SignRow[] = takeoff.sign_rows ? JSON.parse(takeoff.sign_rows) : [];
+  // Flatten sign rows from nested structure
+  const signRows: SignRow[] = [];
+  const signRowsData = takeoff.sign_rows as Record<string, any[]> || {};
+
+  for (const [sectionKey, rows] of Object.entries(signRowsData)) {
+    for (const row of rows) {
+      signRows.push({
+        designation: row.signDesignation || '',
+        quantity: row.quantity || 0,
+        material: row.material || '',
+        structure: row.structureType || '',
+        dimensions: row.dimensionLabel || '',
+        sheeting: row.sheeting || '',
+      });
+    }
+  }
 
   if (signRows.length > 0) {
     // Table header
     page.drawText('Designation', { x: margin, y, size: 12 });
-    page.drawText('Quantity', { x: margin + 200, y, size: 12 });
-    page.drawText('Material', { x: margin + 300, y, size: 12 });
+    page.drawText('Structure', { x: margin + 120, y, size: 12 });
+    page.drawText('Dimensions', { x: margin + 220, y, size: 12 });
+    page.drawText('Qty', { x: margin + 300, y, size: 12 });
+    page.drawText('Material', { x: margin + 340, y, size: 12 });
     y -= lineHeight;
 
     // Table rows
@@ -75,8 +99,10 @@ export async function generateTakeoffPdf(takeoffId: string): Promise<Uint8Array>
         y = height - margin;
       }
       page.drawText(row.designation || '', { x: margin, y, size: 10 });
-      page.drawText(row.quantity?.toString() || '', { x: margin + 200, y, size: 10 });
-      page.drawText(row.material || '', { x: margin + 300, y, size: 10 });
+      page.drawText(row.structure || '', { x: margin + 120, y, size: 10 });
+      page.drawText(row.dimensions || '', { x: margin + 220, y, size: 10 });
+      page.drawText(row.quantity?.toString() || '', { x: margin + 300, y, size: 10 });
+      page.drawText(row.material || '', { x: margin + 340, y, size: 10 });
       y -= lineHeight;
     }
   } else {
