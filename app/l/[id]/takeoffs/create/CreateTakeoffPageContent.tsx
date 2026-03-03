@@ -9,36 +9,27 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   const [draftTakeoff, setDraftTakeoff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing draft takeoff or create one on mount
+  // Always create a fresh draft takeoff on mount
   useEffect(() => {
     const initializeDraftTakeoff = async () => {
       try {
-        // Check if there's already a draft takeoff for this job
-        const response = await fetch(`/api/takeoffs/draft/${jobId}`);
-        const data = await response.json();
+        // Always create new draft takeoff (ignore any existing drafts)
+        const createResponse = await fetch('/api/takeoffs/draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jobId }),
+        });
 
-        if (response.ok && data.takeoff) {
-          // Use existing draft
-          setDraftTakeoff(data.takeoff);
+        if (createResponse.ok) {
+          const createData = await createResponse.json();
+          setDraftTakeoff(createData.takeoff);
         } else {
-          // Create new draft takeoff
-          const createResponse = await fetch('/api/takeoffs/draft', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ jobId }),
-          });
-
-          if (createResponse.ok) {
-            const createData = await createResponse.json();
-            setDraftTakeoff(createData.takeoff);
-          } else {
-            console.error('Failed to create draft takeoff');
-            // Redirect back if we can't create a draft
-            router.push(`/l/${jobId}`);
-            return;
-          }
+          console.error('Failed to create draft takeoff');
+          // Redirect back if we can't create a draft
+          router.push(`/l/${jobId}`);
+          return;
         }
       } catch (error) {
         console.error('Error initializing draft takeoff:', error);
