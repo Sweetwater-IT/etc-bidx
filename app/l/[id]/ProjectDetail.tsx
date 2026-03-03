@@ -62,6 +62,7 @@ import {
   Save,
   Loader2,
   Maximize2,
+  Trash2,
 } from "lucide-react";
 
 type Job360Tab =
@@ -766,12 +767,15 @@ interface TakeoffSummary {
   pickup_date: string | null;
   needed_by_date: string | null;
   work_order_number: string | null;
+  items_count?: number;
 }
 
 const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string }) => {
   const router = useRouter();
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [takeoffToDelete, setTakeoffToDelete] = useState<TakeoffSummary | null>(null);
 
   useEffect(() => {
     const fetchTakeoffs = async () => {
@@ -828,82 +832,96 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
+              <TableHead>Work Order</TableHead>
               <TableHead>Work Type</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead>Need By</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Install</TableHead>
-              <TableHead>Pickup</TableHead>
-              <TableHead>WO #</TableHead>
-              <TableHead className="w-[160px]">Actions</TableHead>
+              <TableHead className="w-[60px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {takeoffs.map((takeoff) => (
-              <TableRow key={takeoff.id}>
+              <TableRow
+                key={takeoff.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}
+              >
                 <TableCell className="font-medium">{takeoff.title}</TableCell>
+                <TableCell className="font-mono">{takeoff.work_order_number || '—'}</TableCell>
                 <TableCell className="capitalize">{takeoff.work_type}</TableCell>
+                <TableCell>{takeoff.items_count || '—'}</TableCell>
+                <TableCell>{takeoff.needed_by_date ? new Date(takeoff.needed_by_date).toLocaleDateString() : '—'}</TableCell>
                 <TableCell>
                   <Badge variant={takeoff.status === 'draft' ? 'secondary' : 'default'}>
                     {takeoff.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm">{new Date(takeoff.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>{takeoff.install_date ? new Date(takeoff.install_date).toLocaleDateString() : '—'}</TableCell>
-                <TableCell>{takeoff.pickup_date ? new Date(takeoff.pickup_date).toLocaleDateString() : '—'}</TableCell>
-                <TableCell className="font-mono">{takeoff.work_order_number || '—'}</TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      asChild
-                    >
-                      <a href={`/api/takeoffs/${takeoff.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                        PDF
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(`/api/workorders/from-takeoff/${takeoff.id}`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                              userEmail: userEmail || 'unknown@example.com'
-                            })
-                          });
-                          if (response.ok) {
-                            toast.success('Work order generated!');
-                            // Refresh list
-                            const refresh = await fetch(`/api/l/jobs/${jobId}/takeoffs`);
-                            if (refresh.ok) {
-                              const data = await refresh.json();
-                              setTakeoffs(data);
-                            }
-                          } else {
-                            const err = await response.json();
-                            toast.error(err.error || 'Failed to generate WO');
-                          }
-                        } catch (error) {
-                          toast.error('Error generating WO');
-                        }
-                      }}
-                    >
-                      Gen WO
-                    </Button>
-                  </div>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setTakeoffToDelete(takeoff);
+                      setDeleteDialogOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Takeoff</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete the takeoff "{takeoffToDelete?.title}"? This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!takeoffToDelete) return;
+
+                try {
+                  const response = await fetch(`/api/takeoffs/${takeoffToDelete.id}`, {
+                    method: 'DELETE',
+                  });
+
+                  if (response.ok) {
+                    toast.success('Takeoff deleted successfully');
+                    setTakeoffs(takeoffs.filter(t => t.id !== takeoffToDelete.id));
+                  } else {
+                    toast.error('Failed to delete takeoff');
+                  }
+                } catch (error) {
+                  toast.error('Error deleting takeoff');
+                } finally {
+                  setDeleteDialogOpen(false);
+                  setTakeoffToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
