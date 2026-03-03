@@ -464,8 +464,8 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
 
         const result = await response.json();
         toast.success(`Work order "${editTitle}" created successfully`);
-        // Navigate to the newly created work order
-        router.push(`/l/${dbJob?.id}/work-orders/${result.workOrder.id}`);
+        // Navigate to the newly created work order with takeoffId to enable immediate loading
+        router.push(`/l/${dbJob?.id}/work-orders/${result.workOrder.id}?takeoffId=${takeoffId}`);
       } else {
         // Update existing work order
         const response = await fetch(`/api/workorders/${workOrderId}`, {
@@ -1363,7 +1363,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
             </div>
           </div>
           <div className="p-5">
-            {loadingRelated ? (
+            {loadingRelated || (takeoffId && takeoffLoading) ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
