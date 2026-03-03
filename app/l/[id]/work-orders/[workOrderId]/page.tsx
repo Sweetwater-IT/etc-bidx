@@ -4,8 +4,15 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import WorkOrderDetail from "./WorkOrderDetail";
 
-export default async function WorkOrderPage({ params }: { params: Promise<{ workOrderId: string }> }) {
+export default async function WorkOrderPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ workOrderId: string }>;
+  searchParams: Promise<{ takeoffId?: string }>
+}) {
   const { workOrderId } = await params;
+  const { takeoffId } = await searchParams;
 
   return (
     <SidebarProvider
@@ -20,7 +27,7 @@ export default async function WorkOrderPage({ params }: { params: Promise<{ work
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          <WorkOrderDetail workOrderId={workOrderId} />
+          <WorkOrderDetail workOrderId={workOrderId} takeoffId={takeoffId} />
         </Suspense>
       </SidebarInset>
     </SidebarProvider>

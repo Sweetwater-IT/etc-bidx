@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
 import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
@@ -148,16 +149,19 @@ const AdminField = ({ label, value, mono }: { label: string; value: string; mono
   </div>
 );
 
-const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
+const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; takeoffId?: string }) => {
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = !!user;
   const isPM = !!user; // Assume PM if authenticated for now
   const canCreateTakeoffs = !!user; // Assume can create if authenticated
 
+  // Check if this is a new work order (preview mode)
+  const isNewWorkOrder = workOrderId === "new" && !!takeoffId;
+
   // Local state for work order data
   const [workOrder, setWorkOrder] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isNewWorkOrder);
   const [buildRequests, setBuildRequests] = useState<any[]>([]);
   const [dispatch, setDispatch] = useState<any>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -168,6 +172,9 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
 
   // Get job data using the hook
   const { data: dbJob, isLoading: jobLoading } = useJobFromDB(workOrder?.job_id);
+
+  // Get takeoff data using the hook when takeoffId is provided
+  const { data: dbTakeoff, isLoading: takeoffLoading } = useTakeoffFromDB(takeoffId);
 
   // Documents state
   const [documents, setDocuments] = useState<WODocument[]>([]);
@@ -239,10 +246,10 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
   // Combined readiness
   const readyToSchedule = hasTakeoff && hasWoItems && buildComplete;
 
-  // Fetch work order data
+  // Fetch work order data (skip for new work orders)
   useEffect(() => {
     const fetchWorkOrder = async () => {
-      if (!workOrderId) return;
+      if (!workOrderId || isNewWorkOrder) return;
       setIsLoading(true);
       try {
         const response = await fetch(`/api/workorders/${workOrderId}`);
@@ -260,7 +267,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
     };
 
     fetchWorkOrder();
-  }, [workOrderId]);
+  }, [workOrderId, isNewWorkOrder]);
 
   // Fetch build requests
   useEffect(() => {
@@ -328,6 +335,29 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
 
   useEffect(() => { fetchRelated(); }, [fetchRelated]);
 
+  // Include takeoff from hook if provided
+  useEffect(() => {
+    if (dbTakeoff && !takeoffLoading) {
+      const takeoffSummary: TakeoffSummary = {
+        id: dbTakeoff.id,
+        title: dbTakeoff.title,
+        status: dbTakeoff.status,
+        work_type: dbTakeoff.work_type,
+        install_date: dbTakeoff.install_date,
+        pickup_date: dbTakeoff.pickup_date,
+        item_count: 0, // We'll need to fetch this separately or estimate
+      };
+      setTakeoffs(prev => {
+        // Check if this takeoff is already in the list
+        const exists = prev.some(t => t.id === dbTakeoff.id);
+        if (!exists) {
+          return [...prev, takeoffSummary];
+        }
+        return prev;
+      });
+    }
+  }, [dbTakeoff, takeoffLoading]);
+
   // Sync editing fields
   useEffect(() => {
     if (workOrder) {
@@ -353,60 +383,91 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
     if (!workOrderId) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/workorders/${workOrderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: editTitle,
-          description: editDescription,
-          notes: editNotes,
-          scheduled_date: editScheduledDate || null,
-          assigned_to: editAssignedTo,
-          contracted_or_additional: editContractedOrAdditional,
-          customer_poc_phone: editCustomerPocPhone,
-        }),
-      });
+      if (isNewWorkOrder) {
+        // Create new work order
+        const response = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: user?.email,
+            title: editTitle,
+            description: editDescription,
+            notes: editNotes,
+            scheduled_date: editScheduledDate || null,
+            assigned_to: editAssignedTo,
+            contracted_or_additional: editContractedOrAdditional,
+            customer_poc_phone: editCustomerPocPhone,
+            install_date: editInstallDate || null,
+            pickup_date: editPickupDate || null,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update work order');
-      }
-
-      // Also sync install/pickup dates to linked takeoff(s)
-      if (takeoffs.length > 0) {
-        const takeoffId = takeoffs[0].id;
-        try {
-          const isPickupWO = (workOrder as any).is_pickup;
-          // For PU work orders, only sync pickup date; for normal WOs, sync both
-          const datePatch: Record<string, string | null> = isPickupWO
-            ? { pickupDate: editPickupDate || null }
-            : { installDate: editInstallDate || null, pickupDate: editPickupDate || null };
-
-          // Use API call to update takeoff dates
-          await fetch(`/api/takeoffs/${takeoffId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datePatch),
-          });
-
-          // For PU work orders, also update pickup date on ALL takeoffs for this job
-          if (isPickupWO && editPickupDate && workOrder?.job_id) {
-            // This would need a separate API endpoint to update all takeoffs for a job
-            // For now, we'll skip this complex operation
-            console.log("Note: Pickup date sync to all job takeoffs not implemented via API yet");
-          }
-        } catch (e) {
-          console.error("Failed to sync dates to takeoff:", e);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create work order');
         }
+
+        const result = await response.json();
+        toast.success(`Work order "${editTitle}" created successfully`);
+        // Navigate to the newly created work order
+        router.push(`/l/${dbJob?.id}/work-orders/${result.workOrder.id}`);
+      } else {
+        // Update existing work order
+        const response = await fetch(`/api/workorders/${workOrderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: editTitle,
+            description: editDescription,
+            notes: editNotes,
+            scheduled_date: editScheduledDate || null,
+            assigned_to: editAssignedTo,
+            contracted_or_additional: editContractedOrAdditional,
+            customer_poc_phone: editCustomerPocPhone,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update work order');
+        }
+
+        // Also sync install/pickup dates to linked takeoff(s)
+        if (takeoffs.length > 0) {
+          const takeoffId = takeoffs[0].id;
+          try {
+            const isPickupWO = (workOrder as any).is_pickup;
+            // For PU work orders, only sync pickup date; for normal WOs, sync both
+            const datePatch: Record<string, string | null> = isPickupWO
+              ? { pickupDate: editPickupDate || null }
+              : { installDate: editInstallDate || null, pickupDate: editPickupDate || null };
+
+            // Use API call to update takeoff dates
+            await fetch(`/api/takeoffs/${takeoffId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(datePatch),
+            });
+
+            // For PU work orders, also update pickup date on ALL takeoffs for this job
+            if (isPickupWO && editPickupDate && workOrder?.job_id) {
+              // This would need a separate API endpoint to update all takeoffs for a job
+              // For now, we'll skip this complex operation
+              console.log("Note: Pickup date sync to all job takeoffs not implemented via API yet");
+            }
+          } catch (e) {
+            console.error("Failed to sync dates to takeoff:", e);
+          }
+        }
+        setLastSavedAt(new Date());
+        // Refetch work order data
+        const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
+        if (workOrderResponse.ok) {
+          const data = await workOrderResponse.json();
+          setWorkOrder(data);
+        }
+        fetchRelated();
       }
-      setLastSavedAt(new Date());
-      // Refetch work order data
-      const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
-      if (workOrderResponse.ok) {
-        const data = await workOrderResponse.json();
-        setWorkOrder(data);
-      }
-      fetchRelated();
     } catch (err: any) {
       toast.error(err.message || 'Failed to save work order');
     } finally {

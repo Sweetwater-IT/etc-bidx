@@ -128,31 +128,13 @@ export const CreateTakeoffForm = ({ jobId, onBack }: Props) => {
 
       const takeoffId = saveData.takeoff.id;
 
-      // Now create the work order from the takeoff
-      const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail: user?.email,
-          title: title,
-          description: notes,
-          contractedOrAdditional,
-        }),
-      });
-
-      const woData = await woResponse.json();
-
-      if (!woResponse.ok) {
-        throw new Error(woData.error || 'Failed to create work order');
-      }
-
-      toast.success(`Work order "${title}" created successfully`);
-      router.push(`/l/${jobId}/work-orders/${woData.workOrder.id}`);
+      // Navigate to work order detail page with takeoff ID as query parameter
+      // The work order will be created when the user clicks "Save" on the work order detail page
+      toast.success(`Takeoff "${title}" saved. Navigate to work order detail page.`);
+      router.push(`/l/${jobId}/work-orders/new?takeoffId=${takeoffId}`);
     } catch (error) {
-      console.error("Error creating work order:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create work order");
+      console.error("Error saving takeoff:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
     } finally {
       setSaving(false);
     }

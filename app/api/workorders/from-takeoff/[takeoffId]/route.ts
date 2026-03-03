@@ -12,7 +12,18 @@ interface WorkOrderItem {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userEmail } = await request.json();
+    const {
+      userEmail,
+      title,
+      description,
+      notes,
+      scheduled_date,
+      assigned_to,
+      contracted_or_additional,
+      customer_poc_phone,
+      install_date,
+      pickup_date
+    } = await request.json();
 
     if (!userEmail) {
       return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
@@ -89,7 +100,13 @@ export async function POST(request: NextRequest) {
       .insert({
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
-        title: takeoff.title,
+        title: title || takeoff.title,
+        description: description || null,
+        notes: notes || null,
+        scheduled_date: scheduled_date || null,
+        assigned_to: assigned_to || null,
+        contracted_or_additional: contracted_or_additional || 'contracted',
+        customer_poc_phone: customer_poc_phone || null,
         created_by: userEmail,
         status: 'draft'
       })
