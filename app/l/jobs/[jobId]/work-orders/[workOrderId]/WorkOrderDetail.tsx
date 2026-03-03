@@ -1331,33 +1331,47 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               <Badge variant="secondary" className="text-[10px] ml-1">{takeoffs.length}</Badge>
             </div>
             <div className="flex items-center gap-2">
-              {canCreateTakeoffs && dbJob && takeoffs.length === 0 && (
+              {takeoffs.length === 0 && (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
                     className="text-xs gap-1.5 h-7"
-                    onClick={() => {
-                      setLoadingTakeoffs(true);
-                      setShowLinkTakeoffModal(true);
-                      // Fetch available takeoffs for this job
-                      fetch(`/api/l/jobs/${dbJob.id}/takeoffs`)
-                        .then(res => res.json())
-                        .then(data => {
-                          setAvailableTakeoffs(data);
-                        })
-                        .catch(err => {
-                          console.error('Failed to fetch takeoffs:', err);
-                          toast.error('Failed to load takeoffs');
-                        })
-                        .finally(() => setLoadingTakeoffs(false));
-                    }}
+                    onClick={() => fetchRelated()}
+                    disabled={loadingRelated}
                   >
-                    <Package className="h-3 w-3" /> Link Takeoff
+                    {loadingRelated ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                    {loadingRelated ? "Fetching…" : "Fetch Takeoff"}
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
-                    <Plus className="h-3 w-3" /> New Takeoff
-                  </Button>
+                  {canCreateTakeoffs && dbJob && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5 h-7"
+                        onClick={() => {
+                          setLoadingTakeoffs(true);
+                          setShowLinkTakeoffModal(true);
+                          // Fetch available takeoffs for this job
+                          fetch(`/api/l/jobs/${dbJob.id}/takeoffs`)
+                            .then(res => res.json())
+                            .then(data => {
+                              setAvailableTakeoffs(data);
+                            })
+                            .catch(err => {
+                              console.error('Failed to fetch takeoffs:', err);
+                              toast.error('Failed to load takeoffs');
+                            })
+                            .finally(() => setLoadingTakeoffs(false));
+                        }}
+                      >
+                        <Package className="h-3 w-3" /> Link Takeoff
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-xs gap-1.5 h-7" onClick={() => router.push(`/l/${dbJob.id}/takeoffs/create`)}>
+                        <Plus className="h-3 w-3" /> New Takeoff
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>
