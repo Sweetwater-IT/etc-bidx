@@ -718,7 +718,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <div className="w-full px-6 py-6 flex-1">
+      <div className="w-full px-6 pt-6 pb-6 flex-1">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
