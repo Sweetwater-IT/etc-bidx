@@ -773,7 +773,7 @@ const WorkOrderDetail = ({ workOrderId }: { workOrderId: string }) => {
                     contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
                     customerPocPhone: workOrder.customer_poc_phone || "",
                     projectName: dbJob?.projectInfo?.projectName || "",
-                    etcJobNumber: dbJob?.projectInfo?.etcJobNumber || "",
+                    etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
                     customerName: dbJob?.projectInfo?.customerName || "",
                     customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
                     customerPM: dbJob?.projectInfo?.customerPM || "",
