@@ -58,7 +58,7 @@ export async function GET(
     // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, is_pickup, takeoff_id')
+      .select('job_id, takeoff_id')
       .eq('id', id)
       .single();
 
@@ -67,7 +67,7 @@ export async function GET(
     }
 
     const jobId = workOrder.job_id;
-    const isPickup = workOrder.is_pickup;
+    const isPickup = false; // Default to false since column doesn't exist
     const takeoffId = workOrder.takeoff_id;
 
     // Helper function to fetch takeoff with retry logic
