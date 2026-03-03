@@ -361,8 +361,57 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
         }
         return prev;
       });
+
+      // For new work orders, populate work order items from takeoff data
+      if (isNewWorkOrder && !takeoffLoading) {
+        // Fetch takeoff data with sign rows
+        fetch(`/api/takeoffs/${takeoffId}/data`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.takeoff?.sign_rows) {
+              const signRowsData = data.takeoff.sign_rows || {};
+              const workOrderItems: WOItem[] = [];
+
+              // Flatten all sign rows from all sections
+              let itemNumber = 1;
+              for (const sectionName of Object.keys(signRowsData)) {
+                const sectionRows = signRowsData[sectionName] || [];
+                for (const row of sectionRows) {
+                  const description = [
+                    row.signDesignation || 'Custom Sign',
+                    row.signDescription || '',
+                    row.dimensionLabel ? `(${row.dimensionLabel})` : '',
+                    row.signLegend ? `- ${row.signLegend}` : ''
+                  ].filter(Boolean).join(' ').trim();
+
+                  const quantity = row.quantity || 1;
+                  const uom = row.sqft > 0 ? 'sqft' : 'each';
+
+                  workOrderItems.push({
+                    id: `temp-${Date.now()}-${itemNumber}`,
+                    item_number: itemNumber.toString(),
+                    description,
+                    contract_quantity: quantity,
+                    work_order_quantity: quantity,
+                    uom,
+                    sort_order: itemNumber - 1,
+                  });
+                  itemNumber++;
+                }
+              }
+
+              // Only set items if we have any (don't overwrite if already populated)
+              if (workOrderItems.length > 0 && woItems.length === 0) {
+                setWoItems(workOrderItems);
+              }
+            }
+          })
+          .catch(err => {
+            console.error('Failed to fetch takeoff data for work order items:', err);
+          });
+      }
     }
-  }, [dbTakeoff, takeoffLoading]);
+  }, [dbTakeoff, takeoffLoading, isNewWorkOrder, woItems.length]);
 
   // Sync editing fields
   useEffect(() => {

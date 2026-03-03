@@ -18,7 +18,7 @@ export async function POST(
       // Add new item
       const nextSort = body.nextSort || 0;
       const { data, error } = await supabase
-        .from("work_order_items")
+        .from("work_order_items_l")
         .insert({
           work_order_id: id,
           item_number: itemData.item_number || "",
@@ -42,7 +42,7 @@ export async function POST(
       // Update existing item
       const { itemId, updates } = itemData;
       const { error } = await supabase
-        .from("work_order_items")
+        .from("work_order_items_l")
         .update(updates)
         .eq("id", itemId);
 
@@ -57,7 +57,7 @@ export async function POST(
       // Delete item
       const { itemId } = itemData;
       const { error } = await supabase
-        .from("work_order_items")
+        .from("work_order_items_l")
         .delete()
         .eq("id", itemId);
 
