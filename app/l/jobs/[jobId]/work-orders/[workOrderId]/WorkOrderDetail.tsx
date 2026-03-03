@@ -294,25 +294,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
     fetchBuildRequests();
   }, [workOrderId]);
 
-  // Fetch dispatch data
-  useEffect(() => {
-    const fetchDispatch = async () => {
-      if (!workOrderId || !workOrder?.job_id) return;
-      try {
-        const response = await fetch(`/api/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/dispatch`);
-        if (response.ok) {
-          const data = await response.json();
-          setDispatch(data);
-        } else {
-          console.error('Failed to fetch dispatch');
-        }
-      } catch (error) {
-        console.error('Error fetching dispatch:', error);
-      }
-    };
 
-    fetchDispatch();
-  }, [workOrderId, workOrder?.job_id]);
 
   // Fetch related data from API
   const fetchRelated = useCallback(async () => {
@@ -985,10 +967,10 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                         contract_quantity: i.contract_quantity,
                         work_order_quantity: i.work_order_quantity,
                       })),
-                      crewNotes: (dispatch as any)?.crew_notes || "",
-                      customerNotOnSite: (dispatch as any)?.customer_not_on_site || false,
-                      customerSignatureName: (dispatch as any)?.customer_signature_name || "",
-                      signedAt: (dispatch as any)?.signed_at || "",
+                      crewNotes: "",
+                      customerNotOnSite: false,
+                      customerSignatureName: "",
+                      signedAt: "",
                       returnBytes: true,
                     });
                     if (!woBytes) { toast.error("Failed to generate work order PDF"); return; }
@@ -1265,7 +1247,6 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
             {/* Quick actions row */}
             {canEdit && (
               <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                {isDraft && !hasTakeoff && canCreateTakeoffs && dbJob && null}
                 {workOrder.status === "ready" && (
                   <Button
                     size="sm"
@@ -1907,12 +1888,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                   }
 
                   setShowScheduleDialog(false);
-                  // Refetch dispatch data
-                  const dispatchResponse = await fetch(`/api/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/dispatch`);
-                  if (dispatchResponse.ok) {
-                    const data = await dispatchResponse.json();
-                    setDispatch(data);
-                  }
+
                 } catch (err: any) {
                   toast.error(err.message || 'Failed to schedule dispatch');
                 }
