@@ -313,7 +313,7 @@ const ProjectDetail = () => {
                     });
                     if (woResponse.ok) {
                       const result = await woResponse.json();
-                      router.push(`/l/${id}/work-orders/${result.workOrder.id}`);
+                      router.push(`/l/jobs/${id}/work-orders/${result.workOrder.id}`);
                     } else {
                       toast.error('Failed to create work order');
                     }
