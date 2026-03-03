@@ -324,6 +324,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
         throw new Error('Failed to fetch work order details');
       }
       const data = await response.json();
+      console.log('fetchRelated data:', data); // Debug log
 
       // Job data is now fetched via useJobFromDB hook
       setTakeoffs(data.takeoffs || []);
@@ -2069,6 +2070,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                             }
                           } else {
                             // For existing work orders, link the takeoff via API
+                            console.log('Linking takeoff:', takeoff.id, 'to work order:', workOrderId);
                             const response = await fetch(`/api/workorders/${workOrderId}`, {
                               method: 'PATCH',
                               headers: { 'Content-Type': 'application/json' },
@@ -2077,12 +2079,33 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
 
                             if (!response.ok) {
                               const error = await response.json();
+                              console.error('Failed to link takeoff:', error);
                               throw new Error(error.error || 'Failed to link takeoff');
                             }
 
+                            const result = await response.json();
+                            console.log('PATCH result:', result);
+
+                            // Optimistic update: immediately add takeoff to state
+                            setTakeoffs(prev => {
+                              // Avoid duplicates
+                              if (prev.some(t => t.id === takeoff.id)) return prev;
+                              return [...prev, {
+                                id: takeoff.id,
+                                title: takeoff.title,
+                                status: takeoff.status,
+                                work_type: takeoff.work_type,
+                                install_date: takeoff.install_date,
+                                pickup_date: takeoff.pickup_date,
+                                item_count: takeoff.item_count || 0, // Use available data
+                              }];
+                            });
+
                             toast.success(`Takeoff "${takeoff.title}" linked successfully`);
                             setShowLinkTakeoffModal(false);
-                            fetchRelated(); // Refresh the data
+
+                            // Background refresh to ensure data consistency
+                            fetchRelated();
                           }
                         } catch (err: any) {
                           toast.error(err.message || 'Failed to link takeoff');
