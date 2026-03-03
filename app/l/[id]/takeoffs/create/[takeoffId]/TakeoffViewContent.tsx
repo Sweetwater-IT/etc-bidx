@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, ArrowLeft, FileText } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 
 interface Props {
@@ -67,8 +67,8 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
     }
   }, [takeoffId]);
 
-  const handleBack = () => {
-    router.push(`/l/${jobId}`);
+  const handleEdit = () => {
+    router.push(`/l/${jobId}/takeoffs/create`);
   };
 
   const handleDownloadPdf = async () => {
@@ -177,9 +177,9 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          <Button variant="outline" size="sm" onClick={handleBack}>
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back
+          <Button variant="outline" size="sm" onClick={handleEdit}>
+            <Edit className="h-3.5 w-3.5 mr-1.5" />
+            Edit
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
             <Download className="h-3.5 w-3.5" />
