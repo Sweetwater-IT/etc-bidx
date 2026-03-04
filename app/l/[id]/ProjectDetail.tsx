@@ -191,65 +191,65 @@ const ProjectDetail = () => {
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
       {/* ─── TOP HEADER BAR ─── */}
       <header className="border-b bg-card shrink-0">
-        <div className="w-full px-6 py-3">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-4 min-w-0">
+        <div className="w-full px-4 py-2">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push("/")}
-                className="shrink-0 h-8 w-8"
+                className="shrink-0 h-7 w-7"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3.5 w-3.5" />
               </Button>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-4 text-xs min-w-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-5 gap-3 text-xs min-w-0">
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Job Name</span>
-                  <span className="text-sm font-bold text-foreground truncate block">{info.projectName || "Untitled"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Job Name</span>
+                  <span className="text-xs font-bold text-foreground truncate block">{info.projectName || "Untitled"}</span>
                 </div>
                 {info.etcJobNumber && (
                   <div className="min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">ETC Job #</span>
-                    <span className="text-sm font-mono font-bold text-primary truncate block">{info.etcJobNumber}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">ETC Job #</span>
+                    <span className="text-xs font-mono font-bold text-primary truncate block">{info.etcJobNumber}</span>
                   </div>
                 )}
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer</span>
-                  <span className="text-sm text-foreground truncate block">{info.customerName || "—"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Customer</span>
+                  <span className="text-xs text-foreground truncate block">{info.customerName || "—"}</span>
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer Job #</span>
-                  <span className="text-sm font-mono text-foreground truncate block">{info.customerJobNumber || "—"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Customer Job #</span>
+                  <span className="text-xs font-mono text-foreground truncate block">{info.customerJobNumber || "—"}</span>
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Customer PM</span>
-                  <span className="text-sm text-foreground truncate block">{info.customerPM || "—"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Customer PM</span>
+                  <span className="text-xs text-foreground truncate block">{info.customerPM || "—"}</span>
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Project Owner</span>
-                  <span className="text-sm text-foreground truncate block">{info.projectOwner || "—"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Project Owner</span>
+                  <span className="text-xs text-foreground truncate block">{info.projectOwner || "—"}</span>
                 </div>
                 {info.contractNumber && (
                   <div className="min-w-0">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Contract #</span>
-                    <span className="text-sm font-mono text-foreground truncate block">{info.contractNumber}</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Contract #</span>
+                    <span className="text-xs font-mono text-foreground truncate block">{info.contractNumber}</span>
                   </div>
                 )}
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">County</span>
-                  <span className="text-sm text-foreground truncate block">{info.county || "—"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">County</span>
+                  <span className="text-xs text-foreground truncate block">{info.county || "—"}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-7">
                 <AlertTriangle className="h-3 w-3" /> Overdays Notice
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 text-xs h-8"
+                className="gap-1.5 text-xs h-7"
                 onClick={() => {
                   setEditCustomerPM(info.customerPM || "");
                   setEditCustomerPMEmail(info.customerPMEmail || "");
@@ -262,14 +262,14 @@ const ProjectDetail = () => {
               </Button>
               <Sheet open={alertsPanelOpen} onOpenChange={setAlertsPanelOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8 relative">
-                    <Bell className="h-3.5 w-3.5" />
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[9px] font-bold flex items-center justify-center">
+                  <Button variant="outline" size="icon" className="h-7 w-7 relative">
+                    <Bell className="h-3 w-3" />
+                    <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-destructive text-destructive-foreground rounded-full text-[8px] font-bold flex items-center justify-center">
                       3
                     </span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[380px]">
+                <SheetContent className="w-[320px]">
                   <SheetHeader>
                     <SheetTitle className="flex items-center gap-2">
                       <Bell className="h-4 w-4" /> Alerts & Reminders
@@ -284,9 +284,9 @@ const ProjectDetail = () => {
       </header>
 
       {/* ─── QUICK ACTIONS ─── */}
-      <div className="w-full px-6 pt-4">
+      <div className="w-full px-4 pt-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick Actions</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Quick Actions</span>
           <Button
             variant="outline"
             size="sm"
@@ -357,9 +357,9 @@ const ProjectDetail = () => {
       </div>
 
       {/* ─── MAP + SIDE CARDS ─── */}
-      <div className="w-full px-6 pt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 rounded-lg border bg-card overflow-hidden" style={{ height: 500 }}>
+      <div className="w-full px-4 pt-3">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-3 rounded-lg border bg-card overflow-hidden" style={{ height: 500 }}>
             <iframe
               title="Job Location"
               width="100%"
@@ -542,10 +542,10 @@ const ProjectDetail = () => {
       </div>
 
       {/* ─── SECTION B: TABBED CONTENT ─── */}
-      <div className="w-full px-6 py-6 flex-1">
+      <div className="w-full px-4 py-4 flex-1 overflow-x-auto">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Job360Tab)}>
-          <div className="border-b bg-card rounded-t-lg px-1">
-            <TabsList className="bg-transparent h-11 gap-0">
+          <div className="border-b bg-card rounded-t-lg min-w-max">
+            <TabsList className="bg-transparent h-9 gap-0">
               <TabBtn value="bid-items" icon={Layers} label="Bid Items / SOV" />
               <TabBtn value="takeoffs" icon={ClipboardList} label="Takeoffs" />
               <TabBtn value="customer-admin" icon={Users} label="Customer Admin" />
@@ -558,16 +558,16 @@ const ProjectDetail = () => {
             </TabsList>
           </div>
 
-          <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px]">
-            <TabsContent value="bid-items" className="m-0 p-6">
+          <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px] overflow-x-auto">
+            <TabsContent value="bid-items" className="m-0 p-4">
               <BidItemsSOV items={[]} />
             </TabsContent>
 
-            <TabsContent value="takeoffs" className="m-0 p-6">
+            <TabsContent value="takeoffs" className="m-0 p-4">
               <TakeoffsList jobId={id || ""} userEmail={user?.email} />
             </TabsContent>
 
-            <TabsContent value="customer-admin" className="m-0 p-6">
+            <TabsContent value="customer-admin" className="m-0 p-4">
               <TabPlaceholder
                 icon={Users}
                 title="Customer Admin"
@@ -576,7 +576,7 @@ const ProjectDetail = () => {
               />
             </TabsContent>
 
-            <TabsContent value="labor" className="m-0 p-6">
+            <TabsContent value="labor" className="m-0 p-4">
               <TabPlaceholder
                 icon={Timer}
                 title="Labor & Time"
@@ -585,11 +585,11 @@ const ProjectDetail = () => {
               />
             </TabsContent>
 
-            <TabsContent value="manufacturing" className="m-0 p-6">
+            <TabsContent value="manufacturing" className="m-0 p-4">
               <ManufacturingStatusPanel jobId={id || ""} signOrderCounts={signOrderCounts} />
             </TabsContent>
 
-            <TabsContent value="dispatch" className="m-0 p-6">
+            <TabsContent value="dispatch" className="m-0 p-4">
               <TabPlaceholder
                 icon={Truck}
                 title="Dispatch & Schedule"
@@ -598,7 +598,7 @@ const ProjectDetail = () => {
               />
             </TabsContent>
 
-            <TabsContent value="notes" className="m-0 p-6">
+            <TabsContent value="notes" className="m-0 p-4">
               <TabPlaceholder
                 icon={StickyNote}
                 title="Notes & Photos"
@@ -607,7 +607,7 @@ const ProjectDetail = () => {
               />
             </TabsContent>
 
-            <TabsContent value="documents" className="m-0 p-6">
+            <TabsContent value="documents" className="m-0 p-4">
               <TabPlaceholder
                 icon={FileText}
                 title="Documents"
@@ -616,7 +616,7 @@ const ProjectDetail = () => {
               />
             </TabsContent>
 
-            <TabsContent value="purchase-orders" className="m-0 p-6">
+            <TabsContent value="purchase-orders" className="m-0 p-4">
               <TabPlaceholder
                 icon={ShoppingCart}
                 title="Purchase Orders"
@@ -816,98 +816,100 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <ClipboardList className="h-5 w-5" />
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
           Takeoffs ({takeoffs.length})
         </h3>
         <Button variant="outline" size="sm" onClick={() => router.push(`/l/${jobId}/takeoffs/create`)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-3 w-3 mr-1.5" />
           New Takeoff
         </Button>
       </div>
       <div className="rounded-md border overflow-hidden">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-muted/30">
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Title
-              </th>
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Work Order
-              </th>
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Work Type
-              </th>
-              <th className="px-4 py-2.5 text-center font-semibold text-muted-foreground uppercase tracking-wider">
-                Items
-              </th>
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Need By
-              </th>
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-2.5 text-left font-semibold text-muted-foreground uppercase tracking-wider">
-                Created
-              </th>
-              <th className="px-4 py-2.5 text-center font-semibold text-muted-foreground uppercase tracking-wider w-[60px]">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {takeoffs.map((takeoff) => (
-              <tr key={takeoff.id} className="cursor-pointer hover:bg-muted/20" onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}>
-                <td className="px-4 py-2.5 font-medium">{takeoff.title}</td>
-                <td className="px-4 py-2.5 font-mono">
-                  {takeoff.work_order_number ? (
-                    takeoff.work_order_number
-                  ) : (
-                    <span className="italic text-muted-foreground">unassigned</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 capitalize">{takeoff.work_type}</td>
-                <td className="px-4 py-2.5 text-center">{takeoff.items_count || '—'}</td>
-                <td className="px-4 py-2.5">
-                  {takeoff.needed_by_date
-                    ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "—"}
-                </td>
-                <td className="px-4 py-2.5">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {takeoff.status}
-                  </Badge>
-                </td>
-                <td className="px-4 py-2.5">
-                  {new Date(takeoff.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </td>
-                <td className="px-4 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => {
-                      setTakeoffToDelete(takeoff);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-muted/30">
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Title
+                </th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Work Order
+                </th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Work Type
+                </th>
+                <th className="px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Items
+                </th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Need By
+                </th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Status
+                </th>
+                <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Created
+                </th>
+                <th className="px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-muted-foreground w-[50px]">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y">
+              {takeoffs.map((takeoff) => (
+                <tr key={takeoff.id} className="cursor-pointer hover:bg-muted/20" onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}>
+                  <td className="px-3 py-1.5 font-medium">{takeoff.title}</td>
+                  <td className="px-3 py-1.5 font-mono">
+                    {takeoff.work_order_number ? (
+                      takeoff.work_order_number
+                    ) : (
+                      <span className="italic text-muted-foreground">unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-1.5 capitalize">{takeoff.work_type}</td>
+                  <td className="px-3 py-1.5 text-center">{takeoff.items_count || '—'}</td>
+                  <td className="px-3 py-1.5">
+                    {takeoff.needed_by_date
+                      ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <Badge variant="secondary" className="text-[9px]">
+                      {takeoff.status}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-1.5">
+                    {new Date(takeoff.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </td>
+                  <td className="px-3 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setTakeoffToDelete(takeoff);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -1011,10 +1013,10 @@ const BidItemsSOV = ({ items }: { items: ScheduleOfValuesItem[] }) => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Layers className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-base font-bold text-foreground">Bid Items / Schedule of Values</h3>
+          <Layers className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-foreground">Bid Items / Schedule of Values</h3>
         </div>
         <Badge variant="secondary" className="text-xs">
           {items.length} item{items.length !== 1 ? "s" : ""}
@@ -1022,9 +1024,9 @@ const BidItemsSOV = ({ items }: { items: ScheduleOfValuesItem[] }) => {
       </div>
       {items.length === 0 ? (
         <div className="rounded-md border overflow-hidden">
-          <div className="p-12 text-center">
-            <Layers className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground font-medium">No bid items configured</p>
+          <div className="p-8 text-center">
+            <Layers className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground font-medium">No bid items configured</p>
             <p className="text-xs text-muted-foreground mt-1">
               Bid items are set up during the contract stage.
             </p>
@@ -1033,30 +1035,30 @@ const BidItemsSOV = ({ items }: { items: ScheduleOfValuesItem[] }) => {
       ) : (
         <div className="rounded-md border overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/30">
-                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item #</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">UOM</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Unit Price</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Extended</th>
-                  <th className="text-right px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Retainage</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Scope Notes</th>
+                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item #</th>
+                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Description</th>
+                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">UOM</th>
+                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
+                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Unit Price</th>
+                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Extended</th>
+                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Retainage</th>
+                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Scope Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id} className="border-t">
-                    <td className="px-4 py-2 text-xs font-mono text-muted-foreground">{item.itemNumber || "—"}</td>
-                    <td className="px-4 py-2 text-xs">{item.description || "—"}</td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground">{item.uom || "—"}</td>
-                    <td className="px-4 py-2 text-xs text-right tabular-nums">{item.quantity}</td>
-                    <td className="px-4 py-2 text-xs text-right tabular-nums">${item.unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-4 py-2 text-xs text-right tabular-nums font-medium">${item.extendedPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-4 py-2 text-xs text-right tabular-nums text-primary">${item.retainageAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground max-w-[200px]">
+                    <td className="px-3 py-1.5 text-xs font-mono text-muted-foreground">{item.itemNumber || "—"}</td>
+                    <td className="px-3 py-1.5 text-xs">{item.description || "—"}</td>
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground">{item.uom || "—"}</td>
+                    <td className="px-3 py-1.5 text-xs text-right tabular-nums">{item.quantity}</td>
+                    <td className="px-3 py-1.5 text-xs text-right tabular-nums">${item.unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-1.5 text-xs text-right tabular-nums font-medium">${item.extendedPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-1.5 text-xs text-right tabular-nums text-primary">${item.retainageAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px]">
                       {item.notes ? (
                         <span className="whitespace-pre-wrap">{item.notes}</span>
                       ) : (
@@ -1066,9 +1068,9 @@ const BidItemsSOV = ({ items }: { items: ScheduleOfValuesItem[] }) => {
                   </tr>
                 ))}
                 <tr className="border-t bg-muted/30 font-semibold">
-                  <td colSpan={5} className="px-4 py-2 text-xs text-right">Total</td>
-                  <td className="px-4 py-2 text-xs text-right tabular-nums">${totalExtended.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                  <td className="px-4 py-2 text-xs text-right tabular-nums text-primary">${totalRetainage.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                  <td colSpan={5} className="px-3 py-1.5 text-xs text-right">Total</td>
+                  <td className="px-3 py-1.5 text-xs text-right tabular-nums">${totalExtended.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                  <td className="px-3 py-1.5 text-xs text-right tabular-nums text-primary">${totalRetainage.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
                   <td />
                 </tr>
               </tbody>
