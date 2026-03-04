@@ -95,10 +95,6 @@ function drawTableHeader(doc: jsPDF, cols: { label: string; x: number; w: number
   for (const col of cols) {
     if (RIGHT_ALIGN_LABELS.has(col.label)) {
       doc.text(col.label, col.x + col.w, y, { align: "right" });
-    } else if (col.label.includes('\n')) {
-      const lines = col.label.split('\n');
-      doc.text(lines[0], col.x, y);
-      doc.text(lines[1], col.x, y + 4);
     } else {
       doc.text(col.label, col.x, y);
     }
@@ -129,25 +125,25 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
 // Landscape page width ~297mm; usable area 14..283 = 269mm
 const MPT_COLS_ORDERED = [
   { label: "LOAD", x: 14, w: 8 },
-  { label: "DESIG\nLEGEND", x: 22, w: 130 },
-  { label: "DIM", x: 152, w: 20 },
-  { label: "SHEET", x: 172, w: 16 },
-  { label: "QTY", x: 188, w: 10 },
-  { label: "STRUCTURE", x: 200, w: 40 },
-  { label: "MATL", x: 242, w: 12 },
-  { label: "LIGHTS", x: 254, w: 10 },
-  { label: "COVER", x: 265, w: 18 },
+  { label: "DESIG", x: 22, w: 90 },
+  { label: "DIM", x: 112, w: 20 },
+  { label: "SHEET", x: 132, w: 16 },
+  { label: "QTY", x: 148, w: 10 },
+  { label: "STRUCTURE", x: 158, w: 42 },
+  { label: "MATL", x: 200, w: 12 },
+  { label: "LIGHTS", x: 212, w: 10 },
+  { label: "COVER", x: 222, w: 18 },
 ];
 
 const MPT_COLS = [
-  { label: "DESIG\nLEGEND", x: 22, w: 130 },
-  { label: "DIM", x: 152, w: 20 },
-  { label: "SHEET", x: 172, w: 16 },
-  { label: "QTY", x: 188, w: 10 },
-  { label: "STRUCTURE", x: 200, w: 40 },
-  { label: "MATL", x: 242, w: 12 },
-  { label: "LIGHTS", x: 254, w: 10 },
-  { label: "COVER", x: 265, w: 18 },
+  { label: "DESIG", x: 22, w: 90 },
+  { label: "DIM", x: 112, w: 20 },
+  { label: "SHEET", x: 132, w: 16 },
+  { label: "QTY", x: 148, w: 10 },
+  { label: "STRUCTURE", x: 158, w: 42 },
+  { label: "MATL", x: 200, w: 12 },
+  { label: "LIGHTS", x: 212, w: 10 },
+  { label: "COVER", x: 222, w: 18 },
 ];
 
 const PERM_COLS = [
