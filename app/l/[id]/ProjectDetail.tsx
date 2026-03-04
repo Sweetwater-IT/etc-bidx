@@ -544,10 +544,10 @@ const ProjectDetail = () => {
       </div>
 
       {/* ─── SECTION B: TABBED CONTENT ─── */}
-      <div className="w-full px-4 py-4 flex-1 overflow-x-auto">
+      <div className="w-full px-6 py-6 flex-1">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Job360Tab)}>
-          <div className="border-b bg-card rounded-t-lg min-w-max">
-            <TabsList className="bg-transparent h-9 gap-0">
+          <div className="border-b bg-card rounded-t-lg overflow-x-auto">
+            <TabsList className="bg-transparent h-9 gap-0 min-w-max">
               <TabBtn value="bid-items" icon={Layers} label="Bid Items / SOV" />
               <TabBtn value="takeoffs" icon={ClipboardList} label="Takeoffs" />
               <TabBtn value="customer-admin" icon={Users} label="Customer Admin" />
@@ -560,7 +560,7 @@ const ProjectDetail = () => {
             </TabsList>
           </div>
 
-          <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px] overflow-x-auto">
+          <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px]">
             <TabsContent value="bid-items" className="m-0 p-4">
               <BidItemsSOV items={[]} />
             </TabsContent>
