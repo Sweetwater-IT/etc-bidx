@@ -188,9 +188,11 @@ const ProjectDetail = () => {
   }[jobStatus];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      {/* ─── TOP HEADER BAR ─── */}
-      <header className="border-b bg-card shrink-0">
+    <div className="flex flex-1 flex-col">
+      <div className="@container/main flex flex-1 flex-col gap-2">
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          {/* ─── TOP HEADER BAR ─── */}
+          <header className="border-b bg-card shrink-0">
         <div className="w-full px-4 py-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -626,6 +628,8 @@ const ProjectDetail = () => {
             </TabsContent>
           </div>
         </Tabs>
+      </div>
+        </div>
       </div>
     </div>
   );
