@@ -36,6 +36,8 @@ interface Props {
   onDesignationSelected?: (updatedSign: PrimarySign | SecondarySign) => void;
   onKitSelected?: (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => void;
   onKitSignsConfigured?: (signs: PrimarySign[], kit: PataKit | PtsKit) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const supabase = createClient(
@@ -49,8 +51,12 @@ const DesignationSearcher = ({
   onDesignationSelected,
   onKitSelected,
   onKitSignsConfigured,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: Props) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange || setInternalOpen;
   const [activeTab, setActiveTab] = useState('mutcd');
 
   // Independent search per tab
@@ -351,20 +357,6 @@ const DesignationSearcher = ({
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => setOpen(true)}
-        className="w-full sm:w-[300px] justify-start text-left font-normal"
-      >
-        <span className="truncate">
-          {localSign.designation
-            ? `${localSign.designation}${
-                localSign.width && localSign.height ? ` (${localSign.width} x ${localSign.height})` : ''
-              }`
-            : 'Select designation...'}
-        </span>
-      </Button>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-6 pb-4 shrink-0">

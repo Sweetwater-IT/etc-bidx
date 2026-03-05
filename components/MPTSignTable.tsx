@@ -194,6 +194,7 @@ export const MPTSignTable = ({
 
   // DesignationSearcher state
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
+  const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
 
   // Debugging ref
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -464,6 +465,7 @@ export const MPTSignTable = ({
     if (row) {
       const newSecondarySign = {
         id: crypto.randomUUID(),
+        primarySignId: id,
         signDesignation: '',
         signDescription: '',
         width: 0,
@@ -473,6 +475,8 @@ export const MPTSignTable = ({
         sheeting: 'HI',
         sqft: 0,
         quantity: row.quantity, // Match primary sign quantity
+        isCustom: false,
+        needsOrder: false,
       };
 
       const updatedRow = {
@@ -481,6 +485,24 @@ export const MPTSignTable = ({
       };
 
       updateRow(id, { secondarySigns: updatedRow.secondarySigns });
+    }
+  };
+
+  const updateSecondarySign = (parentId: string, secId: string, updates: Partial<any>) => {
+    const row = rows.find(row => row.id === parentId);
+    if (row) {
+      const updatedSecondarySigns = row.secondarySigns.map(sec =>
+        sec.id === secId ? { ...sec, ...updates } : sec
+      );
+      updateRow(parentId, { secondarySigns: updatedSecondarySigns });
+    }
+  };
+
+  const removeSecondarySign = (parentId: string, secId: string) => {
+    const row = rows.find(row => row.id === parentId);
+    if (row) {
+      const updatedSecondarySigns = row.secondarySigns.filter(sec => sec.id !== secId);
+      updateRow(parentId, { secondarySigns: updatedSecondarySigns });
     }
   };
 
@@ -537,18 +559,12 @@ export const MPTSignTable = ({
                   substrate: 'Plastic',
                 };
                 setLocalSign(primarySign);
+                setDesignationSearcherOpen(true);
               }}
               disabled={disabled}
             >
               {row.signDesignation || 'select sign...'}
             </Button>
-            {localSign && localSign.id === row.id && (
-              <DesignationSearcher
-                localSign={localSign}
-                setLocalSign={setLocalSign}
-                onDesignationSelected={handleDesignationSelected}
-              />
-            )}
           </>
         );
       case 'legend':
@@ -799,45 +815,131 @@ export const MPTSignTable = ({
                 </thead>
                 <tbody className="divide-y">
                   {rows.map(row => (
-                    <tr key={row.id} className="hover:bg-muted/20">
-                      {columns.map(column => (
-                        <td key={column.key} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
-                          {renderCell(row, column)}
-                        </td>
+                    <>
+                      <tr key={row.id} className="hover:bg-muted/20">
+                        {columns.map(column => (
+                          <td key={column.key} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
+                            {renderCell(row, column)}
+                          </td>
+                        ))}
+                        {!disabled && (
+                          <td className="px-2 py-1">
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => duplicateRow(row.id)}
+                                title="Duplicate row"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => addSecondarySign(row.id)}
+                                title="Add secondary sign"
+                              >
+                                <FilePlus className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => removeRow(row.id)}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+
+                      {/* Secondary signs */}
+                      {(row.secondarySigns || []).map((sec: any) => (
+                        <tr key={sec.id} className="bg-muted/10">
+                          {columns.map((column, index) => (
+                            <td key={`${sec.id}-${column.key}`} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
+                              {column.key === 'designation' ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-muted-foreground">↳</span>
+                                  <Button
+                                    variant="outline"
+                                    className="h-6 w-full justify-start text-left font-normal text-[11px]"
+                                    onClick={() => {
+                                      const secondarySign: SecondarySign = {
+                                        id: sec.id,
+                                        primarySignId: row.id,
+                                        designation: sec.signDesignation || '',
+                                        width: sec.width || 0,
+                                        height: sec.height || 0,
+                                        quantity: row.quantity,
+                                        sheeting: sec.sheeting as any,
+                                        isCustom: sec.isCustom || false,
+                                        description: sec.signDescription || '',
+                                        substrate: 'Plastic',
+                                      };
+                                      setLocalSign(secondarySign);
+                                      setDesignationSearcherOpen(true);
+                                    }}
+                                    disabled={disabled}
+                                  >
+                                    {sec.signDesignation || 'select sign...'}
+                                  </Button>
+                                </div>
+                              ) : column.key === 'legend' ? (
+                                <Input
+                                  className="h-6 text-[11px] w-full"
+                                  value={sec.signLegend}
+                                  onChange={(e) => updateSecondarySign(row.id, sec.id, { signLegend: e.target.value })}
+                                  placeholder="Legend"
+                                  disabled={disabled}
+                                />
+                              ) : column.key === 'dimensions' ? (
+                                <span className="text-[11px] text-muted-foreground">{sec.dimensionLabel || "—"}</span>
+                              ) : column.key === 'sheeting' ? (
+                                <Select
+                                  value={sec.sheeting || 'HI'}
+                                  onValueChange={(v: string) => updateSecondarySign(row.id, sec.id, { sheeting: v })}
+                                  disabled={disabled}
+                                >
+                                  <SelectTrigger className="h-6 text-[11px] w-[65px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {SHEETING_OPTIONS.map((o) => (
+                                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : column.key === 'qty' ? (
+                                <span className="text-[11px] text-muted-foreground">{row.quantity}</span>
+                              ) : column.key === 'structure' ? (
+                                <span className="text-[10px] text-muted-foreground italic">same structure</span>
+                              ) : column.key === 'sqft' ? (
+                                <span className="text-[11px] font-medium tabular-nums text-right">
+                                  {sec.sqft > 0 ? Math.round(sec.sqft * row.quantity * 100) / 100 : "—"}
+                                </span>
+                              ) : index === columns.length - 1 && !disabled ? (
+                                <div className="flex items-center justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={() => removeSecondarySign(row.id, sec.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
                       ))}
-                      {!disabled && (
-                        <td className="px-2 py-1">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => duplicateRow(row.id)}
-                              title="Duplicate row"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => addSecondarySign(row.id)}
-                              title="Add secondary sign"
-                            >
-                              <FilePlus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => removeRow(row.id)}
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -845,6 +947,20 @@ export const MPTSignTable = ({
           </div>
         )}
       </div>
+
+      {/* Controlled DesignationSearcher */}
+      {localSign && (
+        <DesignationSearcher
+          localSign={localSign}
+          setLocalSign={setLocalSign}
+          onDesignationSelected={(updatedSign) => {
+            handleDesignationSelected(updatedSign);
+            setDesignationSearcherOpen(false);
+          }}
+          open={designationSearcherOpen}
+          onOpenChange={setDesignationSearcherOpen}
+        />
+      )}
     </div>
   );
 };
