@@ -277,7 +277,7 @@ export const MPTSignTable = ({
   const getColumns = (sectionKey: string) => {
     const baseColumns = [
       { key: 'designation', label: 'Designation', width: 'w-32' },
-      { key: 'legend', label: 'Legend', width: 'w-80' },
+      { key: 'legend', label: 'Legend', width: 'w-96' },
       { key: 'dimensions', label: 'Dimensions', width: 'w-28' },
       { key: 'sheeting', label: 'Sheeting', width: 'w-20' },
       { key: 'qty', label: 'Qty', width: 'w-16' },
@@ -432,7 +432,7 @@ export const MPTSignTable = ({
       case 'legend':
         return (
           <Input
-            className="h-8 text-xs"
+            className="h-8 text-xs w-full"
             value={row.signLegend}
             onChange={(e) => updateRow(row.id, { signLegend: e.target.value })}
             placeholder="Legend"
