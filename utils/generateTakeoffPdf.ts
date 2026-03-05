@@ -125,25 +125,27 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
 // Landscape page width ~297mm; usable area 14..283 = 269mm
 const MPT_COLS_ORDERED = [
   { label: "LOAD", x: 14, w: 8 },
-  { label: "DESIG", x: 22, w: 90 },
-  { label: "DIM", x: 112, w: 20 },
-  { label: "SHEET", x: 132, w: 16 },
-  { label: "QTY", x: 148, w: 10 },
-  { label: "STRUCTURE", x: 158, w: 42 },
-  { label: "MATL", x: 200, w: 12 },
-  { label: "LIGHTS", x: 212, w: 10 },
-  { label: "COVER", x: 222, w: 18 },
+  { label: "DESIG", x: 22, w: 22 },
+  { label: "LEGEND", x: 44, w: 104 },
+  { label: "DIM", x: 148, w: 20 },
+  { label: "SHEET", x: 168, w: 16 },
+  { label: "QTY", x: 184, w: 10 },
+  { label: "STRUCTURE", x: 200, w: 40 },
+  { label: "MATL", x: 242, w: 12 },
+  { label: "LIGHTS", x: 254, w: 10 },
+  { label: "COVER", x: 265, w: 18 },
 ];
 
 const MPT_COLS = [
-  { label: "DESIG", x: 22, w: 90 },
-  { label: "DIM", x: 112, w: 20 },
-  { label: "SHEET", x: 132, w: 16 },
-  { label: "QTY", x: 148, w: 10 },
-  { label: "STRUCTURE", x: 158, w: 42 },
-  { label: "MATL", x: 200, w: 12 },
-  { label: "LIGHTS", x: 212, w: 10 },
-  { label: "COVER", x: 222, w: 18 },
+  { label: "DESIG", x: 22, w: 22 },
+  { label: "LEGEND", x: 44, w: 108 },
+  { label: "DIM", x: 152, w: 20 },
+  { label: "SHEET", x: 172, w: 16 },
+  { label: "QTY", x: 188, w: 10 },
+  { label: "STRUCTURE", x: 200, w: 40 },
+  { label: "MATL", x: 242, w: 12 },
+  { label: "LIGHTS", x: 254, w: 10 },
+  { label: "COVER", x: 265, w: 18 },
 ];
 
 const PERM_COLS = [
@@ -573,19 +575,19 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.setFont("helvetica", "normal");
             const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
             const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS_ORDERED[1].w - 2);
-            const rowH = Math.max(6, 4 + legendLines.length * 3.5);
+            const legendLines = doc.splitTextToSize(legendText, MPT_COLS_ORDERED[2].w);
+            const rowH = Math.max(6, legendLines.length * 3.5);
             y = checkPageBreak(doc, y, rowH);
             doc.text(String(idx + 1), MPT_COLS_ORDERED[0].x, y);
             doc.text(desigText, MPT_COLS_ORDERED[1].x, y);
-            doc.text(legendLines, MPT_COLS_ORDERED[1].x, y + 4);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[2].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[3].x, y);
-            doc.text(String(item.quantity), MPT_COLS_ORDERED[4].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[5].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[6].x + MPT_COLS_ORDERED[6].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[7].x + MPT_COLS_ORDERED[7].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
+            doc.text(legendLines, MPT_COLS_ORDERED[2].x, y);
+            doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
+            doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
+            doc.text(String(item.quantity), MPT_COLS_ORDERED[5].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[6].x, y);
+            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[7].x + MPT_COLS_ORDERED[7].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
             y += rowH;
             // Light grey separator line
             doc.setDrawColor(220);
@@ -596,8 +598,8 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
               for (const sec of meta.secondarySigns) {
                 const secDesigText = (sec.signDesignation || "").substring(0, 20);
                 const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS_ORDERED[1].w - 2);
-                const secRowH = Math.max(6, 4 + secLegendLines.length * 3.5);
+                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS_ORDERED[2].w);
+                const secRowH = Math.max(6, secLegendLines.length * 3.5);
                 y = checkPageBreak(doc, y, secRowH);
                 doc.setFillColor(248, 248, 250);
                 doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
@@ -608,14 +610,14 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
                 doc.setFontSize(7);
                 doc.text("•", MPT_COLS_ORDERED[0].x + 2, y);
                 doc.text(secDesigText, MPT_COLS_ORDERED[1].x, y);
-                doc.text(secLegendLines, MPT_COLS_ORDERED[1].x, y + 4);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS_ORDERED[2].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS_ORDERED[3].x, y);
-                doc.text("", MPT_COLS_ORDERED[4].x, y);
+                doc.text(secLegendLines, MPT_COLS_ORDERED[2].x, y);
+                doc.text(sec.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
+                doc.text(sec.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
                 doc.text("", MPT_COLS_ORDERED[5].x, y);
                 doc.text("", MPT_COLS_ORDERED[6].x, y);
                 doc.text("", MPT_COLS_ORDERED[7].x, y);
                 doc.text("", MPT_COLS_ORDERED[8].x, y);
+                doc.text("", MPT_COLS_ORDERED[9].x, y);
                 doc.setFontSize(8);
                 doc.setFont("helvetica", "normal");
                 y += secRowH;
@@ -625,18 +627,18 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.setFont("helvetica", "normal");
             const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
             const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS[0].w - 2);
-            const rowH = Math.max(6, 4 + legendLines.length * 3.5);
+            const legendLines = doc.splitTextToSize(legendText, MPT_COLS[1].w);
+            const rowH = Math.max(6, legendLines.length * 3.5);
             y = checkPageBreak(doc, y, rowH);
             doc.text(desigText, MPT_COLS[0].x, y);
-            doc.text(legendLines, MPT_COLS[0].x, y + 4);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS[1].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS[2].x, y);
-            doc.text(String(item.quantity), MPT_COLS[3].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[4].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS[5].x + MPT_COLS[5].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[6].x + MPT_COLS[6].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
+            doc.text(legendLines, MPT_COLS[1].x, y);
+            doc.text(meta?.dimensionLabel || "—", MPT_COLS[2].x, y);
+            doc.text(meta?.sheeting || "—", MPT_COLS[3].x, y);
+            doc.text(String(item.quantity), MPT_COLS[4].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[5].x, y);
+            doc.text((item.material || "").substring(0, 8), MPT_COLS[6].x + MPT_COLS[6].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
             y += rowH;
             // Light grey separator line
             doc.setDrawColor(220);
@@ -647,8 +649,8 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
               for (const sec of meta.secondarySigns) {
                 const secDesigText = (sec.signDesignation || "").substring(0, 20);
                 const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS[0].w - 10);
-                const secRowH = Math.max(6, 4 + secLegendLines.length * 3.5);
+                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS[1].w);
+                const secRowH = Math.max(6, secLegendLines.length * 3.5);
                 y = checkPageBreak(doc, y, secRowH);
                 doc.setFillColor(248, 248, 250);
                 doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
@@ -658,15 +660,15 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
                 doc.setFont("helvetica", "italic");
                 doc.setFontSize(7);
                 doc.text("•", MPT_COLS[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS[0].x + 8, y);
-                doc.text(secLegendLines, MPT_COLS[0].x + 8, y + 4);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS[1].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS[2].x, y);
-                doc.text("", MPT_COLS[3].x, y);
+                doc.text(secDesigText, MPT_COLS[0].x, y);
+                doc.text(secLegendLines, MPT_COLS[1].x, y);
+                doc.text(sec.dimensionLabel || "—", MPT_COLS[2].x, y);
+                doc.text(sec.sheeting || "—", MPT_COLS[3].x, y);
                 doc.text("", MPT_COLS[4].x, y);
                 doc.text("", MPT_COLS[5].x, y);
                 doc.text("", MPT_COLS[6].x, y);
                 doc.text("", MPT_COLS[7].x, y);
+                doc.text("", MPT_COLS[8].x, y);
                 doc.setFontSize(8);
                 doc.setFont("helvetica", "normal");
                 y += secRowH;
