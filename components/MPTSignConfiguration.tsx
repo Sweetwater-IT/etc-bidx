@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Package } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
@@ -66,8 +66,54 @@ export const MPTSignConfiguration = ({
 }: MPTSignConfigurationProps) => {
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
+  // Debugging refs
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Debugging: Log container dimensions
+  useEffect(() => {
+    const logDimensions = () => {
+      if (mainContainerRef.current) {
+        const mainRect = mainContainerRef.current.getBoundingClientRect();
+        console.log('MPTSignConfiguration Main Container:', {
+          clientWidth: mainContainerRef.current.clientWidth,
+          clientHeight: mainContainerRef.current.clientHeight,
+          scrollWidth: mainContainerRef.current.scrollWidth,
+          scrollHeight: mainContainerRef.current.scrollHeight,
+          boundingRect: mainRect,
+        });
+      }
+      if (sidebarRef.current) {
+        const sidebarRect = sidebarRef.current.getBoundingClientRect();
+        console.log('MPTSignConfiguration Sidebar:', {
+          clientWidth: sidebarRef.current.clientWidth,
+          clientHeight: sidebarRef.current.clientHeight,
+          scrollWidth: sidebarRef.current.scrollWidth,
+          scrollHeight: sidebarRef.current.scrollHeight,
+          boundingRect: sidebarRect,
+        });
+      }
+      if (contentRef.current) {
+        const contentRect = contentRef.current.getBoundingClientRect();
+        console.log('MPTSignConfiguration Content Area:', {
+          clientWidth: contentRef.current.clientWidth,
+          clientHeight: contentRef.current.clientHeight,
+          scrollWidth: contentRef.current.scrollWidth,
+          scrollHeight: contentRef.current.scrollHeight,
+          boundingRect: contentRect,
+        });
+      }
+    };
+
+    logDimensions();
+    window.addEventListener('resize', logDimensions);
+
+    return () => window.removeEventListener('resize', logDimensions);
+  }, [activeSections.length]);
+
   return (
-    <div className="rounded-lg border bg-card shadow-sm max-h-[600px] flex flex-col">
+    <div ref={mainContainerRef} className="rounded-lg border bg-card shadow-sm max-h-[600px] flex flex-col">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">MPT Sign Configuration</h2>
         {!disabled && (
@@ -100,7 +146,7 @@ export const MPTSignConfiguration = ({
         )}
       </div>
       <div className="flex flex-1 min-h-0">
-        <div className="w-[200px] shrink-0 border-r p-4 overflow-y-auto overflow-x-auto">
+        <div ref={sidebarRef} className="w-[200px] shrink-0 border-r p-4 overflow-y-auto overflow-x-auto">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Structure Types</h4>
           <div className="space-y-2">
             {MPT_SECTIONS.map((section) => {
@@ -124,7 +170,7 @@ export const MPTSignConfiguration = ({
             })}
           </div>
         </div>
-        <div className="flex-1 min-w-0 p-4 overflow-y-auto">
+        <div ref={contentRef} className="flex-1 min-w-0 p-4 overflow-y-auto">
           {activeSections.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
               <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />

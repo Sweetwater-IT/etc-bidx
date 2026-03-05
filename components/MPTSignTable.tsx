@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 
@@ -170,6 +170,35 @@ export const MPTSignTable = ({
 
   // DesignationSearcher state
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
+
+  // Debugging ref
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Debugging: Log table wrapper dimensions
+  useEffect(() => {
+    const logTableDimensions = () => {
+      if (tableWrapperRef.current) {
+        const rect = tableWrapperRef.current.getBoundingClientRect();
+        console.log(`MPTSignTable ${sectionTitle} Wrapper:`, {
+          clientWidth: tableWrapperRef.current.clientWidth,
+          clientHeight: tableWrapperRef.current.clientHeight,
+          scrollWidth: tableWrapperRef.current.scrollWidth,
+          scrollHeight: tableWrapperRef.current.scrollHeight,
+          scrollLeft: tableWrapperRef.current.scrollLeft,
+          scrollTop: tableWrapperRef.current.scrollTop,
+          boundingRect: rect,
+          overflow: window.getComputedStyle(tableWrapperRef.current).overflow,
+          overflowX: window.getComputedStyle(tableWrapperRef.current).overflowX,
+          overflowY: window.getComputedStyle(tableWrapperRef.current).overflowY,
+        });
+      }
+    };
+
+    logTableDimensions();
+    window.addEventListener('resize', logTableDimensions);
+
+    return () => window.removeEventListener('resize', logTableDimensions);
+  }, [sectionTitle, rows.length]);
 
   // Fetch signs from database
   useEffect(() => {
@@ -560,7 +589,7 @@ export const MPTSignTable = ({
           >
             <SortableContext items={rows.map(row => row.id)} strategy={verticalListSortingStrategy}>
               <div className="rounded-lg border overflow-hidden">
-                <div className="overflow-x-auto max-w-full">
+                <div ref={tableWrapperRef} className="overflow-x-auto max-w-full">
                   <table className="w-full min-w-[800px]">
                     <thead className="bg-muted/30">
                       <tr>

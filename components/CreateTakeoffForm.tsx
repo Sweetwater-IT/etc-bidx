@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useAuth } from "@/contexts/auth-context";
@@ -56,6 +56,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
   const [defaultSignMaterial, setDefaultSignMaterial] = useState<SignMaterial>(DEFAULT_SIGN_MATERIAL);
 
+  // Debugging refs
+  const mptContainerRef = useRef<HTMLDivElement>(null);
+
   // Load draft takeoff data when provided
   useEffect(() => {
     if (draftTakeoff) {
@@ -77,6 +80,38 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       setSavedTakeoffId(draftTakeoff.id);
     }
   }, [draftTakeoff]);
+
+  // Debugging: Log container dimensions
+  useEffect(() => {
+    const logDimensions = () => {
+      if (mptContainerRef.current) {
+        const rect = mptContainerRef.current.getBoundingClientRect();
+        console.log('MPT Container Dimensions:', {
+          clientWidth: mptContainerRef.current.clientWidth,
+          clientHeight: mptContainerRef.current.clientHeight,
+          scrollWidth: mptContainerRef.current.scrollWidth,
+          scrollHeight: mptContainerRef.current.scrollHeight,
+          scrollLeft: mptContainerRef.current.scrollLeft,
+          scrollTop: mptContainerRef.current.scrollTop,
+          boundingRect: rect,
+          overflow: window.getComputedStyle(mptContainerRef.current).overflow,
+          overflowX: window.getComputedStyle(mptContainerRef.current).overflowX,
+          overflowY: window.getComputedStyle(mptContainerRef.current).overflowY,
+        });
+      }
+    };
+
+    // Log on mount and resize
+    logDimensions();
+    window.addEventListener('resize', logDimensions);
+
+    return () => window.removeEventListener('resize', logDimensions);
+  }, [workType]);
+
+  // Log when sign rows change (add sign clicked)
+  useEffect(() => {
+    console.log('Sign rows changed:', signRows);
+  }, [signRows]);
 
   // MPT Configuration Handlers
   const handleToggleSection = (key: string) => {
@@ -457,7 +492,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               {WORK_TYPES.find(wt => wt.value === workType)?.label} Configuration
             </h2>
           </div>
-          <div className="p-5 overflow-auto max-h-[70vh]">
+          <div ref={mptContainerRef} className="p-5 overflow-auto max-h-[70vh]">
             {workType === "MPT" && (
               <MPTSignConfiguration
                 activeSections={activeSections}
