@@ -80,7 +80,7 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <div className="w-full px-6 py-6 flex-1">
+      <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
         <CreateTakeoffForm
           jobId={jobId}
           onBack={handleBack}
