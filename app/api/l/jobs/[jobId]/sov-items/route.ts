@@ -3,13 +3,14 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
     const { data, error } = await supabase
       .from('sov_items_l')
       .select('*')
-      .eq('job_id', params.jobId)
+      .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
 
     if (error) {
@@ -32,9 +33,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params;
     const body = await request.json();
     const { item_number, description, uom, quantity, unit_price, retainage_type, retainage_value, notes } = body;
 
@@ -48,7 +50,7 @@ export async function POST(
     const { data: maxSort } = await supabase
       .from('sov_items_l')
       .select('sort_order')
-      .eq('job_id', params.jobId)
+      .eq('job_id', jobId)
       .order('sort_order', { ascending: false })
       .limit(1);
 
@@ -57,7 +59,7 @@ export async function POST(
     const { data, error } = await supabase
       .from('sov_items_l')
       .insert({
-        job_id: params.jobId,
+        job_id: jobId,
         item_number,
         description,
         uom,
