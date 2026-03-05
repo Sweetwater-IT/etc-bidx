@@ -277,7 +277,7 @@ export const MPTSignTable = ({
   const getColumns = (sectionKey: string) => {
     const baseColumns = [
       { key: 'designation', label: 'Designation', width: 'w-32' },
-      { key: 'legend', label: 'Legend', width: 'w-24' },
+      { key: 'legend', label: 'Legend', width: 'w-80' },
       { key: 'dimensions', label: 'Dimensions', width: 'w-28' },
       { key: 'sheeting', label: 'Sheeting', width: 'w-20' },
       { key: 'qty', label: 'Qty', width: 'w-16' },
