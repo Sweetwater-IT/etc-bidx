@@ -1413,41 +1413,37 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               Work Order Items
             </h2>
-            {canEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={async () => {
-                  if (!workOrderId) return;
-                  const nextSort = woItems.length > 0 ? Math.max(...woItems.map(i => i.sort_order)) + 1 : 0;
-                  const response = await fetch(`/api/workorders/${workOrderId}/items`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      action: 'create',
-                      itemData: {
-                        item_number: "",
-                        description: "",
-                        contract_quantity: 1,
-                        work_order_quantity: 1,
-                        uom: "EA",
-                        sort_order: nextSort,
-                      },
-                    }),
-                  });
-                  if (!response.ok) {
-                    const error = await response.json();
-                    toast.error(error.error || "Failed to add item");
-                  } else {
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={async () => {
+                if (!workOrderId) return;
+                console.log('=== FETCHING WORK ORDER ITEMS ===');
+                console.log('Work Order ID:', workOrderId);
+                try {
+                  const response = await fetch(`/api/workorders/${workOrderId}/items`);
+                  console.log('GET Response status:', response.status);
+                  console.log('GET Response ok:', response.ok);
+                  if (response.ok) {
                     const data = await response.json();
-                    setWoItems((prev) => [...prev, data.item as WOItem]);
+                    console.log('GET Success data:', data);
+                    toast.success(`Found ${data.items?.length || 0} items`);
+                    // Update local state with fetched items
+                    setWoItems(data.items || []);
+                  } else {
+                    const error = await response.json();
+                    console.log('GET Error:', error);
+                    toast.error(error.error || 'Failed to fetch items');
                   }
-                }}
-              >
-                <Plus className="h-3 w-3" /> Add Line Item
-              </Button>
-            )}
+                } catch (err) {
+                  console.error('Error fetching items:', err);
+                  toast.error('Failed to fetch items');
+                }
+              }}
+            >
+              <Plus className="h-3 w-3" /> Fetch Work Order Items
+            </Button>
           </div>
 
           {loadingRelated ? (
