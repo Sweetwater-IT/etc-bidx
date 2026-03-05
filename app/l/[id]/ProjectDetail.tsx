@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
-import { SOVTable } from "../../../../components/SOVTable";
+import { SOVTable } from "@/components/SOVTable";
 
 import {
   Sheet,
