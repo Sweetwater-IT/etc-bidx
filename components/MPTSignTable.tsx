@@ -210,6 +210,7 @@ export const MPTSignTable = ({
     return () => window.removeEventListener('resize', logTableDimensions);
   }, [sectionTitle, rows.length]);
 
+
   // Fetch signs from database
   useEffect(() => {
     const fetchSigns = async () => {
@@ -301,6 +302,67 @@ export const MPTSignTable = ({
   };
 
   const columns = getColumns(sectionTitle.toLowerCase());
+
+  // Debug table cell widths
+  useEffect(() => {
+    const logCellWidths = () => {
+      const table = tableWrapperRef.current?.querySelector('table');
+      if (table && columns.length > 0) {
+        const headers = table.querySelectorAll('thead th');
+        const cells = table.querySelectorAll('tbody td');
+
+        console.log(`MPTSignTable ${sectionTitle} - Cell Width Analysis:`);
+
+        // Log header widths
+        headers.forEach((header, index) => {
+          const column = columns[index];
+          const htmlHeader = header as HTMLElement;
+          if (column) {
+            console.log(`Header ${column.key}:`, {
+              label: column.label,
+              widthClass: column.width,
+              clientWidth: htmlHeader.clientWidth,
+              offsetWidth: htmlHeader.offsetWidth,
+              computedStyle: {
+                width: window.getComputedStyle(htmlHeader).width,
+                minWidth: window.getComputedStyle(htmlHeader).minWidth,
+                maxWidth: window.getComputedStyle(htmlHeader).maxWidth,
+                boxSizing: window.getComputedStyle(htmlHeader).boxSizing,
+              },
+            });
+          }
+        });
+
+        // Log first row cell widths for comparison
+        if (cells.length > 0) {
+          const firstRowCells = Array.from(cells).slice(0, columns.length);
+          firstRowCells.forEach((cell, index) => {
+            const column = columns[index];
+            const htmlCell = cell as HTMLElement;
+            if (column) {
+              console.log(`Cell ${column.key}:`, {
+                label: column.label,
+                widthClass: column.width,
+                clientWidth: htmlCell.clientWidth,
+                offsetWidth: htmlCell.offsetWidth,
+                computedStyle: {
+                  width: window.getComputedStyle(htmlCell).width,
+                  minWidth: window.getComputedStyle(htmlCell).minWidth,
+                  maxWidth: window.getComputedStyle(htmlCell).maxWidth,
+                  boxSizing: window.getComputedStyle(htmlCell).boxSizing,
+                },
+              });
+            }
+          });
+        }
+      }
+    };
+
+    // Log after a short delay to ensure DOM is updated
+    const timeoutId = setTimeout(logCellWidths, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [sectionTitle, columns, rows.length]);
 
   const addSign = () => {
     const newRow: MPTSignRow = {
