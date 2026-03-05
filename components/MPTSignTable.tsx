@@ -368,6 +368,7 @@ export const MPTSignTable = ({
       updateRow(localSign.id, {
         signDesignation: updatedSign.designation,
         signDescription: updatedSign.description || '',
+        signLegend: updatedSign.description || '', // Populate legend with sign description
         width: updatedSign.width,
         height: updatedSign.height,
         dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}x${updatedSign.height}` : '',
