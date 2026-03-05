@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
+    console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type });
+
     // Fetch SOV items for this job
     const { data: sovItems, error: sovError } = await supabase
       .from('sov_items_l')
@@ -65,6 +67,8 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching SOV items:', sovError);
       return NextResponse.json({ error: 'Failed to fetch SOV items' }, { status: 500 });
     }
+
+    console.log('SOV items:', { count: sovItems?.length, items: sovItems?.slice(0,3) });
 
     // Process SOV items → work order items
     const workOrderItems: Array<{
@@ -80,6 +84,7 @@ export async function POST(request: NextRequest) {
     if (takeoff.work_type === 'MPT') {
       // For MPT takeoffs, create one work order item for MPT SOV item
       const mptSovItem = sovItems?.find(item => item.item_number?.startsWith('0901'));
+      console.log('MPT SOV item:', mptSovItem);
       if (mptSovItem) {
         // Calculate total sign quantity from takeoff
         const signRowsData = takeoff.sign_rows || {};
@@ -90,6 +95,7 @@ export async function POST(request: NextRequest) {
             totalSignQuantity += row.quantity || 1;
           }
         }
+        console.log('Total sign quantity:', totalSignQuantity);
 
         workOrderItems.push({
           work_order_id: null, // will be set after work order creation
@@ -117,6 +123,12 @@ export async function POST(request: NextRequest) {
         });
       });
     }
+
+    console.log('Generated work order items:', workOrderItems.map(i => ({
+      item_number: i.item_number,
+      description: i.description.substring(0,50)+'...',
+      qty: i.work_order_quantity
+    })));
 
     // Generate sequential work order number per job
     const { data: maxWO } = await supabase
@@ -167,21 +179,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Create work order items
+    let itemsError: any = null;
     if (workOrderItems.length > 0) {
       const itemsWithWorkOrderId = workOrderItems.map(item => ({
         ...item,
         work_order_id: workOrder.id
       }));
 
-      const { error: itemsError } = await supabase
+      const result = await supabase
         .from('work_order_items_l')
         .insert(itemsWithWorkOrderId);
+
+      itemsError = result.error;
 
       if (itemsError) {
         console.error('Work order items insert error:', itemsError);
         // Don't fail the whole request, but log the error
       }
     }
+
+    console.log('Items insert error:', itemsError);
+    console.log('Response itemCount:', workOrderItems.length);
 
     return NextResponse.json({
       success: true,
