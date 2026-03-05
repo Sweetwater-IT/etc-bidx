@@ -286,7 +286,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
 
       {items.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground text-sm">
-          No line items yet. Click "Add Line Item" to begin.
+          No line items yet. Click Add Line Item to begin.
         </div>
       ) : (
         <div className="overflow-x-auto">
