@@ -504,7 +504,7 @@ export const MPTSignTable = ({
       case 'dimensions':
         return (
           <Input
-            className="h-8 text-xs"
+            className="h-8 text-xs w-full"
             value={row.dimensionLabel}
             onChange={(e) => updateRow(row.id, { dimensionLabel: e.target.value })}
             placeholder="e.g. 48x96"
@@ -546,7 +546,7 @@ export const MPTSignTable = ({
             onValueChange={(value) => updateRow(row.id, { structureType: value })}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 text-xs w-full">
               <SelectValue placeholder="Select structure" />
             </SelectTrigger>
             <SelectContent>
@@ -563,7 +563,7 @@ export const MPTSignTable = ({
             onValueChange={(value: any) => updateRow(row.id, { bLights: value })}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 text-xs w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -591,7 +591,7 @@ export const MPTSignTable = ({
             onValueChange={(value: any) => updateRow(row.id, { material: value })}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-8 text-xs w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
