@@ -174,18 +174,28 @@ export const MPTSignTable = ({
   // Debugging ref
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Debugging: Log table wrapper dimensions
+  // Viewport-aware debugging: Log table wrapper dimensions and viewport calculations
   useEffect(() => {
     const logTableDimensions = () => {
       if (tableWrapperRef.current) {
         const rect = tableWrapperRef.current.getBoundingClientRect();
-        console.log(`MPTSignTable ${sectionTitle} Wrapper:`, {
-          clientWidth: tableWrapperRef.current.clientWidth,
-          clientHeight: tableWrapperRef.current.clientHeight,
-          scrollWidth: tableWrapperRef.current.scrollWidth,
-          scrollHeight: tableWrapperRef.current.scrollHeight,
-          scrollLeft: tableWrapperRef.current.scrollLeft,
-          scrollTop: tableWrapperRef.current.scrollTop,
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const sidebarWidth = 272; // Approximate sidebar width
+        const padding = 32; // p-4 = 16px * 2
+        const availableWidth = viewportWidth - sidebarWidth - padding;
+
+        console.log(`MPTSignTable ${sectionTitle} - Viewport Analysis:`, {
+          viewport: { width: viewportWidth, height: viewportHeight },
+          sidebarWidth,
+          padding,
+          availableContentWidth: availableWidth,
+          tableWrapper: {
+            clientWidth: tableWrapperRef.current.clientWidth,
+            scrollWidth: tableWrapperRef.current.scrollWidth,
+            overflowX: tableWrapperRef.current.scrollWidth > tableWrapperRef.current.clientWidth,
+            overflowAmount: tableWrapperRef.current.scrollWidth - tableWrapperRef.current.clientWidth,
+          },
           boundingRect: rect,
           overflow: window.getComputedStyle(tableWrapperRef.current).overflow,
           overflowX: window.getComputedStyle(tableWrapperRef.current).overflowX,
