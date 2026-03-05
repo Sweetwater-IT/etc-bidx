@@ -1,6 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Work order ID is required' }, { status: 400 });
+    }
+
+    console.log('Fetching work order items for work order:', id);
+
+    const { data, error } = await supabase
+      .from('work_order_items_l')
+      .select('*')
+      .eq('work_order_id', id)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching work order items:', error);
+      return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 });
+    }
+
+    console.log('Found work order items:', data?.length || 0, 'items');
+    if (data && data.length > 0) {
+      console.log('First item:', { id: data[0].id, item_number: data[0].item_number, description: data[0].description?.substring(0, 50) + '...' });
+    }
+
+    return NextResponse.json({ items: data || [] });
+
+  } catch (error) {
+    console.error('Error in work order items GET:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
