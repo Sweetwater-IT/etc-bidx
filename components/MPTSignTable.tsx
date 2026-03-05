@@ -663,7 +663,7 @@ export const MPTSignTable = ({
             <SortableContext items={rows.map(row => row.id)} strategy={verticalListSortingStrategy}>
               <div className="rounded-lg border overflow-hidden">
                 <div ref={tableWrapperRef} className="overflow-x-auto max-w-full">
-                  <table className="w-full min-w-[800px]">
+                  <table className="w-full min-w-[800px]" style={{ tableLayout: 'fixed' }}>
                     <thead className="bg-muted/30">
                       <tr>
                         <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-12">
@@ -698,7 +698,7 @@ export const MPTSignTable = ({
         ) : (
           <div className="rounded-lg border overflow-hidden">
             <div className="overflow-x-auto max-w-full">
-              <table className="w-full min-w-[800px]">
+              <table className="w-full min-w-[800px]" style={{ tableLayout: 'fixed' }}>
                 <thead className="bg-muted/30">
                   <tr>
                     {columns.map(column => (
