@@ -113,7 +113,7 @@ export const MPTSignConfiguration = ({
   }, [activeSections.length]);
 
   return (
-    <div ref={mainContainerRef} className="rounded-lg border bg-card shadow-sm max-h-[600px] flex flex-col">
+    <div ref={mainContainerRef} className="rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] flex flex-col">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">MPT Sign Configuration</h2>
         {!disabled && (
