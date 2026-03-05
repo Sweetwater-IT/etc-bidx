@@ -457,7 +457,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               {WORK_TYPES.find(wt => wt.value === workType)?.label} Configuration
             </h2>
           </div>
-          <div className="p-5">
+          <div className="p-5 overflow-auto max-h-[70vh]">
             {workType === "MPT" && (
               <MPTSignConfiguration
                 activeSections={activeSections}
