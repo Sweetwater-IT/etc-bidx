@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       .from('takeoffs_l')
       .insert({
         job_id: jobId,
-        title: 'Draft Takeoff', // Default title
+        title: '', // Empty title, user provides placeholder
         status: 'draft',
         contracted_or_additional: 'contracted',
         priority: 'standard',

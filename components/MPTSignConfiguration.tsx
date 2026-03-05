@@ -100,7 +100,7 @@ export const MPTSignConfiguration = ({
         )}
       </div>
       <div className="flex flex-1 min-h-0">
-        <div className="w-[200px] shrink-0 border-r p-4 overflow-y-auto">
+        <div className="w-[200px] shrink-0 border-r p-4 overflow-y-auto overflow-x-auto">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Structure Types</h4>
           <div className="space-y-2">
             {MPT_SECTIONS.map((section) => {

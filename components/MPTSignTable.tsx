@@ -535,15 +535,6 @@ export const MPTSignTable = ({
               size="sm"
               variant="outline"
               className="gap-1.5 h-7 text-xs"
-              onClick={addCustomSign}
-            >
-              <Settings className="h-3 w-3" />
-              Custom Sign
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 h-7 text-xs"
               onClick={addSign}
             >
               <Plus className="h-3 w-3" />

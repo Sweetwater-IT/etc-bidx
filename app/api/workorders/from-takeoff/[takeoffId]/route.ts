@@ -94,12 +94,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generate sequential work order number per job
+    const { data: maxWO } = await supabase
+      .from('work_orders_l')
+      .select('work_order_number')
+      .eq('job_id', takeoff.job_id)
+      .order('work_order_number', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextNumber = (maxWO?.work_order_number ? parseInt(maxWO.work_order_number) : 0) + 1;
+    const workOrderNumber = nextNumber.toString().padStart(3, '0');
+
     // Create the work order header
     const { data: workOrder, error: insertError } = await supabase
       .from('work_orders_l')
       .insert({
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
+        work_order_number: workOrderNumber,
         title: title || takeoff.title,
         description: description || null,
         notes: notes || null,
@@ -116,6 +129,17 @@ export async function POST(request: NextRequest) {
     if (insertError || !workOrder) {
       console.error('Work order insert error:', insertError);
       return NextResponse.json({ error: 'Failed to create work order', details: insertError }, { status: 500 });
+    }
+
+    // Update the takeoff with the work order number
+    const { error: updateTakeoffError } = await supabase
+      .from('takeoffs_l')
+      .update({ work_order_number: workOrderNumber })
+      .eq('id', takeoffId);
+
+    if (updateTakeoffError) {
+      console.error('Error updating takeoff with WO number:', updateTakeoffError);
+      // Don't fail, but log
     }
 
     // Create work order items
@@ -140,6 +164,7 @@ export async function POST(request: NextRequest) {
       workOrder: {
         id: workOrder.id,
         title: workOrder.title,
+        workOrderNumber,
         itemCount: workOrderItems.length
       }
     });

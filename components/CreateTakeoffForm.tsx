@@ -84,8 +84,30 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       setActiveSections((prev) => prev.filter((s) => s !== key));
     } else {
       setActiveSections((prev) => [...prev, key]);
-      if (!signRows[key]) {
-        setSignRows((prev) => ({ ...prev, [key]: [] }));
+      if (!signRows[key] || signRows[key].length === 0) {
+        // Auto-add empty sign row
+        const emptyRow = {
+          id: crypto.randomUUID(),
+          isCustom: false,
+          signDesignation: '',
+          signDescription: '',
+          width: 0,
+          height: 0,
+          dimensionLabel: '',
+          signLegend: '',
+          sheeting: 'HI',
+          structureType: '', // Will be set by user
+          bLights: 'none' as const,
+          sqft: 0,
+          totalSqft: 0,
+          quantity: 1,
+          needsOrder: false,
+          cover: false,
+          loadOrder: 1,
+          material: defaultSignMaterial,
+          secondarySigns: [],
+        };
+        setSignRows((prev) => ({ ...prev, [key]: [emptyRow] }));
       }
     }
   };
@@ -124,6 +146,8 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
       if (woResponse.ok) {
         const result = await woResponse.json();
+        // Update the work order number field
+        setWorkOrderNumber(result.workOrder.workOrderNumber);
         toast.success('Work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}`);
       } else {

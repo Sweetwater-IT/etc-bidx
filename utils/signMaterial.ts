@@ -11,8 +11,8 @@ export type SignMaterial = "PLASTIC" | "ALUMINUM" | "DIBOND" | "ACM";
  * Used for dropdowns, chips, tooltips, etc.
  */
 export const SIGN_MATERIALS = [
-  { value: "PLASTIC" as const, label: "Plastic", abbrev: "PL" },
-  { value: "ALUMINUM" as const, label: "Aluminum", abbrev: "AL" },
+  { value: "PLASTIC" as const, label: "Plastic", abbrev: "PLAS" },
+  { value: "ALUMINUM" as const, label: "Aluminum", abbrev: "ALUM" },
   { value: "DIBOND" as const, label: "Dibond", abbrev: "DI" },
   { value: "ACM" as const, label: "ACM", abbrev: "ACM" },
 ] as const;
