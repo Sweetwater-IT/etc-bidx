@@ -533,7 +533,7 @@ export const MPTSignTable = ({
           <Input
             type="number"
             min={1}
-            className="h-8 text-xs w-16"
+            className="h-8 text-xs w-16 w-full"
             value={row.quantity}
             onChange={(e) => updateRow(row.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
             disabled={disabled}
@@ -578,7 +578,7 @@ export const MPTSignTable = ({
           <Input
             type="number"
             step="0.01"
-            className="h-8 text-xs w-20"
+            className="h-8 text-xs w-16 w-full"
             value={row.sqft}
             onChange={(e) => updateRow(row.id, { sqft: parseFloat(e.target.value) || 0 })}
             disabled={disabled}
