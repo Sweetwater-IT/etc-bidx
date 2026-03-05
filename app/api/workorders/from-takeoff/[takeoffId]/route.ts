@@ -56,21 +56,22 @@ export async function POST(request: NextRequest) {
 
     console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type });
 
-    // Fetch SOV items for this job
-    const { data: sovItems, error: sovError } = await supabase
-      .from('sov_items_l')
-      .select('*')
-      .eq('job_id', takeoff.job_id)
-      .order('sort_order', { ascending: true });
+    // Fetch job with SOV items from JSONB column
+    const { data: job, error: jobError } = await supabase
+      .from('jobs_l')
+      .select('sov_items')
+      .eq('id', takeoff.job_id)
+      .single();
 
-    if (sovError) {
-      console.error('Error fetching SOV items:', sovError);
-      return NextResponse.json({ error: 'Failed to fetch SOV items' }, { status: 500 });
+    if (jobError || !job) {
+      console.error('Job fetch error:', jobError);
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    console.log('SOV items:', { count: sovItems?.length, items: sovItems?.slice(0,3) });
+    const sovItems = job.sov_items || [];
+    console.log('SOV items from job:', { count: sovItems.length, items: sovItems.slice(0,3) });
 
-    // Process SOV items → work order items
+    // Create work order items from ALL SOV items for the job
     const workOrderItems: Array<{
       work_order_id: string | null;
       item_number: number;
@@ -79,50 +80,22 @@ export async function POST(request: NextRequest) {
       work_order_quantity: number;
       uom: string;
       sort_order: number;
+      sov_item_id: string;
     }> = [];
 
-    if (takeoff.work_type === 'MPT') {
-      // For MPT takeoffs, create one work order item for MPT SOV item
-      const mptSovItem = sovItems?.find(item => item.item_number?.startsWith('0901'));
-      console.log('MPT SOV item:', mptSovItem);
-      if (mptSovItem) {
-        // Calculate total sign quantity from takeoff
-        const signRowsData = takeoff.sign_rows || {};
-        let totalSignQuantity = 0;
-        for (const sectionName of Object.keys(signRowsData)) {
-          const sectionRows = signRowsData[sectionName] || [];
-          for (const row of sectionRows) {
-            totalSignQuantity += row.quantity || 1;
-          }
-        }
-        console.log('Total sign quantity:', totalSignQuantity);
-
-        workOrderItems.push({
-          work_order_id: null, // will be set after work order creation
-          item_number: 1,
-          description: mptSovItem.description || 'Maintenance and Protection of Traffic',
-          contract_quantity: totalSignQuantity,
-          work_order_quantity: totalSignQuantity,
-          uom: mptSovItem.uom || 'each',
-          sort_order: 1,
-        });
-      }
-    } else {
-      // For other work types, create work order items from relevant SOV items
-      // This logic may need to be expanded based on work type
-      let itemNumber = 1;
-      sovItems?.forEach((sovItem) => {
-        workOrderItems.push({
-          work_order_id: null, // will be set after work order creation
-          item_number: itemNumber++,
-          description: sovItem.description,
-          contract_quantity: sovItem.quantity || 0,
-          work_order_quantity: sovItem.quantity || 0,
-          uom: sovItem.uom || 'each',
-          sort_order: itemNumber - 1,
-        });
+    let itemNumber = 1;
+    sovItems.forEach((sovItem: any) => {
+      workOrderItems.push({
+        work_order_id: null, // will be set after work order creation
+        item_number: itemNumber++,
+        description: sovItem.description,
+        contract_quantity: sovItem.quantity || 0,
+        work_order_quantity: 0, // Start with 0, user configures daily quantity
+        uom: sovItem.uom || 'each',
+        sort_order: itemNumber - 1,
+        sov_item_id: sovItem.id, // Link to SOV item
       });
-    }
+    });
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,

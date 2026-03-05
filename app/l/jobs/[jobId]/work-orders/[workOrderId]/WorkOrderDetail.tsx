@@ -201,6 +201,23 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
   const [openItemPickerRow, setOpenItemPickerRow] = useState<string | null>(null);
   const [itemPickerSearch, setItemPickerSearch] = useState("");
 
+  // Fetch SOV items for the job
+  useEffect(() => {
+    const fetchSovItems = async () => {
+      if (!workOrder?.job_id) return;
+      try {
+        const response = await fetch(`/api/l/jobs/${workOrder.job_id}/sov-items`);
+        if (response.ok) {
+          const data = await response.json();
+          setSovItems(data.sovItems || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch SOV items:', err);
+      }
+    };
+    fetchSovItems();
+  }, [workOrder?.job_id]);
+
   const selectedItemNumbers = useMemo(
     () => new Set(woItems.map((i) => i.item_number).filter(Boolean)),
     [woItems]
@@ -1452,7 +1469,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
             </div>
           ) : woItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              No line items yet. Click Add Line Item to begin.
+              No line items yet. Click Fetch Work Order Items to begin.
             </div>
           ) : (
             <div className="overflow-x-auto">
