@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Minus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Settings, GripVertical, Check, Copy, FilePlus } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import {
   DndContext,
@@ -93,6 +93,8 @@ const SortableRow = ({
   columns,
   renderCell,
   removeRow,
+  duplicateRow,
+  addSecondarySign,
   disabled,
   orderable,
 }: {
@@ -100,6 +102,8 @@ const SortableRow = ({
   columns: { key: string; label: string; width: string }[];
   renderCell: (row: MPTSignRow, column: { key: string; label: string; width: string }) => React.ReactNode;
   removeRow: (id: string) => void;
+  duplicateRow: (id: string) => void;
+  addSecondarySign: (id: string) => void;
   disabled: boolean;
   orderable: boolean;
 }) => {
@@ -141,14 +145,34 @@ const SortableRow = ({
       ))}
       {!disabled && (
         <td className="px-2 py-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => removeRow(row.id)}
-          >
-            <Trash2 className="h-3 w-3 text-destructive" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => duplicateRow(row.id)}
+              title="Duplicate row"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => addSecondarySign(row.id)}
+              title="Add secondary sign"
+            >
+              <FilePlus className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => removeRow(row.id)}
+            >
+              <Trash2 className="h-3 w-3 text-destructive" />
+            </Button>
+          </div>
         </td>
       )}
     </tr>
@@ -422,6 +446,44 @@ export const MPTSignTable = ({
     onRowsChange(rows.filter(row => row.id !== id));
   };
 
+  const duplicateRow = (id: string) => {
+    const rowToDuplicate = rows.find(row => row.id === id);
+    if (rowToDuplicate) {
+      const duplicatedRow: MPTSignRow = {
+        ...rowToDuplicate,
+        id: crypto.randomUUID(),
+        loadOrder: rows.length + 1,
+        secondarySigns: [], // Don't duplicate secondary signs
+      };
+      onRowsChange([...rows, duplicatedRow]);
+    }
+  };
+
+  const addSecondarySign = (id: string) => {
+    const row = rows.find(row => row.id === id);
+    if (row) {
+      const newSecondarySign = {
+        id: crypto.randomUUID(),
+        signDesignation: '',
+        signDescription: '',
+        width: 0,
+        height: 0,
+        dimensionLabel: '',
+        signLegend: '',
+        sheeting: 'HI',
+        sqft: 0,
+        quantity: row.quantity, // Match primary sign quantity
+      };
+
+      const updatedRow = {
+        ...row,
+        secondarySigns: [...row.secondarySigns, newSecondarySign],
+      };
+
+      updateRow(id, { secondarySigns: updatedRow.secondarySigns });
+    }
+  };
+
   // Handle designation selection from DesignationSearcher
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
     // Find the row that triggered the designation search (we'll need to track this)
@@ -455,7 +517,7 @@ export const MPTSignTable = ({
           <>
             <Button
               variant="outline"
-              className="h-8 w-full justify-start text-left font-normal text-xs"
+              className="h-8 w-full justify-center text-center font-normal text-xs"
               onClick={() => {
                 // Create a proper PrimarySign object for the designation searcher
                 const primarySign: PrimarySign = {
@@ -478,9 +540,7 @@ export const MPTSignTable = ({
               }}
               disabled={disabled}
             >
-              <span className="truncate">
-                {row.signDesignation || 'Select designation...'}
-              </span>
+              {row.signDesignation || 'select sign...'}
             </Button>
             {localSign && localSign.id === row.id && (
               <DesignationSearcher
@@ -711,6 +771,8 @@ export const MPTSignTable = ({
                           columns={columns}
                           renderCell={renderCell}
                           removeRow={removeRow}
+                          duplicateRow={duplicateRow}
+                          addSecondarySign={addSecondarySign}
                           disabled={disabled}
                           orderable={orderable}
                         />
@@ -745,14 +807,34 @@ export const MPTSignTable = ({
                       ))}
                       {!disabled && (
                         <td className="px-2 py-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => removeRow(row.id)}
-                          >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => duplicateRow(row.id)}
+                              title="Duplicate row"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => addSecondarySign(row.id)}
+                              title="Add secondary sign"
+                            >
+                              <FilePlus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeRow(row.id)}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
                         </td>
                       )}
                     </tr>
