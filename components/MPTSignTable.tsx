@@ -135,7 +135,7 @@ const SortableRow = ({
         </td>
       )}
       {columns.map(column => (
-        <td key={column.key} className="px-2 py-1 border-r last:border-r-0">
+        <td key={column.key} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
           {renderCell(row, column)}
         </td>
       ))}
@@ -651,7 +651,7 @@ export const MPTSignTable = ({
                   {rows.map(row => (
                     <tr key={row.id} className="hover:bg-muted/20">
                       {columns.map(column => (
-                        <td key={column.key} className="px-2 py-1 border-r last:border-r-0">
+                        <td key={column.key} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
                           {renderCell(row, column)}
                         </td>
                       ))}
