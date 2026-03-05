@@ -508,9 +508,24 @@ export const MPTSignTable = ({
 
   // Handle designation selection from DesignationSearcher
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
-    // Find the row that triggered the designation search (we'll need to track this)
-    // For now, we'll update based on the current localSign state
-    if (localSign) {
+    if (!localSign) return;
+
+    // Check if this is a secondary sign (has primarySignId)
+    if ((localSign as SecondarySign).primarySignId) {
+      // Update secondary sign in parent's secondarySigns array
+      const secondarySign = localSign as SecondarySign;
+      updateSecondarySign(secondarySign.primarySignId, secondarySign.id, {
+        signDesignation: updatedSign.designation,
+        signDescription: updatedSign.description || '',
+        signLegend: updatedSign.description || '', // Populate legend with sign description
+        width: updatedSign.width,
+        height: updatedSign.height,
+        dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
+        sheeting: updatedSign.sheeting as any,
+        sqft: (updatedSign.width * updatedSign.height) / 144, // Convert to square feet
+      });
+    } else {
+      // Update primary sign row
       updateRow(localSign.id, {
         signDesignation: updatedSign.designation,
         signDescription: updatedSign.description || '',
@@ -527,9 +542,10 @@ export const MPTSignTable = ({
                 (updatedSign.bLightsColor === 'Yellow' ? 'yellow' :
                  updatedSign.bLightsColor === 'Red' ? 'red' : 'white'),
       });
-      // Reset localSign after selection
-      setLocalSign(undefined);
     }
+
+    // Reset localSign after selection
+    setLocalSign(undefined);
   };
 
   const renderCell = (row: MPTSignRow, column: { key: string; label: string; width: string }) => {
@@ -866,7 +882,7 @@ export const MPTSignTable = ({
                                   <span className="text-[10px] text-muted-foreground">↳</span>
                                   <Button
                                     variant="outline"
-                                    className="h-6 w-full justify-start text-left font-normal text-[11px]"
+                                    className="h-6 flex-1 justify-start text-left font-normal text-[11px] truncate"
                                     onClick={() => {
                                       const secondarySign: SecondarySign = {
                                         id: sec.id,
