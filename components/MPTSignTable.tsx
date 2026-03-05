@@ -281,7 +281,7 @@ export const MPTSignTable = ({
       { key: 'legend', label: 'Legend', width: 'w-96' },
       { key: 'dimensions', label: 'Dimensions', width: 'w-28' },
       { key: 'sheeting', label: 'Sheeting', width: 'w-24' },
-      { key: 'qty', label: 'Qty', width: 'w-24' },
+      { key: 'qty', label: 'Qty', width: 'w-32' },
       { key: 'structure', label: 'Structure', width: 'w-40' },
       { key: 'bLights', label: 'B-Lights', width: 'w-24' },
       { key: 'sqft', label: 'Sq Ft', width: 'w-24' },
@@ -544,8 +544,8 @@ export const MPTSignTable = ({
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              className="h-8 text-xs text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={row.quantity}
+              className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              value={row.quantity || 1}
               onChange={(e) => {
                 const raw = e.target.value;
                 const cleaned = raw.replace(/\D/g, '');
