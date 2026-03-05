@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
+import { Plus, Minus, Trash2, Search, Settings, GripVertical, Check } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import {
   DndContext,
@@ -280,12 +280,12 @@ export const MPTSignTable = ({
       { key: 'designation', label: 'Designation', width: 'w-32' },
       { key: 'legend', label: 'Legend', width: 'w-96' },
       { key: 'dimensions', label: 'Dimensions', width: 'w-28' },
-      { key: 'sheeting', label: 'Sheeting', width: 'w-20' },
-      { key: 'qty', label: 'Qty', width: 'w-16' },
-      { key: 'structure', label: 'Structure', width: 'w-32' },
-      { key: 'bLights', label: 'B-Lights', width: 'w-20' },
-      { key: 'sqft', label: 'Sq Ft', width: 'w-16' },
-      { key: 'material', label: 'Material', width: 'w-20' },
+      { key: 'sheeting', label: 'Sheeting', width: 'w-24' },
+      { key: 'qty', label: 'Qty', width: 'w-24' },
+      { key: 'structure', label: 'Structure', width: 'w-40' },
+      { key: 'bLights', label: 'B-Lights', width: 'w-24' },
+      { key: 'sqft', label: 'Sq Ft', width: 'w-24' },
+      { key: 'material', label: 'Material', width: 'w-24' },
       { key: 'cover', label: 'Cover', width: 'w-16' },
     ];
 
@@ -433,7 +433,7 @@ export const MPTSignTable = ({
         signLegend: updatedSign.description || '', // Populate legend with sign description
         width: updatedSign.width,
         height: updatedSign.height,
-        dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}x${updatedSign.height}` : '',
+        dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
         sheeting: updatedSign.sheeting as any,
         sqft: (updatedSign.width * updatedSign.height) / 144, // Convert to square feet
         quantity: updatedSign.quantity,
@@ -530,14 +530,40 @@ export const MPTSignTable = ({
         );
       case 'qty':
         return (
-          <Input
-            type="number"
-            min={1}
-            className="h-8 text-xs w-16 w-full"
-            value={row.quantity}
-            onChange={(e) => updateRow(row.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-            disabled={disabled}
-          />
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
+              disabled={disabled || row.quantity <= 1}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className="h-8 text-xs text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              value={row.quantity}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const cleaned = raw.replace(/\D/g, '');
+                const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                updateRow(row.id, { quantity: num });
+              }}
+              disabled={disabled}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
+              disabled={disabled}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
         );
       case 'structure':
         return (
