@@ -54,9 +54,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
-    // Process sign rows → work order items
-    // sign_rows is now a proper JSON object: { "sectionName": MPTSignRow[] }
-    const signRowsData = takeoff.sign_rows || {};
+    // Fetch SOV items for this job
+    const { data: sovItems, error: sovError } = await supabase
+      .from('sov_items_l')
+      .select('*')
+      .eq('job_id', takeoff.job_id)
+      .order('sort_order', { ascending: true });
+
+    if (sovError) {
+      console.error('Error fetching SOV items:', sovError);
+      return NextResponse.json({ error: 'Failed to fetch SOV items' }, { status: 500 });
+    }
+
+    // Process SOV items → work order items
     const workOrderItems: Array<{
       work_order_id: string | null;
       item_number: number;
@@ -67,43 +77,57 @@ export async function POST(request: NextRequest) {
       sort_order: number;
     }> = [];
 
-    // Flatten all sign rows from all sections
-    let itemNumber = 1;
-    for (const sectionName of Object.keys(signRowsData)) {
-      const sectionRows = signRowsData[sectionName] || [];
-      for (const row of sectionRows) {
-        const description = [
-          row.signDesignation || 'Custom Sign',
-          row.signDescription || '',
-          row.dimensionLabel ? `(${row.dimensionLabel})` : '',
-          row.signLegend ? `- ${row.signLegend}` : ''
-        ].filter(Boolean).join(' ').trim();
-
-        const quantity = row.quantity || 1;
-        const uom = row.sqft > 0 ? 'sqft' : 'each';
+    if (takeoff.work_type === 'MPT') {
+      // For MPT takeoffs, create one work order item for MPT SOV item
+      const mptSovItem = sovItems?.find(item => item.item_number?.startsWith('0901'));
+      if (mptSovItem) {
+        // Calculate total sign quantity from takeoff
+        const signRowsData = takeoff.sign_rows || {};
+        let totalSignQuantity = 0;
+        for (const sectionName of Object.keys(signRowsData)) {
+          const sectionRows = signRowsData[sectionName] || [];
+          for (const row of sectionRows) {
+            totalSignQuantity += row.quantity || 1;
+          }
+        }
 
         workOrderItems.push({
           work_order_id: null, // will be set after work order creation
-          item_number: itemNumber++,
-          description,
-          contract_quantity: quantity,
-          work_order_quantity: quantity,
-          uom,
-          sort_order: itemNumber - 1,
+          item_number: 1,
+          description: mptSovItem.description || 'Maintenance and Protection of Traffic',
+          contract_quantity: totalSignQuantity,
+          work_order_quantity: totalSignQuantity,
+          uom: mptSovItem.uom || 'each',
+          sort_order: 1,
         });
       }
+    } else {
+      // For other work types, create work order items from relevant SOV items
+      // This logic may need to be expanded based on work type
+      let itemNumber = 1;
+      sovItems?.forEach((sovItem) => {
+        workOrderItems.push({
+          work_order_id: null, // will be set after work order creation
+          item_number: itemNumber++,
+          description: sovItem.description,
+          contract_quantity: sovItem.quantity || 0,
+          work_order_quantity: sovItem.quantity || 0,
+          uom: sovItem.uom || 'each',
+          sort_order: itemNumber - 1,
+        });
+      });
     }
 
     // Generate sequential work order number per job
     const { data: maxWO } = await supabase
       .from('work_orders_l')
-      .select('work_order_number')
+      .select('wo_number')
       .eq('job_id', takeoff.job_id)
-      .order('work_order_number', { ascending: false, nullsFirst: false })
+      .order('wo_number', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
 
-    const nextNumber = (maxWO?.work_order_number ? parseInt(maxWO.work_order_number) : 0) + 1;
+    const nextNumber = (maxWO?.wo_number ? parseInt(maxWO.wo_number) : 0) + 1;
     const workOrderNumber = nextNumber.toString().padStart(3, '0');
 
     // Create the work order header
@@ -112,7 +136,7 @@ export async function POST(request: NextRequest) {
       .insert({
         job_id: takeoff.job_id,
         takeoff_id: takeoffId,
-        work_order_number: workOrderNumber,
+        wo_number: workOrderNumber,
         title: title || takeoff.title,
         description: description || null,
         notes: notes || null,
