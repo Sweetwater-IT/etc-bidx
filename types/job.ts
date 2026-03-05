@@ -6,7 +6,7 @@ export interface ScheduleOfValuesItem {
   unitPrice: number;
   extendedPrice: number;
   retainageAmount: number;
-  retainageType: 'percent' | 'amount';
+  retainageType: 'percent' | 'dollar';
   retainageValue: number;
   uom: string;
   notes?: string;

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
+import { SOVTable } from "../../../../components/SOVTable";
 
 import {
   Sheet,
@@ -562,7 +563,7 @@ const ProjectDetail = () => {
 
           <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px]">
             <TabsContent value="bid-items" className="m-0 p-4">
-              <BidItemsSOV items={[]} />
+              <SOVTable jobId={id || ""} />
             </TabsContent>
 
             <TabsContent value="takeoffs" className="m-0 p-4">
@@ -1010,81 +1011,7 @@ const TabPlaceholder = ({
   </div>
 );
 
-/* ─── Bid Items / SOV (read-only) ─── */
-const BidItemsSOV = ({ items }: { items: ScheduleOfValuesItem[] }) => {
-  const totalExtended = items.reduce((sum, i) => sum + i.extendedPrice, 0);
-  const totalRetainage = items.reduce((sum, i) => sum + i.retainageAmount, 0);
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-bold text-foreground">Bid Items / Schedule of Values</h3>
-        </div>
-        <Badge variant="secondary" className="text-xs">
-          {items.length} item{items.length !== 1 ? "s" : ""}
-        </Badge>
-      </div>
-      {items.length === 0 ? (
-        <div className="rounded-md border overflow-hidden">
-          <div className="p-8 text-center">
-            <Layers className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground font-medium">No bid items configured</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Bid items are set up during the contract stage.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-md border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-muted/30">
-                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Item #</th>
-                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Description</th>
-                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">UOM</th>
-                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
-                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Unit Price</th>
-                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Extended</th>
-                  <th className="text-right px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Retainage</th>
-                  <th className="text-left px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Scope Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-3 py-1.5 text-xs font-mono text-muted-foreground">{item.itemNumber || "—"}</td>
-                    <td className="px-3 py-1.5 text-xs">{item.description || "—"}</td>
-                    <td className="px-3 py-1.5 text-xs text-muted-foreground">{item.uom || "—"}</td>
-                    <td className="px-3 py-1.5 text-xs text-right tabular-nums">{item.quantity}</td>
-                    <td className="px-3 py-1.5 text-xs text-right tabular-nums">${item.unitPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-3 py-1.5 text-xs text-right tabular-nums font-medium">${item.extendedPrice.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-3 py-1.5 text-xs text-right tabular-nums text-primary">${item.retainageAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td className="px-3 py-1.5 text-xs text-muted-foreground max-w-[150px]">
-                      {item.notes ? (
-                        <span className="whitespace-pre-wrap">{item.notes}</span>
-                      ) : (
-                        <span className="italic text-muted-foreground/50">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="border-t bg-muted/30 font-semibold">
-                  <td colSpan={5} className="px-3 py-1.5 text-xs text-right">Total</td>
-                  <td className="px-3 py-1.5 text-xs text-right tabular-nums">${totalExtended.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                  <td className="px-3 py-1.5 text-xs text-right tabular-nums text-primary">${totalRetainage.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                  <td />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 /* ─── Alerts Panel ─── */
 const AlertsPanel = () => (
