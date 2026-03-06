@@ -12,24 +12,21 @@ export async function GET(
       return NextResponse.json({ error: "Takeoff ID is required" }, { status: 400 });
     }
 
-    const [tRes, tiRes] = await Promise.all([
-      supabase.from("takeoffs_l").select("*").eq("id", takeoffId).single(),
-      supabase.from("takeoff_items_l").select("*").eq("takeoff_id", takeoffId).order("created_at"),
-    ]);
+    const { data: takeoff, error: takeoffError } = await supabase
+      .from("takeoffs_l")
+      .select("*")
+      .eq("id", takeoffId)
+      .single();
 
-    if (tRes.error) {
-      console.error("Error fetching takeoff:", tRes.error);
+    if (takeoffError) {
+      console.error("Error fetching takeoff:", takeoffError);
       return NextResponse.json({ error: "Takeoff not found" }, { status: 404 });
     }
 
-    if (tiRes.error) {
-      console.error("Error fetching takeoff items:", tiRes.error);
-      return NextResponse.json({ error: "Failed to fetch takeoff items" }, { status: 500 });
-    }
-
+    // Items are stored in sign_rows JSONB column, no separate query needed
     return NextResponse.json({
-      takeoff: tRes.data,
-      takeoffItems: tiRes.data || [],
+      takeoff: takeoff,
+      takeoffItems: [], // Empty array for backward compatibility
     });
   } catch (error) {
     console.error("Unexpected error:", error);

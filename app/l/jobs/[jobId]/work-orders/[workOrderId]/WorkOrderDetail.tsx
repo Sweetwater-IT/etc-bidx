@@ -363,8 +363,8 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
 
       // For new work orders, populate work order items from takeoff data
       if (isNewWorkOrder && !takeoffLoading) {
-        // Fetch takeoff data with sign rows
-        fetch(`/api/takeoffs/${takeoffId}/data`)
+                        // Fetch takeoff data with sign rows
+        fetch(`/api/l/takeoffs/${takeoffId}/data`)
           .then(response => response.json())
           .then(data => {
             if (data.takeoff?.sign_rows) {
@@ -925,7 +925,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                   try {
                     const takeoffId = takeoffs[0]?.id;
                     if (!takeoffId) return;
-                    const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+                    const response = await fetch(`/api/l/takeoffs/${takeoffId}/data`);
                     if (!response.ok) {
                       const error = await response.json();
                       toast.error(error.error || "Failed to fetch takeoff data");
@@ -993,7 +993,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                     if (!woBytes) { toast.error("Failed to generate work order PDF"); return; }
 
                     // Fetch takeoff data and generate takeoff PDF as bytes
-                    const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+                    const response = await fetch(`/api/l/takeoffs/${takeoffId}/data`);
                     if (!response.ok) {
                       const error = await response.json();
                       toast.error(error.error || "Failed to fetch takeoff data");
@@ -2104,7 +2104,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                             setShowLinkTakeoffModal(false);
 
                             // Fetch takeoff items and add them to work order items
-                            const response = await fetch(`/api/takeoffs/${takeoff.id}/data`);
+                            const response = await fetch(`/api/l/takeoffs/${takeoff.id}/data`);
                             if (response.ok) {
                               const data = await response.json();
                               if (data.takeoff?.items) {
@@ -2154,7 +2154,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                             });
 
                             // After successfully linking the takeoff, populate work order items
-                            const takeoffDataResponse = await fetch(`/api/takeoffs/${takeoff.id}/data`);
+                            const takeoffDataResponse = await fetch(`/api/l/takeoffs/${takeoff.id}/data`);
                             if (takeoffDataResponse.ok) {
                               const takeoffData = await takeoffDataResponse.json();
                               if (takeoffData.takeoff?.sign_rows) {
