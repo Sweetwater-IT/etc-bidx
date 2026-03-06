@@ -988,7 +988,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground font-medium">No vehicles assigned</p>
-                  <p className="text-xs text-muted-foreground mt-1">Click "Add Vehicle" to assign trucks, TMAs, etc.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Click Add Vehicle to assign trucks, TMAs, etc.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1069,7 +1069,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
-                  <p className="text-xs text-muted-foreground mt-1">Click "Add Equipment" to select from available rental inventory.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Click Add Equipment to select from available rental inventory.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
