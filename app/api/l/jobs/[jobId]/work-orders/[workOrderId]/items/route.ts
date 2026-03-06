@@ -41,9 +41,28 @@ export async function POST(
     } else if (action === 'update') {
       // Update existing item
       const { itemId, updates } = itemData;
+
+      // Create a copy of updates to modify
+      const processedUpdates = { ...updates };
+
+      // Convert item_number from string to integer if present
+      if (processedUpdates.item_number !== undefined) {
+        const itemNumberStr = processedUpdates.item_number?.toString() || '';
+        // Remove any non-numeric characters and parse as integer
+        const cleanItemNumber = itemNumberStr.replace(/[^\d]/g, '');
+        const itemNumberInt = parseInt(cleanItemNumber, 10);
+
+        if (!isNaN(itemNumberInt)) {
+          processedUpdates.item_number = itemNumberInt;
+        } else {
+          // If conversion fails, set to null or keep as string if database allows
+          processedUpdates.item_number = null;
+        }
+      }
+
       const { error } = await supabase
         .from("work_order_items_l")
-        .update(updates)
+        .update(processedUpdates)
         .eq("id", itemId);
 
       if (error) {
