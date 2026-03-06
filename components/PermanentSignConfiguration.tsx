@@ -538,11 +538,11 @@ const PermanentSignTable = ({
                     <td className="px-2 py-1 border-r w-24">
                       <Select value={row.sheeting} onValueChange={(v) => updateRow(row.id, { sheeting: v })} disabled={disabled}>
                         <SelectTrigger className="h-7 text-xs w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {SHEETING_OPTIONS.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>{o.value}</SelectItem>
-                          ))}
-                        </SelectContent>
+                          <SelectContent>
+                            {SHEETING_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.value}</SelectItem>
+                            ))}
+                          </SelectContent>
                       </Select>
                     </td>
                     <td className="px-2 py-1 border-r w-32">
@@ -628,7 +628,7 @@ const PermanentSignTable = ({
                           <SelectTrigger className="h-6 text-[11px] w-full"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {SHEETING_OPTIONS.map((o) => (
-                              <SelectItem key={o} value={o.value}>{o.value}</SelectItem>
+                              <SelectItem key={o.value} value={o.value}>{o.value}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
