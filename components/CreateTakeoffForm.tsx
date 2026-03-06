@@ -754,49 +754,40 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       )}
 
       {workType === "PERMANENT_SIGNS" && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Permanent Signs Configuration
-            </h2>
-          </div>
-          <div ref={mptContainerRef} className="p-5 overflow-auto max-h-[70vh]">
-            <PermanentSignConfiguration
-              activeItems={activePermanentItems}
-              signRows={permanentSignRows}
-              entryRows={permanentEntryRows}
-              defaultSignMaterial={defaultPermanentSignMaterial}
-              onToggleItem={(itemNumber) => {
-                if (activePermanentItems.includes(itemNumber)) {
-                  setActivePermanentItems(prev => prev.filter(i => i !== itemNumber));
-                } else {
-                  setActivePermanentItems(prev => [...prev, itemNumber]);
-                }
-              }}
-              onSignRowsChange={(itemNumber, rows) => {
-                setPermanentSignRows(prev => ({ ...prev, [itemNumber]: rows }));
-              }}
-              onEntryRowsChange={(itemNumber, rows) => {
-                setPermanentEntryRows(prev => ({ ...prev, [itemNumber]: rows }));
-              }}
-              onDefaultMaterialChange={setDefaultPermanentSignMaterial}
-              onApplyMaterialToAll={() => {
-                const newSignRows = { ...permanentSignRows };
-                for (const key of Object.keys(newSignRows)) {
-                  newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultPermanentSignMaterial }));
-                }
-                setPermanentSignRows(newSignRows);
-                toast.success(`All permanent signs set to ${defaultPermanentSignMaterial}`);
-              }}
-            />
-          </div>
-        </div>
+        <PermanentSignConfiguration
+          activeItems={activePermanentItems}
+          signRows={permanentSignRows}
+          entryRows={permanentEntryRows}
+          defaultSignMaterial={defaultPermanentSignMaterial}
+          onToggleItem={(itemNumber) => {
+            if (activePermanentItems.includes(itemNumber)) {
+              setActivePermanentItems(prev => prev.filter(i => i !== itemNumber));
+            } else {
+              setActivePermanentItems(prev => [...prev, itemNumber]);
+            }
+          }}
+          onSignRowsChange={(itemNumber, rows) => {
+            setPermanentSignRows(prev => ({ ...prev, [itemNumber]: rows }));
+          }}
+          onEntryRowsChange={(itemNumber, rows) => {
+            setPermanentEntryRows(prev => ({ ...prev, [itemNumber]: rows }));
+          }}
+          onDefaultMaterialChange={setDefaultPermanentSignMaterial}
+          onApplyMaterialToAll={() => {
+            const newSignRows = { ...permanentSignRows };
+            for (const key of Object.keys(newSignRows)) {
+              newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultPermanentSignMaterial }));
+            }
+            setPermanentSignRows(newSignRows);
+            toast.success(`All permanent signs set to ${defaultPermanentSignMaterial}`);
+          }}
+        />
       )}
 
       {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
         <>
           {/* Sign Configuration Section */}
-          <div className="rounded-lg border bg-card shadow-sm">
+          <div className="rounded-lg border bg-card shadow-sm max-w-[calc(100vw-272px-64px)]">
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Sign Configuration

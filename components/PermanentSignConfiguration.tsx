@@ -269,7 +269,7 @@ export const PermanentSignConfiguration = ({
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 min-w-0 p-4 overflow-auto">
+        <div className="flex-1 min-w-0 p-4 overflow-x-auto">
           {activeItems.length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
