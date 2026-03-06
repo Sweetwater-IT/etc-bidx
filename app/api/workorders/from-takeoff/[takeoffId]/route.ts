@@ -140,10 +140,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create work order', details: insertError }, { status: 500 });
     }
 
-    // Update the takeoff with the work order number
+    // Update the takeoff with the work order number AND work order ID
     const { error: updateTakeoffError } = await supabase
       .from('takeoffs_l')
-      .update({ work_order_number: workOrderNumber })
+      .update({
+        work_order_number: workOrderNumber,
+        work_order_id: workOrder.id
+      })
       .eq('id', takeoffId);
 
     if (updateTakeoffError) {
