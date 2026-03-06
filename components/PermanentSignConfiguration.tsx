@@ -483,6 +483,7 @@ const PermanentSignTable = ({
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-24">Sheeting</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-32">Qty</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-24">Post Size</th>
+                <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-32">Plan Sheet</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-32">Sq Ft</th>
                 {!disabled && <th className="px-2 py-2 w-12"></th>}
               </tr>
@@ -563,6 +564,25 @@ const PermanentSignTable = ({
                         </SelectContent>
                       </Select>
                     </td>
+                    <td className="px-2 py-1 border-r w-32">
+                      <div className="flex gap-1">
+                        <Input
+                          className="h-7 text-xs w-12 text-center"
+                          value={row.planSheetNum}
+                          onChange={(e) => updateRow(row.id, { planSheetNum: e.target.value })}
+                          placeholder="#"
+                          disabled={disabled}
+                        />
+                        <span className="text-xs text-muted-foreground self-center">/</span>
+                        <Input
+                          className="h-7 text-xs w-12 text-center"
+                          value={row.planSheetTotal}
+                          onChange={(e) => updateRow(row.id, { planSheetTotal: e.target.value })}
+                          placeholder="#"
+                          disabled={disabled}
+                        />
+                      </div>
+                    </td>
                     <td className="px-2 py-1 border-r w-32 text-xs font-medium tabular-nums text-right">
                       {row.totalSqft > 0 ? row.totalSqft : "—"}
                     </td>
@@ -638,6 +658,9 @@ const PermanentSignTable = ({
                       </td>
                       <td className="px-2 py-1 border-r w-24">
                         <span className="text-[10px] text-muted-foreground italic">same post</span>
+                      </td>
+                      <td className="px-2 py-1 border-r w-32">
+                        <span className="text-[10px] text-muted-foreground italic">same sheet</span>
                       </td>
                       <td className="px-2 py-1 border-r w-32 text-[11px] font-medium tabular-nums text-right">
                         {sec.sqft > 0 ? Math.round(sec.sqft * row.quantity * 100) / 100 : "—"}

@@ -797,7 +797,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   })}
                 </div>
               </div>
-              <div className="flex-1 min-w-0 p-4">
+              <div className="flex-1 min-w-0 p-4 overflow-x-auto">
                 {activeSections.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-12 text-center">
                     <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
@@ -938,7 +938,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   })}
                 </div>
               </div>
-              <div className="flex-1 min-w-0 p-4">
+              <div className="flex-1 min-w-0 p-4 overflow-x-auto">
                 {activeSections.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-12 text-center">
                     <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
