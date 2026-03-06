@@ -1093,7 +1093,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                               <CommandInput placeholder="Search by number, type, make…" className="h-9 text-xs" />
                               <CommandList>
                                 <CommandEmpty>
-                                  {(() => console.log('🚨 CommandEmpty rendered - no equipment found'))()}
+                                  {(() => { console.log('🚨 CommandEmpty rendered - no equipment found'); return null; })()}
                                   No equipment found matching your dates.
                                 </CommandEmpty>
                                 {Object.entries(groupedEquipment).map(([category, items]) => {

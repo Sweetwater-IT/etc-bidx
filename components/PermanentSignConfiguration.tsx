@@ -478,7 +478,7 @@ const PermanentSignTable = ({
             <thead className="bg-muted/30">
               <tr>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-32">Designation</th>
-                <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r min-w-[150px]">Legend</th>
+                <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-96">Legend</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-28">Dimensions</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-24">Sheeting</th>
                 <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider border-r w-32">Qty</th>
@@ -522,7 +522,7 @@ const PermanentSignTable = ({
                         {row.signDesignation || 'select sign...'}
                       </Button>
                     </td>
-                    <td className="px-2 py-1 border-r min-w-[150px]">
+                    <td className="px-2 py-1 border-r w-96">
                       <Textarea
                         className="text-xs w-full min-h-[28px] resize-none overflow-hidden py-1.5 px-2"
                         value={row.signLegend}
@@ -634,7 +634,7 @@ const PermanentSignTable = ({
                           </Button>
                         </div>
                       </td>
-                      <td className="px-2 py-1 border-r min-w-[150px]">
+                      <td className="px-2 py-1 border-r w-96">
                         <Textarea className="text-[11px] w-full min-h-[24px] resize-none overflow-hidden py-1 px-2" value={sec.signLegend}
                           onChange={(e) => updateSecondarySign(row.id, sec.id, { signLegend: e.target.value })}
                           placeholder="Legend" disabled={disabled} rows={1}
