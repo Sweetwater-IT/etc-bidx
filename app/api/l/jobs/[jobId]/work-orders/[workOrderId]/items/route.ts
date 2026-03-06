@@ -3,14 +3,14 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ jobId: string, workOrderId: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { jobId, workOrderId } = await params;
     const body = await request.json();
     const { action, itemData } = body;
 
-    if (!id) {
+    if (!workOrderId) {
       return NextResponse.json({ error: 'Work order ID is required' }, { status: 400 });
     }
 
@@ -20,7 +20,7 @@ export async function POST(
       const { data, error } = await supabase
         .from("work_order_items_l")
         .insert({
-          work_order_id: id,
+          work_order_id: workOrderId,
           item_number: itemData.item_number || "",
           description: itemData.description || "",
           contract_quantity: itemData.contract_quantity || 1,
