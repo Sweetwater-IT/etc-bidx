@@ -382,7 +382,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
     setGeneratingPdf(true);
     try {
-      const response = await fetch(`/api/takeoffs/${savedTakeoffId}/pdf`);
+      const response = await fetch(`/api/l/takeoffs/${savedTakeoffId}/pdf`);
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
       }
@@ -422,7 +422,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/takeoffs/create', {
+      const response = await fetch('/api/l/takeoffs/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -96,10 +96,10 @@ export async function getTakeoffPdfData(takeoffId: string) {
 export async function getBillingPacketData(workOrderId: string) {
   // Fetch work order with job data
   const { data: workOrder, error: woError } = await supabase
-    .from('work_orders')
+    .from('work_orders_l')
     .select(`
       *,
-      jobs_l!work_orders_job_id_fkey (
+      jobs_l!work_orders_l_job_id_fkey (
         id,
         project_name,
         customer_name,
@@ -123,7 +123,7 @@ export async function getBillingPacketData(workOrderId: string) {
 
   // Get work order items
   const { data: woItems, error: itemsError } = await supabase
-    .from('work_order_items')
+    .from('work_order_items_l')
     .select('*')
     .eq('work_order_id', workOrderId);
 
