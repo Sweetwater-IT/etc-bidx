@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ClipboardList, Save, Download, Send, ArrowLeft } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
+import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 
 interface Props {
@@ -55,6 +56,12 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [activeSections, setActiveSections] = useState<string[]>([]);
   const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
   const [defaultSignMaterial, setDefaultSignMaterial] = useState<SignMaterial>(DEFAULT_SIGN_MATERIAL);
+
+  // Permanent Signs Configuration State
+  const [activePermanentItems, setActivePermanentItems] = useState<string[]>([]);
+  const [permanentSignRows, setPermanentSignRows] = useState<Record<string, PermSignRow[]>>({});
+  const [permanentEntryRows, setPermanentEntryRows] = useState<Record<string, PermEntryRow[]>>({});
+  const [defaultPermanentSignMaterial, setDefaultPermanentSignMaterial] = useState<SignMaterial>("ALUMINUM");
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -506,27 +513,34 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             )}
 
             {workType === "PERMANENT_SIGNS" && (
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p>Select signs from the MUTCD database or choose from pre-configured kits.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Individual Signs</h3>
-                    <p className="text-xs text-muted-foreground">Choose specific signs with custom dimensions and quantities.</p>
-                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                      <p className="text-sm text-muted-foreground">Sign selection will be integrated here</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Sign Kits</h3>
-                    <p className="text-xs text-muted-foreground">Select pre-configured kits with multiple signs.</p>
-                    <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                      <p className="text-sm text-muted-foreground">Kit selection will be integrated here</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PermanentSignConfiguration
+                activeItems={activePermanentItems}
+                signRows={permanentSignRows}
+                entryRows={permanentEntryRows}
+                defaultSignMaterial={defaultPermanentSignMaterial}
+                onToggleItem={(itemNumber) => {
+                  if (activePermanentItems.includes(itemNumber)) {
+                    setActivePermanentItems(prev => prev.filter(i => i !== itemNumber));
+                  } else {
+                    setActivePermanentItems(prev => [...prev, itemNumber]);
+                  }
+                }}
+                onSignRowsChange={(itemNumber, rows) => {
+                  setPermanentSignRows(prev => ({ ...prev, [itemNumber]: rows }));
+                }}
+                onEntryRowsChange={(itemNumber, rows) => {
+                  setPermanentEntryRows(prev => ({ ...prev, [itemNumber]: rows }));
+                }}
+                onDefaultMaterialChange={setDefaultPermanentSignMaterial}
+                onApplyMaterialToAll={() => {
+                  const newSignRows = { ...permanentSignRows };
+                  for (const key of Object.keys(newSignRows)) {
+                    newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultPermanentSignMaterial }));
+                  }
+                  setPermanentSignRows(newSignRows);
+                  toast.success(`All permanent signs set to ${defaultPermanentSignMaterial}`);
+                }}
+              />
             )}
 
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
