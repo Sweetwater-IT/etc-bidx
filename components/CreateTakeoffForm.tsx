@@ -234,12 +234,19 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
     if ((workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "DELIVERY" || workType === "RENTAL") && installDate) {
       const fetchEquipment = async () => {
         try {
+          console.log('🔍 DEBUG - installDate:', installDate);
           const [eqRes, resRes] = await Promise.all([
-            fetch('/api/rental-equipment'),
-            fetch('/api/rental-reservations'),
+            fetch('/api/l/rental-equipment'),
+            fetch('/api/l/rental-reservations'),
           ]);
+          console.log('📡 API eqRes.status:', eqRes.status, 'ok:', eqRes.ok);
+          console.log('📡 API resRes.status:', resRes.status, 'ok:', resRes.ok);
+
           const allEq = (await eqRes.json()).data || [];
           const allRes = (await resRes.json()).data || [];
+          console.log('🔢 allEq.length:', allEq.length);
+          console.log('🔢 allRes.length:', allRes.length);
+
           const needDate = installDate || null;
 
           const enriched = allEq.map((eq: any) => {
@@ -283,11 +290,18 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             return { ...eq, availability: "available" as const, availability_note: "Available now" };
           });
 
+          // TEMP: Show ALL equipment for debugging (comment out strict filtering)
+          // const filteredEquipment = enriched.filter((eq: any) => eq.availability !== "unavailable");
+          const filteredEquipment = enriched; // TEMP: Show all equipment
+
           // Sort: available first, then soon, then unavailable
           const order = { available: 0, soon: 1, unavailable: 2 };
-          enriched.sort((a: any, b: any) => order[a.availability] - order[b.availability] || a.category.localeCompare(b.category));
+          filteredEquipment.sort((a: any, b: any) => order[a.availability] - order[b.availability] || a.category.localeCompare(b.category));
 
-          setAvailableEquipment(enriched);
+          console.log('🔢 filteredEquipment.length:', filteredEquipment.length);
+          console.log('📋 enriched sample:', enriched.slice(0, 3));
+
+          setAvailableEquipment(filteredEquipment);
         } catch (error) {
           console.error("Error fetching equipment:", error);
         }
@@ -770,6 +784,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                       <label
                         key={section.key}
                         className="flex items-center gap-2 select-none cursor-pointer"
+                        onClick={() => handleToggleSection(section.key)}
                       >
                         <div
                           className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${active ? "bg-primary border-primary" : "border-muted-foreground/40 bg-background"}`}
@@ -912,6 +927,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                       <label
                         key={section.key}
                         className="flex items-center gap-2 select-none cursor-pointer"
+                        onClick={() => handleToggleSection(section.key)}
                       >
                         <div className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${active ? "bg-primary border-primary" : "border-muted-foreground/40 bg-background"}`}>
                           {active && <Check className="h-3 w-3 text-primary-foreground" />}
