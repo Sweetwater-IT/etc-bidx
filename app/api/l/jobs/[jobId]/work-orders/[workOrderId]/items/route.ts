@@ -46,17 +46,34 @@ export async function POST(
       const processedUpdates = { ...updates };
 
       // Convert item_number from string to integer if present
+      // Only convert if it looks like a formatted number (contains digits)
+      // Skip built-in item types like "DELIVERY", "SERVICE"
       if (processedUpdates.item_number !== undefined) {
         const itemNumberStr = processedUpdates.item_number?.toString() || '';
-        // Remove any non-numeric characters and parse as integer
-        const cleanItemNumber = itemNumberStr.replace(/[^\d]/g, '');
-        const itemNumberInt = parseInt(cleanItemNumber, 10);
 
-        if (!isNaN(itemNumberInt)) {
-          processedUpdates.item_number = itemNumberInt;
+        // Skip conversion for built-in item types
+        const builtInTypes = ['DELIVERY', 'SERVICE'];
+        if (builtInTypes.includes(itemNumberStr.toUpperCase())) {
+          // Keep as string for built-in types
+          processedUpdates.item_number = itemNumberStr;
         } else {
-          // If conversion fails, set to null or keep as string if database allows
-          processedUpdates.item_number = null;
+          // Check if it contains digits (likely a formatted number)
+          const hasDigits = /\d/.test(itemNumberStr);
+          if (hasDigits) {
+            // Remove any non-numeric characters and parse as integer
+            const cleanItemNumber = itemNumberStr.replace(/[^\d]/g, '');
+            const itemNumberInt = parseInt(cleanItemNumber, 10);
+
+            if (!isNaN(itemNumberInt) && itemNumberInt > 0) {
+              processedUpdates.item_number = itemNumberInt;
+            } else {
+              // If conversion fails, keep original string
+              processedUpdates.item_number = itemNumberStr;
+            }
+          } else {
+            // No digits found, keep as string
+            processedUpdates.item_number = itemNumberStr;
+          }
         }
       }
 
