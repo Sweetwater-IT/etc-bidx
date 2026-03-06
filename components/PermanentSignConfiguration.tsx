@@ -470,7 +470,7 @@ const PermanentSignTable = ({
 
       {rows.length === 0 ? (
         <div className="p-6 text-center text-xs text-muted-foreground">
-          No signs added. Click "Add Sign" to configure signs for this item.
+          No signs added. Click Add Sign to configure signs for this item.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -558,7 +558,7 @@ const PermanentSignTable = ({
                         <SelectTrigger className="h-7 text-xs w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {POST_SIZE_OPTIONS.map((o) => (
-                            <SelectItem key={o} value={o}>{o}"</SelectItem>
+                            <SelectItem key={o} value={o}>{o}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -734,7 +734,7 @@ const PermanentSignEntryTable = ({
       </div>
 
       {rows.length === 0 ? (
-        <div className="p-4 text-center text-xs text-muted-foreground">No entries. Click "Add Entry" to add.</div>
+        <div className="p-4 text-center text-xs text-muted-foreground">No entries. Click Add Entry to add.</div>
       ) : (
         <table className="w-full">
           <thead className="bg-muted/30">
