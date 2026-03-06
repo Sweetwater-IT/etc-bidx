@@ -230,56 +230,35 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
     console.log('Sign rows changed:', signRows);
   }, [signRows]);
 
-  // Fetch rental equipment with availability status based on install date
+  // Fetch rental equipment - simplified to show all equipment as available
   useEffect(() => {
     if (workType === "FLAGGING" || workType === "LANE_CLOSURE" || (workType === "DELIVERY" || workType === "RENTAL") && installDate) {
       const fetchEquipment = async () => {
         try {
           console.log('🔍 DEBUG - Starting equipment fetch');
           console.log('🔍 DEBUG - workType:', workType);
-          console.log('🔍 DEBUG - installDate:', installDate);
 
-          const [eqRes, resRes] = await Promise.all([
-            fetch('/api/l/rental-equipment'),
-            fetch('/api/l/rental-reservations'),
-          ]);
-
+          const eqRes = await fetch('/api/l/rental-equipment');
           console.log('📡 API eqRes.status:', eqRes.status, 'ok:', eqRes.ok);
-          console.log('📡 API resRes.status:', resRes.status, 'ok:', resRes.ok);
 
           if (!eqRes.ok) {
             console.error('❌ API Error - rental-equipment:', await eqRes.text());
             return;
           }
-          if (!resRes.ok) {
-            console.error('❌ API Error - rental-reservations:', await resRes.text());
-            return;
-          }
 
           const eqData = await eqRes.json();
-          const resData = await resRes.json();
-
           console.log('📦 Raw eqData:', eqData);
-          console.log('📦 Raw resData:', resData);
 
           const allEq = eqData.data || [];
-          const allRes = resData.data || [];
-
           console.log('🔢 allEq.length:', allEq.length);
-          console.log('🔢 allRes.length:', allRes.length);
 
           if (allEq.length === 0) {
             console.warn('⚠️ No equipment data returned from API');
           }
 
           console.log('📋 Sample equipment items:', allEq.slice(0, 3));
-          console.log('📋 Sample reservation items:', allRes.slice(0, 3));
 
-          const needDate = installDate || null;
-
-          console.log('🔄 Processing equipment availability...');
-          console.log('📅 needDate:', needDate);
-
+          // Mark all equipment as available (simplified logic)
           const enriched = allEq.map((eq: any) => {
             console.log(`🔍 Processing equipment ${eq.equipment_number} (${eq.id}):`, {
               status: eq.status,
@@ -287,72 +266,22 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               equipment_type: eq.equipment_type
             });
 
-            const eqReservations = allRes.filter((r: any) => r.equipment_id === eq.id);
-            console.log(`📋 Equipment ${eq.equipment_number} has ${eqReservations.length} reservations:`, eqReservations);
-
             if (eq.status === "damaged") {
               console.log(`💥 Equipment ${eq.equipment_number} is damaged`);
               return { ...eq, availability: "unavailable" as const, availability_note: "Damaged" };
             }
-            if (eqReservations.length === 0 && eq.status === "available") {
-              console.log(`✅ Equipment ${eq.equipment_number} is available (no reservations)`);
-              return { ...eq, availability: "available" as const, availability_note: "Available now" };
-            }
 
-            // Check if equipment will be available by the needed date
-            const activeRental = eqReservations.find((r: any) => r.status === "on_rent");
-            const futureReservations = eqReservations.filter((r: any) => r.status === "reserved");
-
-            console.log(`🏷️ Equipment ${eq.equipment_number} - Active rental:`, activeRental);
-            console.log(`📅 Equipment ${eq.equipment_number} - Future reservations:`, futureReservations);
-
-            if (activeRental) {
-              if (activeRental.end_date && needDate && activeRental.end_date <= needDate) {
-                console.log(`⏰ Equipment ${eq.equipment_number} will be off rent by ${activeRental.end_date}`);
-                return { ...eq, availability: "soon" as const, availability_note: `Off rent ${activeRental.end_date}` };
-              }
-              if (!activeRental.end_date) {
-                console.log(`❌ Equipment ${eq.equipment_number} on rent with no return date`);
-                return { ...eq, availability: "unavailable" as const, availability_note: "On rent (no return date)" };
-              }
-              console.log(`❌ Equipment ${eq.equipment_number} on rent until ${activeRental.end_date}`);
-              return { ...eq, availability: "unavailable" as const, availability_note: `On rent until ${activeRental.end_date}` };
-            }
-
-            if (futureReservations.length > 0) {
-              // Check if any reservation conflicts with the needed date
-              const conflicting = futureReservations.find((r: any) => {
-                if (!needDate) return true;
-                const rStart = r.start_date;
-                const rEnd = r.end_date || r.start_date;
-                const conflict = needDate >= rStart && needDate <= rEnd;
-                console.log(`🔍 Checking reservation ${r.id}: ${rStart} to ${rEnd}, needDate: ${needDate}, conflict: ${conflict}`);
-                return conflict;
-              });
-              if (conflicting) {
-                console.log(`⚠️ Equipment ${eq.equipment_number} has conflicting reservation`);
-                return { ...eq, availability: "soon" as const, availability_note: `Reserved ${conflicting.start_date}${conflicting.end_date ? ` → ${conflicting.end_date}` : ""}` };
-              }
-              console.log(`✅ Equipment ${eq.equipment_number} available for dates`);
-              return { ...eq, availability: "available" as const, availability_note: "Available for your dates" };
-            }
-
-            console.log(`✅ Equipment ${eq.equipment_number} default available`);
-            return { ...eq, availability: "available" as const, availability_note: "Available now" };
+            console.log(`✅ Equipment ${eq.equipment_number} marked as available`);
+            return { ...eq, availability: "available" as const, availability_note: "Available" };
           });
 
-          // TEMP: Show ALL equipment for debugging (comment out strict filtering)
-          // const filteredEquipment = enriched.filter((eq: any) => eq.availability !== "unavailable");
-          const filteredEquipment = enriched; // TEMP: Show all equipment
+          // Sort by category
+          enriched.sort((a: any, b: any) => a.category.localeCompare(b.category));
 
-          // Sort: available first, then soon, then unavailable
-          const order = { available: 0, soon: 1, unavailable: 2 };
-          filteredEquipment.sort((a: any, b: any) => order[a.availability] - order[b.availability] || a.category.localeCompare(b.category));
-
-          console.log('🔢 filteredEquipment.length:', filteredEquipment.length);
+          console.log('🔢 enriched.length:', enriched.length);
           console.log('📋 enriched sample:', enriched.slice(0, 3));
 
-          setAvailableEquipment(filteredEquipment);
+          setAvailableEquipment(enriched);
         } catch (error) {
           console.error("Error fetching equipment:", error);
         }
