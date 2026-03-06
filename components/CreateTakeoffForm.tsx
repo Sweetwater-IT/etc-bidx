@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Trash2, ChevronsUpDown } from "lucide-react";
 import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
+import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 
@@ -741,105 +742,15 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
       {/* Work Type Specific Content */}
       {workType === "MPT" && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              MPT Sign Configuration
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Default Material:
-              </span>
-              <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
-                {SIGN_MATERIALS.map((m) => (
-                  <button
-                    key={m.value}
-                    onClick={() => setDefaultSignMaterial(m.value as SignMaterial)}
-                    className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-all ${defaultSignMaterial === m.value ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground border border-transparent"}`}
-                  >
-                    {m.abbrev}
-                  </button>
-                ))}
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-[10px]"
-                onClick={handleApplyMaterialToAll}
-              >
-                Apply to All
-              </Button>
-            </div>
-          </div>
-          <div ref={mptContainerRef} className="p-5 overflow-auto max-h-[70vh]">
-            <div className="flex">
-              <div className="w-[200px] shrink-0 border-r p-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                  Structure Types
-                </h4>
-                <div className="space-y-2">
-                  {MPT_SECTIONS.map((section) => {
-                    const active = activeSections.includes(section.key);
-                    return (
-                      <label
-                        key={section.key}
-                        className="flex items-center gap-2 select-none cursor-pointer"
-                        onClick={() => handleToggleSection(section.key)}
-                      >
-                        <div
-                          className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${active ? "bg-primary border-primary" : "border-muted-foreground/40 bg-background"}`}
-                        >
-                          {active && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                        <span className="text-xs font-medium text-foreground">{section.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0 p-4 overflow-x-auto">
-                {activeSections.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-12 text-center">
-                    <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground font-medium">Select a structure type</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Click a structure type on the left to start building your MPT takeoff.
-                    </p>
-                  </div>
-                ) : (
-                  activeSections.map((sectionKey) => {
-                    const section = MPT_SECTIONS.find((s) => s.key === sectionKey)!;
-                    const sectionSandbags = (signRows[sectionKey] || []).reduce((total, row) => {
-                      const bags = SANDBAG_MAP[row.structureType] || 0;
-                      return total + bags * row.quantity;
-                    }, 0);
-                    return (
-                      <div key={sectionKey}>
-                        <MPTSignTable
-                          sectionTitle={section.label}
-                          structureOptions={section.structures}
-                          rows={signRows[sectionKey] || []}
-                          onRowsChange={(rows) => setSignRows((prev) => ({ ...prev, [sectionKey]: rows }))}
-                          orderable={sectionKey === "type_iii"}
-                          disabled={false}
-                          defaultMaterial={defaultSignMaterial}
-                        />
-                        {sectionSandbags > 0 && (
-                          <div className="mt-1.5 mb-4 px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 inline-flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                              Sand Bags
-                            </span>
-                            <span className="text-sm font-bold tabular-nums text-amber-700">{sectionSandbags}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <MPTSignConfiguration
+          activeSections={activeSections}
+          signRows={signRows}
+          defaultSignMaterial={defaultSignMaterial}
+          onToggleSection={handleToggleSection}
+          onSignRowsChange={handleSignRowsChange}
+          onDefaultMaterialChange={setDefaultSignMaterial}
+          onApplyMaterialToAll={handleApplyMaterialToAll}
+        />
       )}
 
       {workType === "PERMANENT_SIGNS" && (
