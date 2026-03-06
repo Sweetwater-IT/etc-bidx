@@ -1006,7 +1006,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                     }
 
                     const { generateTakeoffPdf } = await import("@/utils/generateTakeoffPdf");
-                    const takeoffBytes = await generateTakeoffPdf(takeoffId);
+                    const takeoffBytes = await generateTakeoffPdf(data.takeoff);
                     if (!takeoffBytes) { toast.error("Failed to generate takeoff PDF"); return; }
 
                     // Merge both PDFs
