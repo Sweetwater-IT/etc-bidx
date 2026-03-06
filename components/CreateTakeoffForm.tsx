@@ -43,6 +43,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [pickupDate, setPickupDate] = useState("");
   const [neededByDate, setNeededByDate] = useState("");
   const [priority, setPriority] = useState("standard");
+  const [mobilizationNumber, setMobilizationNumber] = useState(1);
   const [notes, setNotes] = useState("");
   const [crewNotes, setCrewNotes] = useState("");
   const [buildShopNotes, setBuildShopNotes] = useState("");
