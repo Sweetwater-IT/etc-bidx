@@ -232,7 +232,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
   // Fetch rental equipment with availability status based on install date
   useEffect(() => {
-    if ((workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "DELIVERY" || workType === "RENTAL") && installDate) {
+    if (workType === "FLAGGING" || workType === "LANE_CLOSURE" || (workType === "DELIVERY" || workType === "RENTAL") && installDate) {
       const fetchEquipment = async () => {
         try {
           console.log('🔍 DEBUG - Starting equipment fetch');
