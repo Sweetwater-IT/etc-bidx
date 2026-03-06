@@ -739,7 +739,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             )}
 
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
-              <div className="space-y-6">
+              <>
                 {/* Sign Configuration Section */}
                 <div className="rounded-lg border bg-card shadow-sm">
                   <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
@@ -837,23 +837,31 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                 </div>
 
                 {/* Vehicles Section */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Vehicles</h3>
-                  <p className="text-xs text-muted-foreground">Select trucks and vehicles for the operation.</p>
-                  <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Vehicle selection will be added here</p>
+                <div className="rounded-lg border bg-card shadow-sm">
+                  <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
+                    <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
+                      <ClipboardList className="h-3 w-3" /> Add Vehicle
+                    </Button>
+                  </div>
+                  <div className="p-5">
+                    <div className="text-center text-xs text-muted-foreground">No vehicles added yet.</div>
                   </div>
                 </div>
 
                 {/* Rolling Stock Section */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Rolling Stock</h3>
-                  <p className="text-xs text-muted-foreground">Choose cones, barrels, signs, and other equipment.</p>
-                  <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Equipment selection will be added here</p>
+                <div className="rounded-lg border bg-card shadow-sm">
+                  <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+                    <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
+                      <ClipboardList className="h-3 w-3" /> Add Equipment
+                    </Button>
+                  </div>
+                  <div className="p-5">
+                    <div className="text-center text-xs text-muted-foreground">No equipment added yet.</div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {(workType === "SERVICE" || workType === "DELIVERY" || workType === "RENTAL") && (
