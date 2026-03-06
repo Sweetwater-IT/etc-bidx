@@ -7,8 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "sonner";
-import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package } from "lucide-react";
+import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Trash2, ChevronsUpDown } from "lucide-react";
 import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
@@ -80,6 +93,35 @@ const SANDBAG_MAP: Record<string, number> = {
   "6FT WING BARRICADE": 4,
 };
 
+const FLAGGING_VEHICLE_OPTIONS = [
+  { id: "pickup_truck", name: "Pick Up Truck" },
+  { id: "tma", name: "TMA" },
+  { id: "message_board", name: "Message Board" },
+  { id: "arrow_panel", name: "Arrow Panel" },
+  { id: "speed_trailer", name: "Speed Trailer" },
+];
+
+const MPT_ADDITIONAL_ITEM_OPTIONS = [
+  "SAND BAGS",
+  "HIP VERTICAL PANEL (TOP AND BASE)",
+  "TYPE 11 VERTICAL PANEL (TOP AND BASE)",
+  "A LIGHT",
+  "C LIGHT",
+  "SHARP BARRICADE",
+  "TYPE III BARRICADE — 6FT RIGHT",
+  "TYPE III BARRICADE — 6FT LEFT",
+  "TYPE III BARRICADE — 6FT LEFT/RIGHT",
+  "TYPE III BARRICADE — 4FT RIGHT",
+  "TYPE III BARRICADE — 4FT LEFT",
+  "TYPE III BARRICADE — 4FT LEFT/RIGHT",
+  "TYPE III BARRICADE — 6FT WING BARRICADE",
+  "8FT H-STAND",
+  "10FT H-STAND",
+  "12FT H-STAND",
+  "14FT H-STAND",
+  "SIGN STAND",
+];
+
 export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -116,6 +158,19 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [permanentSignRows, setPermanentSignRows] = useState<Record<string, PermSignRow[]>>({});
   const [permanentEntryRows, setPermanentEntryRows] = useState<Record<string, PermEntryRow[]>>({});
   const [defaultPermanentSignMaterial, setDefaultPermanentSignMaterial] = useState<SignMaterial>("ALUMINUM");
+
+  // Flagging/Lane Closure State
+  const [vehicleItems, setVehicleItems] = useState<{ id: string; vehicleType: string; quantity: number }[]>([]);
+  const [rollingStockItems, setRollingStockItems] = useState<{ id: string; equipmentId: string; equipmentLabel: string }[]>([]);
+  const [availableEquipment, setAvailableEquipment] = useState<{
+    id: string; equipment_number: string; category: string; equipment_type: string;
+    make: string; model: string; status: string; rental_rate: number | null;
+    availability: "available" | "soon" | "unavailable";
+    availability_note: string;
+  }[]>([]);
+
+  // Additional Items State
+  const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string }[]>([]);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -173,6 +228,73 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   useEffect(() => {
     console.log('Sign rows changed:', signRows);
   }, [signRows]);
+
+  // Fetch rental equipment with availability status based on install date
+  useEffect(() => {
+    if ((workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "DELIVERY" || workType === "RENTAL") && installDate) {
+      const fetchEquipment = async () => {
+        try {
+          const [eqRes, resRes] = await Promise.all([
+            fetch('/api/rental-equipment'),
+            fetch('/api/rental-reservations'),
+          ]);
+          const allEq = (await eqRes.json()).data || [];
+          const allRes = (await resRes.json()).data || [];
+          const needDate = installDate || null;
+
+          const enriched = allEq.map((eq: any) => {
+            const eqReservations = allRes.filter((r: any) => r.equipment_id === eq.id);
+
+            if (eq.status === "damaged") {
+              return { ...eq, availability: "unavailable" as const, availability_note: "Damaged" };
+            }
+            if (eqReservations.length === 0 && eq.status === "available") {
+              return { ...eq, availability: "available" as const, availability_note: "Available now" };
+            }
+
+            // Check if equipment will be available by the needed date
+            const activeRental = eqReservations.find((r: any) => r.status === "on_rent");
+            const futureReservations = eqReservations.filter((r: any) => r.status === "reserved");
+
+            if (activeRental) {
+              if (activeRental.end_date && needDate && activeRental.end_date <= needDate) {
+                return { ...eq, availability: "soon" as const, availability_note: `Off rent ${activeRental.end_date}` };
+              }
+              if (!activeRental.end_date) {
+                return { ...eq, availability: "unavailable" as const, availability_note: "On rent (no return date)" };
+              }
+              return { ...eq, availability: "unavailable" as const, availability_note: `On rent until ${activeRental.end_date}` };
+            }
+
+            if (futureReservations.length > 0) {
+              // Check if any reservation conflicts with the needed date
+              const conflicting = futureReservations.find((r: any) => {
+                if (!needDate) return true;
+                const rStart = r.start_date;
+                const rEnd = r.end_date || r.start_date;
+                return needDate >= rStart && needDate <= rEnd;
+              });
+              if (conflicting) {
+                return { ...eq, availability: "soon" as const, availability_note: `Reserved ${conflicting.start_date}${conflicting.end_date ? ` → ${conflicting.end_date}` : ""}` };
+              }
+              return { ...eq, availability: "available" as const, availability_note: "Available for your dates" };
+            }
+
+            return { ...eq, availability: "available" as const, availability_note: "Available now" };
+          });
+
+          // Sort: available first, then soon, then unavailable
+          const order = { available: 0, soon: 1, unavailable: 2 };
+          enriched.sort((a: any, b: any) => order[a.availability] - order[b.availability] || a.category.localeCompare(b.category));
+
+          setAvailableEquipment(enriched);
+        } catch (error) {
+          console.error("Error fetching equipment:", error);
+        }
+      };
+      fetchEquipment();
+    }
+  }, [workType, installDate]);
 
   // MPT Configuration Handlers
   const handleToggleSection = (key: string) => {
@@ -329,6 +451,10 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
           activeSections,
           signRows,
           defaultSignMaterial,
+          // Include flagging/lane closure data
+          vehicleItems,
+          rollingStockItems,
+          additionalItems,
           // Include takeoffId for updates
           takeoffId: savedTakeoffId,
         }),
@@ -843,12 +969,80 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
           <div className="rounded-lg border bg-card shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
-              <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-                <ClipboardList className="h-3 w-3" /> Add Vehicle
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-7 text-xs"
+                onClick={() =>
+                  setVehicleItems((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), vehicleType: "", quantity: 1 },
+                  ])
+                }
+              >
+                <Plus className="h-3 w-3" /> Add Vehicle
               </Button>
             </div>
             <div className="p-5">
-              <div className="text-center text-xs text-muted-foreground">No vehicles added yet.</div>
+              {vehicleItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground font-medium">No vehicles assigned</p>
+                  <p className="text-xs text-muted-foreground mt-1">Click "Add Vehicle" to assign trucks, TMAs, etc.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {vehicleItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
+                      <Select
+                        value={item.vehicleType}
+                        onValueChange={(v) =>
+                          setVehicleItems((prev) =>
+                            prev.map((vi) => (vi.id === item.id ? { ...vi, vehicleType: v } : vi))
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[220px]">
+                          <SelectValue placeholder="Select vehicle type…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FLAGGING_VEHICLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              {opt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-8 w-16 text-xs"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            setVehicleItems((prev) =>
+                              prev.map((vi) =>
+                                vi.id === item.id
+                                  ? { ...vi, quantity: Math.max(1, parseInt(e.target.value) || 1) }
+                                  : vi
+                              )
+                            )
+                          }
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 ml-auto"
+                        onClick={() => setVehicleItems((prev) => prev.filter((vi) => vi.id !== item.id))}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -856,12 +1050,126 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
           <div className="rounded-lg border bg-card shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
-              <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-                <ClipboardList className="h-3 w-3" /> Add Equipment
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-7 text-xs"
+                onClick={() =>
+                  setRollingStockItems((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
+                  ])
+                }
+              >
+                <Plus className="h-3 w-3" /> Add Equipment
               </Button>
             </div>
             <div className="p-5">
-              <div className="text-center text-xs text-muted-foreground">No equipment added yet.</div>
+              {rollingStockItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
+                  <p className="text-xs text-muted-foreground mt-1">Click "Add Equipment" to select from available rental inventory.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {rollingStockItems.map((item) => {
+                    // Filter out already-selected equipment (except the current row's selection)
+                    const selectedIds = rollingStockItems
+                      .filter((rs) => rs.id !== item.id && rs.equipmentId)
+                      .map((rs) => rs.equipmentId);
+                    const filteredEquipment = availableEquipment
+                      .filter((eq) => !selectedIds.includes(eq.id))
+                      .filter((eq) => eq.availability !== "unavailable");
+
+                    // Group by category
+                    const groupedEquipment = filteredEquipment.reduce<Record<string, typeof filteredEquipment>>((acc, eq) => {
+                      if (!acc[eq.category]) acc[eq.category] = [];
+                      acc[eq.category].push(eq);
+                      return acc;
+                    }, {});
+
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="h-8 text-xs flex-1 min-w-[300px] justify-between font-normal"
+                            >
+                              {item.equipmentId ? (
+                                <span className="truncate">{item.equipmentLabel}</span>
+                              ) : (
+                                <span className="text-muted-foreground">Search equipment…</span>
+                              )}
+                              <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[520px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search by number, type, make…" className="h-9 text-xs" />
+                              <CommandList>
+                                <CommandEmpty>No equipment found matching your dates.</CommandEmpty>
+                                {Object.entries(groupedEquipment).map(([category, items]) => (
+                                  <CommandGroup key={category} heading={category}>
+                                    {items.map((eq) => {
+                                      const colorClass = eq.availability === "available"
+                                        ? "bg-emerald-500/10 hover:bg-emerald-500/20"
+                                        : "bg-amber-500/10 hover:bg-amber-500/20";
+                                      const dotColor = eq.availability === "available"
+                                        ? "bg-emerald-500"
+                                        : "bg-amber-500";
+                                      return (
+                                        <CommandItem
+                                          key={eq.id}
+                                          value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
+                                          onSelect={() => {
+                                            const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
+                                            setRollingStockItems((prev) =>
+                                              prev.map((rs) =>
+                                                rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
+                                              )
+                                            );
+                                          }}
+                                          className={`text-xs ${colorClass}`}
+                                        >
+                                          <Check
+                                            className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
+                                          />
+                                          <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
+                                          <span className="font-mono">{eq.equipment_number}</span>
+                                          <span className="text-muted-foreground ml-2">
+                                            {eq.equipment_type} · {eq.make} {eq.model}
+                                          </span>
+                                          {eq.rental_rate ? (
+                                            <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
+                                          ) : null}
+                                          <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
+                                            {eq.availability_note}
+                                          </span>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                ))}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setRollingStockItems((prev) => prev.filter((rs) => rs.id !== item.id))}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -892,16 +1200,49 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       )}
 
       {/* Additional Items */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <div className="bg-muted/30 px-5 py-3 flex items-center justify-between border-b">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
-          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-            <ClipboardList className="h-3 w-3" /> Add Item
+          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), name: "", quantity: 1, description: "" },
+          ])}>
+            <Plus className="h-3 w-3" /> Add Item
           </Button>
         </div>
-        <div className="p-5">
-          <div className="text-center text-xs text-muted-foreground">No additional items.</div>
-        </div>
+
+        {additionalItems.length === 0 ? (
+          <div className="p-6 text-center text-xs text-muted-foreground">No additional items.</div>
+        ) : (
+          <div className="divide-y">
+            {additionalItems.map((item) => (
+              <div key={item.id} className="px-5 py-2.5 flex items-center gap-3">
+                <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                  <SelectTrigger className="h-8 text-xs w-[260px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                  <SelectContent>
+                    {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom">Custom…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {item.name === "__custom" && (
+                  <Input className="h-8 text-xs w-[160px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom item name" />
+                )}
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
+                  <Input type="number" min={1} className="h-8 w-16 text-xs" value={item.quantity} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, parseInt(e.target.value) || 1) } : i)))} />
+                </div>
+                {item.name !== "__custom" && (
+                  <Input className="h-8 text-xs flex-1" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Notes */}
