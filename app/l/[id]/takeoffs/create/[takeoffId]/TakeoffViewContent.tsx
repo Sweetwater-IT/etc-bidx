@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, Edit, FileText } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText, ArrowRight } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 
 interface Props {
@@ -256,7 +256,18 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
-              <div className="text-sm font-medium font-mono">{takeoff.work_order_number || "—"}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium font-mono">{takeoff.work_order_number || "—"}</div>
+                {takeoff.work_order_id && (
+                  <button
+                    onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}`)}
+                    className="text-primary hover:text-primary/80 transition-colors p-1 rounded hover:bg-primary/10"
+                    title="View Work Order"
+                  >
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</Label>
