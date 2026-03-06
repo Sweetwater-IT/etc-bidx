@@ -1006,7 +1006,30 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                     }
 
                     const { generateTakeoffPdf } = await import("@/utils/generateTakeoffPdf");
-                    const takeoffBytes = await generateTakeoffPdf(data.takeoff);
+                    const takeoffBytes = await generateTakeoffPdf({
+                      title: data.takeoff.title || "",
+                      workType: data.takeoff.work_type || "",
+                      status: data.takeoff.status || "",
+                      installDate: data.takeoff.install_date || undefined,
+                      pickupDate: data.takeoff.pickup_date || undefined,
+                      neededByDate: data.takeoff.needed_by_date || undefined,
+                      notes: data.takeoff.notes || undefined,
+                      workOrderNumber: workOrder.wo_number || undefined,
+                      contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
+                      projectName: dbJob?.projectInfo?.projectName || "",
+                      etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
+                      customerName: dbJob?.projectInfo?.customerName || "",
+                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
+                      customerPM: dbJob?.projectInfo?.customerPM || "",
+                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                      county: dbJob?.projectInfo?.county || "",
+                      etcBranch: dbJob?.etc_branch || "",
+                      etcProjectManager: dbJob?.etc_project_manager || "",
+                      crewNotes: (dispatch as any)?.crew_notes || undefined,
+                      buildShopNotes: data.takeoff.build_shop_notes || undefined,
+                      items: data.takeoff.items,
+                      returnBytes: true,
+                    });
                     if (!takeoffBytes) { toast.error("Failed to generate takeoff PDF"); return; }
 
                     // Merge both PDFs
