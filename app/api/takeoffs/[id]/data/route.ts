@@ -14,7 +14,7 @@ export async function GET(
 
     const [tRes, tiRes] = await Promise.all([
       supabase.from("takeoffs_l").select("*").eq("id", takeoffId).single(),
-      supabase.from("takeoff_items").select("*").eq("takeoff_id", takeoffId).order("created_at"),
+      supabase.from("takeoff_items_l").select("*").eq("takeoff_id", takeoffId).order("created_at"),
     ]);
 
     if (tRes.error) {

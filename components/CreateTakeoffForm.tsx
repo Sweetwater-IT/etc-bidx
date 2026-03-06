@@ -601,12 +601,21 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
-              <Input
-                className="text-sm"
-                value={workOrderNumber || "Save takeoff first"}
-                disabled
-                placeholder="Save takeoff first"
-              />
+              {workOrderNumber ? (
+                <div
+                  className="text-sm text-primary hover:text-primary/80 cursor-pointer underline"
+                  onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}
+                >
+                  {workOrderNumber}
+                </div>
+              ) : (
+                <Input
+                  className="text-sm"
+                  value="Save takeoff first"
+                  disabled
+                  placeholder="Save takeoff first"
+                />
+              )}
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</Label>
@@ -700,7 +709,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   onChange={(e) => setMobilizationNumber(Math.max(1, parseInt(e.target.value) || 1))}
                 />
               </div>
-            ) : (
+            ) : workType ? (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</Label>
                 <Select value={priority} onValueChange={setPriority}>
@@ -714,7 +723,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

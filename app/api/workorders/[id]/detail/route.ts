@@ -156,7 +156,7 @@ export async function GET(
       const itemCounts = new Map<string, number>();
       if (takeoffIds.length > 0) {
         const { data: items } = await supabase
-          .from("takeoff_items")
+          .from("takeoff_items_l")
           .select("takeoff_id")
           .in("takeoff_id", takeoffIds);
         (items || []).forEach((i: any) => {
