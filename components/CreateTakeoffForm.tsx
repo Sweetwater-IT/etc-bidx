@@ -235,28 +235,67 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
     if ((workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "DELIVERY" || workType === "RENTAL") && installDate) {
       const fetchEquipment = async () => {
         try {
+          console.log('🔍 DEBUG - Starting equipment fetch');
+          console.log('🔍 DEBUG - workType:', workType);
           console.log('🔍 DEBUG - installDate:', installDate);
+
           const [eqRes, resRes] = await Promise.all([
             fetch('/api/l/rental-equipment'),
             fetch('/api/l/rental-reservations'),
           ]);
+
           console.log('📡 API eqRes.status:', eqRes.status, 'ok:', eqRes.ok);
           console.log('📡 API resRes.status:', resRes.status, 'ok:', resRes.ok);
 
-          const allEq = (await eqRes.json()).data || [];
-          const allRes = (await resRes.json()).data || [];
+          if (!eqRes.ok) {
+            console.error('❌ API Error - rental-equipment:', await eqRes.text());
+            return;
+          }
+          if (!resRes.ok) {
+            console.error('❌ API Error - rental-reservations:', await resRes.text());
+            return;
+          }
+
+          const eqData = await eqRes.json();
+          const resData = await resRes.json();
+
+          console.log('📦 Raw eqData:', eqData);
+          console.log('📦 Raw resData:', resData);
+
+          const allEq = eqData.data || [];
+          const allRes = resData.data || [];
+
           console.log('🔢 allEq.length:', allEq.length);
           console.log('🔢 allRes.length:', allRes.length);
 
+          if (allEq.length === 0) {
+            console.warn('⚠️ No equipment data returned from API');
+          }
+
+          console.log('📋 Sample equipment items:', allEq.slice(0, 3));
+          console.log('📋 Sample reservation items:', allRes.slice(0, 3));
+
           const needDate = installDate || null;
 
+          console.log('🔄 Processing equipment availability...');
+          console.log('📅 needDate:', needDate);
+
           const enriched = allEq.map((eq: any) => {
+            console.log(`🔍 Processing equipment ${eq.equipment_number} (${eq.id}):`, {
+              status: eq.status,
+              category: eq.category,
+              equipment_type: eq.equipment_type
+            });
+
             const eqReservations = allRes.filter((r: any) => r.equipment_id === eq.id);
+            console.log(`📋 Equipment ${eq.equipment_number} has ${eqReservations.length} reservations:`, eqReservations);
 
             if (eq.status === "damaged") {
+              console.log(`💥 Equipment ${eq.equipment_number} is damaged`);
               return { ...eq, availability: "unavailable" as const, availability_note: "Damaged" };
             }
             if (eqReservations.length === 0 && eq.status === "available") {
+              console.log(`✅ Equipment ${eq.equipment_number} is available (no reservations)`);
               return { ...eq, availability: "available" as const, availability_note: "Available now" };
             }
 
@@ -264,13 +303,19 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             const activeRental = eqReservations.find((r: any) => r.status === "on_rent");
             const futureReservations = eqReservations.filter((r: any) => r.status === "reserved");
 
+            console.log(`🏷️ Equipment ${eq.equipment_number} - Active rental:`, activeRental);
+            console.log(`📅 Equipment ${eq.equipment_number} - Future reservations:`, futureReservations);
+
             if (activeRental) {
               if (activeRental.end_date && needDate && activeRental.end_date <= needDate) {
+                console.log(`⏰ Equipment ${eq.equipment_number} will be off rent by ${activeRental.end_date}`);
                 return { ...eq, availability: "soon" as const, availability_note: `Off rent ${activeRental.end_date}` };
               }
               if (!activeRental.end_date) {
+                console.log(`❌ Equipment ${eq.equipment_number} on rent with no return date`);
                 return { ...eq, availability: "unavailable" as const, availability_note: "On rent (no return date)" };
               }
+              console.log(`❌ Equipment ${eq.equipment_number} on rent until ${activeRental.end_date}`);
               return { ...eq, availability: "unavailable" as const, availability_note: `On rent until ${activeRental.end_date}` };
             }
 
@@ -280,14 +325,19 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                 if (!needDate) return true;
                 const rStart = r.start_date;
                 const rEnd = r.end_date || r.start_date;
-                return needDate >= rStart && needDate <= rEnd;
+                const conflict = needDate >= rStart && needDate <= rEnd;
+                console.log(`🔍 Checking reservation ${r.id}: ${rStart} to ${rEnd}, needDate: ${needDate}, conflict: ${conflict}`);
+                return conflict;
               });
               if (conflicting) {
+                console.log(`⚠️ Equipment ${eq.equipment_number} has conflicting reservation`);
                 return { ...eq, availability: "soon" as const, availability_note: `Reserved ${conflicting.start_date}${conflicting.end_date ? ` → ${conflicting.end_date}` : ""}` };
               }
+              console.log(`✅ Equipment ${eq.equipment_number} available for dates`);
               return { ...eq, availability: "available" as const, availability_note: "Available for your dates" };
             }
 
+            console.log(`✅ Equipment ${eq.equipment_number} default available`);
             return { ...eq, availability: "available" as const, availability_note: "Available now" };
           });
 
@@ -992,13 +1042,24 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               ) : (
                 <div className="space-y-2">
                   {rollingStockItems.map((item) => {
+                    console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
+                      equipmentId: item.equipmentId,
+                      equipmentLabel: item.equipmentLabel
+                    });
+
                     // Filter out already-selected equipment (except the current row's selection)
                     const selectedIds = rollingStockItems
                       .filter((rs) => rs.id !== item.id && rs.equipmentId)
                       .map((rs) => rs.equipmentId);
+
+                    console.log(`🚫 Selected IDs to exclude:`, selectedIds);
+
                     const filteredEquipment = availableEquipment
                       .filter((eq) => !selectedIds.includes(eq.id))
                       .filter((eq) => eq.availability !== "unavailable");
+
+                    console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
+                    console.log(`📋 Filtered equipment sample:`, filteredEquipment.slice(0, 3));
 
                     // Group by category
                     const groupedEquipment = filteredEquipment.reduce<Record<string, typeof filteredEquipment>>((acc, eq) => {
@@ -1006,6 +1067,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                       acc[eq.category].push(eq);
                       return acc;
                     }, {});
+
+                    console.log(`📂 Grouped equipment by category:`, Object.keys(groupedEquipment));
+                    console.log(`📂 Grouped equipment details:`, Object.entries(groupedEquipment).map(([cat, items]) => `${cat}: ${items.length} items`));
 
                     return (
                       <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
@@ -1028,49 +1092,56 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                             <Command>
                               <CommandInput placeholder="Search by number, type, make…" className="h-9 text-xs" />
                               <CommandList>
-                                <CommandEmpty>No equipment found matching your dates.</CommandEmpty>
-                                {Object.entries(groupedEquipment).map(([category, items]) => (
-                                  <CommandGroup key={category} heading={category}>
-                                    {items.map((eq) => {
-                                      const colorClass = eq.availability === "available"
-                                        ? "bg-emerald-500/10 hover:bg-emerald-500/20"
-                                        : "bg-amber-500/10 hover:bg-amber-500/20";
-                                      const dotColor = eq.availability === "available"
-                                        ? "bg-emerald-500"
-                                        : "bg-amber-500";
-                                      return (
-                                        <CommandItem
-                                          key={eq.id}
-                                          value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
-                                          onSelect={() => {
-                                            const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
-                                            setRollingStockItems((prev) =>
-                                              prev.map((rs) =>
-                                                rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
-                                              )
-                                            );
-                                          }}
-                                          className={`text-xs ${colorClass}`}
-                                        >
-                                          <Check
-                                            className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
-                                          />
-                                          <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
-                                          <span className="font-mono">{eq.equipment_number}</span>
-                                          <span className="text-muted-foreground ml-2">
-                                            {eq.equipment_type} · {eq.make} {eq.model}
-                                          </span>
-                                          {eq.rental_rate ? (
-                                            <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
-                                          ) : null}
-                                          <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
-                                            {eq.availability_note}
-                                          </span>
-                                        </CommandItem>
-                                      );
-                                    })}
-                                  </CommandGroup>
-                                ))}
+                                <CommandEmpty>
+                                  {(() => console.log('🚨 CommandEmpty rendered - no equipment found'))()}
+                                  No equipment found matching your dates.
+                                </CommandEmpty>
+                                {Object.entries(groupedEquipment).map(([category, items]) => {
+                                  (() => console.log(`🏷️ Rendering category "${category}" with ${items.length} items:`, items.map(eq => eq.equipment_number)))();
+                                  return (
+                                    <CommandGroup key={category} heading={category}>
+                                      {items.map((eq) => {
+                                        (() => console.log(`🔧 Rendering equipment ${eq.equipment_number} in category ${category}`))();
+                                        const colorClass = eq.availability === "available"
+                                          ? "bg-emerald-500/10 hover:bg-emerald-500/20"
+                                          : "bg-amber-500/10 hover:bg-amber-500/20";
+                                        const dotColor = eq.availability === "available"
+                                          ? "bg-emerald-500"
+                                          : "bg-amber-500";
+                                        return (
+                                          <CommandItem
+                                            key={eq.id}
+                                            value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
+                                            onSelect={() => {
+                                              const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
+                                              setRollingStockItems((prev) =>
+                                                prev.map((rs) =>
+                                                  rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
+                                                )
+                                              );
+                                            }}
+                                            className={`text-xs ${colorClass}`}
+                                          >
+                                            <Check
+                                              className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
+                                            />
+                                            <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
+                                            <span className="font-mono">{eq.equipment_number}</span>
+                                            <span className="text-muted-foreground ml-2">
+                                              {eq.equipment_type} · {eq.make} {eq.model}
+                                            </span>
+                                            {eq.rental_rate ? (
+                                              <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
+                                            ) : null}
+                                            <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
+                                              {eq.availability_note}
+                                            </span>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  );
+                                })}
                               </CommandList>
                             </Command>
                           </PopoverContent>
