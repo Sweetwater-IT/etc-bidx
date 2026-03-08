@@ -21,7 +21,15 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown } from "lucide-react";
+import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
