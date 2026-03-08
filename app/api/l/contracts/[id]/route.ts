@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractId = params.id;
+    const { id: contractId } = await params;
     const body = await request.json();
     const { patch, clientVersion } = body;
 
@@ -155,10 +155,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const contractId = params.id;
+    const { id: contractId } = await params;
 
     // Check if contract is signed (cannot delete signed contracts)
     const { data: contractData, error: fetchError } = await supabase
