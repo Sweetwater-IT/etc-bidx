@@ -62,6 +62,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Plus,
+  Minus,
   Loader2,
   Save,
   FileText,
@@ -1673,33 +1674,60 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                       </TableCell>
                       <TableCell className="p-1.5">
                         {canEdit ? (
-                          <Input
-                            className="h-7 text-xs text-right w-[100px]"
-                            type="number"
-                            step="1"
-                            min="0"
-                            value={item.work_order_quantity || ""}
-                            onChange={(e) => {
-                              const val = Math.max(0, parseFloat(e.target.value) || 0);
-                              setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: val } : i));
-                            }}
-                            onBlur={async () => {
-                              const response = await fetch(`/api/workorders/${workOrderId}/items`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  action: 'update',
-                                  itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
-                                }),
-                              });
-                              if (!response.ok) {
-                                const error = await response.json();
-                                toast.error(error.error || 'Failed to update quantity');
-                                // Revert the change
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: item.work_order_quantity } : i));
-                              }
-                            }}
-                          />
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                const newQty = Math.max(0, (item.work_order_quantity || 0) - 1);
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
+                              }}
+                              disabled={(item.work_order_quantity || 0) <= 0}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={item.work_order_quantity || ""}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                const cleaned = raw.replace(/\D/g, '');
+                                const num = cleaned === '' ? 0 : Math.max(0, parseInt(cleaned, 10));
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: num } : i));
+                              }}
+                              onBlur={async () => {
+                                const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    action: 'update',
+                                    itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
+                                  }),
+                                });
+                                if (!response.ok) {
+                                  const error = await response.json();
+                                  toast.error(error.error || 'Failed to update quantity');
+                                  // Revert the change
+                                  setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: item.work_order_quantity } : i));
+                                }
+                              }}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                const newQty = (item.work_order_quantity || 0) + 1;
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         ) : (
                           <span className="text-xs text-right block">{item.work_order_quantity}</span>
                         )}

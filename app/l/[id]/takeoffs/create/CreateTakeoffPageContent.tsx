@@ -80,6 +80,18 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
+      {/* Back to Project Link */}
+      <div className="w-full px-6 pt-4">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Project
+        </button>
+      </div>
       <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
         <CreateTakeoffForm
           jobId={jobId}

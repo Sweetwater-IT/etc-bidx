@@ -148,6 +148,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [takeoffSaved, setTakeoffSaved] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [savedTakeoffId, setSavedTakeoffId] = useState<string | null>(null);
+  const [workOrderExists, setWorkOrderExists] = useState(false);
+  const [showWorkTypeChangeDialog, setShowWorkTypeChangeDialog] = useState(false);
+  const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
 
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
@@ -522,10 +525,17 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             <Download className="h-3.5 w-3.5" />
             {generatingPdf ? "Generating…" : "Download PDF"}
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving || !takeoffSaved}>
-            <ClipboardList className="h-3.5 w-3.5" />
-            {saving ? "Creating…" : "Generate Work Order"}
-          </Button>
+          {workOrderExists ? (
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              View Work Order
+            </Button>
+          ) : (
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving || !takeoffSaved}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              {saving ? "Creating…" : "Generate Work Order"}
+            </Button>
+          )}
           <Button size="sm" variant="secondary" className="gap-1.5">
             <Send className="h-3.5 w-3.5" />
             Send to Build Shop
@@ -598,7 +608,24 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type *</Label>
-              <Select value={workType} onValueChange={setWorkType}>
+              <Select value={workType} onValueChange={(newWorkType) => {
+                // Check if there's progress made
+                const hasProgress = activeSections.length > 0 ||
+                  Object.values(signRows).some(rows => rows.length > 0) ||
+                  activePermanentItems.length > 0 ||
+                  Object.values(permanentSignRows).some(rows => rows.length > 0) ||
+                  Object.values(permanentEntryRows).some(rows => rows.length > 0) ||
+                  vehicleItems.length > 0 ||
+                  rollingStockItems.length > 0 ||
+                  additionalItems.length > 0;
+
+                if (hasProgress && newWorkType !== workType) {
+                  setPendingWorkType(newWorkType);
+                  setShowWorkTypeChangeDialog(true);
+                } else {
+                  setWorkType(newWorkType);
+                }
+              }}>
                 <SelectTrigger className="text-sm mt-0">
                   <SelectValue placeholder="Choose Work Type" />
                 </SelectTrigger>
@@ -1237,6 +1264,49 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
         </div>
       </div>
 
+      {/* Work Type Change Confirmation Dialog */}
+      <Dialog open={showWorkTypeChangeDialog} onOpenChange={setShowWorkTypeChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Change Work Type?
+            </DialogTitle>
+            <DialogDescription>
+              You have items entered for the current work type. Switching will clear all sign rows and additional items. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWorkTypeChangeDialog(false);
+              setPendingWorkType(null);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingWorkType) {
+                  setWorkType(pendingWorkType);
+                  // Clear all progress
+                  setActiveSections([]);
+                  setSignRows({});
+                  setActivePermanentItems([]);
+                  setPermanentSignRows({});
+                  setPermanentEntryRows({});
+                  setVehicleItems([]);
+                  setRollingStockItems([]);
+                  setAdditionalItems([]);
+                }
+                setShowWorkTypeChangeDialog(false);
+                setPendingWorkType(null);
+              }}
+            >
+              Change Work Type
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
