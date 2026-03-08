@@ -168,7 +168,7 @@ export const data = {
       }, */
     {
       title: "Contract Manager",
-      url: "/contracts",
+      url: "/l/contracts",
       icon: IconUsers,
     },
     /*   {
