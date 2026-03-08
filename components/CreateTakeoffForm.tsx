@@ -1,4 +1,4 @@
-n import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useAuth } from "@/contexts/auth-context";
