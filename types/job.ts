@@ -10,6 +10,7 @@ export interface ScheduleOfValuesItem {
   retainageValue: number;
   uom: string;
   notes?: string;
+  noNotes?: boolean;
 }
 
 export interface Job {
@@ -77,6 +78,7 @@ export interface Job {
 export interface JobProjectInfo {
   projectName: string | null;
   etcJobNumber: number | null;
+  etcBranch?: string | null;
   customerName: string | null;
   customerJobNumber: string | null;
   customerPM: string | null;
@@ -89,6 +91,26 @@ export interface JobProjectInfo {
   projectEndDate: string | null;
   extensionDate: string | null;
   otherNotes: string | null;
+  isCertifiedPayroll: "none" | "state" | "federal";
+  shopRate: string | null;
+  stateMptBaseRate: string | null;
+  stateMptFringeRate: string | null;
+  stateFlaggingBaseRate: string | null;
+  stateFlaggingFringeRate: string | null;
+  federalMptBaseRate: string | null;
+  federalMptFringeRate: string | null;
+  federalFlaggingBaseRate: string | null;
+  federalFlaggingFringeRate: string | null;
+  etcProjectManager: string | null;
+  etcBillingManager: string | null;
+  etcProjectManagerEmail: string | null;
+  etcBillingManagerEmail: string | null;
+  certifiedPayrollContact: string | null;
+  certifiedPayrollEmail: string | null;
+  certifiedPayrollPhone: string | null;
+  customerBillingContact: string | null;
+  customerBillingEmail: string | null;
+  customerBillingPhone: string | null;
 }
 
 export interface JobFromDB {

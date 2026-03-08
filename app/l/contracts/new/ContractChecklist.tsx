@@ -1,15 +1,10 @@
+"use client";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { ProjectInfoFields } from "@/components/ProjectInfoFields";
-import { ChecklistHeader } from "@/components/ChecklistHeader";
-import { ScheduleOfValues } from "@/components/ScheduleOfValues";
-import { DocumentsFormsStep } from "@/components/DocumentsFormsStep";
-import { SaveStatusIndicator } from "@/components/SaveStatusIndicator";
-import { ChangeOrderGateDialog } from "@/components/ChangeOrderGateDialog";
-import { useContractDraft } from "@/hooks/useContractDraft";
-
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,9 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Lock, Edit } from "lucide-react";
-import { toast } from "sonner";
+import { Lock, Edit } from "lucide-react";
 import type { JobProjectInfo, ScheduleOfValuesItem } from "@/types/job";
+import { useContractDraft } from "@/hooks/useContractDraft";
+import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
+import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
+import { ScheduleOfValues } from "@/app/l/components/ScheduleOfValues";
+import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
+import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
+import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 
 type DocumentCategory = "contract" | "permit" | "insurance" | "other";
 
