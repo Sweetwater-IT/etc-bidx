@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+n import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useAuth } from "@/contexts/auth-context";
@@ -21,7 +21,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Trash2, ChevronsUpDown } from "lucide-react";
+import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown } from "lucide-react";
 import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
@@ -1102,29 +1102,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
         </>
       )}
 
-      {(workType === "SERVICE" || workType === "DELIVERY" || workType === "RENTAL") && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {WORK_TYPES.find(wt => wt.value === workType)?.label} Configuration
-            </h2>
-          </div>
-          <div className="p-5">
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                <p>Configure additional items for {workType.toLowerCase()} work.</p>
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">Additional Items</h3>
-                <p className="text-xs text-muted-foreground">Select equipment, materials, or services needed for this work type.</p>
-                <div className="border border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-                  <p className="text-sm text-muted-foreground">Item selection will be added here</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Additional Items */}
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
@@ -1143,9 +1121,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
         ) : (
           <div className="divide-y">
             {additionalItems.map((item) => (
-              <div key={item.id} className="px-5 py-2.5 flex items-center gap-3">
+              <div key={item.id} className="px-5 py-2.5 flex items-center gap-4">
                 <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                  <SelectTrigger className="h-8 text-xs w-[260px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs w-[240px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
                   <SelectContent>
                     {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
                       <SelectItem key={opt} value={opt}>{opt}</SelectItem>
@@ -1154,14 +1132,49 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   </SelectContent>
                 </Select>
                 {item.name === "__custom" && (
-                  <Input className="h-8 text-xs w-[160px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom item name" />
+                  <Input className="h-8 text-xs w-[140px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom item name" />
                 )}
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
-                  <Input type="number" min={1} className="h-8 w-16 text-xs" value={item.quantity} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, parseInt(e.target.value) || 1) } : i)))} />
-                </div>
+                {workType === "SERVICE" ? (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i)))}
+                      disabled={item.quantity <= 1}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={item.quantity || 1}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const cleaned = raw.replace(/\D/g, '');
+                        const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                        setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: num } : i)));
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)))}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
+                    <Input type="number" min={1} className="h-8 w-16 text-xs" value={item.quantity} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, parseInt(e.target.value) || 1) } : i)))} />
+                  </div>
+                )}
                 {item.name !== "__custom" && (
-                  <Input className="h-8 text-xs flex-1" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
+                  <Input className="h-8 text-xs flex-1 max-w-[300px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
                   <Trash2 className="h-3 w-3 text-destructive" />
