@@ -194,6 +194,11 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       setActiveSections(draftTakeoff.active_sections || []);
       setSignRows(draftTakeoff.sign_rows || {});
       setDefaultSignMaterial(draftTakeoff.default_sign_material || DEFAULT_SIGN_MATERIAL);
+      // Load permanent signs data
+      setActivePermanentItems(draftTakeoff.active_permanent_items || []);
+      setPermanentSignRows(draftTakeoff.permanent_sign_rows || {});
+      setPermanentEntryRows(draftTakeoff.permanent_entry_rows || {});
+      setDefaultPermanentSignMaterial(draftTakeoff.default_permanent_sign_material || "ALUMINUM");
       setSavedTakeoffId(draftTakeoff.id);
     }
   }, [draftTakeoff]);
@@ -445,6 +450,11 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
           activeSections,
           signRows,
           defaultSignMaterial,
+          // Include permanent signs data
+          activePermanentItems,
+          permanentSignRows,
+          permanentEntryRows,
+          defaultPermanentSignMaterial,
           // Include flagging/lane closure data
           vehicleItems,
           rollingStockItems,

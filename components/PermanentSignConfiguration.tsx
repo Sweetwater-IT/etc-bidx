@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Copy, FilePlus, Search } from "lucide-react";
+import { Plus, Minus, Trash2, Copy, FilePlus, Search } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
@@ -115,6 +115,9 @@ export const PermanentSignConfiguration = ({
   const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
+  // Search state
+  const [itemSearch, setItemSearch] = useState("");
+
   // Fetch permanent sign items
   useEffect(() => {
     const fetchItems = async () => {
@@ -205,42 +208,29 @@ export const PermanentSignConfiguration = ({
     <div className="rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] flex flex-col">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Permanent Signs Configuration</h2>
-        {!disabled && (
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Default Material:</span>
-            <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
-              {SIGN_MATERIALS.filter(m => m.value === "ALUMINUM").map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => onDefaultMaterialChange(m.value)}
-                  className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-all ${
-                    defaultSignMaterial === m.value
-                      ? "bg-card text-foreground shadow-sm border border-border"
-                      : "text-muted-foreground border border-transparent"
-                  }`}
-                >
-                  {m.abbrev}
-                </button>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-[10px]"
-              onClick={() => setShowApplyMaterialDialog(true)}
-            >
-              Apply to All
-            </Button>
-          </div>
-        )}
       </div>
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar with item checkboxes */}
         <div className="w-[250px] shrink-0 border-r p-4 overflow-y-auto">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Item Numbers</h4>
+          <div className="mb-3">
+            <Input
+              placeholder="Search items..."
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+              className="h-7 text-xs"
+            />
+          </div>
           <div className="space-y-3">
-            {permanentSignItems.map((item) => {
+            {permanentSignItems
+              .filter((item) =>
+                itemSearch === "" ||
+                item.item_number.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                item.display_name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                item.description.toLowerCase().includes(itemSearch.toLowerCase())
+              )
+              .map((item) => {
               const active = activeItems.includes(item.item_number);
               return (
                 <label
@@ -547,12 +537,40 @@ const PermanentSignTable = ({
                       </Select>
                     </td>
                     <td className="px-2 py-1 border-r w-32">
-                      <Input
-                        type="number" min={1} className="h-7 w-12 text-xs"
-                        value={row.quantity}
-                        onChange={(e) => updateRow(row.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                        disabled={disabled}
-                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
+                          disabled={disabled || row.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={row.quantity || 1}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const cleaned = raw.replace(/\D/g, '');
+                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                            updateRow(row.id, { quantity: num });
+                          }}
+                          disabled={disabled}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
+                          disabled={disabled}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </td>
                     <td className="px-2 py-1 border-r w-24">
                       <Select value={row.postSize} onValueChange={(v) => updateRow(row.id, { postSize: v })} disabled={disabled}>
