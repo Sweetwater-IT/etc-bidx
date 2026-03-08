@@ -14,7 +14,7 @@ export default function ContractManagerEmptyState({ onCreateNew }: ContractManag
         </div>
         <h2 className="text-2xl font-bold text-foreground mb-2">No Contracts Yet</h2>
         <p className="text-muted-foreground mb-8">
-          Get started by creating your first contract. Contracts will appear here once they're created and ready for management.
+          Get started by creating your first contract. Contracts will appear here once they are created and ready for management.
         </p>
         <Button onClick={onCreateNew} className="gap-2">
           <Plus className="h-4 w-4" />
