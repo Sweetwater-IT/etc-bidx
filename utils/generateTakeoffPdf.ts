@@ -126,26 +126,26 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
 const MPT_COLS_ORDERED = [
   { label: "LOAD", x: 14, w: 8 },
   { label: "DESIG", x: 22, w: 22 },
-  { label: "LEGEND", x: 44, w: 104 },
-  { label: "DIM", x: 148, w: 20 },
-  { label: "SHEET", x: 168, w: 16 },
-  { label: "QTY", x: 184, w: 10 },
-  { label: "STRUCTURE", x: 200, w: 40 },
-  { label: "MATL", x: 242, w: 12 },
-  { label: "LIGHTS", x: 254, w: 10 },
-  { label: "COVER", x: 265, w: 18 },
+  { label: "LEGEND", x: 44, w: 96 },
+  { label: "DIM", x: 140, w: 18 },
+  { label: "SHEET", x: 158, w: 14 },
+  { label: "QTY", x: 172, w: 8 },
+  { label: "STRUCTURE", x: 180, w: 38 },
+  { label: "MATL", x: 218, w: 10 },
+  { label: "LIGHTS", x: 228, w: 8 },
+  { label: "COVER", x: 236, w: 12 },
 ];
 
 const MPT_COLS = [
   { label: "DESIG", x: 22, w: 22 },
-  { label: "LEGEND", x: 44, w: 108 },
-  { label: "DIM", x: 152, w: 20 },
-  { label: "SHEET", x: 172, w: 20 },
-  { label: "QTY", x: 192, w: 16 },
-  { label: "STRUCTURE", x: 208, w: 50 },
-  { label: "MATL", x: 258, w: 20 },
-  { label: "LIGHTS", x: 278, w: 16 },
-  { label: "COVER", x: 294, w: 24 },
+  { label: "LEGEND", x: 44, w: 100 },
+  { label: "DIM", x: 144, w: 18 },
+  { label: "SHEET", x: 162, w: 16 },
+  { label: "QTY", x: 178, w: 12 },
+  { label: "STRUCTURE", x: 190, w: 45 },
+  { label: "MATL", x: 235, w: 16 },
+  { label: "LIGHTS", x: 251, w: 12 },
+  { label: "COVER", x: 263, w: 16 },
 ];
 
 const PERM_COLS = [
