@@ -1,8 +1,7 @@
 "use client";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/formatUTCDate";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { differenceInDays } from "date-fns";
@@ -132,18 +131,29 @@ const ContractManager = () => {
   const [contractToDelete, setContractToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch contracts
-  const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["contracts-list"],
-    queryFn: async () => {
-      const response = await fetch('/api/l/contracts');
-      if (!response.ok) {
-        throw new Error('Failed to fetch contracts');
+  const [jobs, setJobs] = useState<ContractListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/l/contracts');
+        if (!response.ok) {
+          throw new Error('Failed to fetch contracts');
+        }
+        const data = await response.json();
+        setJobs(data);
+      } catch (error) {
+        console.error('Error fetching contracts:', error);
+        toast.error('Failed to load contracts');
+      } finally {
+        setIsLoading(false);
       }
-      return response.json();
-    },
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
+    };
+
+    fetchContracts();
+  }, []);
 
   const pipelineJobs = useMemo(() => jobs.filter((j) => !j.archived), [jobs]);
   const jobsByStage = useMemo(() => {
@@ -877,7 +887,7 @@ const ListView = ({
                   {isSigned && <Lock className="h-3 w-3 inline mr-1 text-warning" />}
                   {job.etcJobNumber || "—"}
                 </TableCell>
-                <TableCell className="py-3">{getStatusBadge((job.contractStatus || "CONTRACT_RECEIPT") as ContractPipelineStatus)}</TableCell>
+                <TableCell className="py-3">{getStatusBadge(job.contractStatus || "CONTRACT_RECEIPT")}</TableCell>
                 <TableCell className="max-w-[200px] truncate py-3">{job.projectName || "—"}</TableCell>
                 <TableCell className="py-3 uppercase text-xs tracking-wide">{job.customerName || "—"}</TableCell>
                 <TableCell className="py-3">{job.county || "—"}</TableCell>
