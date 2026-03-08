@@ -662,7 +662,7 @@ const KanbanCard = ({
   const isStale = daysSinceCreated > 5;
   const isSigned = SIGNED_STATUSES.includes(stage.id);
   const isTerminal = stage.id === "SOURCE_OF_SUPPLY";
-  const effectiveStatus = mapToDisplayStage(job.contractStatus) as string;
+  const effectiveStatus = mapToDisplayStage(job.contractStatus || "CONTRACT_RECEIPT");
   const allowedTargets = ALLOWED_TRANSITIONS[effectiveStatus] || [];
   const canAdvance = currentIdx < stages.length - 1 && allowedTargets.includes(stages[currentIdx + 1].id);
   const canRetreat = currentIdx > 0 && allowedTargets.includes(stages[currentIdx - 1].id);
