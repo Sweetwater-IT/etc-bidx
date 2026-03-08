@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Lock, Edit } from "lucide-react";
+import { ArrowLeft, Lock, Edit } from "lucide-react";
 import type { JobProjectInfo, ScheduleOfValuesItem } from "@/types/job";
 import { useContractDraft } from "@/hooks/useContractDraft";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
@@ -100,8 +99,6 @@ const ContractChecklist = () => {
     createContract,
   } = useContractDraft(contractId);
 
-  const queryClient = useQueryClient();
-
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(contractRow.contract_status) : false;
 
@@ -153,11 +150,9 @@ const ContractChecklist = () => {
     if (contractId) {
       supabase.functions.invoke("upsert-sov-items", {
         body: { jobId: contractId, items },
-      }).then(() => {
-        queryClient.invalidateQueries({ queryKey: ["sov-items", contractId] });
       });
     }
-  }, [markDirty, isSigned, changeOrderApproved, contractId, queryClient]);
+  }, [markDirty, isSigned, changeOrderApproved, contractId]);
 
   // Handler when user tries to edit SOV on a signed contract (clicks the unlock button)
   const handleRequestSovEdit = useCallback(() => {
@@ -226,7 +221,7 @@ const ContractChecklist = () => {
       setShowChangeOrderGate(false);
       setPendingSovChanges(null);
     }
-  }, [contractId, scheduleOfValues, queryClient]);
+  }, [contractId, scheduleOfValues]);
 
   const handleChangeOrderCancel = useCallback(() => {
     if (sovSnapshotRef.current) {
@@ -450,7 +445,7 @@ const ContractChecklist = () => {
           </Button>
           <div className="flex items-center gap-3">
             <SaveStatusIndicator
-              status={saveStatus}
+              status={saveStatus === "unsaved" ? "idle" : saveStatus}
               lastSavedAt={lastSavedAt}
               onManualSave={manualSave}
               isSaving={isSaving}
