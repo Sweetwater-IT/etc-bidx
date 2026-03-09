@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,20 +18,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  FileText,
   Upload,
-  Download,
+  Paperclip,
   Trash2,
-  Plus,
-  File,
-  Image,
-  FileSpreadsheet,
-  FileVideo
+  Download,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
 import type { JobProjectInfo } from "@/types/job";
+
+const CATEGORY_LABELS: Record<DocumentCategory, string> = {
+  contract: "Contract",
+  addendum: "Addendum",
+  permit: "Permit",
+  insurance: "Insurance",
+  bond: "Bond",
+  plan: "Plan",
+  specification: "Specification",
+  correspondence: "Correspondence",
+  photo: "Photo",
+  other: "Other",
+};
+
+interface FinalWorkOrder {
+  id: string;
+  wo_number: string;
+  title: string;
+  status: string;
+  updated_at: string;
+}
 
 interface DocumentsFormsStepProps {
   documents: ContractDocument[];
