@@ -813,7 +813,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         <Textarea
           placeholder="Enter any additional notes, comments, or special instructions…"
           className="min-h-[100px] text-sm"
-          value={projectInfo.otherNotes}
+          value={projectInfo.otherNotes || ""}
           onChange={(e) => update("otherNotes", e.target.value)}
         />
       </div>
