@@ -199,7 +199,7 @@ const ContractChecklist = () => {
         });
         const newId = result.id;
         setContractId(newId);
-        window.history.replaceState(null, "", `/contract/${newId}`);
+        window.history.replaceState(null, "", `/l/${newId}`);
         return newId;
       } catch {
         return undefined;

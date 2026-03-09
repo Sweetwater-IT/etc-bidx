@@ -21,7 +21,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ sovItems: data || [] });
+    return NextResponse.json({ data: data || [] });
   } catch (error) {
     console.error('Error in SOV items GET:', error);
     return NextResponse.json(
