@@ -600,16 +600,16 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
 
           <div>
-            <Label htmlFor="certifiedPayrollPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> Payroll Phone
+            <Label htmlFor="projectStartDate" className="flex items-center gap-1 text-xs">
+              <Calendar className="h-3 w-3" /> Project Start Date<RequiredMark />
             </Label>
             <Input
-              id="certifiedPayrollPhone"
-              type="tel"
-              className="h-8 text-sm"
-              placeholder="(555) 555-5555"
-              value={projectInfo.certifiedPayrollPhone || ""}
-              onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
+              id="projectStartDate"
+              type="date"
+              max={projectInfo.projectEndDate || undefined}
+              className={cn("h-8 text-sm", isInvalid("projectStartDate") && "border-destructive ring-1 ring-destructive/30")}
+              value={projectInfo.projectStartDate || ""}
+              onChange={(e) => update("projectStartDate", e.target.value)}
             />
           </div>
           <div>
