@@ -197,26 +197,18 @@ export async function PATCH(
         const hasNoJobNumber = !currentContract.etc_job_number;
 
         if (wasNotSigned && hasNoJobNumber) {
-          // Generate job number (J-0001, J-0002, etc.)
-          const { data: latestJob, error: jobError } = await supabase
+          // Generate job number (J-0001, J-0002, etc.) - simple sequential numbering
+          const { count, error: countError } = await supabase
             .from('jobs_l')
-            .select('etc_job_number')
-            .not('etc_job_number', 'is', null)
-            .order('etc_job_number', { ascending: false })
-            .limit(1);
+            .select('etc_job_number', { count: 'exact', head: true })
+            .not('etc_job_number', 'is', null);
 
           let nextJobNumber = 'J-0001';
-          if (!jobError && latestJob && latestJob.length > 0) {
-            const current = latestJob[0].etc_job_number;
-            if (current && current.startsWith('J-')) {
-              const num = parseInt(current.substring(2));
-              if (!isNaN(num)) {
-                nextJobNumber = `J-${String(num + 1).padStart(4, '0')}`;
-              }
-            }
+          if (!countError && count !== null) {
+            nextJobNumber = `J-${String(count + 1).padStart(4, '0')}`;
           }
 
-          finalPatch.etcJobNumber = nextJobNumber;
+          finalPatch.etc_job_number = nextJobNumber;
           console.log('[API] Generated job number:', nextJobNumber, 'for contract:', contractId);
         }
       }
