@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
 
     // Create new contract
     const insertData = {
+      id: crypto.randomUUID(),
       ...transformedPatch,
       internal_id: nextInternalId,
       version: 1,
