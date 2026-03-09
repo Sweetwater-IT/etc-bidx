@@ -145,7 +145,7 @@ async function upsertDraft(params: {
       code?: string;
     } | null;
 
-    if (import.meta.env.DEV) {
+    if (process.env.NODE_ENV === 'development') {
       console.error("[upsert-contract-draft] Error response:", { errorMsg: resp.error.message, body });
     }
 
@@ -366,7 +366,7 @@ export function useContractDraft(contractId: string | undefined) {
         });
 
         // sendBeacon to the edge function — best-effort
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upsert-contract-draft`;
+        const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/upsert-contract-draft`;
         navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
       }
 
