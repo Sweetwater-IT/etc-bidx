@@ -26,7 +26,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
 import type { JobProjectInfo } from "@/types/job";
 
@@ -86,16 +85,20 @@ export const ContractSaveDocument = ({
 
   useEffect(() => {
     if (!jobId) return;
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("work_orders")
-        .select("id, wo_number, title, status, updated_at")
-        .eq("job_id", jobId)
-        .in("status", ["completed", "ready", "scheduled"])
-        .order("updated_at", { ascending: false });
-      if (data) setFinalWOs(data);
+    const fetchWorkOrders = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/work-orders`);
+        if (response.ok) {
+          const data = await response.json();
+          setFinalWOs(data);
+        } else {
+          console.error('Failed to fetch work orders');
+        }
+      } catch (error) {
+        console.error('Error fetching work orders:', error);
+      }
     };
-    fetch();
+    fetchWorkOrders();
   }, [jobId]);
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,10 +113,13 @@ export const ContractSaveDocument = ({
       return;
     }
     try {
-      const { data, error } = await supabase.storage
-        .from("contract-documents")
-        .createSignedUrl(doc.filePath, 300);
-      if (error) throw error;
+      const response = await fetch(`/api/l/contracts/${jobId}/documents/download?documentId=${doc.id}`);
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(error.error || "Failed to download document");
+        return;
+      }
+      const data = await response.json();
       window.open(data.signedUrl, "_blank");
     } catch {
       toast.error("Failed to download document");
