@@ -31,8 +31,8 @@ import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
 
 interface ProjectInfoFieldsProps {
-  projectInfo: ProjectInfo;
-  onChange: (info: ProjectInfo) => void;
+  projectInfo: JobProjectInfo;
+  onChange: (info: JobProjectInfo) => void;
   contractSigned?: boolean;
   showValidation?: boolean;
   readOnly?: boolean;
@@ -497,7 +497,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                         className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
                         onMouseDown={(e) => { e.preventDefault(); handleAddPM(); }}
                       >
-                        <Plus className="h-3.5 w-3.5" /> Add "{pmSearch}"
+                        <Plus className="h-3.5 w-3.5" /> Add {pmSearch}
                       </button>
                     </CommandEmpty>
                     <CommandGroup>
@@ -534,7 +534,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                             onSelect={handleAddPM}
                             className="text-sm"
                           >
-                            <Plus className="mr-2 h-3 w-3" /> Add "{pmSearch}"
+                            <Plus className="mr-2 h-3 w-3" /> Add {pmSearch}
                           </CommandItem>
                         </CommandGroup>
                       </>
@@ -620,7 +620,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                         className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
                         onMouseDown={(e) => { e.preventDefault(); handleAddCustomer(); }}
                       >
-                        <Plus className="h-3.5 w-3.5" /> Add "{customerSearch}"
+                        <Plus className="h-3.5 w-3.5" /> Add {customerSearch}
                       </button>
                     </CommandEmpty>
                     <CommandGroup>
@@ -652,7 +652,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                             onSelect={handleAddCustomer}
                             className="text-sm"
                           >
-                            <Plus className="mr-2 h-3 w-3" /> Add "{customerSearch}"
+                            <Plus className="mr-2 h-3 w-3" /> Add {customerSearch}
                           </CommandItem>
                         </CommandGroup>
                       </>
