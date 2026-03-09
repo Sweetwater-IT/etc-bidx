@@ -232,6 +232,60 @@ export const ContractSaveDocument = ({
           </Table>
         )}
       </div>
+
+      {/* Final Work Orders for Billing */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold text-foreground">Work Orders Ready for Billing</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Finalized work orders that can be submitted to the billing department.
+          </p>
+        </div>
+
+        {finalWOs.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 p-10 text-center">
+            <FileText className="h-8 w-8 mx-auto text-muted-foreground/50" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              No finalized work orders yet. Work orders in Ready, Scheduled, or Completed status will appear here.
+            </p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>WO #</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[140px]">Last Updated</TableHead>
+                <TableHead className="w-[80px] text-right">View</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {finalWOs.map((wo) => (
+                <TableRow key={wo.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${wo.id}`)}>
+                  <TableCell className="font-mono font-bold text-primary text-sm">
+                    {wo.wo_number || "—"}
+                  </TableCell>
+                  <TableCell className="font-medium text-sm">{wo.title || "Untitled"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] capitalize ${STATUS_STYLE[wo.status] || ""}`}>
+                      {wo.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(wo.updated_at)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 };
