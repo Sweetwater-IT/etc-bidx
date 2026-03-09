@@ -307,13 +307,7 @@ const ContractManager = () => {
     );
   }
 
-  if (!isLoading && pipelineJobs.length === 0) {
-    return (
-      <div className="min-h-screen bg-background">
-        <ContractManagerEmptyState onCreateNew={() => router.push("/l/contracts/new")} />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-background">
