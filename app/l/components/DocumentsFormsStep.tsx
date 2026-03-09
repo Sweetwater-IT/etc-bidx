@@ -17,6 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Upload,
   Paperclip,
@@ -24,6 +26,7 @@ import {
   Download,
   FileText,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
@@ -74,11 +77,7 @@ const DOCUMENT_CATEGORIES: { value: DocumentCategory; label: string; description
 ];
 
 const getFileIcon = (fileType: string) => {
-  if (fileType.startsWith('image/')) return <ImageIcon className="h-4 w-4" />;
-  if (fileType.includes('pdf')) return <FileText className="h-4 w-4" />;
-  if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="h-4 w-4" />;
-  if (fileType.startsWith('video/')) return <FileVideo className="h-4 w-4" />;
-  return <File className="h-4 w-4" />;
+  return <FileText className="h-4 w-4" />;
 };
 
 const formatFileSize = (bytes: number) => {
