@@ -1,6 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: contractId } = await params;
+
+    const { data, error } = await supabase
+      .from('jobs_l')
+      .select('*')
+      .eq('id', contractId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching contract:', error);
+      return NextResponse.json({ error: 'Failed to fetch contract' }, { status: 500 });
+    }
+
+    // Transform the data to match the expected format
+    const contract = {
+      id: data.id,
+      project_name: data.project_name,
+      contract_number: data.contract_number,
+      customer_name: data.customer_name,
+      project_owner: data.project_owner,
+      etc_job_number: data.etc_job_number,
+      etc_branch: data.etc_branch,
+      county: data.county,
+      etc_project_manager: data.etc_project_manager,
+      project_start_date: data.project_start_date,
+      project_end_date: data.project_end_date,
+      contract_status: data.contract_status,
+      project_status: data.project_status,
+      billing_status: data.billing_status,
+      archived: data.archived,
+      created_at: data.created_at,
+      version: data.version,
+      approver_pm_user_id: data.approver_pm_user_id,
+      submitted_for_approval_at: data.submitted_for_approval_at,
+      submitted_for_approval_by: data.submitted_for_approval_by,
+      approved_at: data.approved_at,
+      approved_by: data.approved_by,
+      approval_notes: data.approval_notes,
+      rejected_at: data.rejected_at,
+      rejected_by: data.rejected_by,
+      rejection_reason: data.rejection_reason,
+      rejection_notes: data.rejection_notes,
+      // Include all other fields
+      ...data
+    };
+
+    return NextResponse.json(contract);
+  } catch (error) {
+    console.error('Error in contract GET API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

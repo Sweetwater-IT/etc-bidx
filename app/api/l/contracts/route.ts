@@ -73,3 +73,75 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { patch } = body;
+
+    if (!patch || typeof patch !== 'object') {
+      return NextResponse.json(
+        { error: 'Missing or invalid patch data' },
+        { status: 400 }
+      );
+    }
+
+    // Create new contract
+    const insertData = {
+      ...patch,
+      version: 1,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      archived: false,
+    };
+
+    const { data: newContract, error: insertError } = await supabase
+      .from('jobs_l')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating contract:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create contract' },
+        { status: 500 }
+      );
+    }
+
+    // Transform response to match expected format
+    const contract = {
+      id: newContract.id,
+      project_name: newContract.project_name,
+      contract_number: newContract.contract_number,
+      customer_name: newContract.customer_name,
+      project_owner: newContract.project_owner,
+      etc_job_number: newContract.etc_job_number,
+      etc_branch: newContract.etc_branch,
+      county: newContract.county,
+      etc_project_manager: newContract.etc_project_manager,
+      project_start_date: newContract.project_start_date,
+      project_end_date: newContract.project_end_date,
+      contract_status: newContract.contract_status,
+      project_status: newContract.project_status,
+      billing_status: newContract.billing_status,
+      archived: newContract.archived,
+      created_at: newContract.created_at,
+      version: newContract.version,
+      // Include all other fields
+      ...newContract
+    };
+
+    return NextResponse.json({
+      contract,
+      message: 'Contract created successfully'
+    });
+
+  } catch (error) {
+    console.error('Error in contract create API:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

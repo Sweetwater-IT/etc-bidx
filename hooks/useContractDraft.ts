@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { create } from "zustand";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { JobProjectInfo } from "@/types/job";
 
@@ -98,13 +97,13 @@ function rowToProjectInfo(row: ContractRow): JobProjectInfo {
 }
 
 async function fetchContract(id: string): Promise<ContractRow | null> {
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  return data as unknown as ContractRow;
+  const response = await fetch(`/api/l/contracts/${id}`);
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch contract');
+  }
+  const data = await response.json();
+  return data as ContractRow;
 }
 
 class ConflictError extends Error {
@@ -128,56 +127,36 @@ async function upsertDraft(params: {
   patch: Record<string, unknown>;
   clientVersion?: number;
 }) {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("Not authenticated — please sign in");
+  const url = params.contractId
+    ? `/api/l/contracts/${params.contractId}`
+    : '/api/l/contracts';
 
-  const resp = await supabase.functions.invoke("upsert-contract-draft", {
-    body: params,
+  const method = params.contractId ? 'PATCH' : 'POST';
+
+  const response = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patch: params.patch,
+      clientVersion: params.clientVersion,
+    }),
   });
 
-  // Extract structured error from edge function response
-  if (resp.error) {
-    const body = resp.data as {
-      error?: string;
-      details?: string;
-      message?: string;
-      latest?: ContractRow;
-      code?: string;
-    } | null;
+  if (!response.ok) {
+    const error = await response.json();
 
-    if (process.env.NODE_ENV === 'development') {
-      console.error("[upsert-contract-draft] Error response:", { errorMsg: resp.error.message, body });
+    if (response.status === 409 && error.code === 'VERSION_CONFLICT' && error.latest) {
+      throw new ConflictError(error.error || "Stale update", error.latest);
+    }
+    if (error.code === "ACCESS_DENIED" || error.error === "Forbidden") {
+      throw new ForbiddenError(error.details || "You do not have permission to update this contract");
     }
 
-    if (body?.error === "conflict" && body.latest) {
-      throw new ConflictError(body.message || "Stale update", body.latest);
-    }
-    if (body?.code === "ACCESS_DENIED" || body?.error === "Forbidden") {
-      throw new ForbiddenError(body.details || "You do not have permission to update this contract");
-    }
-    const detail = body?.details || body?.message || body?.error || resp.error.message;
-    throw new Error(`${detail}${body?.code ? ` [${body.code}]` : ""}`);
+    throw new Error(error.error || 'Failed to save contract');
   }
 
-  const result = resp.data as {
-    contract?: ContractRow;
-    error?: string;
-    details?: string;
-    message?: string;
-    latest?: ContractRow;
-    code?: string;
-  };
-
-  if (result.error === "conflict") {
-    throw new ConflictError(result.message || "Stale update", result.latest!);
-  }
-  if (result.code === "ACCESS_DENIED" || result.error === "Forbidden") {
-    throw new ForbiddenError(result.details || result.error || "Access denied");
-  }
-  if (result.error) {
-    throw new Error(`${result.details || result.error}${result.code ? ` [${result.code}]` : ""}`);
-  }
-  return result.contract!;
+  const result = await response.json();
+  return result.contract;
 }
 
 const DEBOUNCE_MS = 800;
@@ -448,7 +427,9 @@ export function useContractDraft(contractId: string | undefined) {
             clientVersion: store.localVersion,
           });
 
-          const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/upsert-contract-draft`;
+          const url = contractId
+            ? `/api/l/contracts/${contractId}`
+            : '/api/l/contracts';
           navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
         }
 
