@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Upload,
   Paperclip,
@@ -25,6 +27,11 @@ import {
   Download,
   FileText,
   ExternalLink,
+  FileSpreadsheet,
+  FileVideo,
+  File,
+  Plus,
+  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
@@ -75,7 +82,7 @@ const DOCUMENT_CATEGORIES: { value: DocumentCategory; label: string; description
 ];
 
 const getFileIcon = (fileType: string) => {
-  if (fileType.startsWith('image/')) return <Image className="h-4 w-4" />;
+  if (fileType.startsWith('image/')) return <ImageIcon className="h-4 w-4" />;
   if (fileType.includes('pdf')) return <FileText className="h-4 w-4" />;
   if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="h-4 w-4" />;
   if (fileType.startsWith('video/')) return <FileVideo className="h-4 w-4" />;
@@ -110,8 +117,10 @@ export const DocumentsFormsStep = ({
   onUpdateCategory,
   readOnly = false
 }: DocumentsFormsStepProps) => {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>("other");
   const [isDragOver, setIsDragOver] = useState(false);
+  const [finalWOs, setFinalWOs] = useState<FinalWorkOrder[]>([]);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || readOnly) return;
@@ -137,11 +146,31 @@ export const DocumentsFormsStep = ({
     }
   };
 
+  useEffect(() => {
+    if (!jobId) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("work_orders")
+        .select("id, wo_number, title, status, updated_at")
+        .eq("job_id", jobId)
+        .in("status", ["completed", "ready", "scheduled"])
+        .order("updated_at", { ascending: false });
+      if (data) setFinalWOs(data);
+    };
+    fetch();
+  }, [jobId]);
+
   const documentsByCategory = documents.reduce((acc, doc) => {
     if (!acc[doc.category]) acc[doc.category] = [];
     acc[doc.category].push(doc);
     return acc;
   }, {} as Record<DocumentCategory, ContractDocument[]>);
+
+  const STATUS_STYLE: Record<string, string> = {
+    completed: "bg-success/10 text-success border-success/30",
+    ready: "bg-primary/10 text-primary border-primary/30",
+    scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  };
 
   return (
     <div className="space-y-6">
@@ -332,6 +361,60 @@ export const DocumentsFormsStep = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Final Work Orders for Billing */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold text-foreground">Work Orders Ready for Billing</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Finalized work orders that can be submitted to the billing department.
+          </p>
+        </div>
+
+        {finalWOs.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 p-10 text-center">
+            <FileText className="h-8 w-8 mx-auto text-muted-foreground/50" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              No finalized work orders yet. Work orders in Ready, Scheduled, or Completed status will appear here.
+            </p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>WO #</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="w-[120px]">Status</TableHead>
+                <TableHead className="w-[140px]">Last Updated</TableHead>
+                <TableHead className="w-[80px] text-right">View</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {finalWOs.map((wo) => (
+                <TableRow key={wo.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${wo.id}`)}>
+                  <TableCell className="font-mono font-bold text-primary text-sm">
+                    {wo.wo_number || "—"}
+                  </TableCell>
+                  <TableCell className="font-medium text-sm">{wo.title || "Untitled"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] capitalize ${STATUS_STYLE[wo.status] || ""}`}>
+                      {wo.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(wo.updated_at)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 };
