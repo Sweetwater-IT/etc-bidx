@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
     const insertData = {
       id: crypto.randomUUID(),
       ...transformedPatch,
+      project_status: 'not started',
+      billing_status: 'not started',
       internal_id: nextInternalId,
       version: 1,
       created_at: new Date().toISOString(),
