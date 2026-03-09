@@ -130,7 +130,7 @@ export async function PATCH(
     }
 
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
-    let finalPatch = { ...patch };
+    const finalPatch = { ...patch };
     if (patch.contractStatus === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
