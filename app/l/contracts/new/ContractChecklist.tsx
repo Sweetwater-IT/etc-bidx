@@ -18,7 +18,7 @@ import { useContractDraft } from "@/hooks/useContractDraft";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
-import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
+import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 
 
@@ -376,7 +376,7 @@ const ContractChecklist = () => {
         </div>
 
         {/* Documents & Forms */}
-        <DocumentsFormsStep
+        <ContractSaveDocument
           documents={documents}
           projectInfo={projectInfo}
           jobId={routeId}
