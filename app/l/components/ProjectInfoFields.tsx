@@ -42,7 +42,7 @@ export const ProjectInfoFields = ({
     }));
   };
 
-  const updateField = (field: keyof JobProjectInfo, value: string | null) => {
+  const updateField = (field: keyof JobProjectInfo, value: string | number | null) => {
     onChange({
       ...projectInfo,
       [field]: value,
