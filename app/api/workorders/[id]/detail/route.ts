@@ -102,7 +102,7 @@ export async function GET(
     };
 
     // Fetch all related data in parallel
-    const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
+    const [jobRes, takeoffRes, woItemsRes, sovRes, sovFullRes, docsRes, pickupRes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
@@ -114,6 +114,9 @@ export async function GET(
 
       // SOV items for picklist — try dedicated table first, fall back to JSONB column
       supabase.from("sov_items").select("id, item_number, description, quantity, uom").eq("job_id", jobId).order("sort_order", { ascending: true }),
+
+      // Full SOV items with pricing for PDFs
+      supabase.from("sov_items").select("id, item_number, description, quantity, uom, unit_price, extended_price, retainage_type, retainage_value, retainage_amount, notes").eq("job_id", jobId).order("sort_order", { ascending: true }),
 
       // Documents linked to this work order (via job + checklist)
       supabase.from("documents").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
@@ -199,6 +202,24 @@ export async function GET(
       }));
     }
 
+    // Process full SOV items with pricing
+    let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
+    if (sovFullRes.data && sovFullRes.data.length > 0) {
+      sovItemsFull = sovFullRes.data.map((s: any) => ({
+        id: s.id,
+        itemNumber: s.item_number || "",
+        description: s.description || "",
+        uom: s.uom || "EA",
+        quantity: Number(s.quantity) || 0,
+        unitPrice: Number(s.unit_price) || 0,
+        extendedPrice: Number(s.extended_price) || 0,
+        retainageType: (s.retainage_type as 'percent' | 'dollar') || 'percent',
+        retainageValue: Number(s.retainage_value) || 0,
+        retainageAmount: Number(s.retainage_amount) || 0,
+        notes: s.notes || null,
+      }));
+    }
+
     // Process documents
     const documents: WODocument[] = (docsRes.data || []) as WODocument[];
 
@@ -213,6 +234,7 @@ export async function GET(
       takeoffs,
       woItems,
       sovItems,
+      sovItemsFull,
       documents,
       pickupWO,
     });

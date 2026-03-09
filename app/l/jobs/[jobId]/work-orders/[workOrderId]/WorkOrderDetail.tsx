@@ -199,6 +199,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
 
   // SOV picklist state
   const [sovItems, setSovItems] = useState<{ id: string; item_number: string; description: string; quantity: number; uom: string }[]>([]);
+  const [sovItemsFull, setSovItemsFull] = useState<{ id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[]>([]);
   const [openItemPickerRow, setOpenItemPickerRow] = useState<string | null>(null);
   const [itemPickerSearch, setItemPickerSearch] = useState("");
 
@@ -330,6 +331,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
       setTakeoffs(data.takeoffs || []);
       setWoItems(data.woItems || []);
       setSovItems(data.sovItems || []);
+      setSovItemsFull(data.sovItemsFull || []);
       setDocuments(data.documents || []);
       setPickupWO(data.pickupWO || null);
     } catch (err) {
@@ -873,47 +875,68 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 {saving ? "Saving…" : "Save"}
               </Button>
             )}
-            {/* Download Work Order PDF */}
+            {/* Download Work Order Only */}
             {hasWoItems && (
               <Button
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
                 onClick={async () => {
-                  await generateBillingPacketPdf({
-                    woNumber: workOrder.wo_number || "",
-                    woTitle: workOrder.title || "",
-                    woDescription: workOrder.description || "",
-                    woNotes: workOrder.notes || "",
-                    etcAssignedTo: workOrder.assigned_to || "",
-                    contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
-                    customerPocPhone: workOrder.customer_poc_phone || "",
-                    projectName: dbJob?.projectInfo?.projectName || "",
-                    etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
-                    customerName: dbJob?.projectInfo?.customerName || "",
-                    customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
-                    customerPM: dbJob?.projectInfo?.customerPM || "",
-                    projectOwner: dbJob?.projectInfo?.projectOwner || "",
-                    county: dbJob?.projectInfo?.county || "",
-                    etcBranch: dbJob?.etc_branch || "",
-                    etcProjectManager: dbJob?.etc_project_manager || "",
-                    installDate: takeoffs[0]?.install_date || "",
-                    pickupDate: takeoffs[0]?.pickup_date || "",
-                    items: woItems.map(i => ({
-                      item_number: i.item_number,
-                      description: i.description || "",
-                      uom: i.uom || "EA",
-                      contract_quantity: i.contract_quantity,
-                      work_order_quantity: i.work_order_quantity,
-                    })),
-                    crewNotes: (dispatch as any)?.crew_notes || "",
-                    customerNotOnSite: (dispatch as any)?.customer_not_on_site || false,
-                    customerSignatureName: (dispatch as any)?.customer_signature_name || "",
-                    signedAt: (dispatch as any)?.signed_at || "",
-                  });
+                  try {
+                    const woBytes = await generateBillingPacketPdf({
+                      woNumber: workOrder.wo_number || "",
+                      woTitle: workOrder.title || "",
+                      woDescription: workOrder.description || "",
+                      woNotes: workOrder.notes || "",
+                      etcAssignedTo: workOrder.assigned_to || "",
+                      contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
+                      customerPocPhone: workOrder.customer_poc_phone || "",
+                      projectName: dbJob?.projectInfo?.projectName || "",
+                      etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
+                      customerName: dbJob?.projectInfo?.customerName || "",
+                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
+                      customerPM: dbJob?.projectInfo?.customerPM || "",
+                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                      county: dbJob?.projectInfo?.county || "",
+                      etcBranch: dbJob?.etc_branch || "",
+                      etcProjectManager: dbJob?.etc_project_manager || "",
+                      installDate: takeoffs[0]?.install_date || "",
+                      pickupDate: takeoffs[0]?.pickup_date || "",
+                      items: woItems.map(i => ({
+                        item_number: i.item_number,
+                        description: i.description || "",
+                        uom: i.uom || "EA",
+                        contract_quantity: i.contract_quantity,
+                        work_order_quantity: i.work_order_quantity,
+                      })),
+                      sovItems: sovItemsFull,
+                      crewNotes: (dispatch as any)?.crew_notes || "",
+                      customerNotOnSite: (dispatch as any)?.customer_not_on_site || false,
+                      customerSignatureName: (dispatch as any)?.customer_signature_name || "",
+                      signedAt: (dispatch as any)?.signed_at || "",
+                      returnBytes: true,
+                    });
+
+                    if (!woBytes) {
+                      toast.error("Failed to generate work order PDF");
+                      return;
+                    }
+
+                    const blob = new Blob([woBytes], { type: "application/pdf" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Work_Order_${workOrder.wo_number || "WO"}_${new Date().toISOString().split("T")[0]}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Work Order PDF downloaded");
+                  } catch (err: any) {
+                    console.error("Download WO failed:", err);
+                    toast.error("Failed to download work order PDF");
+                  }
                 }}
               >
-                <FileDown className="h-3.5 w-3.5" /> WO PDF
+                <FileDown className="h-3.5 w-3.5" /> Download WO Only
               </Button>
             )}
             {/* Download Takeoff PDF */}

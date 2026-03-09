@@ -29,6 +29,18 @@ interface TakeoffPdfData {
     notes?: string | null;
     material?: string;
   }[];
+  sovItems?: {
+    itemNumber: string;
+    description: string;
+    uom: string;
+    quantity: number;
+    unitPrice: number;
+    extendedPrice: number;
+    retainageType: 'percent' | 'dollar';
+    retainageValue: number;
+    retainageAmount: number;
+    notes?: string | null;
+  }[];
   returnBytes?: boolean;
 }
 
@@ -777,6 +789,60 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       _activeCols = null; // clear after category
       y += 4; // spacing between categories
     }
+  }
+
+  // Schedule of Values
+  if (data.sovItems && data.sovItems.length > 0) {
+    y += 12;
+    y = checkPageBreak(doc, y, 20);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Schedule of Values", 14, y);
+    y += 5;
+
+    // SOV Table header
+    doc.setFontSize(7);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(14, y - 3.5, pageW - 28, 7, "F");
+    doc.text("ITEM #", 14 + 2, y);
+    doc.text("DESCRIPTION", 40, y);
+    doc.text("UOM", 110, y);
+    doc.text("QTY", 125, y);
+    doc.text("UNIT PRICE", 140, y);
+    doc.text("EXTENDED", 165, y);
+    doc.text("RETAINAGE", 185, y);
+    y += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    for (const item of data.sovItems) {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.text(item.itemNumber || "", 14 + 2, y);
+      doc.text((item.description || "").substring(0, 35), 40, y);
+      doc.text(item.uom || "EA", 110, y);
+      doc.text(String(item.quantity), 125, y);
+      doc.text(`$${item.unitPrice.toFixed(2)}`, 140, y);
+      doc.text(`$${item.extendedPrice.toFixed(2)}`, 165, y);
+      const retainageText = item.retainageType === 'percent'
+        ? `${item.retainageValue}%`
+        : `$${item.retainageValue.toFixed(2)}`;
+      doc.text(retainageText, 185, y);
+      y += 5;
+      // Light grey row divider
+      doc.setDrawColor(220);
+      doc.setLineWidth(0.15);
+      doc.line(14, y - 2.5, pageW - 14, y - 2.5);
+    }
+
+    // SOV Totals
+    y += 2;
+    const totalExtended = data.sovItems.reduce((sum, i) => sum + i.extendedPrice, 0);
+    const totalRetainage = data.sovItems.reduce((sum, i) => sum + i.retainageAmount, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Contract Value: $${totalExtended.toFixed(2)}`, 14, y);
+    y += 5;
+    doc.text(`Total Retainage: $${totalRetainage.toFixed(2)}`, 14, y);
+    y += 8;
   }
 
   // Notes

@@ -103,17 +103,17 @@ export async function POST(request: NextRequest) {
       qty: i.work_order_quantity
     })));
 
-    // Generate sequential work order number per job
+    // Generate sequential work order number per takeoff
     const { data: maxWO } = await supabase
       .from('work_orders_l')
       .select('wo_number')
-      .eq('job_id', takeoff.job_id)
+      .eq('takeoff_id', takeoffId)
       .order('wo_number', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
 
-    const nextNumber = (maxWO?.wo_number ? parseInt(maxWO.wo_number) : 0) + 1;
-    const workOrderNumber = nextNumber.toString().padStart(3, '0');
+    const nextNumber = (maxWO?.wo_number || 0) + 1;
+    const workOrderNumber = nextNumber;
 
     // Create the work order header
     const { data: workOrder, error: insertError } = await supabase
