@@ -230,6 +230,16 @@ const ContractManager = () => {
     try {
       // This will need to be implemented with your API
       setUploadProgress(100);
+
+      // Update local state to move contract to signed status
+      setJobs(prevJobs =>
+        prevJobs.map(j =>
+          j.id === pendingSignedJobId
+            ? { ...j, contractStatus: "CONTRACT_SIGNED" }
+            : j
+        )
+      );
+
       toast.success("Contract signed! Job number assigned.");
       setSignedDialogOpen(false);
       setPendingSignedJobId(null);
