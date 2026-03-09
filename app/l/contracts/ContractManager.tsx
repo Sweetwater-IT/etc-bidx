@@ -188,17 +188,47 @@ const ContractManager = () => {
       return;
     }
 
-    // Update local state immediately for UI feedback
-    setJobs(prevJobs =>
-      prevJobs.map(j =>
-        j.id === jobId
-          ? { ...j, contractStatus: newStatus }
-          : j
-      )
-    );
+    try {
+      // Update local state immediately for UI feedback
+      setJobs(prevJobs =>
+        prevJobs.map(j =>
+          j.id === jobId
+            ? { ...j, contractStatus: newStatus }
+            : j
+        )
+      );
 
-    // This will need to be implemented with your API
-    toast.success(`Contract moved to ${newStatus}`);
+      // Persist to database
+      const response = await fetch(`/api/l/contracts/${jobId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patch: { contractStatus: newStatus },
+          clientVersion: job.version
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update contract status');
+      }
+
+      toast.success(`Contract moved to ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating contract status:', error);
+      toast.error('Failed to update contract status');
+
+      // Revert local state on error
+      setJobs(prevJobs =>
+        prevJobs.map(j =>
+          j.id === jobId
+            ? { ...j, contractStatus: job.contractStatus }
+            : j
+        )
+      );
+    }
   };
 
   const openDeleteDialog = (job: ContractListItem) => {
@@ -224,6 +254,9 @@ const ContractManager = () => {
 
   const handleConfirmSigned = async () => {
     if (!pendingSignedJobId || signedFiles.length === 0) return;
+    const job = jobs.find((j) => j.id === pendingSignedJobId);
+    if (!job) return;
+
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -231,7 +264,7 @@ const ContractManager = () => {
       // This will need to be implemented with your API
       setUploadProgress(100);
 
-      // Update local state to move contract to signed status
+      // Update local state immediately for UI feedback
       setJobs(prevJobs =>
         prevJobs.map(j =>
           j.id === pendingSignedJobId
@@ -240,12 +273,39 @@ const ContractManager = () => {
         )
       );
 
+      // Persist to database
+      const response = await fetch(`/api/l/contracts/${pendingSignedJobId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patch: { contractStatus: "CONTRACT_SIGNED" },
+          clientVersion: job.version
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update contract status');
+      }
+
       toast.success("Contract signed! Job number assigned.");
       setSignedDialogOpen(false);
       setPendingSignedJobId(null);
       setSignedFiles([]);
     } catch (err: any) {
+      console.error('Error updating contract status:', err);
       toast.error("Sign Contract failed");
+
+      // Revert local state on error
+      setJobs(prevJobs =>
+        prevJobs.map(j =>
+          j.id === pendingSignedJobId
+            ? { ...j, contractStatus: job.contractStatus }
+            : j
+        )
+      );
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
