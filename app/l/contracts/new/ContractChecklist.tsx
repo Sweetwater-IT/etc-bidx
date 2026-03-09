@@ -13,14 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Lock, Edit } from "lucide-react";
-import type { JobProjectInfo, ScheduleOfValuesItem } from "@/types/job";
+import type { JobProjectInfo } from "@/types/job";
 import { useContractDraft } from "@/hooks/useContractDraft";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
-import { ScheduleOfValues } from "@/app/l/components/ScheduleOfValues";
+import { SOVTable } from "@/components/SOVTable";
 import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
-import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
+
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
@@ -100,127 +100,14 @@ const ContractChecklist = () => {
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(contractRow.contract_status) : false;
 
-  // SOV state
-  const [scheduleOfValues, setScheduleOfValuesLocal] = useState<ScheduleOfValuesItem[]>([]);
-  const sovSnapshotRef = useRef<ScheduleOfValuesItem[] | null>(null);
-  const [showChangeOrderGate, setShowChangeOrderGate] = useState(false);
-  const [pendingSovChanges, setPendingSovChanges] = useState<ScheduleOfValuesItem[] | null>(null);
-  const [changeOrderApproved, setChangeOrderApproved] = useState(false);
 
-  // SOV is read-only on signed contracts until change order is approved
-  const sovReadOnly = isSigned && !changeOrderApproved;
 
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
 
-  // Take SOV snapshot when contract is signed (for change detection)
-  useEffect(() => {
-    if (isSigned && !sovSnapshotRef.current && scheduleOfValues.length > 0) {
-      sovSnapshotRef.current = [...scheduleOfValues];
-    }
-  }, [isSigned, scheduleOfValues]);
 
-  const hasSovChanged = useCallback(() => {
-    if (!sovSnapshotRef.current) return false;
-    const snap = sovSnapshotRef.current;
-    const curr = scheduleOfValues;
-    if (snap.length !== curr.length) return true;
-    return snap.some((s, i) => {
-      const c = curr[i];
-      return s.id !== c.id || s.itemNumber !== c.itemNumber || s.description !== c.description ||
-        s.quantity !== c.quantity || s.unitPrice !== c.unitPrice || s.uom !== c.uom;
-    });
-  }, [scheduleOfValues]);
-
-  const setScheduleOfValues = useCallback(async (items: ScheduleOfValuesItem[]) => {
-    // On signed contracts without change order, block edits and show gate
-    if (isSigned && !changeOrderApproved) {
-      // This shouldn't be called if SOV is readOnly, but just in case
-      setPendingSovChanges(items);
-      setShowChangeOrderGate(true);
-      return;
-    }
-    setScheduleOfValuesLocal(items);
-    markDirty("sovItems", items);
-    // Also persist to sov_items table for PM window visibility
-    if (contractId) {
-      try {
-        await fetch(`/api/l/contracts/${contractId}/sov-items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items }),
-        });
-      } catch (error) {
-        console.error('Failed to update SOV items:', error);
-      }
-    }
-  }, [markDirty, isSigned, changeOrderApproved, contractId]);
-
-  // Handler when user tries to edit SOV on a signed contract (clicks the unlock button)
-  const handleRequestSovEdit = useCallback(() => {
-    if (changeOrderApproved) return; // already unlocked
-    setPendingSovChanges(scheduleOfValues);
-    setShowChangeOrderGate(true);
-  }, [changeOrderApproved, scheduleOfValues]);
-
-  const handleChangeOrderApproved = useCallback(async (
-    method: "document" | "admin_approval",
-    details: {
-      coNumber?: string;
-      description?: string;
-      amount?: number;
-      documentFile?: File;
-      approverUserId?: string;
-      approverName?: string;
-    }
-  ) => {
-    if (!contractId) return;
-    try {
-      const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          coNumber: details.coNumber,
-          description: details.description,
-          amount: details.amount,
-          status: method === "document" ? "approved" : "admin_approved",
-          submittedDate: new Date().toISOString().split("T")[0],
-          approvedDate: new Date().toISOString().split("T")[0],
-          documentFile: details.documentFile,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        toast.error(`Failed to record change order: ${error.error}`);
-        return;
-      }
-
-      // Don't save SOV yet — just unlock editing. User will make changes and they auto-save.
-      setChangeOrderApproved(true);
-      sovSnapshotRef.current = [...scheduleOfValues];
-
-      toast.success(method === "document"
-        ? "Change order recorded — SOV is now unlocked for editing"
-        : `SOV unlocked by ${details.approverName || "Admin"} — you can now edit`
-      );
-    } catch (err: any) {
-      toast.error(`Failed to process change order: ${err.message}`);
-    } finally {
-      setShowChangeOrderGate(false);
-      setPendingSovChanges(null);
-    }
-  }, [contractId, scheduleOfValues]);
-
-  const handleChangeOrderCancel = useCallback(() => {
-    if (sovSnapshotRef.current) {
-      setScheduleOfValuesLocal(sovSnapshotRef.current);
-    }
-    setShowChangeOrderGate(false);
-    setPendingSovChanges(null);
-  }, []);
 
   // Contract creation mutex
   const creatingRef = useRef<Promise<string | undefined> | null>(null);
@@ -258,10 +145,7 @@ const ContractChecklist = () => {
 
       setProjectInfo(dbProjectInfo);
 
-      const dbSov = (contractRow as any)?.sov_items;
-      if (Array.isArray(dbSov) && dbSov.length > 0) {
-        setScheduleOfValuesLocal(dbSov);
-      }
+
 
       try {
         const response = await fetch(`/api/l/contracts/${contractId}/documents`);
@@ -296,7 +180,6 @@ const ContractChecklist = () => {
     if (contractId !== hydratedKeyRef.current) {
       setHydrated(false);
       setProjectInfo(emptyProjectInfo);
-      setScheduleOfValuesLocal([]);
     }
   }, [contractId]);
 
@@ -481,29 +364,18 @@ const ContractChecklist = () => {
         />
 
         {/* Schedule of Values */}
-        <div>
-          <ScheduleOfValues items={scheduleOfValues} onChange={setScheduleOfValues} readOnly={sovReadOnly} />
-          {isSigned && (
-            <div className="mt-4 flex items-center justify-between rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
-              <p className="text-xs text-warning font-medium">
-                {changeOrderApproved
-                  ? "✓ Change order approved — SOV is unlocked for editing."
-                  : "SOV is locked. A Change Order is required to modify the Schedule of Values."}
-              </p>
-              {!changeOrderApproved && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs border-warning/40 text-warning hover:bg-warning/10"
-                  onClick={handleRequestSovEdit}
-                >
-                  <Edit className="h-3 w-3" />
-                  Unlock SOV
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+        {contractId && (
+          <div>
+            <SOVTable jobId={contractId} />
+            {isSigned && (
+              <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
+                <p className="text-xs text-warning font-medium">
+                  This contract is signed. SOV changes require a Change Order.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Documents & Forms */}
         <DocumentsFormsStep
@@ -547,16 +419,7 @@ const ContractChecklist = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Change Order Gate Dialog for signed contract SOV edits */}
-      {contractId && (
-        <ChangeOrderGateDialog
-          open={showChangeOrderGate}
-          onOpenChange={setShowChangeOrderGate}
-          jobId={contractId}
-          onApproved={handleChangeOrderApproved}
-          onCancel={handleChangeOrderCancel}
-        />
-      )}
+
     </div>
   );
 };
