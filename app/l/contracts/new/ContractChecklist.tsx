@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,7 +134,7 @@ const ContractChecklist = () => {
     });
   }, [scheduleOfValues]);
 
-  const setScheduleOfValues = useCallback((items: ScheduleOfValuesItem[]) => {
+  const setScheduleOfValues = useCallback(async (items: ScheduleOfValuesItem[]) => {
     // On signed contracts without change order, block edits and show gate
     if (isSigned && !changeOrderApproved) {
       // This shouldn't be called if SOV is readOnly, but just in case
@@ -147,9 +146,15 @@ const ContractChecklist = () => {
     markDirty("sovItems", items);
     // Also persist to sov_items table for PM window visibility
     if (contractId) {
-      supabase.functions.invoke("upsert-sov-items", {
-        body: { jobId: contractId, items },
-      });
+      try {
+        await fetch(`/api/l/contracts/${contractId}/sov-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items }),
+        });
+      } catch (error) {
+        console.error('Failed to update SOV items:', error);
+      }
     }
   }, [markDirty, isSigned, changeOrderApproved, contractId]);
 
@@ -173,37 +178,24 @@ const ContractChecklist = () => {
   ) => {
     if (!contractId) return;
     try {
-      const coData: Record<string, unknown> = {
-        job_id: contractId,
-        co_number: details.coNumber || `CO-AUTO-${Date.now()}`,
-        description: details.description || "SOV modification on signed contract",
-        amount: details.amount || 0,
-        status: method === "document" ? "approved" : "admin_approved",
-        submitted_date: new Date().toISOString().split("T")[0],
-        approved_date: new Date().toISOString().split("T")[0],
-      };
-      const { error: coErr } = await supabase.from("change_orders").insert(coData as any);
-      if (coErr) {
-        toast.error(`Failed to record change order: ${coErr.message}`);
-        return;
-      }
+      const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coNumber: details.coNumber,
+          description: details.description,
+          amount: details.amount,
+          status: method === "document" ? "approved" : "admin_approved",
+          submittedDate: new Date().toISOString().split("T")[0],
+          approvedDate: new Date().toISOString().split("T")[0],
+          documentFile: details.documentFile,
+        }),
+      });
 
-      if (method === "document" && details.documentFile) {
-        const filePath = `${contractId}/change-orders/${Date.now()}-${details.documentFile.name}`;
-        const { error: uploadErr } = await supabase.storage
-          .from("contract-documents")
-          .upload(filePath, details.documentFile);
-        if (uploadErr) {
-          toast.error("Change order recorded but document upload failed");
-        } else {
-          await supabase.from("documents").insert({
-            job_id: contractId,
-            file_name: details.documentFile.name,
-            file_path: filePath,
-            file_type: details.documentFile.type,
-            file_size: details.documentFile.size,
-          });
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Failed to record change order: ${error.error}`);
+        return;
       }
 
       // Don't save SOV yet — just unlock editing. User will make changes and they auto-save.
@@ -272,23 +264,23 @@ const ContractChecklist = () => {
       }
 
       try {
-        const [docsResult] = await Promise.all([
-          supabase.from("documents").select("*").eq("job_id", contractId),
-        ]);
+        const response = await fetch(`/api/l/contracts/${contractId}/documents`);
         if (thisRunId !== runIdRef.current) return;
 
-        const docs = docsResult.data;
-        if (docs && docs.length > 0) {
-          setDocuments(docs.map((d: any) => ({
-            id: d.id,
-            name: d.file_name,
-            size: d.file_size || 0,
-            type: d.file_type || "other",
-            category: (d.file_type || "other") as DocumentCategory,
-            associatedItemId: d.checklist_item_id || undefined,
-            uploadedAt: d.uploaded_at,
-            filePath: d.file_path,
-          })));
+        if (response.ok) {
+          const docs = await response.json();
+          if (docs && docs.length > 0) {
+            setDocuments(docs.map((d: any) => ({
+              id: d.id,
+              name: d.file_name,
+              size: d.file_size || 0,
+              type: d.file_type || "other",
+              category: (d.file_type || "other") as DocumentCategory,
+              associatedItemId: d.checklist_item_id || undefined,
+              uploadedAt: d.uploaded_at,
+              filePath: d.file_path,
+            })));
+          }
         }
       } catch {
         // Non-critical
@@ -371,59 +363,71 @@ const ContractChecklist = () => {
     }
     const docCategory = category || "other";
 
-    for (const file of files) {
-      const filePath = `${contractId}/${docCategory}/${Date.now()}_${file.name}`;
-      try {
-        const { error: uploadErr } = await supabase.storage
-          .from("contract-documents")
-          .upload(filePath, file, { upsert: false });
-        if (uploadErr) throw uploadErr;
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('associatedItemId', associatedItemId || '');
+    formData.append('category', docCategory);
 
-        const { data: docRow, error: docErr } = await supabase.from("documents").insert({
-          job_id: contractId,
-          file_name: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          file_type: docCategory,
-          checklist_item_id: associatedItemId || null,
-        }).select("*").single();
-        if (docErr) throw docErr;
+    try {
+      const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        const newDoc: ContractDocument = {
-          id: docRow.id,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          category: docCategory,
-          associatedItemId,
-          associatedItemLabel,
-          uploadedAt: new Date().toISOString(),
-          filePath,
-        };
-        setDocuments((prev) => [...prev, newDoc]);
-      } catch (err: any) {
-        toast.error(`Upload failed: ${err.message}`);
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Upload failed: ${error.error}`);
+        return;
       }
-    }
-    if (!associatedItemLabel) {
-      toast.success(`${files.length} document(s) uploaded`);
+
+      const result = await response.json();
+      setDocuments((prev) => [...prev, ...result.documents]);
+      if (!associatedItemLabel) {
+        toast.success(`${files.length} document(s) uploaded`);
+      }
+    } catch (err: any) {
+      toast.error(`Upload failed: ${err.message}`);
     }
   };
 
   const handleRemoveDocument = async (id: string) => {
-    const doc = documents.find((d) => d.id === id);
-    if (doc?.filePath) {
-      await supabase.storage.from("contract-documents").remove([doc.filePath]);
-      await supabase.from("documents").delete().eq("id", id);
+    try {
+      const response = await fetch(`/api/l/contracts/${contractId}/documents?documentId=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Failed to delete document: ${error.error}`);
+        return;
+      }
+
+      setDocuments((prev) => prev.filter((d) => d.id !== id));
+    } catch (err: any) {
+      toast.error(`Failed to delete document: ${err.message}`);
     }
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
   };
 
   const handleUpdateDocumentCategory = async (id: string, category: DocumentCategory) => {
-    setDocuments((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, category } : d))
-    );
-    await supabase.from("documents").update({ file_type: category }).eq("id", id);
+    try {
+      const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: id, category }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Failed to update document category: ${error.error}`);
+        return;
+      }
+
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, category } : d))
+      );
+    } catch (err: any) {
+      toast.error(`Failed to update document category: ${err.message}`);
+    }
   };
 
   if (!isNew && isLoading) {
