@@ -221,7 +221,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         // Fetch branches
         const branchesResponse = await fetch("/api/branches");
         const branchesResult = await branchesResponse.json();
-        if (branchesResult.success && branchesResult.data) {
+        if (branchesResult.data) {
           setBranches(branchesResult.data);
         }
 

@@ -100,9 +100,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Transform camelCase field names to snake_case for database
+    const fieldMapping: Record<string, string> = {
+      projectName: 'project_name',
+      contractNumber: 'contract_number',
+      customerName: 'customer_name',
+      customerJobNumber: 'customer_job_number',
+      projectOwner: 'project_owner',
+      etcJobNumber: 'etc_job_number',
+      etcBranch: 'etc_branch',
+      county: 'county',
+      stateRoute: 'state_route',
+      projectStartDate: 'project_start_date',
+      projectEndDate: 'project_end_date',
+      additionalNotes: 'additional_notes',
+      certifiedPayrollType: 'certified_payroll_type',
+      shopRate: 'shop_rate',
+      stateBaseRate: 'state_base_rate',
+      stateFringeRate: 'state_fringe_rate',
+      stateFlaggingBaseRate: 'state_flagging_base_rate',
+      stateFlaggingFringeRate: 'state_flagging_fringe_rate',
+      federalBaseRate: 'federal_base_rate',
+      federalFringeRate: 'federal_fringe_rate',
+      federalFlaggingBaseRate: 'federal_flagging_base_rate',
+      federalFlaggingFringeRate: 'federal_flagging_fringe_rate',
+      contractStatus: 'contract_status',
+      projectStatus: 'project_status',
+      billingStatus: 'billing_status',
+      customerPm: 'customer_pm',
+      customerPmEmail: 'customer_pm_email',
+      customerPmPhone: 'customer_pm_phone',
+      certifiedPayrollContact: 'certified_payroll_contact',
+      certifiedPayrollEmail: 'certified_payroll_email',
+      certifiedPayrollPhone: 'certified_payroll_phone',
+      customerBillingContact: 'customer_billing_contact',
+      customerBillingEmail: 'customer_billing_email',
+      customerBillingPhone: 'customer_billing_phone',
+      etcProjectManager: 'etc_project_manager',
+      etcBillingManager: 'etc_billing_manager',
+      etcProjectManagerEmail: 'etc_project_manager_email',
+      etcBillingManagerEmail: 'etc_billing_manager_email',
+      extensionDate: 'extension_date',
+    };
+
+    // Transform patch data to snake_case
+    const transformedPatch: Record<string, unknown> = {};
+    for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
+      if (patch[camelKey] !== undefined) {
+        transformedPatch[snakeKey] = patch[camelKey];
+      }
+    }
+
     // Create new contract
     const insertData = {
-      ...patch,
+      ...transformedPatch,
       version: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
