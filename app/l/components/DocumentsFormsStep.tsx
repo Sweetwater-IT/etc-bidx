@@ -17,8 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Upload,
   Paperclip,
@@ -26,11 +24,6 @@ import {
   Download,
   FileText,
   ExternalLink,
-  FileSpreadsheet,
-  FileVideo,
-  File,
-  Plus,
-  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
