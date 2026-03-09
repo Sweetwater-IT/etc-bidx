@@ -29,6 +29,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
+import { ETCUser, defaultETCUsers, CertifiedPayrollType } from "@/data/masterItems";
+// import { generateJobNumber } from "@/utils/generateJobNumber"; // Removed - will implement with business logic later
 
 interface ProjectInfoFieldsProps {
   projectInfo: JobProjectInfo;
@@ -38,7 +40,7 @@ interface ProjectInfoFieldsProps {
   readOnly?: boolean;
 }
 
-const REQUIRED_FIELDS: (keyof ProjectInfo)[] = [
+const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
   "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
   "customerJobNumber", "customerPM", "customerPMEmail", "certifiedPayrollContact",
@@ -55,17 +57,17 @@ const RateField = ({
 }: {
   id: string;
   label: string;
-  field: keyof ProjectInfo;
-  value: string;
-  onUpdate: (field: keyof ProjectInfo, value: string) => void;
+  field: keyof JobProjectInfo;
+  value: string | null;
+  onUpdate: (field: keyof JobProjectInfo, value: string) => void;
 }) => {
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useState(value || "");
   const [focused, setFocused] = useState(false);
 
   // Sync from parent only when NOT focused (prevents cursor jump)
   useEffect(() => {
     if (!focused) {
-      setLocalValue(value);
+      setLocalValue(value || "");
     }
   }, [value, focused]);
 
@@ -115,14 +117,14 @@ const CertifiedPayrollSection = ({
   isInvalid,
   RequiredMark,
 }: {
-  projectInfo: ProjectInfo;
-  update: (field: keyof ProjectInfo, value: string) => void;
-  isInvalid: (field: keyof ProjectInfo) => boolean;
+  projectInfo: JobProjectInfo;
+  update: (field: keyof JobProjectInfo, value: string) => void;
+  isInvalid: (field: keyof JobProjectInfo) => boolean;
   RequiredMark: React.FC;
 }) => {
 
-  const TotalCell = ({ base, fringe }: { base: string; fringe: string }) => {
-    const total = (parseFloat(base) || 0) + (parseFloat(fringe) || 0);
+  const TotalCell = ({ base, fringe }: { base: string | null; fringe: string | null }) => {
+    const total = (parseFloat(base || "0") || 0) + (parseFloat(fringe || "0") || 0);
     return (
       <div className="flex items-end">
         <div>
@@ -209,6 +211,34 @@ const CertifiedPayrollSection = ({
 export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
 
+  // Database-driven data
+  const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
+  const [counties, setCounties] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchBranchesAndCounties = async () => {
+      try {
+        // Fetch branches
+        const { data: branchesData } = await supabase
+          .from("branches")
+          .select("id, name, address, shop_rate")
+          .order("name");
+        if (branchesData) setBranches(branchesData);
+
+        // Fetch counties
+        const { data: countiesData } = await supabase
+          .from("counties")
+          .select("name")
+          .order("name");
+        if (countiesData) setCounties(countiesData.map(c => c.name));
+      } catch (error) {
+        console.error("Error fetching branches/counties:", error);
+      }
+    };
+
+    fetchBranchesAndCounties();
+  }, []);
+
   useEffect(() => {
     if (dateWarning) {
       const t = setTimeout(() => setDateWarning(null), 4000);
@@ -216,7 +246,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     }
   }, [dateWarning]);
 
-  const update = (field: keyof ProjectInfo, value: string) => {
+  const update = (field: keyof JobProjectInfo, value: string) => {
     if (readOnly) return;
     const updated = { ...projectInfo, [field]: value };
     if (field === "projectStartDate" && updated.projectEndDate && value > updated.projectEndDate) {
@@ -230,7 +260,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     onChange(updated);
   };
 
-  const isInvalid = (field: keyof ProjectInfo) =>
+  const isInvalid = (field: keyof JobProjectInfo) =>
     showValidation && REQUIRED_FIELDS.includes(field) && !projectInfo[field];
 
   // Customer combobox state — loaded from Supabase
@@ -313,24 +343,13 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [countyOpen, setCountyOpen] = useState(false);
   const [countySearch, setCountySearch] = useState("");
   const filteredCounties = useMemo(
-    () => PA_COUNTIES.filter((c) => c.toLowerCase().includes(countySearch.toLowerCase())),
-    [countySearch]
+    () => counties.filter((c) => c.toLowerCase().includes(countySearch.toLowerCase())),
+    [counties, countySearch]
   );
 
-  // Auto-generate job number when branch changes
-  const { jobs } = useJobs();
-  const existingJobNumbers = useMemo(() => jobs.map((j) => j.projectInfo.etcJobNumber), [jobs]);
-
-  useEffect(() => {
-    if (!contractSigned) return;
-    if (!projectInfo.etcBranch) return;
-    if (projectInfo.etcJobNumber) return; // already assigned
-    const branch = BRANCHES.find((b) => b.name === projectInfo.etcBranch);
-    if (!branch) return;
-    const jobNum = generateJobNumber(branch.code, existingJobNumbers);
-    update("etcJobNumber", jobNum);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectInfo.etcBranch, contractSigned]);
+  // TODO: Implement job number auto-generation with business logic later
+  // const { jobs } = useJobs();
+  // const existingJobNumbers = useMemo(() => jobs.map((j) => j.projectInfo.etcJobNumber), [jobs]);
 
   const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
 
@@ -347,7 +366,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           <div className="sm:col-span-2">
             <Label htmlFor="projectOwner" className="text-xs">Project Owner<RequiredMark /></Label>
             <Select
-              value={projectInfo.projectOwner}
+              value={projectInfo.projectOwner || undefined}
               onValueChange={(val) => update("projectOwner", val)}
             >
               <SelectTrigger id="projectOwner" className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}>
@@ -368,7 +387,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="projectName"
               className={cn("h-8 text-sm", isInvalid("projectName") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="e.g. Highway 101 Overpass"
-              value={projectInfo.projectName}
+              value={projectInfo.projectName || ""}
               onChange={(e) => update("projectName", e.target.value)}
             />
           </div>
@@ -378,7 +397,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="contractNumber"
               className={cn("h-8 text-sm", isInvalid("contractNumber") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="e.g. C-2024-0123"
-              value={projectInfo.contractNumber}
+              value={projectInfo.contractNumber || ""}
               onChange={(e) => update("contractNumber", e.target.value)}
             />
           </div>
@@ -424,29 +443,20 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               </PopoverContent>
             </Popover>
           </div>
-          <div className="sm:col-span-1">
-            <Label htmlFor="stateRoute" className="text-xs">State Route</Label>
-            <Input
-              id="stateRoute"
-              className="h-8 text-sm"
-              placeholder="e.g. SR 0022"
-              value={projectInfo.stateRoute}
-              onChange={(e) => update("stateRoute", e.target.value)}
-            />
-          </div>
+
           <div className="sm:col-span-2">
             <Label htmlFor="etcBranch" className="text-xs">ETC Branch<RequiredMark /></Label>
             <Select
-              value={projectInfo.etcBranch}
+              value={projectInfo.etcBranch || ""}
               onValueChange={(val) => update("etcBranch", val)}
             >
               <SelectTrigger id="etcBranch" className={cn("h-8 text-sm", isInvalid("etcBranch") && "border-destructive ring-1 ring-destructive/30")}>
                 <SelectValue placeholder="Select branch…" />
               </SelectTrigger>
               <SelectContent>
-                {BRANCHES.map((b) => (
-                  <SelectItem key={b.code} value={b.name}>
-                    {b.name} ({b.code})
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.name}>
+                    {b.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -458,7 +468,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="etcJobNumber"
               className="h-8 text-sm bg-muted/50"
               placeholder={contractSigned ? "Auto-generated" : "Assigned when contract is signed"}
-              value={projectInfo.etcJobNumber}
+              value={projectInfo.etcJobNumber || ""}
               readOnly
             />
             {!contractSigned && !projectInfo.etcJobNumber && (
@@ -551,16 +561,16 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
 
           <div>
-            <Label htmlFor="projectStartDate" className="flex items-center gap-1 text-xs">
-              <Calendar className="h-3 w-3" /> Project Start Date<RequiredMark />
+            <Label htmlFor="certifiedPayrollPhone" className="flex items-center gap-1 text-xs">
+              <Phone className="h-3 w-3" /> Payroll Phone
             </Label>
             <Input
-              id="projectStartDate"
-              type="date"
-              max={projectInfo.projectEndDate || undefined}
-              className={cn("h-8 text-sm", isInvalid("projectStartDate") && "border-destructive ring-1 ring-destructive/30")}
-              value={projectInfo.projectStartDate}
-              onChange={(e) => update("projectStartDate", e.target.value)}
+              id="certifiedPayrollPhone"
+              type="tel"
+              className="h-8 text-sm"
+              placeholder="(555) 555-5555"
+              value={projectInfo.certifiedPayrollPhone || ""}
+              onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
             />
           </div>
           <div>
@@ -572,7 +582,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="date"
               min={projectInfo.projectStartDate || undefined}
               className={cn("h-8 text-sm", isInvalid("projectEndDate") && "border-destructive ring-1 ring-destructive/30")}
-              value={projectInfo.projectEndDate}
+              value={projectInfo.projectEndDate || ""}
               onChange={(e) => update("projectEndDate", e.target.value)}
             />
           </div>
@@ -669,7 +679,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="customerJobNumber"
               className={cn("h-8 text-sm", isInvalid("customerJobNumber") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="Customer's reference #"
-              value={projectInfo.customerJobNumber}
+              value={projectInfo.customerJobNumber || ""}
               onChange={(e) => update("customerJobNumber", e.target.value)}
             />
           </div>
@@ -682,7 +692,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="customerPM"
               className={cn("h-8 text-sm", isInvalid("customerPM") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="Full name"
-              value={projectInfo.customerPM}
+              value={projectInfo.customerPM || ""}
               onChange={(e) => update("customerPM", e.target.value)}
             />
           </div>
@@ -695,7 +705,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="email"
               className={cn("h-8 text-sm", isInvalid("customerPMEmail") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="pm@customer.com"
-              value={projectInfo.customerPMEmail}
+              value={projectInfo.customerPMEmail || ""}
               onChange={(e) => update("customerPMEmail", e.target.value)}
             />
           </div>
@@ -708,7 +718,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="tel"
               className="h-8 text-sm"
               placeholder="(555) 555-5555"
-              value={projectInfo.customerPMPhone}
+              value={projectInfo.customerPMPhone || ""}
               onChange={(e) => update("customerPMPhone", e.target.value)}
             />
           </div>
@@ -720,7 +730,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="certPayroll"
               className={cn("h-8 text-sm", isInvalid("certifiedPayrollContact") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="Full name"
-              value={projectInfo.certifiedPayrollContact}
+              value={projectInfo.certifiedPayrollContact || ""}
               onChange={(e) => update("certifiedPayrollContact", e.target.value)}
             />
           </div>
@@ -733,7 +743,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="email"
               className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="payroll@customer.com"
-              value={projectInfo.certifiedPayrollEmail}
+              value={projectInfo.certifiedPayrollEmail || ""}
               onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
             />
           </div>
@@ -746,7 +756,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="tel"
               className="h-8 text-sm"
               placeholder="(555) 555-5555"
-              value={projectInfo.certifiedPayrollPhone}
+              value={projectInfo.certifiedPayrollPhone || ""}
               onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
             />
           </div>
@@ -758,7 +768,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               id="custBillingContact"
               className="h-8 text-sm"
               placeholder="Full name"
-              value={projectInfo.customerBillingContact}
+              value={projectInfo.customerBillingContact || ""}
               onChange={(e) => update("customerBillingContact", e.target.value)}
             />
           </div>
@@ -771,7 +781,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="email"
               className="h-8 text-sm"
               placeholder="billing@customer.com"
-              value={projectInfo.customerBillingEmail}
+              value={projectInfo.customerBillingEmail || ""}
               onChange={(e) => update("customerBillingEmail", e.target.value)}
             />
           </div>
@@ -784,7 +794,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               type="tel"
               className="h-8 text-sm"
               placeholder="(555) 555-5555"
-              value={projectInfo.customerBillingPhone}
+              value={projectInfo.customerBillingPhone || ""}
               onChange={(e) => update("customerBillingPhone", e.target.value)}
             />
           </div>

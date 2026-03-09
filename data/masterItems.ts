@@ -66,3 +66,25 @@ export const MASTER_ITEMS: MasterItem[] = [
   { itemNumber: "RENTAL-SIGNS", displayName: "ADD'L TRAFFIC CONTROL SIGNS", uom: "SQ. FT." },
   { itemNumber: "0901-0230", displayName: "ADD'L WARNING LIGHTS, TYPE A", uom: "EA/DAY" },
 ];
+
+// Database-driven data structures
+export interface Branch {
+  id: number;
+  name: string;
+  address: string;
+  shop_rate: number;
+}
+
+export interface ETCUser {
+  id: string;
+  name: string;
+  allowedBranches: string[];
+}
+
+export const defaultETCUsers: ETCUser[] = [
+  { id: "1", name: "John Smith", allowedBranches: ["Turbotville", "Hatfield"] },
+  { id: "2", name: "Jane Doe", allowedBranches: ["Bedford"] },
+  // Add more default users as needed
+];
+
+export type CertifiedPayrollType = "none" | "state" | "federal";
