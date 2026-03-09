@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -148,16 +147,20 @@ export const DocumentsFormsStep = ({
 
   useEffect(() => {
     if (!jobId) return;
-    const fetch = async () => {
-      const { data } = await supabase
-        .from("work_orders")
-        .select("id, wo_number, title, status, updated_at")
-        .eq("job_id", jobId)
-        .in("status", ["completed", "ready", "scheduled"])
-        .order("updated_at", { ascending: false });
-      if (data) setFinalWOs(data);
+    const fetchWorkOrders = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/work-orders`);
+        if (response.ok) {
+          const data = await response.json();
+          setFinalWOs(data);
+        } else {
+          console.error('Failed to fetch work orders');
+        }
+      } catch (error) {
+        console.error('Error fetching work orders:', error);
+      }
     };
-    fetch();
+    fetchWorkOrders();
   }, [jobId]);
 
   const documentsByCategory = documents.reduce((acc, doc) => {
