@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/command";
 import { User, Mail, Phone, Building, Calendar, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
 import { ETCUser, defaultETCUsers, CertifiedPayrollType } from "@/data/masterItems";
@@ -219,18 +219,18 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     const fetchBranchesAndCounties = async () => {
       try {
         // Fetch branches
-        const { data: branchesData } = await supabase
-          .from("branches")
-          .select("id, name, address, shop_rate")
-          .order("name");
-        if (branchesData) setBranches(branchesData);
+        const branchesResponse = await fetch("/api/branches");
+        const branchesResult = await branchesResponse.json();
+        if (branchesResult.success && branchesResult.data) {
+          setBranches(branchesResult.data);
+        }
 
-        // Fetch counties
-        const { data: countiesData } = await supabase
-          .from("counties")
-          .select("name")
-          .order("name");
-        if (countiesData) setCounties(countiesData.map(c => c.name));
+        // Fetch counties (names only)
+        const countiesResponse = await fetch("/api/counties?namesOnly=true");
+        const countiesResult = await countiesResponse.json();
+        if (countiesResult.success && countiesResult.data) {
+          setCounties(countiesResult.data);
+        }
       } catch (error) {
         console.error("Error fetching branches/counties:", error);
       }
@@ -270,11 +270,21 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [customerSearch, setCustomerSearch] = useState("");
 
   const fetchCustomers = useCallback(async () => {
-    const { data } = await supabase
-      .from("customers")
-      .select("id, display_name, company_name")
-      .order("display_name");
-    if (data) setCustomers(data);
+    try {
+      const response = await fetch("/api/contractors?limit=1000");
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Transform contractors data to match the expected format
+        const transformedCustomers = result.data.map((contractor: any) => ({
+          id: contractor.id.toString(),
+          display_name: contractor.name,
+          company_name: contractor.name
+        }));
+        setCustomers(transformedCustomers);
+      }
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
   }, []);
 
   useEffect(() => {
@@ -292,20 +302,49 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const handleAddCustomer = async () => {
     if (!customerSearch.trim()) return;
     const name = customerSearch.trim();
-    const { data, error } = await supabase
-      .from("customers")
-      .insert({ display_name: name, company_name: name })
-      .select("id, display_name, company_name")
-      .single();
-    if (error) {
+
+    try {
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name,
+          display_name: name,
+          customer_number: Math.floor(Math.random() * 1000000), // Generate a random customer number
+          main_phone: "",
+          address: "",
+          city: "",
+          state: "",
+          zip: "",
+          payment_terms: "NET30", // Default payment terms
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || "Failed to create customer");
+        return;
+      }
+
+      // Add the new customer to the local state
+      const newCustomer = {
+        id: result.customer.id.toString(),
+        display_name: result.customer.name,
+        company_name: result.customer.name
+      };
+
+      setCustomers((prev) => [...prev, newCustomer]);
+      update("customerName", newCustomer.display_name);
+      setCustomerSearch("");
+      setCustomerOpen(false);
+      toast.success(`Customer "${name}" added`);
+    } catch (error) {
+      console.error("Error creating customer:", error);
       toast.error("Failed to create customer");
-      return;
     }
-    setCustomers((prev) => [...prev, data]);
-    update("customerName", data.display_name);
-    setCustomerSearch("");
-    setCustomerOpen(false);
-    toast.success(`Customer "${name}" added`);
   };
 
   // ETC PM combobox state
