@@ -188,6 +188,15 @@ const ContractManager = () => {
       return;
     }
 
+    // Update local state immediately for UI feedback
+    setJobs(prevJobs =>
+      prevJobs.map(j =>
+        j.id === jobId
+          ? { ...j, contractStatus: newStatus }
+          : j
+      )
+    );
+
     // This will need to be implemented with your API
     toast.success(`Contract moved to ${newStatus}`);
   };
