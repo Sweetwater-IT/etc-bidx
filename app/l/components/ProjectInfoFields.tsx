@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,639 +10,803 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Building2, User, Phone, Mail, Calendar, MapPin, DollarSign, Users } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
+import { User, Mail, Phone, Building, Calendar, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import type { JobProjectInfo } from "@/types/job";
+import { toast } from "sonner";
 
 interface ProjectInfoFieldsProps {
-  projectInfo: JobProjectInfo;
-  onChange: (info: JobProjectInfo) => void;
+  projectInfo: ProjectInfo;
+  onChange: (info: ProjectInfo) => void;
+  contractSigned?: boolean;
   showValidation?: boolean;
   readOnly?: boolean;
 }
 
-export const ProjectInfoFields = ({
-  projectInfo,
-  onChange,
-  showValidation = false,
-  readOnly = false
-}: ProjectInfoFieldsProps) => {
-  const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    contacts: false,
-    rates: false,
-    dates: false,
-  });
+const REQUIRED_FIELDS: (keyof ProjectInfo)[] = [
+  "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
+  "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
+  "customerJobNumber", "customerPM", "customerPMEmail", "certifiedPayrollContact",
+  "certifiedPayrollEmail", "isCertifiedPayroll",
+];
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+// Stable RateField — defined OUTSIDE parent components to prevent remounting on every keystroke
+const RateField = ({
+  id,
+  label,
+  field,
+  value,
+  onUpdate,
+}: {
+  id: string;
+  label: string;
+  field: keyof ProjectInfo;
+  value: string;
+  onUpdate: (field: keyof ProjectInfo, value: string) => void;
+}) => {
+  const [localValue, setLocalValue] = useState(value);
+  const [focused, setFocused] = useState(false);
 
-  const updateField = (field: keyof JobProjectInfo, value: string | number | null) => {
-    onChange({
-      ...projectInfo,
-      [field]: value,
-    });
-  };
+  // Sync from parent only when NOT focused (prevents cursor jump)
+  useEffect(() => {
+    if (!focused) {
+      setLocalValue(value);
+    }
+  }, [value, focused]);
 
-  const hasRequiredFields = !!(
-    projectInfo.projectName &&
-    projectInfo.contractNumber &&
-    projectInfo.customerName &&
-    projectInfo.county
-  );
+  const displayValue = !focused && localValue && !isNaN(parseFloat(localValue))
+    ? parseFloat(localValue).toFixed(2)
+    : localValue;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div>
+      <Label htmlFor={id} className="text-xs">{label}</Label>
+      <Input
+        id={id}
+        className="h-8 text-sm"
+        type="text"
+        inputMode="decimal"
+        placeholder="0.00"
+        value={displayValue}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          const cleaned = localValue.replace(/[^0-9.]/g, "");
+          const parsed = parseFloat(cleaned);
+          if (!isNaN(parsed)) {
+            const formatted = parsed.toFixed(2);
+            setLocalValue(formatted);
+            onUpdate(field, formatted);
+          } else if (localValue === "") {
+            onUpdate(field, "");
+          }
+        }}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === "" || /^\d*\.?\d*$/.test(val)) {
+            setLocalValue(val);
+            onUpdate(field, val);
+          }
+        }}
+      />
+    </div>
+  );
+};
+
+// --- Certified Payroll Section ---
+const CertifiedPayrollSection = ({
+  projectInfo,
+  update,
+  isInvalid,
+  RequiredMark,
+}: {
+  projectInfo: ProjectInfo;
+  update: (field: keyof ProjectInfo, value: string) => void;
+  isInvalid: (field: keyof ProjectInfo) => boolean;
+  RequiredMark: React.FC;
+}) => {
+
+  const TotalCell = ({ base, fringe }: { base: string; fringe: string }) => {
+    const total = (parseFloat(base) || 0) + (parseFloat(fringe) || 0);
+    return (
+      <div className="flex items-end">
         <div>
-          <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Project Information
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Basic project details and contract information.
-          </p>
+          <Label className="text-xs text-muted-foreground">Total</Label>
+          <p className="h-8 flex items-center text-sm font-medium">${total.toFixed(2)}/hr</p>
         </div>
-        {showValidation && (
-          <Badge variant={hasRequiredFields ? "default" : "destructive"}>
-            {hasRequiredFields ? "Complete" : "Incomplete"}
-          </Badge>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+        <DollarSign className="h-4 w-4 text-muted-foreground" />
+        Certified Payroll Information
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="sm:col-span-3">
+          <Label className="text-xs">Is this a Certified Payroll job?<RequiredMark /></Label>
+          <Select value={projectInfo.isCertifiedPayroll}
+            onValueChange={(val) => update("isCertifiedPayroll", val as CertifiedPayrollType)}>
+            <SelectTrigger className={cn("h-8 text-sm w-full sm:w-[240px]", isInvalid("isCertifiedPayroll") && "border-destructive ring-1 ring-destructive/30")}>
+              <SelectValue placeholder="Select…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No</SelectItem>
+              <SelectItem value="state">Yes — State (PA Prevailing Wage)</SelectItem>
+              <SelectItem value="federal">Yes — Federal (Davis-Bacon)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {projectInfo.isCertifiedPayroll === "none" && (
+          <div>
+            <Label htmlFor="shopRate" className="text-xs">Shop Rate ($/hr)</Label>
+            <Input id="shopRate" className="h-8 text-sm bg-muted" type="text" readOnly value="Shop — no value required" tabIndex={-1} />
+          </div>
+        )}
+
+        {projectInfo.isCertifiedPayroll === "state" && (
+          <>
+            <div className="sm:col-span-3">
+              <p className="text-xs font-medium text-muted-foreground">PA Prevailing Wage Rates</p>
+            </div>
+            <div className="sm:col-span-3 mt-1">
+              <p className="text-[11px] font-semibold text-foreground mb-1">MPT (Maintenance & Protection of Traffic)</p>
+            </div>
+            <RateField id="stateMptBase" label="Base Rate ($/hr)" field="stateMptBaseRate" value={projectInfo.stateMptBaseRate} onUpdate={update} />
+            <RateField id="stateMptFringe" label="Fringe Rate ($/hr)" field="stateMptFringeRate" value={projectInfo.stateMptFringeRate} onUpdate={update} />
+            <TotalCell base={projectInfo.stateMptBaseRate} fringe={projectInfo.stateMptFringeRate} />
+            <div className="sm:col-span-3 mt-2">
+              <p className="text-[11px] font-semibold text-foreground mb-1">Flagging</p>
+            </div>
+            <RateField id="stateFlagBase" label="Base Rate ($/hr)" field="stateFlaggingBaseRate" value={projectInfo.stateFlaggingBaseRate} onUpdate={update} />
+            <RateField id="stateFlagFringe" label="Fringe Rate ($/hr)" field="stateFlaggingFringeRate" value={projectInfo.stateFlaggingFringeRate} onUpdate={update} />
+            <TotalCell base={projectInfo.stateFlaggingBaseRate} fringe={projectInfo.stateFlaggingFringeRate} />
+          </>
+        )}
+
+        {projectInfo.isCertifiedPayroll === "federal" && (
+          <>
+            <div className="sm:col-span-3">
+              <p className="text-xs font-medium text-muted-foreground">Federal Davis-Bacon Rates</p>
+            </div>
+            <div className="sm:col-span-3 mt-1">
+              <p className="text-[11px] font-semibold text-foreground mb-1">MPT (Maintenance & Protection of Traffic)</p>
+            </div>
+            <RateField id="fedMptBase" label="Base Rate ($/hr)" field="federalMptBaseRate" value={projectInfo.federalMptBaseRate} onUpdate={update} />
+            <RateField id="fedMptFringe" label="Fringe Rate ($/hr)" field="federalMptFringeRate" value={projectInfo.federalMptFringeRate} onUpdate={update} />
+            <TotalCell base={projectInfo.federalMptBaseRate} fringe={projectInfo.federalMptFringeRate} />
+            <div className="sm:col-span-3 mt-2">
+              <p className="text-[11px] font-semibold text-foreground mb-1">Flagging</p>
+            </div>
+            <RateField id="fedFlagBase" label="Base Rate ($/hr)" field="federalFlaggingBaseRate" value={projectInfo.federalFlaggingBaseRate} onUpdate={update} />
+            <RateField id="fedFlagFringe" label="Fringe Rate ($/hr)" field="federalFlaggingFringeRate" value={projectInfo.federalFlaggingFringeRate} onUpdate={update} />
+            <TotalCell base={projectInfo.federalFlaggingBaseRate} fringe={projectInfo.federalFlaggingFringeRate} />
+          </>
         )}
       </div>
+    </div>
+  );
+};
 
-      {/* Basic Information */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle
-            className="text-sm font-medium cursor-pointer flex items-center justify-between"
-            onClick={() => toggleSection('basic')}
-          >
-            Basic Information
-            <span className="text-xs text-muted-foreground">
-              {expandedSections.basic ? '−' : '+'}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        {expandedSections.basic && (
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">
-                  Project Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={projectInfo.projectName || ""}
-                  onChange={(e) => updateField('projectName', e.target.value || null)}
-                  placeholder="Enter project name"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">
-                  Contract Number <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={projectInfo.contractNumber || ""}
-                  onChange={(e) => updateField('contractNumber', e.target.value || null)}
-                  placeholder="Enter contract number"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">
-                  Customer Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={projectInfo.customerName || ""}
-                  onChange={(e) => updateField('customerName', e.target.value || null)}
-                  placeholder="Enter customer name"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Customer Job Number</Label>
-                <Input
-                  value={projectInfo.customerJobNumber || ""}
-                  onChange={(e) => updateField('customerJobNumber', e.target.value || null)}
-                  placeholder="Enter customer job number"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Project Owner</Label>
-                <Input
-                  value={projectInfo.projectOwner || ""}
-                  onChange={(e) => updateField('projectOwner', e.target.value || null)}
-                  placeholder="Enter project owner"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">
-                  County <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={projectInfo.county || ""}
-                  onChange={(e) => updateField('county', e.target.value || null)}
-                  placeholder="Enter county"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">ETC Job Number</Label>
-                <Input
-                  type="number"
-                  value={projectInfo.etcJobNumber?.toString() || ""}
-                  onChange={(e) => updateField('etcJobNumber', e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder="Enter ETC job number"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">ETC Branch</Label>
-                <Input
-                  value={projectInfo.etcBranch || ""}
-                  onChange={(e) => updateField('etcBranch', e.target.value || null)}
-                  placeholder="Enter ETC branch"
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-medium">Other Notes</Label>
-              <Textarea
-                value={projectInfo.otherNotes || ""}
-                onChange={(e) => updateField('otherNotes', e.target.value || null)}
-                placeholder="Additional project notes..."
-                className="min-h-[80px] resize-none"
-                readOnly={readOnly}
-              />
-            </div>
-          </CardContent>
-        )}
-      </Card>
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false }: ProjectInfoFieldsProps) => {
+  const [dateWarning, setDateWarning] = useState<string | null>(null);
 
-      {/* Contact Information */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle
-            className="text-sm font-medium cursor-pointer flex items-center justify-between"
-            onClick={() => toggleSection('contacts')}
-          >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Contact Information
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {expandedSections.contacts ? '−' : '+'}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        {expandedSections.contacts && (
-          <CardContent className="space-y-6">
-            {/* Customer PM */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Customer Project Manager
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Name</Label>
-                  <Input
-                    value={projectInfo.customerPM || ""}
-                    onChange={(e) => updateField('customerPM', e.target.value || null)}
-                    placeholder="PM name"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Email</Label>
-                  <Input
-                    type="email"
-                    value={projectInfo.customerPMEmail || ""}
-                    onChange={(e) => updateField('customerPMEmail', e.target.value || null)}
-                    placeholder="PM email"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Phone</Label>
-                  <Input
-                    value={projectInfo.customerPMPhone || ""}
-                    onChange={(e) => updateField('customerPMPhone', e.target.value || null)}
-                    placeholder="PM phone"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-              </div>
-            </div>
+  useEffect(() => {
+    if (dateWarning) {
+      const t = setTimeout(() => setDateWarning(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [dateWarning]);
 
-            {/* ETC Project Manager */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
-                ETC Project Manager
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Name</Label>
-                  <Input
-                    value={projectInfo.etcProjectManager || ""}
-                    onChange={(e) => updateField('etcProjectManager', e.target.value || null)}
-                    placeholder="ETC PM name"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Email</Label>
-                  <Input
-                    type="email"
-                    value={projectInfo.etcProjectManagerEmail || ""}
-                    onChange={(e) => updateField('etcProjectManagerEmail', e.target.value || null)}
-                    placeholder="ETC PM email"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Phone</Label>
-                  <Input
-                    value={""}
-                    placeholder="ETC PM phone"
-                    className="h-8"
-                    readOnly
-                  />
-                </div>
-              </div>
-            </div>
+  const update = (field: keyof ProjectInfo, value: string) => {
+    if (readOnly) return;
+    const updated = { ...projectInfo, [field]: value };
+    if (field === "projectStartDate" && updated.projectEndDate && value > updated.projectEndDate) {
+      updated.projectEndDate = "";
+      setDateWarning("End date was cleared — it was before the new start date");
+    }
+    if (field === "projectEndDate" && updated.projectStartDate && value < updated.projectStartDate) {
+      setDateWarning("End date cannot be before start date");
+      return;
+    }
+    onChange(updated);
+  };
 
-            {/* ETC Billing Manager */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
-                ETC Billing Manager
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Name</Label>
-                  <Input
-                    value={projectInfo.etcBillingManager || ""}
-                    onChange={(e) => updateField('etcBillingManager', e.target.value || null)}
-                    placeholder="ETC billing name"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Email</Label>
-                  <Input
-                    type="email"
-                    value={projectInfo.etcBillingManagerEmail || ""}
-                    onChange={(e) => updateField('etcBillingManagerEmail', e.target.value || null)}
-                    placeholder="ETC billing email"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Phone</Label>
-                  <Input
-                    value={""}
-                    placeholder="ETC billing phone"
-                    className="h-8"
-                    readOnly
-                  />
-                </div>
-              </div>
-            </div>
+  const isInvalid = (field: keyof ProjectInfo) =>
+    showValidation && REQUIRED_FIELDS.includes(field) && !projectInfo[field];
 
-            {/* Certified Payroll Contact */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Certified Payroll Contact
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Name</Label>
-                  <Input
-                    value={projectInfo.certifiedPayrollContact || ""}
-                    onChange={(e) => updateField('certifiedPayrollContact', e.target.value || null)}
-                    placeholder="Payroll contact name"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Email</Label>
-                  <Input
-                    type="email"
-                    value={projectInfo.certifiedPayrollEmail || ""}
-                    onChange={(e) => updateField('certifiedPayrollEmail', e.target.value || null)}
-                    placeholder="Payroll contact email"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Phone</Label>
-                  <Input
-                    value={projectInfo.certifiedPayrollPhone || ""}
-                    onChange={(e) => updateField('certifiedPayrollPhone', e.target.value || null)}
-                    placeholder="Payroll contact phone"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-              </div>
-            </div>
+  // Customer combobox state — loaded from Supabase
+  interface DBCustomer { id: string; display_name: string; company_name: string; }
+  const [customers, setCustomers] = useState<DBCustomer[]>([]);
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
 
-            {/* Customer Billing Contact */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Customer Billing Contact
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Name</Label>
-                  <Input
-                    value={projectInfo.customerBillingContact || ""}
-                    onChange={(e) => updateField('customerBillingContact', e.target.value || null)}
-                    placeholder="Billing contact name"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Email</Label>
-                  <Input
-                    type="email"
-                    value={projectInfo.customerBillingEmail || ""}
-                    onChange={(e) => updateField('customerBillingEmail', e.target.value || null)}
-                    placeholder="Billing contact email"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Phone</Label>
-                  <Input
-                    value={projectInfo.customerBillingPhone || ""}
-                    onChange={(e) => updateField('customerBillingPhone', e.target.value || null)}
-                    placeholder="Billing contact phone"
-                    className="h-8"
-                    readOnly={readOnly}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+  const fetchCustomers = useCallback(async () => {
+    const { data } = await supabase
+      .from("customers")
+      .select("id, display_name, company_name")
+      .order("display_name");
+    if (data) setCustomers(data);
+  }, []);
 
-      {/* Rates & Payroll */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle
-            className="text-sm font-medium cursor-pointer flex items-center justify-between"
-            onClick={() => toggleSection('rates')}
-          >
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Rates & Payroll
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {expandedSections.rates ? '−' : '+'}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        {expandedSections.rates && (
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Label className="text-sm font-medium">Certified Payroll Type</Label>
-                <Select
-                  value={projectInfo.isCertifiedPayroll}
-                  onValueChange={(value: "none" | "state" | "federal") => updateField('isCertifiedPayroll', value)}
-                  disabled={readOnly}
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const filteredCustomers = useMemo(
+    () =>
+      customers.filter((c) =>
+        c.display_name.toLowerCase().includes(customerSearch.toLowerCase())
+      ),
+    [customers, customerSearch]
+  );
+
+  const handleAddCustomer = async () => {
+    if (!customerSearch.trim()) return;
+    const name = customerSearch.trim();
+    const { data, error } = await supabase
+      .from("customers")
+      .insert({ display_name: name, company_name: name })
+      .select("id, display_name, company_name")
+      .single();
+    if (error) {
+      toast.error("Failed to create customer");
+      return;
+    }
+    setCustomers((prev) => [...prev, data]);
+    update("customerName", data.display_name);
+    setCustomerSearch("");
+    setCustomerOpen(false);
+    toast.success(`Customer "${name}" added`);
+  };
+
+  // ETC PM combobox state
+  const [etcUsers, setEtcUsers] = useState<ETCUser[]>(defaultETCUsers);
+  const [pmOpen, setPmOpen] = useState(false);
+  const [pmSearch, setPmSearch] = useState("");
+
+  const availablePMs = useMemo(() => {
+    const branch = projectInfo.etcBranch?.trim();
+    return etcUsers.filter((u) => {
+      if (!branch) return true;
+      if (u.allowedBranches.length === 0) return true;
+      return u.allowedBranches.some((b) => b.toLowerCase() === branch.toLowerCase());
+    });
+  }, [etcUsers, projectInfo.etcBranch]);
+
+  const filteredPMs = useMemo(
+    () =>
+      availablePMs.filter((u) =>
+        u.name.toLowerCase().includes(pmSearch.toLowerCase())
+      ),
+    [availablePMs, pmSearch]
+  );
+
+  const handleAddPM = () => {
+    if (!pmSearch.trim()) return;
+    const newUser: ETCUser = { id: crypto.randomUUID(), name: pmSearch.trim(), allowedBranches: [] };
+    setEtcUsers((prev) => [...prev, newUser]);
+    update("etcProjectManager", newUser.name);
+    setPmSearch("");
+    setPmOpen(false);
+  };
+
+  // County combobox state
+  const [countyOpen, setCountyOpen] = useState(false);
+  const [countySearch, setCountySearch] = useState("");
+  const filteredCounties = useMemo(
+    () => PA_COUNTIES.filter((c) => c.toLowerCase().includes(countySearch.toLowerCase())),
+    [countySearch]
+  );
+
+  // Auto-generate job number when branch changes
+  const { jobs } = useJobs();
+  const existingJobNumbers = useMemo(() => jobs.map((j) => j.projectInfo.etcJobNumber), [jobs]);
+
+  useEffect(() => {
+    if (!contractSigned) return;
+    if (!projectInfo.etcBranch) return;
+    if (projectInfo.etcJobNumber) return; // already assigned
+    const branch = BRANCHES.find((b) => b.name === projectInfo.etcBranch);
+    if (!branch) return;
+    const jobNum = generateJobNumber(branch.code, existingJobNumbers);
+    update("etcJobNumber", jobNum);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectInfo.etcBranch, contractSigned]);
+
+  const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
+
+  return (
+    <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
+      {/* Project Details */}
+      <div className="rounded-xl border bg-card p-4">
+        <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Building className="h-4 w-4 text-muted-foreground" />
+          Project Details
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+          {/* Row 1: Owner, Job Name, Contract # */}
+          <div className="sm:col-span-2">
+            <Label htmlFor="projectOwner" className="text-xs">Project Owner<RequiredMark /></Label>
+            <Select
+              value={projectInfo.projectOwner}
+              onValueChange={(val) => update("projectOwner", val)}
+            >
+              <SelectTrigger id="projectOwner" className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}>
+                <SelectValue placeholder="Select owner…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENNDOT">PENNDOT</SelectItem>
+                <SelectItem value="Turnpike">Turnpike</SelectItem>
+                <SelectItem value="SEPTA">SEPTA</SelectItem>
+                <SelectItem value="Private">Private</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="projectName" className="text-xs">Job Name<RequiredMark /></Label>
+            <Input
+              id="projectName"
+              className={cn("h-8 text-sm", isInvalid("projectName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="e.g. Highway 101 Overpass"
+              value={projectInfo.projectName}
+              onChange={(e) => update("projectName", e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="contractNumber" className="text-xs">Project Owner Contract #<RequiredMark /></Label>
+            <Input
+              id="contractNumber"
+              className={cn("h-8 text-sm", isInvalid("contractNumber") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="e.g. C-2024-0123"
+              value={projectInfo.contractNumber}
+              onChange={(e) => update("contractNumber", e.target.value)}
+            />
+          </div>
+
+          {/* Row 2: County, State Route, Branch, Job Number */}
+          <div className="sm:col-span-1">
+            <Label className="text-xs">County<RequiredMark /></Label>
+            <Popover open={countyOpen} onOpenChange={setCountyOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={countyOpen}
+                  className={cn("w-full justify-between h-8 text-sm font-normal", isInvalid("county") && "border-destructive ring-1 ring-destructive/30")}
                 >
-                  <SelectTrigger className="w-[140px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="state">State</SelectItem>
-                    <SelectItem value="federal">Federal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  {projectInfo.county || "Select…"}
+                  <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[220px] p-0 z-50 bg-popover" align="start">
+                <Command>
+                  <CommandInput placeholder="Search county…" value={countySearch} onValueChange={setCountySearch} />
+                  <CommandList>
+                    <CommandEmpty>No county found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredCounties.map((c) => (
+                        <CommandItem
+                          key={c}
+                          value={c}
+                          onSelect={() => {
+                            update("county", c);
+                            setCountyOpen(false);
+                            setCountySearch("");
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-3 w-3", projectInfo.county === c ? "opacity-100" : "opacity-0")} />
+                          {c}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="sm:col-span-1">
+            <Label htmlFor="stateRoute" className="text-xs">State Route</Label>
+            <Input
+              id="stateRoute"
+              className="h-8 text-sm"
+              placeholder="e.g. SR 0022"
+              value={projectInfo.stateRoute}
+              onChange={(e) => update("stateRoute", e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="etcBranch" className="text-xs">ETC Branch<RequiredMark /></Label>
+            <Select
+              value={projectInfo.etcBranch}
+              onValueChange={(val) => update("etcBranch", val)}
+            >
+              <SelectTrigger id="etcBranch" className={cn("h-8 text-sm", isInvalid("etcBranch") && "border-destructive ring-1 ring-destructive/30")}>
+                <SelectValue placeholder="Select branch…" />
+              </SelectTrigger>
+              <SelectContent>
+                {BRANCHES.map((b) => (
+                  <SelectItem key={b.code} value={b.name}>
+                    {b.name} ({b.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="etcJobNumber" className="text-xs">ETC Job Number</Label>
+            <Input
+              id="etcJobNumber"
+              className="h-8 text-sm bg-muted/50"
+              placeholder={contractSigned ? "Auto-generated" : "Assigned when contract is signed"}
+              value={projectInfo.etcJobNumber}
+              readOnly
+            />
+            {!contractSigned && !projectInfo.etcJobNumber && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Job number will be assigned once the contract is signed
+              </p>
+            )}
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Shop Rate */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">Shop Rate</h4>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Shop Rate ($/hr)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={projectInfo.shopRate || ""}
-                    onChange={(e) => updateField('shopRate', e.target.value || null)}
-                    placeholder="0.00"
-                    className="h-8"
-                    readOnly={readOnly}
+          {/* Row 3: ETC PM, Project Start Date, Project End Date */}
+          {/* ETC Project Manager — searchable dropdown */}
+          <div>
+            <Label className="text-xs">ETC Project Manager<RequiredMark /></Label>
+            <Popover open={pmOpen} onOpenChange={setPmOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={pmOpen}
+                  className={cn("w-full justify-between h-8 text-sm font-normal", isInvalid("etcProjectManager") && "border-destructive ring-1 ring-destructive/30")}
+                >
+                  {projectInfo.etcProjectManager || "Select PM…"}
+                  <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0 z-50 bg-popover" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search or add PM…"
+                    value={pmSearch}
+                    onValueChange={setPmSearch}
                   />
-                </div>
-              </div>
+                  <CommandList>
+                    <CommandEmpty className="p-0">
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                        onMouseDown={(e) => { e.preventDefault(); handleAddPM(); }}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add "{pmSearch}"
+                      </button>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredPMs.map((u) => (
+                        <CommandItem
+                          key={u.id}
+                          value={u.name}
+                          onSelect={() => {
+                            update("etcProjectManager", u.name);
+                            setPmOpen(false);
+                            setPmSearch("");
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3 w-3",
+                              projectInfo.etcProjectManager === u.name ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="text-sm">{u.name}</span>
+                          {u.allowedBranches.length > 0 && (
+                            <span className="ml-auto text-[10px] text-muted-foreground">
+                              {u.allowedBranches.join(", ")}
+                            </span>
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    {pmSearch && filteredPMs.length > 0 && (
+                      <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={handleAddPM}
+                            className="text-sm"
+                          >
+                            <Plus className="mr-2 h-3 w-3" /> Add "{pmSearch}"
+                          </CommandItem>
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {projectInfo.etcBranch && availablePMs.length === 0 && (
+              <p className="text-[10px] text-destructive mt-0.5">
+                No PMs assigned to {projectInfo.etcBranch}
+              </p>
+            )}
+          </div>
 
-              {/* State Rates */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">State Rates</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">MPT Base</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.stateMptBaseRate || ""}
-                      onChange={(e) => updateField('stateMptBaseRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">MPT Fringe</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.stateMptFringeRate || ""}
-                      onChange={(e) => updateField('stateMptFringeRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Flagging Base</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.stateFlaggingBaseRate || ""}
-                      onChange={(e) => updateField('stateFlaggingBaseRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Flagging Fringe</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.stateFlaggingFringeRate || ""}
-                      onChange={(e) => updateField('stateFlaggingFringeRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                </div>
-              </div>
+          <div>
+            <Label htmlFor="projectStartDate" className="flex items-center gap-1 text-xs">
+              <Calendar className="h-3 w-3" /> Project Start Date<RequiredMark />
+            </Label>
+            <Input
+              id="projectStartDate"
+              type="date"
+              max={projectInfo.projectEndDate || undefined}
+              className={cn("h-8 text-sm", isInvalid("projectStartDate") && "border-destructive ring-1 ring-destructive/30")}
+              value={projectInfo.projectStartDate}
+              onChange={(e) => update("projectStartDate", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="projectEndDate" className="flex items-center gap-1 text-xs">
+              <Calendar className="h-3 w-3" /> Project End Date<RequiredMark />
+            </Label>
+            <Input
+              id="projectEndDate"
+              type="date"
+              min={projectInfo.projectStartDate || undefined}
+              className={cn("h-8 text-sm", isInvalid("projectEndDate") && "border-destructive ring-1 ring-destructive/30")}
+              value={projectInfo.projectEndDate}
+              onChange={(e) => update("projectEndDate", e.target.value)}
+            />
+          </div>
+          {dateWarning && (
+            <div className="sm:col-span-2 flex items-center gap-1.5 text-destructive">
+              <Calendar className="h-3 w-3 shrink-0" />
+              <p className="text-[11px] font-medium">{dateWarning}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
-              {/* Federal Rates */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">Federal Rates</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">MPT Base</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.federalMptBaseRate || ""}
-                      onChange={(e) => updateField('federalMptBaseRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">MPT Fringe</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.federalMptFringeRate || ""}
-                      onChange={(e) => updateField('federalMptFringeRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Flagging Base</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.federalFlaggingBaseRate || ""}
-                      onChange={(e) => updateField('federalFlaggingBaseRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Flagging Fringe</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={projectInfo.federalFlaggingFringeRate || ""}
-                      onChange={(e) => updateField('federalFlaggingFringeRate', e.target.value || null)}
-                      placeholder="0.00"
-                      className="h-8"
-                      readOnly={readOnly}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
 
-      {/* Project Dates */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle
-            className="text-sm font-medium cursor-pointer flex items-center justify-between"
-            onClick={() => toggleSection('dates')}
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Project Dates
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {expandedSections.dates ? '−' : '+'}
-            </span>
-          </CardTitle>
-        </CardHeader>
-        {expandedSections.dates && (
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Project Start Date</Label>
-                <Input
-                  type="date"
-                  value={projectInfo.projectStartDate || ""}
-                  onChange={(e) => updateField('projectStartDate', e.target.value || null)}
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Project End Date</Label>
-                <Input
-                  type="date"
-                  value={projectInfo.projectEndDate || ""}
-                  onChange={(e) => updateField('projectEndDate', e.target.value || null)}
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Extension Date</Label>
-                <Input
-                  type="date"
-                  value={projectInfo.extensionDate || ""}
-                  onChange={(e) => updateField('extensionDate', e.target.value || null)}
-                  className="h-8"
-                  readOnly={readOnly}
-                />
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+      <div className="rounded-xl border bg-card p-4">
+        <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          Customer Admin Information
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Customer Name — searchable dropdown */}
+          <div>
+            <Label className="text-xs">Customer Name<RequiredMark /></Label>
+            <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={customerOpen}
+                  className={cn("w-full justify-between h-8 text-sm font-normal", isInvalid("customerName") && "border-destructive ring-1 ring-destructive/30")}
+                >
+                  {projectInfo.customerName || "Select customer…"}
+                  <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0 z-50 bg-popover" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Search or add customer…"
+                    value={customerSearch}
+                    onValueChange={setCustomerSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty className="p-0">
+                      <button
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                        onMouseDown={(e) => { e.preventDefault(); handleAddCustomer(); }}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add "{customerSearch}"
+                      </button>
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredCustomers.map((c) => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.display_name}
+                          onSelect={() => {
+                            update("customerName", c.display_name);
+                            setCustomerOpen(false);
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3 w-3",
+                              projectInfo.customerName === c.display_name ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {c.display_name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    {customerSearch && filteredCustomers.length > 0 && (
+                      <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={handleAddCustomer}
+                            className="text-sm"
+                          >
+                            <Plus className="mr-2 h-3 w-3" /> Add "{customerSearch}"
+                          </CommandItem>
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label htmlFor="customerJobNumber" className="text-xs">Customer Job Number<RequiredMark /></Label>
+            <Input
+              id="customerJobNumber"
+              className={cn("h-8 text-sm", isInvalid("customerJobNumber") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Customer's reference #"
+              value={projectInfo.customerJobNumber}
+              onChange={(e) => update("customerJobNumber", e.target.value)}
+            />
+          </div>
+          <div className="hidden sm:block" /> {/* spacer to push PM to row 2 */}
+
+          {/* Row 2: Customer PM */}
+          <div>
+            <Label htmlFor="customerPM" className="text-xs">Customer Project Manager<RequiredMark /></Label>
+            <Input
+              id="customerPM"
+              className={cn("h-8 text-sm", isInvalid("customerPM") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Full name"
+              value={projectInfo.customerPM}
+              onChange={(e) => update("customerPM", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> PM Email<RequiredMark />
+            </Label>
+            <Input
+              id="customerPMEmail"
+              type="email"
+              className={cn("h-8 text-sm", isInvalid("customerPMEmail") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="pm@customer.com"
+              value={projectInfo.customerPMEmail}
+              onChange={(e) => update("customerPMEmail", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMPhone" className="flex items-center gap-1 text-xs">
+              <Phone className="h-3 w-3" /> PM Phone
+            </Label>
+            <Input
+              id="customerPMPhone"
+              type="tel"
+              className="h-8 text-sm"
+              placeholder="(555) 555-5555"
+              value={projectInfo.customerPMPhone}
+              onChange={(e) => update("customerPMPhone", e.target.value)}
+            />
+          </div>
+
+          {/* Certified Payroll */}
+          <div>
+            <Label htmlFor="certPayroll" className="text-xs">Certified Payroll Contact<RequiredMark /></Label>
+            <Input
+              id="certPayroll"
+              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContact") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Full name"
+              value={projectInfo.certifiedPayrollContact}
+              onChange={(e) => update("certifiedPayrollContact", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
+            </Label>
+            <Input
+              id="certPayrollEmail"
+              type="email"
+              className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="payroll@customer.com"
+              value={projectInfo.certifiedPayrollEmail}
+              onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
+              <Phone className="h-3 w-3" /> Payroll Phone
+            </Label>
+            <Input
+              id="certPayrollPhone"
+              type="tel"
+              className="h-8 text-sm"
+              placeholder="(555) 555-5555"
+              value={projectInfo.certifiedPayrollPhone}
+              onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
+            />
+          </div>
+
+          {/* Customer Billing */}
+          <div>
+            <Label htmlFor="custBillingContact" className="text-xs">Billing Contact Name</Label>
+            <Input
+              id="custBillingContact"
+              className="h-8 text-sm"
+              placeholder="Full name"
+              value={projectInfo.customerBillingContact}
+              onChange={(e) => update("customerBillingContact", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> Billing Email
+            </Label>
+            <Input
+              id="custBillingEmail"
+              type="email"
+              className="h-8 text-sm"
+              placeholder="billing@customer.com"
+              value={projectInfo.customerBillingEmail}
+              onChange={(e) => update("customerBillingEmail", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="custBillingPhone" className="flex items-center gap-1 text-xs">
+              <Phone className="h-3 w-3" /> Billing Phone
+            </Label>
+            <Input
+              id="custBillingPhone"
+              type="tel"
+              className="h-8 text-sm"
+              placeholder="(555) 555-5555"
+              value={projectInfo.customerBillingPhone}
+              onChange={(e) => update("customerBillingPhone", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Certified Payroll Information */}
+      <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
+
+      {/* Other Notes */}
+      <div className="rounded-xl border bg-card p-4">
+        <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          Additional Notes
+        </h2>
+        <Textarea
+          placeholder="Enter any additional notes, comments, or special instructions…"
+          className="min-h-[100px] text-sm"
+          value={projectInfo.otherNotes}
+          onChange={(e) => update("otherNotes", e.target.value)}
+        />
+      </div>
     </div>
   );
 };
