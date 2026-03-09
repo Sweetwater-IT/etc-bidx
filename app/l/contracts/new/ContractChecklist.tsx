@@ -364,18 +364,16 @@ const ContractChecklist = () => {
         />
 
         {/* Schedule of Values */}
-        {contractId && (
-          <div>
-            <SOVTable jobId={contractId} />
-            {isSigned && (
-              <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
-                <p className="text-xs text-warning font-medium">
-                  This contract is signed. SOV changes require a Change Order.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+        <div>
+          <SOVTable jobId={contractId} />
+          {isSigned && (
+            <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
+              <p className="text-xs text-warning font-medium">
+                This contract is signed. SOV changes require a Change Order.
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Documents & Forms */}
         <DocumentsFormsStep

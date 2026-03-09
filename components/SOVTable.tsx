@@ -45,7 +45,7 @@ import { useSovItems } from '@/hooks/useSovItems';
 import type { ScheduleOfValuesItem } from '@/types/job';
 
 interface SOVTableProps {
-  jobId: string;
+  jobId?: string;
 }
 
 interface CustomItemDraft {
