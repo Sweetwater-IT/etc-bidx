@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const { id: contractId } = await params;
+    console.log('[API] GET /api/l/contracts/[id] - Fetching contract:', contractId);
 
     const { data, error } = await supabase
       .from('jobs_l')
@@ -15,9 +16,11 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error('Error fetching contract:', error);
+      console.error('[API] Error fetching contract:', error);
       return NextResponse.json({ error: 'Failed to fetch contract' }, { status: 500 });
     }
+
+    console.log('[API] Contract fetched successfully:', data?.id);
 
     // Transform the data to match the expected format
     const contract = {
@@ -68,7 +71,10 @@ export async function PATCH(
     const body = await request.json();
     const { patch, clientVersion } = body;
 
+    console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, { patch, clientVersion });
+
     if (!patch || typeof patch !== 'object') {
+      console.error('[API] Invalid patch data:', patch);
       return NextResponse.json(
         { error: 'Missing or invalid patch data' },
         { status: 400 }

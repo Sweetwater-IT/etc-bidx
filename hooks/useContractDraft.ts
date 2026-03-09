@@ -97,12 +97,15 @@ function rowToProjectInfo(row: ContractRow): JobProjectInfo {
 }
 
 async function fetchContract(id: string): Promise<ContractRow | null> {
+  console.log('[HOOK] fetchContract - Fetching contract:', id);
   const response = await fetch(`/api/l/contracts/${id}`);
   if (!response.ok) {
     const error = await response.json();
+    console.error('[HOOK] fetchContract - Error:', error);
     throw new Error(error.error || 'Failed to fetch contract');
   }
   const data = await response.json();
+  console.log('[HOOK] fetchContract - Success:', data?.id);
   return data as ContractRow;
 }
 
@@ -133,6 +136,8 @@ async function upsertDraft(params: {
 
   const method = params.contractId ? 'PATCH' : 'POST';
 
+  console.log('[HOOK] upsertDraft - Calling API:', { url, method, contractId: params.contractId, patch: params.patch, clientVersion: params.clientVersion });
+
   const response = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -144,6 +149,7 @@ async function upsertDraft(params: {
 
   if (!response.ok) {
     const error = await response.json();
+    console.error('[HOOK] upsertDraft - API error:', { status: response.status, error });
 
     if (response.status === 409 && error.code === 'VERSION_CONFLICT' && error.latest) {
       throw new ConflictError(error.error || "Stale update", error.latest);
@@ -156,6 +162,7 @@ async function upsertDraft(params: {
   }
 
   const result = await response.json();
+  console.log('[HOOK] upsertDraft - Success:', result.contract?.id);
   return result.contract;
 }
 
@@ -227,6 +234,8 @@ export const useContractDraftStore = create<ContractDraftState>((set, get) => ({
     const state = get();
     if (!state.isMounted) return;
 
+    console.log('[STORE] markDirty - Field:', fieldName, 'Value:', value, 'Current dirty fields:', Object.keys(state.dirtyFields));
+
     const newDirtyFields = { ...state.dirtyFields, [fieldName]: value };
     const dirtyCount = Object.keys(newDirtyFields).length;
 
@@ -265,6 +274,8 @@ export const useContractDraftStore = create<ContractDraftState>((set, get) => ({
     const state = get();
     const fields = { ...state.dirtyFields };
     if (Object.keys(fields).length === 0) return;
+
+    console.log('[STORE] manualSave - Starting save with fields:', Object.keys(fields));
 
     // Record which fields we're sending
     set({ sentFields: fields, saveStatus: "saving" });

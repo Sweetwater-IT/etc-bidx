@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { patch } = body;
 
+    console.log('[API] POST /api/l/contracts - Creating contract:', patch);
+
     if (!patch || typeof patch !== 'object') {
+      console.error('[API] Invalid patch data for contract creation:', patch);
       return NextResponse.json(
         { error: 'Missing or invalid patch data' },
         { status: 400 }
