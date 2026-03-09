@@ -129,9 +129,62 @@ export async function PATCH(
       );
     }
 
+    // Transform camelCase field names to snake_case for database
+    const fieldMapping: Record<string, string> = {
+      projectName: 'project_name',
+      contractNumber: 'contract_number',
+      customerName: 'customer_name',
+      customerJobNumber: 'customer_job_number',
+      projectOwner: 'project_owner',
+      etcJobNumber: 'etc_job_number',
+      etcBranch: 'etc_branch',
+      county: 'county',
+      stateRoute: 'state_route',
+      projectStartDate: 'project_start_date',
+      projectEndDate: 'project_end_date',
+      additionalNotes: 'additional_notes',
+      otherNotes: 'additional_notes', // alias
+      certifiedPayrollType: 'certified_payroll_type',
+      isCertifiedPayroll: 'certified_payroll_type', // alias
+      shopRate: 'shop_rate',
+      stateMptBaseRate: 'state_base_rate',
+      stateMptFringeRate: 'state_fringe_rate',
+      stateFlaggingBaseRate: 'state_flagging_base_rate',
+      stateFlaggingFringeRate: 'state_flagging_fringe_rate',
+      federalMptBaseRate: 'federal_base_rate',
+      federalMptFringeRate: 'federal_fringe_rate',
+      federalFlaggingBaseRate: 'federal_flagging_base_rate',
+      federalFlaggingFringeRate: 'federal_flagging_fringe_rate',
+      contractStatus: 'contract_status',
+      projectStatus: 'project_status',
+      billingStatus: 'billing_status',
+      customerPM: 'customer_pm',
+      customerPMEmail: 'customer_pm_email',
+      customerPMPhone: 'customer_pm_phone',
+      certifiedPayrollContact: 'certified_payroll_contact',
+      certifiedPayrollEmail: 'certified_payroll_email',
+      certifiedPayrollPhone: 'certified_payroll_phone',
+      customerBillingContact: 'customer_billing_contact',
+      customerBillingEmail: 'customer_billing_email',
+      customerBillingPhone: 'customer_billing_phone',
+      etcProjectManager: 'etc_project_manager',
+      etcBillingManager: 'etc_billing_manager',
+      etcProjectManagerEmail: 'etc_project_manager_email',
+      etcBillingManagerEmail: 'etc_billing_manager_email',
+      extensionDate: 'extension_date',
+    };
+
+    // Transform patch data to snake_case
+    const transformedPatch: Record<string, unknown> = {};
+    for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
+      if (patch[camelKey] !== undefined) {
+        transformedPatch[snakeKey] = patch[camelKey];
+      }
+    }
+
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
-    const finalPatch = { ...patch };
-    if (patch.contractStatus === 'CONTRACT_SIGNED') {
+    const finalPatch = { ...transformedPatch };
+    if (transformedPatch.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
         .from('jobs_l')
