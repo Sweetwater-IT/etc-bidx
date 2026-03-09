@@ -182,244 +182,299 @@ async function upsertDraft(params: {
 
 const DEBOUNCE_MS = 800;
 
-export function useContractDraft(contractId: string | undefined) {
-  const queryClient = useQueryClient();
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [localVersion, setLocalVersion] = useState<number>(1);
-  // Use a ref to always have the latest version in closures (prevents stale closure 409s)
-  const localVersionRef = useRef<number>(1);
-  const [dirtyCount, setDirtyCount] = useState(0);
-  const dirtyFieldsRef = useRef<Record<string, unknown>>({});
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMountedRef = useRef(true);
-  // Single-flight mutex: prevents overlapping saves
-  const inFlightRef = useRef<Promise<unknown> | null>(null);
-  // Ref to scheduleSave so onSuccess can trigger re-save without stale closure
-  const scheduleSaveRef = useRef<(() => void) | null>(null);
+interface ContractDraftState {
+  contractRow: ContractRow | null;
+  projectInfo: JobProjectInfo | null;
+  isLoading: boolean;
+  fetchError: string | null;
+  saveStatus: SaveStatus;
+  lastSavedAt: Date | null;
+  localVersion: number;
+  dirtyCount: number;
+  hasDirtyFields: boolean;
+  dirtyFields: Record<string, unknown>;
+  sentFields: Record<string, unknown>;
+  debounceTimer: ReturnType<typeof setTimeout> | null;
+  inFlightPromise: Promise<unknown> | null;
+  isMounted: boolean;
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, []);
+  // Actions
+  fetchContractData: (contractId: string) => Promise<void>;
+  markDirty: (fieldName: string, value: unknown) => void;
+  saveOnBlur: () => Promise<void>;
+  manualSave: () => Promise<void>;
+  createContract: (initialData: Record<string, unknown>) => Promise<ContractRow>;
+  reset: () => void;
+}
 
-  // Query: fetch contract from DB
-  const {
-    data: contractRow,
-    isLoading,
-    error: fetchError,
-  } = useQuery({
-    queryKey: ["contract", contractId],
-    queryFn: () => fetchContract(contractId!),
-    enabled: !!contractId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-  });
+export const useContractDraftStore = create<ContractDraftState>((set, get) => ({
+  contractRow: null,
+  projectInfo: null,
+  isLoading: false,
+  fetchError: null,
+  saveStatus: "idle",
+  lastSavedAt: null,
+  localVersion: 1,
+  dirtyCount: 0,
+  hasDirtyFields: false,
+  dirtyFields: {},
+  sentFields: {},
+  debounceTimer: null,
+  inFlightPromise: null,
+  isMounted: true,
 
-  // Update local version when server data arrives
-  useEffect(() => {
-    if (contractRow?.version) {
-      setLocalVersion(contractRow.version);
-      localVersionRef.current = contractRow.version;
+  fetchContractData: async (contractId: string) => {
+    set({ isLoading: true, fetchError: null });
+
+    try {
+      const data = await fetchContract(contractId);
+      const projectInfo = data ? rowToProjectInfo(data) : null;
+      set({
+        contractRow: data,
+        projectInfo,
+        isLoading: false,
+        localVersion: data?.version || 1,
+      });
+    } catch (error) {
+      console.error("Error fetching contract:", error);
+      set({
+        fetchError: (error as Error).message,
+        isLoading: false,
+      });
     }
-  }, [contractRow?.version]);
+  },
 
-  // Mutation
-  // Track which fields were sent in the last save so onSuccess only clears those
-  const sentFieldsRef = useRef<Record<string, unknown>>({});
+  markDirty: (fieldName: string, value: unknown) => {
+    const state = get();
+    if (!state.isMounted) return;
 
-  const mutation = useMutation({
-    mutationFn: upsertDraft,
-    onSuccess: (data) => {
-      if (!isMountedRef.current) return;
-      // Only remove fields that were actually sent — preserve any new dirty fields added during the save
-      const sent = sentFieldsRef.current;
-      for (const key of Object.keys(sent)) {
-        if (dirtyFieldsRef.current[key] === sent[key]) {
-          delete dirtyFieldsRef.current[key];
-        }
-      }
-      sentFieldsRef.current = {};
-      const remainingCount = Object.keys(dirtyFieldsRef.current).length;
-      setDirtyCount(remainingCount);
-      setSaveStatus(remainingCount > 0 ? "unsaved" : "saved");
-      setLastSavedAt(new Date());
-      setLocalVersion(data.version);
-      localVersionRef.current = data.version;
-      queryClient.setQueryData(["contract", data.id], data);
-      queryClient.invalidateQueries({ queryKey: ["contracts-list"] });
-      // If there are still dirty fields, schedule another save
-      if (remainingCount > 0) {
-        scheduleSaveRef.current?.();
-      }
-    },
-    onError: (err) => {
-      if (!isMountedRef.current) return;
-      sentFieldsRef.current = {};
-      setSaveStatus("error");
-      if (err instanceof ConflictError) {
-        toast.error("This contract was updated elsewhere. Your changes were reloaded.");
-        queryClient.setQueryData(["contract", contractId], err.latest);
-        setLocalVersion(err.latest.version);
-        localVersionRef.current = err.latest.version;
-        dirtyFieldsRef.current = {};
-        setDirtyCount(0);
-      } else if (err instanceof ForbiddenError) {
-        toast.error(err.message);
-      } else {
-        toast.error(`Save failed: ${err.message}`);
-      }
-    },
-  });
+    const newDirtyFields = { ...state.dirtyFields, [fieldName]: value };
+    const dirtyCount = Object.keys(newDirtyFields).length;
 
-  const flushSave = useCallback(async () => {
-    const fields = { ...dirtyFieldsRef.current };
+    set({
+      dirtyFields: newDirtyFields,
+      dirtyCount,
+      hasDirtyFields: dirtyCount > 0,
+    });
+
+    // Clear existing timer
+    if (state.debounceTimer) {
+      clearTimeout(state.debounceTimer);
+    }
+
+    // Schedule save
+    const timer = setTimeout(() => {
+      get().manualSave();
+    }, DEBOUNCE_MS);
+
+    set({ debounceTimer: timer, saveStatus: "unsaved" });
+  },
+
+  saveOnBlur: async () => {
+    const state = get();
+    if (Object.keys(state.dirtyFields).length === 0) return;
+
+    if (state.debounceTimer) {
+      clearTimeout(state.debounceTimer);
+      set({ debounceTimer: null });
+    }
+
+    await get().manualSave();
+  },
+
+  manualSave: async () => {
+    const state = get();
+    const fields = { ...state.dirtyFields };
     if (Object.keys(fields).length === 0) return;
 
-    // Record which fields we're sending so onSuccess only clears these
-    sentFieldsRef.current = fields;
-    setSaveStatus("saving");
+    // Record which fields we're sending
+    set({ sentFields: fields, saveStatus: "saving" });
 
     // Single-flight: wait for any in-flight save to complete first
-    if (inFlightRef.current) {
+    if (state.inFlightPromise) {
       try {
-        await inFlightRef.current;
+        await state.inFlightPromise;
       } catch {
         // Previous save failed, proceed with new one
       }
-      // Re-snapshot fields after waiting (may have new dirty fields)
-      const freshFields = { ...dirtyFieldsRef.current };
-      if (Object.keys(freshFields).length === 0) return;
-      sentFieldsRef.current = freshFields;
     }
 
-    // Always read the latest version from ref (not stale closure state)
-    const promise = mutation.mutateAsync({
-      contractId,
-      patch: sentFieldsRef.current,
-      clientVersion: localVersionRef.current,
-    });
+    const promise = (async () => {
+      try {
+        const contractId = state.contractRow?.id;
+        const result = await upsertDraft({
+          contractId,
+          patch: fields,
+          clientVersion: state.localVersion,
+        });
 
-    inFlightRef.current = promise;
+        if (!get().isMounted) return;
+
+        // Only remove fields that were actually sent
+        const sent = get().sentFields;
+        const remainingDirtyFields = { ...get().dirtyFields };
+        for (const key of Object.keys(sent)) {
+          if (remainingDirtyFields[key] === sent[key]) {
+            delete remainingDirtyFields[key];
+          }
+        }
+
+        const remainingCount = Object.keys(remainingDirtyFields).length;
+
+        set({
+          dirtyFields: remainingDirtyFields,
+          sentFields: {},
+          dirtyCount: remainingCount,
+          hasDirtyFields: remainingCount > 0,
+          saveStatus: remainingCount > 0 ? "unsaved" : "saved",
+          lastSavedAt: new Date(),
+          localVersion: result.version,
+          contractRow: result,
+          projectInfo: rowToProjectInfo(result),
+        });
+
+        // If there are still dirty fields, schedule another save
+        if (remainingCount > 0) {
+          const timer = setTimeout(() => {
+            get().manualSave();
+          }, DEBOUNCE_MS);
+          set({ debounceTimer: timer });
+        }
+      } catch (err: any) {
+        if (!get().isMounted) return;
+
+        set({ sentFields: {}, saveStatus: "error" });
+
+        if (err instanceof ConflictError) {
+          toast.error("This contract was updated elsewhere. Your changes were reloaded.");
+          set({
+            contractRow: err.latest,
+            projectInfo: rowToProjectInfo(err.latest),
+            localVersion: err.latest.version,
+            dirtyFields: {},
+            dirtyCount: 0,
+            hasDirtyFields: false,
+          });
+        } else if (err instanceof ForbiddenError) {
+          toast.error(err.message);
+        } else {
+          toast.error(`Save failed: ${err.message}`);
+        }
+      }
+    })();
+
+    set({ inFlightPromise: promise });
 
     try {
       await promise;
-    } catch {
-      // Error handled by mutation.onError
     } finally {
-      inFlightRef.current = null;
+      set({ inFlightPromise: null });
     }
-  }, [contractId, mutation]);
+  },
 
-  const scheduleSave = useCallback(() => {
-    if (!contractId) return;
-    setSaveStatus("unsaved");
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      flushSave();
-    }, DEBOUNCE_MS);
-  }, [contractId, flushSave]);
+  createContract: async (initialData: Record<string, unknown>) => {
+    set({ saveStatus: "saving" });
 
-  // Keep ref in sync so onSuccess can trigger re-save
-  scheduleSaveRef.current = scheduleSave;
-
-  // Mark a field as dirty and schedule autosave
-  const markDirty = useCallback(
-    (fieldName: string, value: unknown) => {
-      dirtyFieldsRef.current[fieldName] = value;
-      setDirtyCount(Object.keys(dirtyFieldsRef.current).length);
-      scheduleSave();
-    },
-    [scheduleSave]
-  );
-
-  // Blur handler: immediate save — returns Promise so callers can await
-  const saveOnBlur = useCallback(async () => {
-    if (Object.keys(dirtyFieldsRef.current).length === 0) return;
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    await flushSave();
-  }, [flushSave]);
-
-  // Manual save — returns a Promise so callers can await it
-  const manualSave = useCallback(async () => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    if (Object.keys(dirtyFieldsRef.current).length === 0) {
-      return;
+    try {
+      const result = await upsertDraft({ patch: initialData });
+      set({
+        saveStatus: "saved",
+        lastSavedAt: new Date(),
+        localVersion: result.version,
+        contractRow: result,
+        projectInfo: rowToProjectInfo(result),
+      });
+      return result;
+    } catch (err: any) {
+      set({ saveStatus: "error" });
+      toast.error(`Create failed: ${err.message}`);
+      throw err;
     }
-    await flushSave();
-  }, [flushSave]);
+  },
 
-  // ── Before-unload flush protection ──
+  reset: () => {
+    const state = get();
+    if (state.debounceTimer) {
+      clearTimeout(state.debounceTimer);
+    }
+    set({
+      contractRow: null,
+      projectInfo: null,
+      isLoading: false,
+      fetchError: null,
+      saveStatus: "idle",
+      lastSavedAt: null,
+      localVersion: 1,
+      dirtyCount: 0,
+      hasDirtyFields: false,
+      dirtyFields: {},
+      sentFields: {},
+      debounceTimer: null,
+      inFlightPromise: null,
+      isMounted: true,
+    });
+  },
+}));
+
+export function useContractDraft(contractId: string | undefined) {
+  const store = useContractDraftStore();
+
+  // Auto-fetch when contractId changes
+  useEffect(() => {
+    if (contractId) {
+      store.fetchContractData(contractId);
+    } else {
+      store.reset();
+    }
+  }, [contractId, store]);
+
+  // Set mounted state
+  useEffect(() => {
+    useContractDraftStore.setState({ isMounted: true });
+    return () => {
+      useContractDraftStore.setState({ isMounted: false });
+    };
+  }, []);
+
+  // Before-unload protection
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (Object.keys(dirtyFieldsRef.current).length === 0) return;
+      if (store.hasDirtyFields) {
+        // Attempt to flush via sendBeacon for reliability
+        if (contractId && navigator.sendBeacon) {
+          const payload = JSON.stringify({
+            contractId,
+            patch: store.dirtyFields,
+            clientVersion: store.localVersion,
+          });
 
-      // Attempt to flush via sendBeacon for reliability
-      if (contractId && navigator.sendBeacon) {
-        const payload = JSON.stringify({
-          contractId,
-          patch: { ...dirtyFieldsRef.current },
-          clientVersion: localVersionRef.current,
-        });
+          const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/upsert-contract-draft`;
+          navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+        }
 
-        // sendBeacon to the edge function — best-effort
-        const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/upsert-contract-draft`;
-        navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+        // Show browser confirmation dialog
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
       }
-
-      // Show browser confirmation dialog
-      e.preventDefault();
-      e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [contractId]);
-
-  // Create new contract
-  const createContract = useCallback(
-    async (initialData: Record<string, unknown>) => {
-      setSaveStatus("saving");
-      try {
-        const result = await upsertDraft({ patch: initialData });
-        setSaveStatus("saved");
-        setLastSavedAt(new Date());
-        setLocalVersion(result.version);
-        queryClient.setQueryData(["contract", result.id], result);
-        queryClient.invalidateQueries({ queryKey: ["contracts-list"] });
-        return result;
-      } catch (err: any) {
-        setSaveStatus("error");
-        toast.error(`Create failed: ${err.message}`);
-        throw err;
-      }
-    },
-    [queryClient]
-  );
-
-  const hasDirtyFields = dirtyCount > 0;
-
-  const projectInfo = useMemo(
-    () => (contractRow ? rowToProjectInfo(contractRow) : null),
-    [contractRow]
-  );
+  }, [contractId, store.hasDirtyFields, store.dirtyFields, store.localVersion]);
 
   return {
-    contractRow,
-    projectInfo,
-    isLoading,
-    fetchError,
-    saveStatus,
-    lastSavedAt,
-    isSaving: mutation.isPending,
-    hasDirtyFields,
-    markDirty,
-    saveOnBlur,
-    manualSave,
-    createContract,
-    localVersion,
+    contractRow: store.contractRow,
+    projectInfo: store.projectInfo,
+    isLoading: store.isLoading,
+    fetchError: store.fetchError,
+    saveStatus: store.saveStatus,
+    lastSavedAt: store.lastSavedAt,
+    isSaving: store.saveStatus === "saving",
+    hasDirtyFields: store.hasDirtyFields,
+    markDirty: store.markDirty,
+    saveOnBlur: store.saveOnBlur,
+    manualSave: store.manualSave,
+    createContract: store.createContract,
+    localVersion: store.localVersion,
   };
 }
