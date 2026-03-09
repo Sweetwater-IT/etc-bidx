@@ -56,46 +56,62 @@ export async function POST(request: NextRequest) {
 
     console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type });
 
-    // Fetch job with SOV items from JSONB column
-    const { data: job, error: jobError } = await supabase
-      .from('jobs_l')
-      .select('sov_items')
-      .eq('id', takeoff.job_id)
+    // Fetch takeoff data with sign rows to create work order items
+    const { data: takeoffData, error: takeoffDataError } = await supabase
+      .from('takeoffs_l')
+      .select('sign_rows')
+      .eq('id', takeoffId)
       .single();
 
-    if (jobError || !job) {
-      console.error('Job fetch error:', jobError);
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    if (takeoffDataError) {
+      console.error('Takeoff data fetch error:', takeoffDataError);
+      return NextResponse.json({ error: 'Failed to fetch takeoff data' }, { status: 500 });
     }
 
-    const sovItems = job.sov_items || [];
-    console.log('SOV items from job:', { count: sovItems.length, items: sovItems.slice(0,3) });
-
-    // Create work order items from ALL SOV items for the job
+    // Create work order items from takeoff sign designations
     const workOrderItems: Array<{
       work_order_id: string | null;
-      item_number: number;
+      item_number: string; // Will be selected from SOV later
       description: string;
       contract_quantity: number;
       work_order_quantity: number;
       uom: string;
       sort_order: number;
-      sov_item_id: string;
+      sov_item_id: string | null;
     }> = [];
 
-    let itemNumber = 1;
-    sovItems.forEach((sovItem: any) => {
-      workOrderItems.push({
-        work_order_id: null, // will be set after work order creation
-        item_number: itemNumber++,
-        description: sovItem.description,
-        contract_quantity: sovItem.quantity || 0,
-        work_order_quantity: 0, // Start with 0, user configures daily quantity
-        uom: sovItem.uom || 'each',
-        sort_order: itemNumber - 1,
-        sov_item_id: sovItem.id, // Link to SOV item
-      });
-    });
+    const signRowsData = takeoffData.sign_rows || {};
+    let sortOrder = 0;
+
+    // Process each section (trailblazers, type_iii, sign_stands)
+    for (const [sectionKey, sectionRows] of Object.entries(signRowsData)) {
+      if (Array.isArray(sectionRows)) {
+        for (const row of sectionRows) {
+          // Create description from sign details
+          const descriptionParts = [
+            row.signDesignation || 'Custom Sign',
+            row.signDescription || '',
+            row.dimensionLabel ? `(${row.dimensionLabel})` : '',
+            row.signLegend ? `- ${row.signLegend}` : ''
+          ].filter(Boolean);
+
+          const description = descriptionParts.join(' ').trim();
+          const quantity = row.quantity || 1;
+          const uom = row.sqft > 0 ? 'SF' : 'SF'; // All signs use SF
+
+          workOrderItems.push({
+            work_order_id: null, // will be set after work order creation
+            item_number: '', // Empty initially, user selects SOV item
+            description,
+            contract_quantity: quantity,
+            work_order_quantity: quantity, // Start with takeoff quantity
+            uom,
+            sort_order: sortOrder++,
+            sov_item_id: null, // Will be set when user selects SOV item
+          });
+        }
+      }
+    }
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,

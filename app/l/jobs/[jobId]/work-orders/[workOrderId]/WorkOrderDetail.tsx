@@ -1609,7 +1609,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                                     {[
                                       { key: "DELIVERY", label: "Delivery", desc: "Job Site Delivery" },
                                       { key: "SERVICE", label: "Service", desc: "Job Site Service" },
-                                    ].filter(opt => 
+                                    ].filter(opt =>
                                       opt.label.toLowerCase().includes(itemPickerSearch.toLowerCase()) ||
                                       opt.desc.toLowerCase().includes(itemPickerSearch.toLowerCase()) ||
                                       opt.key.toLowerCase().includes(itemPickerSearch.toLowerCase())
@@ -1627,7 +1627,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                                             const updated = {
                                               item_number: opt.key,
                                               description: opt.desc,
-                                              contract_quantity: 1,
+                                              contract_quantity: item.contract_quantity, // Keep existing quantity
                                               uom: "EA",
                                               sov_item_id: null,
                                             };
