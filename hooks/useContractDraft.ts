@@ -416,7 +416,7 @@ export function useContractDraft(contractId: string | undefined) {
     } else {
       store.reset();
     }
-  }, [contractId, store]);
+  }, [contractId]);
 
   // Set mounted state
   useEffect(() => {

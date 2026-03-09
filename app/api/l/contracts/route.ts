@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       .from('jobs_l')
       .select(LIST_COLUMNS)
       .eq('archived', false)
-      .in('contract_status', CONTRACT_STATUSES)
+      .eq('project_status', 'not started')
       .order('created_at', { ascending: false });
 
     if (error) {
