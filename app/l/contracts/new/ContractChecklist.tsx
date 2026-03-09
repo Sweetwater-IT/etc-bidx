@@ -23,7 +23,7 @@ import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 
-type DocumentCategory = "contract" | "permit" | "insurance" | "other";
+type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
 interface ContractDocument {
   id: string;
