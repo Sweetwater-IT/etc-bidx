@@ -361,6 +361,7 @@ const ContractChecklist = () => {
           onChange={handleProjectInfoChange}
           showValidation={showValidation}
           readOnly={false}
+          contractRow={contractRow}
         />
 
         {/* Schedule of Values */}

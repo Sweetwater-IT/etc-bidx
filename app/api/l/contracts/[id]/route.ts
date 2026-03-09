@@ -129,9 +129,49 @@ export async function PATCH(
       );
     }
 
+    // Check if contract status is changing to CONTRACT_SIGNED and generate job number
+    let finalPatch = { ...patch };
+    if (patch.contractStatus === 'CONTRACT_SIGNED') {
+      // Get current contract data to check if it was previously not signed
+      const { data: currentContract, error: currentError } = await supabase
+        .from('jobs_l')
+        .select('contract_status, etc_job_number')
+        .eq('id', contractId)
+        .single();
+
+      if (!currentError && currentContract) {
+        const wasNotSigned = !['CONTRACT_SIGNED', 'SOURCE_OF_SUPPLY'].includes(currentContract.contract_status || '');
+        const hasNoJobNumber = !currentContract.etc_job_number;
+
+        if (wasNotSigned && hasNoJobNumber) {
+          // Generate job number (J-0001, J-0002, etc.)
+          const { data: latestJob, error: jobError } = await supabase
+            .from('jobs_l')
+            .select('etc_job_number')
+            .not('etc_job_number', 'is', null)
+            .order('etc_job_number', { ascending: false })
+            .limit(1);
+
+          let nextJobNumber = 'J-0001';
+          if (!jobError && latestJob && latestJob.length > 0) {
+            const current = latestJob[0].etc_job_number;
+            if (current && current.startsWith('J-')) {
+              const num = parseInt(current.substring(2));
+              if (!isNaN(num)) {
+                nextJobNumber = `J-${String(num + 1).padStart(4, '0')}`;
+              }
+            }
+          }
+
+          finalPatch.etcJobNumber = nextJobNumber;
+          console.log('[API] Generated job number:', nextJobNumber, 'for contract:', contractId);
+        }
+      }
+    }
+
     // Apply the patch
     const updateData = {
-      ...patch,
+      ...finalPatch,
       version: currentVersion + 1,
       updated_at: new Date().toISOString()
     };

@@ -15,6 +15,7 @@ export interface ScheduleOfValuesItem {
 
 export interface Job {
   id: string;
+  internal_id: string | null;
   created_by: string | null;
   assigned_pm: string | null;
   assigned_billing: string | null;

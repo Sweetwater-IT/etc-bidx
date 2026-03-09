@@ -151,9 +151,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generate structured internal contract ID (C-0001, C-0002, etc.)
+    const { data: latestContract, error: latestError } = await supabase
+      .from('jobs_l')
+      .select('internal_id')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    let nextInternalId = 'C-0001';
+    if (!latestError && latestContract && latestContract.length > 0) {
+      const current = latestContract[0].internal_id;
+      if (current && current.startsWith('C-')) {
+        const num = parseInt(current.substring(2));
+        if (!isNaN(num)) {
+          nextInternalId = `C-${String(num + 1).padStart(4, '0')}`;
+        }
+      }
+    }
+
     // Create new contract
     const insertData = {
       ...transformedPatch,
+      internal_id: nextInternalId,
       version: 1,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

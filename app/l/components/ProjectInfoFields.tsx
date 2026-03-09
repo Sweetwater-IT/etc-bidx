@@ -38,6 +38,7 @@ interface ProjectInfoFieldsProps {
   contractSigned?: boolean;
   showValidation?: boolean;
   readOnly?: boolean;
+  contractRow?: any;
 }
 
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
@@ -208,7 +209,7 @@ const CertifiedPayrollSection = ({
   );
 };
 
-export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false }: ProjectInfoFieldsProps) => {
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
 
   // Database-driven data
@@ -439,6 +440,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               value={projectInfo.contractNumber || ""}
               onChange={(e) => update("contractNumber", e.target.value)}
             />
+            {contractRow?.internal_id && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Internal ID: {contractRow.internal_id}
+              </p>
+            )}
           </div>
 
           {/* Row 2: County, State Route, Branch, Job Number */}
