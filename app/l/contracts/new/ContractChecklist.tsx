@@ -76,7 +76,7 @@ const emptyProjectInfo: JobProjectInfo = {
 
 const SIGNED_STATUSES = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
 
-const ContractChecklist = () => {
+const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean }) => {
   const router = useRouter();
   const params = useParams();
   const routeId = params?.id as string;
@@ -99,6 +99,7 @@ const ContractChecklist = () => {
 
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(contractRow.contract_status) : false;
+  const isReadOnly = forceReadOnly || isSigned;
 
 
 
@@ -360,7 +361,7 @@ const ContractChecklist = () => {
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
           showValidation={showValidation}
-          readOnly={false}
+          readOnly={isReadOnly}
           contractRow={contractRow}
         />
 
@@ -384,7 +385,7 @@ const ContractChecklist = () => {
           onAddDocuments={handleAddDocuments}
           onRemoveDocument={handleRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
-          readOnly={false}
+          readOnly={isReadOnly}
         />
       </div>
 

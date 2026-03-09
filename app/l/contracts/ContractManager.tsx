@@ -678,7 +678,10 @@ const KanbanCard = ({
         (e.currentTarget as HTMLElement).style.opacity = "1";
         onDragEnd();
       }}
-      onClick={() => router.push(`/l/${job.id}`)}
+      onClick={() => {
+        const isSigned = SIGNED_STATUSES.includes(stage.id);
+        router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`);
+      }}
     >
       {/* Lock banner for signed contracts */}
       {isSigned && (
@@ -708,7 +711,7 @@ const KanbanCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => router.push(`/l/${job.id}`)}>
+              <DropdownMenuItem onClick={() => router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`)}>
                 {isSigned ? <><Eye className="h-3.5 w-3.5 mr-2" />Open Contract</> : <>Edit Contract</>}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -875,7 +878,10 @@ const ListView = ({
               <TableRow
                 key={job.id}
                 className="cursor-pointer hover:bg-muted/20 transition-colors text-sm"
-                onClick={() => router.push(`/l/${job.id}`)}
+                onClick={() => {
+                  const isSigned = job.contractStatus ? SIGNED_STATUSES.includes(job.contractStatus) : false;
+                  router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`);
+                }}
               >
                 <TableCell className="font-mono font-semibold text-primary py-3">
                   {isSigned && <Lock className="h-3 w-3 inline mr-1 text-warning" />}
@@ -893,7 +899,7 @@ const ListView = ({
                       <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => router.push(`/l/${job.id}`)}>
+                      <DropdownMenuItem onClick={() => router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`)}>
                         {isSigned ? "Open Contract" : "Edit Contract"}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
