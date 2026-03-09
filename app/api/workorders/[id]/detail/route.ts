@@ -119,7 +119,7 @@ export async function GET(
       supabase.from("sov_items").select("id, item_number, description, quantity, uom, unit_price, extended_price, retainage_type, retainage_value, retainage_amount, notes").eq("job_id", jobId).order("sort_order", { ascending: true }),
 
       // Documents linked to this work order (via job + checklist)
-      supabase.from("documents").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
+      supabase.from("documents_l").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
 
       // Pickup work order if this is a parent
       !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),

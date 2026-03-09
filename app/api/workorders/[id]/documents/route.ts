@@ -14,7 +14,7 @@ export async function POST(
 
     // Get work order to get job_id
     const { data: workOrder, error: woError } = await supabase
-      .from('work_orders')
+      .from('work_orders_l')
       .select('job_id')
       .eq('id', id)
       .single();
@@ -50,7 +50,7 @@ export async function POST(
 
       // Save record to documents table
       const { data: docData, error: insertError } = await supabase
-        .from("documents")
+        .from("documents_l")
         .insert({
           job_id: jobId,
           file_name: file.name,
@@ -96,7 +96,7 @@ export async function DELETE(
 
     // Get document info
     const { data: doc, error: docError } = await supabase
-      .from('documents')
+      .from('documents_l')
       .select('file_path')
       .eq('id', documentId)
       .single();
@@ -117,7 +117,7 @@ export async function DELETE(
 
     // Delete from database
     const { error: dbErr } = await supabase
-      .from("documents")
+      .from("documents_l")
       .delete()
       .eq("id", documentId);
 
