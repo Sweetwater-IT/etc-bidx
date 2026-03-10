@@ -219,7 +219,7 @@ export async function POST(
 
     console.log('[SOV API POST] Inserting SOV entry with data:', JSON.stringify(insertData, null, 2));
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('sov_entries')
       .insert(insertData)
       .select(`
@@ -249,7 +249,56 @@ export async function POST(
 
     console.log('[SOV API POST] Supabase insert result:', { data: !!data, error });
 
-    if (error) {
+    // Handle duplicate key constraint violation - try to update existing entry instead
+    if (error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key')) {
+      console.log('[SOV API POST] Duplicate key violation detected, attempting to update existing entry');
+
+      // Remove sort_order from update data since we're updating an existing entry
+      const { sort_order, ...updateData } = insertData;
+
+      const { data: updateDataResult, error: updateError } = await supabase
+        .from('sov_entries')
+        .update(updateData)
+        .eq('job_id', jobId)
+        .eq('sov_item_id', finalSovItemId)
+        .select(`
+          id,
+          job_id,
+          sov_item_id,
+          quantity,
+          unit_price,
+          extended_price,
+          retainage_type,
+          retainage_value,
+          retainage_amount,
+          notes,
+          sort_order,
+          created_at,
+          updated_at,
+          sov_items (
+            id,
+            item_number,
+            display_item_number,
+            description,
+            display_name,
+            work_type
+          )
+        `)
+        .single();
+
+      console.log('[SOV API POST] Update result:', { data: !!updateDataResult, error: updateError });
+
+      if (updateError) {
+        console.error('[SOV API POST] Error updating existing SOV entry:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update SOV entry', details: updateError },
+          { status: 500 }
+        );
+      }
+
+      data = updateDataResult;
+      console.log('[SOV API POST] Successfully updated existing SOV entry');
+    } else if (error) {
       console.error('[SOV API POST] Error creating SOV entry:', error);
       return NextResponse.json(
         { error: 'Failed to create SOV entry', details: error },
@@ -258,6 +307,14 @@ export async function POST(
     }
 
     console.log('[SOV API POST] Raw data from insert:', JSON.stringify(data, null, 2));
+
+    if (!data) {
+      console.error('[SOV API POST] No data returned from database operation');
+      return NextResponse.json(
+        { error: 'No data returned from database operation' },
+        { status: 500 }
+      );
+    }
 
     // Transform response to match expected format
     const transformedData = {
