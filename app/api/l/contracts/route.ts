@@ -159,6 +159,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('API: contractId:', contractId);
+    console.log('API: contractData received:', contractData);
+    console.log('API: dbData transformed:', dbData);
+
     // Generate next internal contract ID (C-0001, C-0002, ...)
     const { data: latest, error: latestError } = await supabase
       .from('jobs_l')
@@ -189,7 +193,10 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: result, error: upsertError } = contractId 
+    console.log('API: About to perform upsert, contractId exists:', !!contractId);
+    console.log('API: Update data being sent:', contractId ? { ...dbData, updated_at: new Date().toISOString() } : insertData);
+
+    const { data: result, error: upsertError } = contractId
       ? await supabase
         .from('jobs_l')
         .update({ ...dbData, updated_at: new Date().toISOString() })
@@ -201,6 +208,9 @@ export async function POST(request: NextRequest) {
         .insert(insertData)
         .select()
         .single();
+
+    console.log('API: Upsert result:', result);
+    console.log('API: Upsert error:', upsertError);
 
     if (upsertError) {
       console.error('Error upserting contract:', upsertError);
