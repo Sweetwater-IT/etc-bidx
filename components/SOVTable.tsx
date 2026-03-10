@@ -3,6 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { QuantityInput } from '@/components/ui/quantity-input';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { InputGroup } from '@/components/ui/input-group';
 import { useSovItems } from '@/hooks/useSovItems';
 import {
   Popover,
@@ -403,27 +406,27 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
                     <span className="text-xs px-1">{item.uom}</span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <Input
-                      className="h-7 text-xs text-right w-[70px]"
-                      type="number"
-                      step="1"
-                      min="0"
-                      value={item.quantity || ''}
-                      onChange={(e) => updateRow(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                    <QuantityInput
+                      value={item.quantity}
+                      onChange={(value) => updateRow(item.id, 'quantity', value)}
+                      className="justify-center"
                     />
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <Input
+                    <CurrencyInput
+                      value={item.unitPrice.toString()}
+                      onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
                       className="h-7 text-xs text-right w-[100px]"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={item.unitPrice || ''}
-                      onChange={(e) => updateRow(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                     />
                   </TableCell>
-                  <TableCell className="p-1.5 text-right text-xs font-medium">
-                    ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  <TableCell className="p-1.5">
+                    <InputGroup
+                      value={item.extendedPrice.toString()}
+                      onValueChange={(value) => updateRow(item.id, 'extendedPrice', parseFloat(value) || 0)}
+                      type={item.retainageType}
+                      onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                      className="w-[110px]"
+                    />
                   </TableCell>
                   <TableCell className="p-1.5">
                     <div className="flex items-center gap-1">

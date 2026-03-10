@@ -12,6 +12,7 @@ export function useSovItems(jobId: string | undefined) {
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
+  const originalItemsRef = useRef<ScheduleOfValuesItem[]>([]);
 
   // Fetch SOV items
   const fetchItems = useCallback(async () => {
@@ -36,6 +37,7 @@ export function useSovItems(jobId: string | undefined) {
           notes: item.notes || '',
         }));
         setItems(formattedItems);
+        originalItemsRef.current = formattedItems;
       } else {
         console.error('Failed to fetch SOV items');
       }
@@ -57,8 +59,8 @@ export function useSovItems(jobId: string | undefined) {
     return Math.round(value * 100) / 100;
   };
 
-  // Save items to database
-  const saveItems = useCallback(async (itemsToSave: ScheduleOfValuesItem[]) => {
+  // Save items to database with proper change tracking
+  const saveItems = useCallback(async (currentItems: ScheduleOfValuesItem[]) => {
     if (!jobId) return;
 
     // Wait for any in-flight save
@@ -71,26 +73,49 @@ export function useSovItems(jobId: string | undefined) {
 
     const promise = (async () => {
       try {
-        // Delete all existing items and insert new ones (simpler than diffing)
-        const deleteResponse = await fetch(`/api/l/jobs/${jobId}/sov-items`, {
-          method: 'GET',
-        });
-        if (deleteResponse.ok) {
-          const existingData = await deleteResponse.json();
-          const existingIds = existingData.data.map((item: any) => item.id);
+        const originalItems = originalItemsRef.current;
+        const currentItemIds = new Set(currentItems.map(item => item.id));
+        const originalItemIds = new Set(originalItems.map(item => item.id));
 
-          // Delete existing items
-          await Promise.all(
-            existingIds.map((id: string) =>
-              fetch(`/api/l/jobs/${jobId}/sov-items/${id}`, { method: 'DELETE' })
-            )
+        // Find items to delete (in original but not in current)
+        const itemsToDelete = originalItems.filter(item => !currentItemIds.has(item.id));
+
+        // Find items to create (in current but not in original)
+        const itemsToCreate = currentItems.filter(item => !originalItemIds.has(item.id));
+
+        // Find items to update (in both, but potentially changed)
+        const itemsToUpdate = currentItems.filter(currentItem => {
+          const originalItem = originalItems.find(orig => orig.id === currentItem.id);
+          if (!originalItem) return false;
+
+          // Check if any significant fields changed
+          return (
+            originalItem.quantity !== currentItem.quantity ||
+            originalItem.unitPrice !== currentItem.unitPrice ||
+            originalItem.retainageType !== currentItem.retainageType ||
+            originalItem.retainageValue !== currentItem.retainageValue ||
+            originalItem.notes !== currentItem.notes
+          );
+        });
+
+        // Execute operations in order: delete, create, update
+        const operations: Promise<any>[] = [];
+
+        // Delete operations
+        for (const item of itemsToDelete) {
+          operations.push(
+            fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, { method: 'DELETE' })
+              .then(response => {
+                if (!response.ok) throw new Error(`Failed to delete item ${item.itemNumber}`);
+                return response;
+              })
           );
         }
 
-        // Insert new items
-        await Promise.all(
-          itemsToSave.map(async (item, index) => {
-            const response = await fetch(`/api/l/jobs/${jobId}/sov-items`, {
+        // Create operations
+        for (const item of itemsToCreate) {
+          operations.push(
+            fetch(`/api/l/jobs/${jobId}/sov-items`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -102,18 +127,41 @@ export function useSovItems(jobId: string | undefined) {
                 retainage_type: item.retainageType,
                 retainage_value: item.retainageValue,
                 notes: item.notes,
-                sort_order: index + 1,
+                sort_order: currentItems.indexOf(item) + 1,
               }),
-            });
+            }).then(response => {
+              if (!response.ok) throw new Error(`Failed to create item ${item.itemNumber}`);
+              return response.json();
+            })
+          );
+        }
 
-            if (!response.ok) {
-              throw new Error(`Failed to save item ${item.itemNumber}`);
-            }
+        // Update operations
+        for (const item of itemsToUpdate) {
+          operations.push(
+            fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                quantity: item.quantity,
+                unit_price: item.unitPrice,
+                retainage_type: item.retainageType,
+                retainage_value: item.retainageValue,
+                notes: item.notes,
+                sort_order: currentItems.indexOf(item) + 1,
+              }),
+            }).then(response => {
+              if (!response.ok) throw new Error(`Failed to update item ${item.itemNumber}`);
+              return response.json();
+            })
+          );
+        }
 
-            const result = await response.json();
-            return result.data;
-          })
-        );
+        // Execute all operations
+        await Promise.all(operations);
+
+        // Update original items reference with current state
+        originalItemsRef.current = currentItems.map(item => ({ ...item }));
 
         setSaveStatus('saved');
         // Reset to idle after a moment
@@ -122,6 +170,7 @@ export function useSovItems(jobId: string | undefined) {
         console.error('[SOV save error]', err);
         setSaveStatus('error');
         toast.error(`SOV save failed: ${err.message}`);
+        throw err; // Re-throw to allow caller to handle
       } finally {
         setSaving(false);
       }
