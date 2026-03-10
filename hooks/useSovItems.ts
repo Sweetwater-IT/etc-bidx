@@ -63,7 +63,8 @@ export function useSovItems(jobId: string | undefined) {
   const isItemValidForSave = useCallback((item: ScheduleOfValuesItem): boolean => {
     // Skip temporary items that haven't been properly saved yet
     if (typeof item.id === 'string' && item.id.startsWith('temp-')) {
-      return false;
+      // Allow temp items if they have an item number selected (from dropdown)
+      return !!(item.itemNumber && item.itemNumber.trim());
     }
 
     // Item must have either:
@@ -200,7 +201,19 @@ export function useSovItems(jobId: string | undefined) {
             notes: item.notes,
             sort_order: currentItems.indexOf(item) + 1,
           };
-          console.log(`[SOV save] Create operation ${operationIndex}: item ${item.itemNumber}`, payload);
+          console.log(`[SOV save] Create operation ${operationIndex}: item ${item.itemNumber}`, {
+            timestamp: new Date().toISOString(),
+            url: `/api/l/jobs/${jobId}/sov-items`,
+            method: 'POST',
+            payload,
+            itemDetails: {
+              id: item.id,
+              itemNumber: item.itemNumber,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice
+            }
+          });
 
           operations.push(
             fetch(`/api/l/jobs/${jobId}/sov-items`, {
@@ -209,18 +222,44 @@ export function useSovItems(jobId: string | undefined) {
               body: JSON.stringify(payload),
             })
               .then(async response => {
-                console.log(`[SOV save] Create response for ${item.itemNumber}:`, response.status, response.statusText);
+                const responseTimestamp = new Date().toISOString();
+                console.log(`[SOV save] Create response for ${item.itemNumber}:`, {
+                  timestamp: responseTimestamp,
+                  status: response.status,
+                  statusText: response.statusText,
+                  ok: response.ok,
+                  url: response.url
+                });
+
                 if (!response.ok) {
                   const errorText = await response.text();
-                  console.error(`[SOV save] Create failed for ${item.itemNumber}:`, errorText);
+                  console.error(`[SOV save] Create failed for ${item.itemNumber}:`, {
+                    timestamp: responseTimestamp,
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText,
+                    payload,
+                    jobId
+                  });
                   throw new Error(`Failed to create item ${item.itemNumber}: ${response.status} ${response.statusText} - ${errorText}`);
                 }
+
                 const result = await response.json();
-                console.log(`[SOV save] Create success for ${item.itemNumber}:`, result);
+                console.log(`[SOV save] Create success for ${item.itemNumber}:`, {
+                  timestamp: responseTimestamp,
+                  result,
+                  itemNumber: item.itemNumber
+                });
                 return result;
               })
               .catch(error => {
-                console.error(`[SOV save] Create operation failed for ${item.itemNumber}:`, error);
+                console.error(`[SOV save] Create operation failed for ${item.itemNumber}:`, {
+                  timestamp: new Date().toISOString(),
+                  error: error.message,
+                  stack: error.stack,
+                  itemNumber: item.itemNumber,
+                  payload
+                });
                 throw error;
               })
           );

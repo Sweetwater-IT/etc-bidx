@@ -81,7 +81,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
-  const { items, loading: sovLoading, saving, updateItems } = useSovItems(jobId);
+  const { items, loading: sovLoading, saving, updateItems, saveNow } = useSovItems(jobId);
 
   console.log('[SOVTable] useSovItems hook returned:', { items: items.length, loading: sovLoading, saving });
 
@@ -293,6 +293,15 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
         </h2>
         {!readOnly && (
           <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={saveNow}
+              disabled={saving}
+              className="h-7 text-xs gap-1"
+            >
+              {saving ? 'Saving...' : 'Save SOV'}
+            </Button>
             <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
               <Plus className="h-3 w-3" /> Add Line Item
             </Button>
