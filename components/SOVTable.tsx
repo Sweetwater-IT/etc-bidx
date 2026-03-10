@@ -43,7 +43,13 @@ import { ClipboardList, Plus, Trash2, Check, ChevronsUpDown, MessageSquare, Penc
 import { cn } from '@/lib/utils';
 interface SovMasterItem {
   id: number;
-  item_number: string
+  item_number: string;
+  display_item_number: string;
+  description: string;
+  display_name: string;
+  work_type: string;
+}
+
 import type { ScheduleOfValuesItem } from '@/types/job';
 
 interface SOVTableProps {
@@ -67,8 +73,28 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
 }
 
 export const SOVTable = ({ jobId }: SOVTableProps) => {
-  const { products, loading: productsLoading } = useProductsSearch('');
+  const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
+  const [sovMasterLoading, setSovMasterLoading] = useState(false);
   const { items, loading: sovLoading, saving, updateItems } = useSovItems(jobId);
+
+  useEffect(() => {
+    const fetchSovItems = async () => {
+      setSovMasterLoading(true);
+      try {
+        const response = await fetch('/api/sov-items');
+        if (response.ok) {
+          const data = await response.json();
+          setSovProducts(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching SOV items:', error);
+      } finally {
+        setSovMasterLoading(false);
+      }
+    };
+
+    fetchSovItems();
+  }, []);
 
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -80,12 +106,13 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
 
   const filteredItems = useMemo(
     () =>
-      products.filter(
+      sovProducts.filter(
         (p) =>
           p.item_number.toLowerCase().includes(search.toLowerCase()) ||
+          p.display_name.toLowerCase().includes(search.toLowerCase()) ||
           p.description.toLowerCase().includes(search.toLowerCase())
       ),
-    [products, search]
+    [sovProducts, search]
   );
 
   const addRow = () => {
@@ -130,11 +157,11 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
     );
   };
 
-  const selectMasterItem = (rowId: string, master: { item_number: string; description: string; uom: string }) => {
+  const selectMasterItem = (rowId: string, master: SovMasterItem) => {
     updateItems(
       items.map((item) =>
         item.id === rowId
-          ? { ...item, itemNumber: master.item_number, description: master.description, uom: master.uom }
+          ? { ...item, itemNumber: master.item_number, description: master.display_name, uom: 'EA' }
           : item
       )
     );
@@ -309,7 +336,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
             </TableHeader>
             <TableBody>
               {items.map((item) => {
-                const isCustom = item.itemNumber && !products.some(p => p.item_number === item.itemNumber);
+                const isCustom = item.itemNumber && !sovProducts.some(p => p.item_number === item.itemNumber);
                 return (
                 <TableRow key={item.id}>
                   <TableCell className="p-1.5">
@@ -348,7 +375,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
                                 {filteredItems.slice(0, 50).map((p) => (
                                   <CommandItem
                                     key={p.id}
-                                    value={`${p.item_number} ${p.description}`}
+                                    value={`${p.item_number} ${p.display_name}`}
                                     onSelect={() => selectMasterItem(item.id, p)}
                                     className="text-xs"
                                   >
@@ -359,7 +386,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
                                       )}
                                     />
                                     <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                    <span className="truncate">{p.description}</span>
+                                    <span className="truncate">{p.display_name}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
