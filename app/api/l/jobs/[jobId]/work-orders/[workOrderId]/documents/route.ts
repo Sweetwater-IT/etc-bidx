@@ -40,7 +40,7 @@ export async function POST(
 
       // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
-        .from("contract-documents")
+        .from("contracts")
         .upload(filePath, file);
 
       if (uploadError) {
@@ -107,7 +107,7 @@ export async function DELETE(
 
     // Delete from storage
     const { error: storageErr } = await supabase.storage
-      .from("contract-documents")
+      .from("contracts")
       .remove([doc.file_path]);
 
     if (storageErr) {

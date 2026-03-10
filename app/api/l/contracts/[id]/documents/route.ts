@@ -43,7 +43,7 @@ export async function POST(
       const filePath = `${jobId}/${category}/${Date.now()}_${file.name}`;
 
       const { error: uploadErr } = await supabase.storage
-        .from("contract-documents")
+        .from("contracts")
         .upload(filePath, file, { upsert: false });
 
       if (uploadErr) {
@@ -109,7 +109,7 @@ export async function DELETE(
 
     // Delete from storage
     if (doc.file_path) {
-      await supabase.storage.from("contract-documents").remove([doc.file_path]);
+      await supabase.storage.from("contracts").remove([doc.file_path]);
     }
 
     // Delete from database
