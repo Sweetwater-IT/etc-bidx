@@ -64,8 +64,8 @@ export function useSovItems(jobId: string | undefined) {
     // Item must have either:
     // 1. A sov_item_id (from master items), OR
     // 2. Both itemNumber and description (custom item)
-    const hasMasterItem = item.id && item.itemNumber && !item.itemNumber.startsWith('temp-'); // Items with real IDs from DB
-    const hasCustomItem = item.itemNumber && item.itemNumber.trim() && item.description && item.description.trim();
+    const hasMasterItem = !!(item.id && item.itemNumber && !item.itemNumber.startsWith('temp-')); // Items with real IDs from DB
+    const hasCustomItem = !!(item.itemNumber && item.itemNumber.trim() && item.description && item.description.trim());
 
     return hasMasterItem || hasCustomItem;
   }, []);
