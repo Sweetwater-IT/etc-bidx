@@ -318,6 +318,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             const contractData = {
               contractId,
               data: {
+                // Preserve existing contract status or default to CONTRACT_RECEIPT
+                contract_status: contractRow?.contract_status || "CONTRACT_RECEIPT",
                 project_name: projectInfo.projectName,
                 contract_number: projectInfo.contractNumber,
                 customer_name: projectInfo.customerName,
@@ -355,7 +357,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
                 extension_date: projectInfo.extensionDate,
               }
             };
+            console.log('Autosave: sending contract data:', contractData);
             const result = await saveContract(contractData);
+            console.log('Autosave: received result:', result);
             setContractRow(result);
             setLastSavedAt(new Date());
             setFirstSave(true);
@@ -381,6 +385,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       const contractData = {
         contractId,
         data: {
+          // Preserve existing contract status or default to CONTRACT_RECEIPT
+          contract_status: contractRow?.contract_status || "CONTRACT_RECEIPT",
           project_name: projectInfo.projectName,
           contract_number: projectInfo.contractNumber,
           customer_name: projectInfo.customerName,
@@ -418,7 +424,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           extension_date: projectInfo.extensionDate,
         }
       };
+      console.log('Manual save: sending contract data:', contractData);
       const result = await saveContract(contractData);
+      console.log('Manual save: received result:', result);
       setContractRow(result);
       setLastSavedAt(new Date());
       setFirstSave(true);
