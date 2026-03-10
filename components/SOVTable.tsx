@@ -57,6 +57,7 @@ import type { ScheduleOfValuesItem } from '@/types/job';
 
 interface SOVTableProps {
   jobId?: string;
+  readOnly?: boolean;
 }
 
 interface CustomItemDraft {
@@ -75,7 +76,7 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
   return Math.round(value * 100) / 100;
 }
 
-export const SOVTable = ({ jobId }: SOVTableProps) => {
+export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
   const { items, loading: sovLoading, saving, updateItems } = useSovItems(jobId);
@@ -280,14 +281,16 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
           <ClipboardList className="h-4 w-4 text-muted-foreground" />
           Schedule of Values
         </h2>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
-            <Plus className="h-3 w-3" /> Add Line Item
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-7 text-xs gap-1">
-            <Plus className="h-3 w-3" /> Add Custom Item
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
+              <Plus className="h-3 w-3" /> Add Line Item
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-7 text-xs gap-1">
+              <Plus className="h-3 w-3" /> Add Custom Item
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Bulk retainage controls */}
@@ -407,101 +410,127 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
                     <span className="text-xs px-1">{item.uom}</span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <QuantityInput
-                      value={item.quantity}
-                      onChange={(value) => updateRow(item.id, 'quantity', value)}
-                      className="justify-center"
-                    />
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <CurrencyInput
-                      value={item.unitPrice.toString()}
-                      onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                      className="h-7 text-xs text-right w-[100px]"
-                    />
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <InputGroup
-                      value={item.extendedPrice.toString()}
-                      onValueChange={(value) => updateRow(item.id, 'extendedPrice', parseFloat(value) || 0)}
-                      type={item.retainageType}
-                      onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                      className="w-[110px]"
-                    />
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <div className="flex items-center gap-1">
-                      <Select
-                        value={item.retainageType}
-                        onValueChange={(v) => updateRow(item.id, 'retainageType', v)}
-                      >
-                        <SelectTrigger className="h-7 w-[50px] text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percent">%</SelectItem>
-                          <SelectItem value="dollar">$</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        className="h-7 text-xs text-right w-[70px]"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.retainageValue || ''}
-                        onChange={(e) => updateRow(item.id, 'retainageValue', parseFloat(e.target.value) || 0)}
+                    {readOnly ? (
+                      <span className="text-xs text-right block px-1">{item.quantity}</span>
+                    ) : (
+                      <QuantityInput
+                        value={item.quantity}
+                        onChange={(value) => updateRow(item.id, 'quantity', value)}
+                        className="justify-center"
                       />
-                    </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    {readOnly ? (
+                      <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    ) : (
+                      <CurrencyInput
+                        value={item.unitPrice.toString()}
+                        onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                        className="h-7 text-xs text-right w-[100px]"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    {readOnly ? (
+                      <span className="text-xs text-right block px-1">${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    ) : (
+                      <InputGroup
+                        value={item.extendedPrice.toString()}
+                        onValueChange={(value) => updateRow(item.id, 'extendedPrice', parseFloat(value) || 0)}
+                        type={item.retainageType}
+                        onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                        className="w-[110px]"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    {readOnly ? (
+                      <span className="text-xs text-right block px-1">
+                        {item.retainageType === 'percent' ? `${item.retainageValue}%` : `$${item.retainageValue}`}
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Select
+                          value={item.retainageType}
+                          onValueChange={(v) => updateRow(item.id, 'retainageType', v)}
+                        >
+                          <SelectTrigger className="h-7 w-[50px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percent">%</SelectItem>
+                            <SelectItem value="dollar">$</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          className="h-7 text-xs text-right w-[70px]"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.retainageValue || ''}
+                          onChange={(e) => updateRow(item.id, 'retainageValue', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
                     ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell className="p-1.5 text-center">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn('h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-3" align="end">
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-foreground">Scope Notes</label>
-                          <textarea
-                            className="text-xs min-h-[80px] resize-none w-full p-2 border rounded"
-                            placeholder="Add notes about scope, special instructions, etc."
-                            value={item.notes || ''}
-                            onChange={(e) => updateRow(item.id, 'notes', e.target.value)}
-                          />
-                          <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    {readOnly ? (
+                      <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </div>
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn('h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-3" align="end">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-foreground">Scope Notes</label>
+                            <textarea
+                              className="text-xs min-h-[80px] resize-none w-full p-2 border rounded"
+                              placeholder="Add notes about scope, special instructions, etc."
+                              value={item.notes || ''}
+                              onChange={(e) => updateRow(item.id, 'notes', e.target.value)}
+                            />
+                            <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <div className="flex items-center gap-0.5">
-                      {isCustom && (
+                    {!readOnly && (
+                      <div className="flex items-center gap-0.5">
+                        {isCustom && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => openCustomDialog(item.id)}
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => openCustomDialog(item.id)}
+                          onClick={() => removeRow(item.id)}
                         >
-                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeRow(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
                 );
