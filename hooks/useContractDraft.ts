@@ -46,18 +46,15 @@ const useContractStore = create<ContractState & {
 }));
 
 async function upsertDraft(params: { contractId?: string; data: Record<string, unknown> }) {
-  const url = params.contractId
-    ? `/api/l/contracts/${params.contractId}`
-    : '/api/l/contracts';
+  const url = '/api/l/contracts';
+  const method = 'POST';
 
-  const method = params.contractId ? 'PATCH' : 'POST';
-
-  console.log('[HOOK] upsertDraft', { url, method, data: params.data });
+  console.log('[HOOK] upsertDraft', { url, method, params });
 
   const response = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params.data),
+    body: JSON.stringify(params),
   });
 
   if (!response.ok) {
