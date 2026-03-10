@@ -112,11 +112,55 @@ export async function GET(
       // Work order items
       supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
 
-      // SOV items for picklist — try dedicated table first, fall back to JSONB column
-      supabase.from("sov_items").select("id, item_number, description, quantity, uom").eq("job_id", jobId).order("sort_order", { ascending: true }),
+      // SOV items for picklist — query sov_entries joined with sov_items for job-specific items
+      supabase
+        .from("sov_entries")
+        .select(`
+          id,
+          quantity,
+          unit_price,
+          extended_price,
+          retainage_type,
+          retainage_value,
+          retainage_amount,
+          notes,
+          sov_item_id,
+          sov_items!inner (
+            id,
+            item_number,
+            display_item_number,
+            description,
+            display_name,
+            work_type
+          )
+        `)
+        .eq("job_id", jobId)
+        .order("sort_order", { ascending: true }),
 
-      // Full SOV items with pricing for PDFs
-      supabase.from("sov_items").select("id, item_number, description, quantity, uom, unit_price, extended_price, retainage_type, retainage_value, retainage_amount, notes").eq("job_id", jobId).order("sort_order", { ascending: true }),
+      // Full SOV items with pricing for PDFs — same query but with all fields
+      supabase
+        .from("sov_entries")
+        .select(`
+          id,
+          quantity,
+          unit_price,
+          extended_price,
+          retainage_type,
+          retainage_value,
+          retainage_amount,
+          notes,
+          sov_item_id,
+          sov_items!inner (
+            id,
+            item_number,
+            display_item_number,
+            description,
+            display_name,
+            work_type
+          )
+        `)
+        .eq("job_id", jobId)
+        .order("sort_order", { ascending: true }),
 
       // Documents linked to this work order (via job + checklist)
       supabase.from("documents_l").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
@@ -175,15 +219,15 @@ export async function GET(
     // Process work order items
     const woItems: WOItem[] = (woItemsRes.data || []) as WOItem[];
 
-    // Process SOV items
+    // Process SOV items (from joined query)
     let sovItems: { id: string; item_number: string; description: string; quantity: number; uom: string }[] = [];
     if (sovRes.data && sovRes.data.length > 0) {
       sovItems = sovRes.data.map((s: any) => ({
-        id: s.id,
-        item_number: s.item_number || "",
-        description: s.description || "",
+        id: s.sov_item_id, // Use the sov_item_id as the ID for the dropdown
+        item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
+        description: s.sov_items?.description || s.sov_items?.display_name || "",
         quantity: Number(s.quantity) || 0,
-        uom: s.uom || "EA",
+        uom: "EA", // Default UOM since it's not in the joined data
       }));
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
@@ -202,14 +246,14 @@ export async function GET(
       }));
     }
 
-    // Process full SOV items with pricing
+    // Process full SOV items with pricing (from joined query)
     let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
     if (sovFullRes.data && sovFullRes.data.length > 0) {
       sovItemsFull = sovFullRes.data.map((s: any) => ({
-        id: s.id,
-        itemNumber: s.item_number || "",
-        description: s.description || "",
-        uom: s.uom || "EA",
+        id: s.sov_item_id, // Use the sov_item_id as the ID
+        itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
+        description: s.sov_items?.description || s.sov_items?.display_name || "",
+        uom: "EA", // Default UOM
         quantity: Number(s.quantity) || 0,
         unitPrice: Number(s.unit_price) || 0,
         extendedPrice: Number(s.extended_price) || 0,
