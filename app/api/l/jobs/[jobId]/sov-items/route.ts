@@ -82,7 +82,65 @@ export async function POST(
   try {
     const { jobId } = await params;
     const body = await request.json();
-    const { sov_item_id, quantity, unit_price, retainage_type, retainage_value, notes } = body;
+    const {
+      sov_item_id,
+      item_number,
+      description,
+      uom,
+      quantity,
+      unit_price,
+      retainage_type,
+      retainage_value,
+      notes,
+      sort_order
+    } = body;
+
+    let finalSovItemId = sov_item_id;
+
+    // If no sov_item_id provided, try to find existing master item or create one
+    if (!finalSovItemId && item_number) {
+      // First, try to find existing master item
+      const { data: existingItem } = await supabase
+        .from('sov_items')
+        .select('id')
+        .eq('item_number', item_number)
+        .single();
+
+      if (existingItem) {
+        finalSovItemId = existingItem.id;
+      } else {
+        // Create new master item for custom item
+        const { data: newItem, error: createError } = await supabase
+          .from('sov_items')
+          .insert({
+            item_number,
+            display_item_number: item_number,
+            description: description || '',
+            display_name: description || item_number,
+            work_type: 'OTHER',
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          console.error('Error creating master SOV item:', createError);
+          return NextResponse.json(
+            { error: 'Failed to create master SOV item' },
+            { status: 500 }
+          );
+        }
+
+        finalSovItemId = newItem.id;
+      }
+    }
+
+    // Validate we have a sov_item_id
+    if (!finalSovItemId) {
+      return NextResponse.json(
+        { error: 'Missing sov_item_id or item_number' },
+        { status: 400 }
+      );
+    }
 
     // Calculate extended price and retainage amount
     const extended_price = quantity * unit_price;
@@ -90,21 +148,24 @@ export async function POST(
       ? extended_price * (retainage_value / 100)
       : retainage_value;
 
-    // Get next sort order
-    const { data: maxSort } = await supabase
-      .from('sov_entries')
-      .select('sort_order')
-      .eq('job_id', jobId)
-      .order('sort_order', { ascending: false })
-      .limit(1);
+    // Get next sort order if not provided
+    let finalSortOrder = sort_order;
+    if (!finalSortOrder) {
+      const { data: maxSort } = await supabase
+        .from('sov_entries')
+        .select('sort_order')
+        .eq('job_id', jobId)
+        .order('sort_order', { ascending: false })
+        .limit(1);
 
-    const nextSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
+      finalSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
+    }
 
     const { data, error } = await supabase
       .from('sov_entries')
       .insert({
         job_id: jobId,
-        sov_item_id,
+        sov_item_id: finalSovItemId,
         quantity,
         unit_price,
         extended_price,
@@ -112,7 +173,7 @@ export async function POST(
         retainage_value,
         retainage_amount,
         notes,
-        sort_order: nextSortOrder,
+        sort_order: finalSortOrder,
       })
       .select(`
         id,
