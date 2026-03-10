@@ -425,7 +425,9 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                 return (
                 <TableRow key={item.id}>
                   <TableCell className="p-1.5">
-                    {isCustom ? (
+                    {readOnly ? (
+                      <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
+                    ) : isCustom ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
                       <Popover

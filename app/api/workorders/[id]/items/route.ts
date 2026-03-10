@@ -78,10 +78,21 @@ export async function POST(
     } else if (action === 'update') {
       // Update existing item
       const { itemId, updates } = itemData;
+      console.log('[WO Items API] Update request:', { itemId: itemId, itemIdType: typeof itemId, updates });
+
+      // Convert itemId to integer if it's a string (UUID)
+      const numericItemId = typeof itemId === 'string' ? parseInt(itemId, 10) : itemId;
+      console.log('[WO Items API] Converted itemId:', { original: itemId, converted: numericItemId, isValid: !isNaN(numericItemId) });
+
+      if (isNaN(numericItemId)) {
+        console.error('[WO Items API] Invalid itemId - cannot convert to integer:', itemId);
+        return NextResponse.json({ error: 'Invalid item ID format' }, { status: 400 });
+      }
+
       const { error } = await supabase
         .from("work_order_items_l")
         .update(updates)
-        .eq("id", itemId);
+        .eq("id", numericItemId);
 
       if (error) {
         console.error('Error updating work order item:', error);
