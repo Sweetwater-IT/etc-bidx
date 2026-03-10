@@ -14,7 +14,7 @@ export async function POST(
 
     // Get work order to get job_id
     const { data: workOrder, error: woError } = await supabase
-      .from('work_orders')
+      .from('work_orders_l')
       .select('job_id')
       .eq('id', id)
       .single();

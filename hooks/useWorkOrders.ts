@@ -86,7 +86,7 @@ export const useWorkOrderStore = create<WorkOrderState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { data, error } = await supabase
-        .from("work_orders")
+        .from("work_orders_l")
         .select("*")
         .eq("id", workOrderId)
         .single();
@@ -102,7 +102,7 @@ export const useWorkOrderStore = create<WorkOrderState>((set, get) => ({
   updateWorkOrder: async (workOrderId: string, patch: Partial<WorkOrder>) => {
     try {
       const { data, error } = await supabase
-        .from("work_orders")
+        .from("work_orders_l")
         .update(patch)
         .eq("id", workOrderId)
         .select()
@@ -123,13 +123,13 @@ export const useWorkOrderStore = create<WorkOrderState>((set, get) => ({
   deleteWorkOrder: async (workOrderId: string) => {
     try {
       const { data: workOrder } = await supabase
-        .from("work_orders")
+        .from("work_orders_l")
         .select("job_id")
         .eq("id", workOrderId)
         .single();
 
       const { error } = await supabase
-        .from("work_orders")
+        .from("work_orders_l")
         .delete()
         .eq("id", workOrderId);
 

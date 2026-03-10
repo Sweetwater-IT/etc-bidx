@@ -72,6 +72,24 @@ export async function PATCH(
 
     console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, updateData);
 
+    // Get current contract to check version
+    const { data: currentContract, error: currentError } = await supabase
+      .from('jobs_l')
+      .select('version')
+      .eq('id', contractId)
+      .single();
+
+    if (currentError) {
+      console.error('Error fetching current contract:', currentError);
+      return NextResponse.json({ error: 'Failed to fetch contract' }, { status: 500 });
+    }
+
+    // Check version conflict
+    if (updateData.clientVersion !== undefined && updateData.clientVersion !== currentContract.version) {
+      console.error('Version conflict detected:', { clientVersion: updateData.clientVersion, serverVersion: currentContract.version });
+      return NextResponse.json({ error: 'Version conflict detected' }, { status: 409 });
+    }
+
     // Convert camelCase field names to snake_case for database
     const fieldMapping: Record<string, string> = {
       contractStatus: 'contract_status',
@@ -106,9 +124,13 @@ export async function PATCH(
     // Transform camelCase fields to snake_case
     const transformedData: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updateData)) {
+      if (key === 'clientVersion') continue; // Skip version from client
       const snakeKey = fieldMapping[key] || key;
       transformedData[snakeKey] = value;
     }
+
+    // Increment version
+    transformedData.version = (currentContract.version || 0) + 1;
 
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
     if (transformedData.contract_status === 'CONTRACT_SIGNED') {

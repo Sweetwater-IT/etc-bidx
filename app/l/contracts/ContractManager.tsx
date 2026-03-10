@@ -189,7 +189,8 @@ const ContractManager = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractStatus: newStatus
+          contractStatus: newStatus,
+          clientVersion: job.version || 0
         }),
       });
 
@@ -277,7 +278,8 @@ const ContractManager = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractStatus: "CONTRACT_SIGNED"
+          contractStatus: "CONTRACT_SIGNED",
+          clientVersion: (job.version || 0) + 1 // Assume previous PATCH incremented version
         }),
       });
 

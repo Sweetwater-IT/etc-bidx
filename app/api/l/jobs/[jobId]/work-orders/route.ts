@@ -13,7 +13,7 @@ export async function GET(
     }
 
     const { data, error } = await supabase
-      .from('work_orders')
+      .from('work_orders_l')
       .select('id, wo_number, title, status, updated_at')
       .eq('job_id', jobId)
       .in('status', ['completed', 'ready', 'scheduled'])
