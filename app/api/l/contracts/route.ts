@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const contractData = body;
+    const { contractId, data } = body;
+    const contractData = data;
 
     if (!contractData || typeof contractData !== 'object') {
       return NextResponse.json(
@@ -206,12 +207,58 @@ export async function POST(request: NextRequest) {
       etcJobNumber: row.etc_job_number,
       etcBranch: row.etc_branch,
       county: row.county,
-      stateRoute: row.state_route,
+      etcProjectManager: row.etc_project_manager,
       projectStartDate: row.project_start_date,
       projectEndDate: row.project_end_date,
-      additionalNotes
+      contractStatus: row.contract_status,
+      projectStatus: row.project_status,
+      billingStatus: row.billing_status,
+      archived: row.archived,
+      createdAt: row.created_at,
+      approverPmUserId: row.approver_pm_user_id,
+      submittedForApprovalAt: row.submitted_for_approval_at,
+      submittedForApprovalBy: row.submitted_for_approval_by,
+      approvedAt: row.approved_at,
+      approvedBy: row.approved_by,
+      approvalNotes: row.approval_notes,
+      rejectedAt: row.rejected_at,
+      rejectedBy: row.rejected_by,
+      rejectionReason: row.rejection_reason,
+      rejectionNotes: row.rejection_notes,
+      additionalNotes: row.additional_notes,
+      certifiedPayrollType: row.certified_payroll_type,
+      shopRate: row.shop_rate,
+      stateBaseRate: row.state_base_rate,
+      stateFringeRate: row.state_fringe_rate,
+      stateFlaggingBaseRate: row.state_flagging_base_rate,
+      stateFlaggingFringeRate: row.state_flagging_fringe_rate,
+      federalBaseRate: row.federal_base_rate,
+      federalFringeRate: row.federal_fringe_rate,
+      federalFlaggingBaseRate: row.federal_flagging_base_rate,
+      federalFlaggingFringeRate: row.federal_flagging_fringe_rate,
+      customerPm: row.customer_pm,
+      customerPmEmail: row.customer_pm_email,
+      customerPmPhone: row.customer_pm_phone,
+      certifiedPayrollContact: row.certified_payroll_contact,
+      certifiedPayrollEmail: row.certified_payroll_email,
+      certifiedPayrollPhone: row.certified_payroll_phone,
+      customerBillingContact: row.customer_billing_contact,
+      customerBillingEmail: row.customer_billing_email,
+      customerBillingPhone: row.customer_billing_phone,
+      etcBillingManager: row.etc_billing_manager,
+      etcProjectManagerEmail: row.etc_project_manager_email,
+      etcBillingManagerEmail: row.etc_billing_manager_email,
+      extensionDate: row.extension_date,
+      internalId: row.internal_id,
+      version: row.version
+    });
+
+    return NextResponse.json({
+      contract: toCamelCase(result),
+      projectInfo: toCamelCase(result)
+    });
   } catch (error) {
-    console.error('Error in contract create API:', error);
+    console.error('Error in contract upsert API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
