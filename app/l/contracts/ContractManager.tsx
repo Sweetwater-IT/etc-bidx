@@ -122,11 +122,14 @@ const ContractManager = () => {
     const fetchContracts = async () => {
       try {
         setIsLoading(true);
+        console.log('ContractManager: Fetching contracts from /api/l/contracts');
         const response = await fetch('/api/l/contracts');
         if (!response.ok) {
           throw new Error('Failed to fetch contracts');
         }
         const data = await response.json();
+        console.log('ContractManager: Received contracts data:', data);
+        console.log('ContractManager: Number of contracts received:', data.length);
         setJobs(data);
       } catch (error) {
         console.error('Error fetching contracts:', error);

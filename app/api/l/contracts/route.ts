@@ -35,6 +35,14 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('API: Fetching contracts with query:', {
+      select: LIST_COLUMNS,
+      filters: {
+        archived: false,
+        or: `contract_status.in.(${CONTRACT_STATUSES.join(',')}),project_status.eq.NOT STARTED`
+      }
+    });
+
     const { data, error } = await supabase
       .from('jobs_l')
       .select(LIST_COLUMNS)
@@ -46,6 +54,9 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching contracts:', error);
       return NextResponse.json({ error: 'Failed to fetch contracts' }, { status: 500 });
     }
+
+    console.log('API: Raw contracts data from DB:', data);
+    console.log('API: Number of contracts returned from DB:', data?.length || 0);
 
     // Transform snake_case → camelCase for frontend
     const contracts = (data || []).map(row => ({
