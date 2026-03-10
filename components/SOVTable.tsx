@@ -352,15 +352,6 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
         </h2>
         {!readOnly && (
           <div className="flex items-center gap-2">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={saveNow}
-              disabled={saving}
-              className="h-7 text-xs gap-1"
-            >
-              {saving ? 'Saving...' : 'Save SOV'}
-            </Button>
             <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
               <Plus className="h-3 w-3" /> Add Line Item
             </Button>
@@ -539,17 +530,9 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                    ) : (
-                      <InputGroup
-                        value={item.extendedPrice.toString()}
-                        onValueChange={(value) => updateRow(item.id, 'extendedPrice', parseFloat(value) || 0)}
-                        type={item.retainageType}
-                        onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                        className="w-[110px]"
-                      />
-                    )}
+                    <span className="text-xs text-right block px-1 font-medium">
+                      ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
                   </TableCell>
                   <TableCell className="p-1.5">
                     {readOnly ? (

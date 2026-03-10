@@ -314,38 +314,12 @@ export const ScheduleOfValues = ({
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {readOnly ? (
-                          <span className="text-sm">
-                            {item.retainageType === 'percent'
-                              ? `${item.retainageValue}%`
-                              : formatCurrency(item.retainageValue)
-                            }
-                          </span>
-                        ) : (
-                          <div className="flex items-center">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="h-7 text-sm text-right rounded-r-none border-r-0 w-20"
-                              placeholder="0.00"
-                              value={item.retainageValue || ''}
-                              onChange={(e) => updateItem(item.id, { retainageValue: parseFloat(e.target.value) || 0 })}
-                            />
-                            <Select
-                              value={item.retainageType}
-                              onValueChange={(type: 'percent' | 'dollar') => updateItem(item.id, { retainageType: type })}
-                            >
-                              <SelectTrigger className="w-[50px] h-7 rounded-l-none border-l-0">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="percent">%</SelectItem>
-                                <SelectItem value="dollar">$</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                        <span className="text-sm font-medium">
+                          {item.retainageType === 'percent'
+                            ? `${item.retainageValue}%`
+                            : formatCurrency(item.retainageValue)
+                          }
+                        </span>
                       </TableCell>
                       {!readOnly && (
                         <TableCell>
