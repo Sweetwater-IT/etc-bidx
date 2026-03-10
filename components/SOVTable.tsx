@@ -293,8 +293,8 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
         )}
       </div>
 
-      {/* Bulk retainage controls */}
-      {items.length > 0 && (
+      {/* Bulk retainage controls - only show when not read-only */}
+      {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
           <Select value={bulkType} onValueChange={(v) => setBulkType(v as 'percent' | 'dollar')}>

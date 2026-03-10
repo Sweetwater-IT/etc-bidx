@@ -61,13 +61,18 @@ export function useSovItems(jobId: string | undefined) {
 
   // Validate if an item is ready to be saved
   const isItemValidForSave = useCallback((item: ScheduleOfValuesItem): boolean => {
+    // Skip temporary items that haven't been properly saved yet
+    if (typeof item.id === 'string' && item.id.startsWith('temp-')) {
+      return false;
+    }
+
     // Item must have either:
-    // 1. A sov_item_id (from master items), OR
+    // 1. A numeric ID (from database), OR
     // 2. Both itemNumber and description (custom item)
-    const hasMasterItem = !!(item.id && item.itemNumber && !item.itemNumber.startsWith('temp-')); // Items with real IDs from DB
+    const hasDbId = typeof item.id === 'number';
     const hasCustomItem = !!(item.itemNumber && item.itemNumber.trim() && item.description && item.description.trim());
 
-    return hasMasterItem || hasCustomItem;
+    return hasDbId || hasCustomItem;
   }, []);
 
   // Save items to database with proper change tracking

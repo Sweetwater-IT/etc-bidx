@@ -77,6 +77,32 @@ export async function POST(
         }
       }
 
+      // Handle sov_item_id conversion - if it's a string that looks like an item number,
+      // look up the actual UUID from the sov_items table
+      if (processedUpdates.sov_item_id !== undefined && typeof processedUpdates.sov_item_id === 'string') {
+        const sovItemIdStr = processedUpdates.sov_item_id;
+
+        // If it looks like a UUID (has dashes), keep it as is
+        if (sovItemIdStr.includes('-')) {
+          // Already a UUID, keep as is
+        } else {
+          // Looks like an item number, look up the actual UUID from sov_items table
+          const { data: sovItem, error: sovError } = await supabase
+            .from('sov_items')
+            .select('id')
+            .eq('item_number', sovItemIdStr)
+            .single();
+
+          if (sovError || !sovItem) {
+            console.error('Error looking up SOV item UUID for item_number:', sovItemIdStr, sovError);
+            // If lookup fails, set to null to indicate no SOV association
+            processedUpdates.sov_item_id = null;
+          } else {
+            processedUpdates.sov_item_id = sovItem.id;
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("work_order_items_l")
         .update(processedUpdates)
