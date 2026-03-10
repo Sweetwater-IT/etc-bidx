@@ -35,7 +35,7 @@ export async function GET(
       .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
 
-    // eslint-disable-next-line prefer-const
+     
     const { data, error } = supabaseResult;
 
     if (error) {
