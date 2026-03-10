@@ -223,7 +223,7 @@ export async function GET(
     let sovItems: { id: string; item_number: string; description: string; quantity: number; uom: string }[] = [];
     if (sovRes.data && sovRes.data.length > 0) {
       sovItems = sovRes.data.map((s: any) => ({
-        id: s.sov_item_id, // Use the sov_item_id as the ID for the dropdown
+        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
         item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
         description: s.sov_items?.description || s.sov_items?.display_name || "",
         quantity: Number(s.quantity) || 0,
@@ -250,7 +250,7 @@ export async function GET(
     let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
     if (sovFullRes.data && sovFullRes.data.length > 0) {
       sovItemsFull = sovFullRes.data.map((s: any) => ({
-        id: s.sov_item_id, // Use the sov_item_id as the ID
+        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
         itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
         description: s.sov_items?.description || s.sov_items?.display_name || "",
         uom: "EA", // Default UOM
