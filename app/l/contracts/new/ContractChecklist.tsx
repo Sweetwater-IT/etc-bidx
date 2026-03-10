@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Lock, Edit } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
-import { useContractDraft } from "@/hooks/useContractDraft";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
+import { saveContract } from "@/lib/api-client";
+import isEqual from "lodash/isEqual";
 
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -83,31 +84,22 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const isNew = !routeId || routeId === "new";
 
   const [contractId, setContractId] = useState<string | undefined>(isNew ? undefined : routeId);
-  const {
-    contractRow,
-    projectInfo: dbProjectInfo,
-    isLoading,
-    saveStatus,
-    lastSavedAt,
-    isSaving,
-    hasDirtyFields,
-    markDirty,
-    manualSave,
-    createContract,
-  } = useContractDraft(contractId);
+  const [contractRow, setContractRow] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(!isNew);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [secondCounter, setSecondCounter] = useState<number>(0);
+  const [firstSave, setFirstSave] = useState<boolean>(false);
+  const saveTimeoutRef = useRef<number | null>(null);
 
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(contractRow.contract_status) : false;
   const isReadOnly = forceReadOnly || isSigned;
 
-
-
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
-
-
 
   // Contract creation mutex
   const creatingRef = useRef<Promise<string | undefined> | null>(null);
@@ -115,44 +107,85 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   // Navigation blocker - simplified for Next.js
   const [showNavBlocker, setShowNavBlocker] = useState(false);
 
+  // Autosave states - exactly like sign-orders
+  const prevStateRef = useRef({
+    projectInfo,
+    contractId
+  });
+
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasDirtyFields) {
-        e.preventDefault();
-        e.returnValue = '';
-        setShowNavBlocker(true);
+    const intervalId = setInterval(() => {
+      setSecondCounter(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
     };
+  }, []);
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasDirtyFields]);
-
-  // Atomic hydration
-  const hydratedKeyRef = useRef<string | undefined>(undefined);
-  const runIdRef = useRef(0);
-
+  // Fetch contract data for existing contracts
   useEffect(() => {
     if (isNew || !contractId) return;
-    if (hydratedKeyRef.current === contractId) return;
-    if (!dbProjectInfo || !contractRow) return;
 
-    hydratedKeyRef.current = contractId;
-    const thisRunId = ++runIdRef.current;
-
-    const hydrate = async () => {
-      if (thisRunId !== runIdRef.current) return;
-
-      setProjectInfo(dbProjectInfo);
-
-
-
+    const fetchContract = async () => {
       try {
-        const response = await fetch(`/api/l/contracts/${contractId}/documents`);
-        if (thisRunId !== runIdRef.current) return;
-
+        setIsLoading(true);
+        const response = await fetch(`/api/l/contracts/${contractId}`);
         if (response.ok) {
-          const docs = await response.json();
+          const contract = await response.json();
+          setContractRow(contract);
+          // Transform snake_case to camelCase for projectInfo
+          const transformedProjectInfo: JobProjectInfo = {
+            projectName: contract.project_name || "",
+            contractNumber: contract.contract_number || "",
+            customerName: contract.customer_name || "",
+            customerJobNumber: contract.customer_job_number || "",
+            projectOwner: contract.project_owner || "",
+            etcJobNumber: contract.etc_job_number || null,
+            etcBranch: contract.etc_branch || "",
+            county: contract.county || "",
+            customerPM: contract.customer_pm || "",
+            customerPMEmail: contract.customer_pm_email || "",
+            customerPMPhone: contract.customer_pm_phone || "",
+            certifiedPayrollContact: contract.certified_payroll_contact || "",
+            certifiedPayrollEmail: contract.certified_payroll_email || "",
+            certifiedPayrollPhone: contract.certified_payroll_phone || "",
+            customerBillingContact: contract.customer_billing_contact || "",
+            customerBillingEmail: contract.customer_billing_email || "",
+            customerBillingPhone: contract.customer_billing_phone || "",
+            etcProjectManager: contract.etc_project_manager || "",
+            etcBillingManager: contract.etc_billing_manager || "",
+            etcProjectManagerEmail: contract.etc_project_manager_email || "",
+            etcBillingManagerEmail: contract.etc_billing_manager_email || "",
+            projectStartDate: contract.project_start_date || "",
+            projectEndDate: contract.project_end_date || "",
+            otherNotes: contract.additional_notes || "",
+            isCertifiedPayroll: contract.certified_payroll_type === "state" ? "state" : contract.certified_payroll_type === "federal" ? "federal" : "none",
+            shopRate: contract.shop_rate || "",
+            stateMptBaseRate: contract.state_base_rate || "",
+            stateMptFringeRate: contract.state_fringe_rate || "",
+            stateFlaggingBaseRate: contract.state_flagging_base_rate || "",
+            stateFlaggingFringeRate: contract.state_flagging_fringe_rate || "",
+            federalMptBaseRate: contract.federal_base_rate || "",
+            federalMptFringeRate: contract.federal_fringe_rate || "",
+            federalFlaggingBaseRate: contract.federal_flagging_base_rate || "",
+            federalFlaggingFringeRate: contract.federal_flagging_fringe_rate || "",
+            extensionDate: contract.extension_date || "",
+          };
+          setProjectInfo(transformedProjectInfo);
+        }
+
+        // Fetch documents
+        const docsResponse = await fetch(`/api/l/contracts/${contractId}/documents`);
+        if (docsResponse.ok) {
+          const docs = await docsResponse.json();
           if (docs && docs.length > 0) {
             setDocuments(docs.map((d: any) => ({
               id: d.id,
@@ -166,22 +199,17 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             })));
           }
         }
-      } catch {
-        // Non-critical
+      } catch (error) {
+        console.error('Error fetching contract:', error);
+        toast.error('Failed to load contract');
+      } finally {
+        setIsLoading(false);
+        setHydrated(true);
       }
-
-      setHydrated(true);
     };
 
-    hydrate();
-  }, [isNew, contractId, dbProjectInfo, contractRow]);
-
-  useEffect(() => {
-    if (contractId !== hydratedKeyRef.current) {
-      setHydrated(false);
-      setProjectInfo(emptyProjectInfo);
-    }
-  }, [contractId]);
+    fetchContract();
+  }, [isNew, contractId]);
 
   const ensureContractExists = useCallback(async (info: JobProjectInfo) => {
     if (contractId) return contractId;
@@ -189,16 +217,21 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
     const promise = (async () => {
       try {
-        const result = await createContract({
-          projectName: info.projectName || "Untitled Contract",
-          contractNumber: info.contractNumber,
-          customerName: info.customerName,
-          etcBranch: info.etcBranch,
-          county: info.county,
-          contractStatus: "CONTRACT_RECEIPT",
-        });
+        const contractData = {
+          contractId: undefined,
+          data: {
+            project_name: info.projectName || "Untitled Contract",
+            contract_number: info.contractNumber,
+            customer_name: info.customerName,
+            etc_branch: info.etcBranch,
+            county: info.county,
+            contract_status: "CONTRACT_RECEIPT",
+          }
+        };
+        const result = await saveContract(contractData);
         const newId = result.id;
         setContractId(newId);
+        setContractRow(result);
         window.history.replaceState(null, "", `/l/${newId}`);
         return newId;
       } catch {
@@ -210,18 +243,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
     creatingRef.current = promise;
     return promise;
-  }, [contractId, createContract]);
+  }, [contractId]);
 
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {
       setProjectInfo(newInfo);
-      const changedFields: Record<string, unknown> = {};
-      for (const key of Object.keys(newInfo) as (keyof JobProjectInfo)[]) {
-        if (newInfo[key] !== projectInfo[key]) {
-          changedFields[key] = newInfo[key];
-        }
-      }
-      if (Object.keys(changedFields).length === 0) return;
 
       if (!contractId) {
         const hasContent = newInfo.projectName || newInfo.contractNumber || newInfo.customerName;
@@ -230,13 +256,141 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         }
         return;
       }
-
-      for (const [key, value] of Object.entries(changedFields)) {
-        markDirty(key, value);
-      }
     },
-    [contractId, projectInfo, markDirty, ensureContractExists]
+    [contractId, ensureContractExists]
   );
+
+  // Autosave logic - exactly like sign-orders
+  useEffect(() => {
+    const currentState = { projectInfo, contractId };
+    const prevState = prevStateRef.current;
+
+    if (!isEqual(currentState, prevState)) {
+      prevStateRef.current = currentState;
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = window.setTimeout(async () => {
+        if (contractId && !isEqual(projectInfo, emptyProjectInfo)) {
+          try {
+            setIsSaving(true);
+            const contractData = {
+              contractId,
+              data: {
+                project_name: projectInfo.projectName,
+                contract_number: projectInfo.contractNumber,
+                customer_name: projectInfo.customerName,
+                customer_job_number: projectInfo.customerJobNumber,
+                project_owner: projectInfo.projectOwner,
+                etc_job_number: projectInfo.etcJobNumber,
+                etc_branch: projectInfo.etcBranch,
+                county: projectInfo.county,
+                customer_pm: projectInfo.customerPM,
+                customer_pm_email: projectInfo.customerPMEmail,
+                customer_pm_phone: projectInfo.customerPMPhone,
+                certified_payroll_contact: projectInfo.certifiedPayrollContact,
+                certified_payroll_email: projectInfo.certifiedPayrollEmail,
+                certified_payroll_phone: projectInfo.certifiedPayrollPhone,
+                customer_billing_contact: projectInfo.customerBillingContact,
+                customer_billing_email: projectInfo.customerBillingEmail,
+                customer_billing_phone: projectInfo.customerBillingPhone,
+                etc_project_manager: projectInfo.etcProjectManager,
+                etc_billing_manager: projectInfo.etcBillingManager,
+                etc_project_manager_email: projectInfo.etcProjectManagerEmail,
+                etc_billing_manager_email: projectInfo.etcBillingManagerEmail,
+                project_start_date: projectInfo.projectStartDate,
+                project_end_date: projectInfo.projectEndDate,
+                additional_notes: projectInfo.otherNotes,
+                certified_payroll_type: projectInfo.isCertifiedPayroll,
+                shop_rate: projectInfo.shopRate,
+                state_base_rate: projectInfo.stateMptBaseRate,
+                state_fringe_rate: projectInfo.stateMptFringeRate,
+                state_flagging_base_rate: projectInfo.stateFlaggingBaseRate,
+                state_flagging_fringe_rate: projectInfo.stateFlaggingFringeRate,
+                federal_base_rate: projectInfo.federalMptBaseRate,
+                federal_fringe_rate: projectInfo.federalMptFringeRate,
+                federal_flagging_base_rate: projectInfo.federalFlaggingBaseRate,
+                federal_flagging_fringe_rate: projectInfo.federalFlaggingFringeRate,
+                extension_date: projectInfo.extensionDate,
+              }
+            };
+            const result = await saveContract(contractData);
+            setContractRow(result);
+            setLastSavedAt(new Date());
+            setFirstSave(true);
+          } catch (error) {
+            console.error('Autosave failed:', error);
+            toast.error('Failed to save contract');
+          } finally {
+            setIsSaving(false);
+          }
+        }
+      }, 5000); // Autosave every 5 seconds like sign-orders
+    }
+  }, [projectInfo, contractId]);
+
+  const manualSave = useCallback(async () => {
+    if (!contractId) {
+      await ensureContractExists(projectInfo);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const contractData = {
+        contractId,
+        data: {
+          project_name: projectInfo.projectName,
+          contract_number: projectInfo.contractNumber,
+          customer_name: projectInfo.customerName,
+          customer_job_number: projectInfo.customerJobNumber,
+          project_owner: projectInfo.projectOwner,
+          etc_job_number: projectInfo.etcJobNumber,
+          etc_branch: projectInfo.etcBranch,
+          county: projectInfo.county,
+          customer_pm: projectInfo.customerPM,
+          customer_pm_email: projectInfo.customerPMEmail,
+          customer_pm_phone: projectInfo.customerPMPhone,
+          certified_payroll_contact: projectInfo.certifiedPayrollContact,
+          certified_payroll_email: projectInfo.certifiedPayrollEmail,
+          certified_payroll_phone: projectInfo.certifiedPayrollPhone,
+          customer_billing_contact: projectInfo.customerBillingContact,
+          customer_billing_email: projectInfo.customerBillingEmail,
+          customer_billing_phone: projectInfo.customerBillingPhone,
+          etc_project_manager: projectInfo.etcProjectManager,
+          etc_billing_manager: projectInfo.etcBillingManager,
+          etc_project_manager_email: projectInfo.etcProjectManagerEmail,
+          etc_billing_manager_email: projectInfo.etcBillingManagerEmail,
+          project_start_date: projectInfo.projectStartDate,
+          project_end_date: projectInfo.projectEndDate,
+          additional_notes: projectInfo.otherNotes,
+          certified_payroll_type: projectInfo.isCertifiedPayroll,
+          shop_rate: projectInfo.shopRate,
+          state_base_rate: projectInfo.stateMptBaseRate,
+          state_fringe_rate: projectInfo.stateMptFringeRate,
+          state_flagging_base_rate: projectInfo.stateFlaggingBaseRate,
+          state_flagging_fringe_rate: projectInfo.stateFlaggingFringeRate,
+          federal_base_rate: projectInfo.federalMptBaseRate,
+          federal_fringe_rate: projectInfo.federalMptFringeRate,
+          federal_flagging_base_rate: projectInfo.federalFlaggingBaseRate,
+          federal_flagging_fringe_rate: projectInfo.federalFlaggingFringeRate,
+          extension_date: projectInfo.extensionDate,
+        }
+      };
+      const result = await saveContract(contractData);
+      setContractRow(result);
+      setLastSavedAt(new Date());
+      setFirstSave(true);
+      toast.success('Contract saved successfully');
+    } catch (error) {
+      console.error('Manual save failed:', error);
+      toast.error('Failed to save contract');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [contractId, projectInfo, ensureContractExists]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {
@@ -331,7 +485,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           </Button>
           <div className="flex items-center gap-3">
             <SaveStatusIndicator
-              status={saveStatus === "unsaved" ? "idle" : saveStatus}
+              status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
               lastSavedAt={lastSavedAt}
               onManualSave={manualSave}
               isSaving={isSaving}
