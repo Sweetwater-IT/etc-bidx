@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { InputGroup } from "@/components/ui/input-group";
 import {
   Table,
   TableBody,
@@ -248,6 +250,7 @@ export const ScheduleOfValues = ({
                     <TableHead className="w-[100px] text-right">Quantity</TableHead>
                     <TableHead className="w-[120px] text-right">Unit Price</TableHead>
                     <TableHead className="w-[120px] text-right">Extended</TableHead>
+                    <TableHead className="w-[140px] text-right">Retainage</TableHead>
                     {!readOnly && <TableHead className="w-[50px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -290,7 +293,7 @@ export const ScheduleOfValues = ({
                             step="0.01"
                             value={item.quantity}
                             onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                            className="h-7 text-sm text-right w-20"
+                            className="h-7 text-sm text-right w-20 no-spinner"
                           />
                         )}
                       </TableCell>
@@ -298,11 +301,9 @@ export const ScheduleOfValues = ({
                         {readOnly ? (
                           <span className="text-sm">{formatCurrency(item.unitPrice)}</span>
                         ) : (
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                          <CurrencyInput
+                            value={Math.round(item.unitPrice * 100).toString()}
+                            onChange={(digits) => updateItem(item.id, { unitPrice: parseInt(digits) / 100 })}
                             className="h-7 text-sm text-right w-24"
                           />
                         )}
@@ -311,6 +312,24 @@ export const ScheduleOfValues = ({
                         <span className="text-sm font-medium">
                           {formatCurrency(item.extendedPrice)}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {readOnly ? (
+                          <span className="text-sm">
+                            {item.retainageType === 'percent'
+                              ? `${item.retainageValue}%`
+                              : formatCurrency(item.retainageValue)
+                            }
+                          </span>
+                        ) : (
+                          <InputGroup
+                            value={item.retainageValue.toString()}
+                            onValueChange={(value) => updateItem(item.id, { retainageValue: parseFloat(value) || 0 })}
+                            type={item.retainageType}
+                            onTypeChange={(type) => updateItem(item.id, { retainageType: type })}
+                            className="w-28"
+                          />
+                        )}
                       </TableCell>
                       {!readOnly && (
                         <TableCell>

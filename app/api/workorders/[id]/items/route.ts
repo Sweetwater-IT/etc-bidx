@@ -80,42 +80,28 @@ export async function POST(
       const { itemId, updates } = itemData;
       console.log('[WO Items API] Update request:', { itemId: itemId, itemIdType: typeof itemId, updates });
 
-      let numericItemId: number;
+      // The itemId is the database primary key - use it directly
+      let dbItemId: string | number;
 
-      // Check if itemId is already a valid integer
       if (typeof itemId === 'number' && !isNaN(itemId)) {
-        numericItemId = itemId;
-        console.log('[WO Items API] itemId is already a valid integer:', numericItemId);
+        // itemId is already a number (integer primary key)
+        dbItemId = itemId;
+        console.log('[WO Items API] itemId is already a valid integer:', dbItemId);
       } else if (typeof itemId === 'string') {
-        // Try to parse as integer first
-        const parsed = parseInt(itemId, 10);
-        if (!isNaN(parsed)) {
-          numericItemId = parsed;
-          console.log('[WO Items API] Parsed string to integer:', numericItemId);
+        // Check if it's a UUID (contains dashes)
+        if (itemId.includes('-')) {
+          // itemId is a UUID string - use it directly as the database ID
+          dbItemId = itemId;
+          console.log('[WO Items API] itemId is a UUID, using directly:', dbItemId);
         } else {
-          // itemId is a UUID string - need to find the actual database ID
-          console.log('[WO Items API] itemId is a UUID string, attempting to resolve to database ID');
-
-          // Try to find the item by work_order_id and sov_item_id (if available)
-          if (updates.sov_item_id) {
-            console.log('[WO Items API] Looking up item by work_order_id and sov_item_id');
-            const { data: existingItem, error: lookupError } = await supabase
-              .from("work_order_items_l")
-              .select("id")
-              .eq("work_order_id", id)
-              .eq("sov_item_id", updates.sov_item_id)
-              .single();
-
-            if (lookupError || !existingItem) {
-              console.error('[WO Items API] Could not find item by sov_item_id:', { workOrderId: id, sovItemId: updates.sov_item_id, error: lookupError });
-              return NextResponse.json({ error: 'Could not find work order item to update' }, { status: 404 });
-            }
-
-            numericItemId = existingItem.id;
-            console.log('[WO Items API] Resolved UUID to database ID:', numericItemId);
+          // Try to parse as integer
+          const parsed = parseInt(itemId, 10);
+          if (!isNaN(parsed)) {
+            dbItemId = parsed;
+            console.log('[WO Items API] Parsed string to integer:', dbItemId);
           } else {
-            console.error('[WO Items API] Cannot resolve UUID itemId without sov_item_id in updates');
-            return NextResponse.json({ error: 'Invalid item ID format - cannot resolve UUID' }, { status: 400 });
+            console.error('[WO Items API] Invalid itemId format:', itemId);
+            return NextResponse.json({ error: 'Invalid item ID format' }, { status: 400 });
           }
         }
       } else {
@@ -123,12 +109,12 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid item ID format' }, { status: 400 });
       }
 
-      console.log('[WO Items API] Final numericItemId for update:', numericItemId);
+      console.log('[WO Items API] Final dbItemId for update:', dbItemId);
 
       const { error } = await supabase
         .from("work_order_items_l")
         .update(updates)
-        .eq("id", numericItemId);
+        .eq("id", dbItemId);
 
       if (error) {
         console.error('Error updating work order item:', error);
