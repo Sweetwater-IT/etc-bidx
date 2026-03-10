@@ -120,7 +120,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
 
   const addRow = () => {
     const newItem: ScheduleOfValuesItem = {
-      id: crypto.randomUUID(),
+      id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
       itemNumber: '',
       description: '',
       uom: '',
@@ -132,6 +132,7 @@ export const SOVTable = ({ jobId }: SOVTableProps) => {
       retainageAmount: 0,
       notes: '',
     };
+    // Add to items but don't trigger save yet (validation will prevent it)
     updateItems([...items, newItem]);
   };
 

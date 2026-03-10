@@ -59,6 +59,17 @@ export function useSovItems(jobId: string | undefined) {
     return Math.round(value * 100) / 100;
   };
 
+  // Validate if an item is ready to be saved
+  const isItemValidForSave = useCallback((item: ScheduleOfValuesItem): boolean => {
+    // Item must have either:
+    // 1. A sov_item_id (from master items), OR
+    // 2. Both itemNumber and description (custom item)
+    const hasMasterItem = item.id && item.itemNumber && !item.itemNumber.startsWith('temp-'); // Items with real IDs from DB
+    const hasCustomItem = item.itemNumber && item.itemNumber.trim() && item.description && item.description.trim();
+
+    return hasMasterItem || hasCustomItem;
+  }, []);
+
   // Save items to database with proper change tracking
   const saveItems = useCallback(async (currentItems: ScheduleOfValuesItem[]) => {
     if (!jobId) {
@@ -67,6 +78,23 @@ export function useSovItems(jobId: string | undefined) {
     }
 
     console.log('[SOV save] Starting save operation for jobId:', jobId);
+
+    // Filter out invalid items that shouldn't be saved yet
+    const validItems = currentItems.filter(item => isItemValidForSave(item));
+    const invalidItems = currentItems.filter(item => !isItemValidForSave(item));
+
+    console.log('[SOV save] Filtered items:', {
+      total: currentItems.length,
+      valid: validItems.length,
+      invalid: invalidItems.length,
+      invalidDetails: invalidItems.map(i => ({ id: i.id, itemNumber: i.itemNumber, description: i.description }))
+    });
+
+    // If no valid items to save, skip the operation
+    if (validItems.length === 0) {
+      console.log('[SOV save] No valid items to save, skipping operation');
+      return;
+    }
 
     // Wait for any in-flight save
     if (inFlightRef.current) {
@@ -79,23 +107,23 @@ export function useSovItems(jobId: string | undefined) {
 
     const promise = (async () => {
       try {
-        const originalItems = originalItemsRef.current;
-        console.log('[SOV save] Original items count:', originalItems.length);
-        console.log('[SOV save] Current items count:', currentItems.length);
+        const originalItems = originalItemsRef.current.filter(item => isItemValidForSave(item)); // Only consider valid original items
+        console.log('[SOV save] Original valid items count:', originalItems.length);
+        console.log('[SOV save] Current valid items count:', validItems.length);
 
-        const currentItemIds = new Set(currentItems.map(item => item.id));
+        const currentItemIds = new Set(validItems.map(item => item.id));
         const originalItemIds = new Set(originalItems.map(item => item.id));
 
-        // Find items to delete (in original but not in current)
+        // Find items to delete (in original but not in current valid items)
         const itemsToDelete = originalItems.filter(item => !currentItemIds.has(item.id));
         console.log('[SOV save] Items to delete:', itemsToDelete.length, itemsToDelete.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
-        // Find items to create (in current but not in original)
-        const itemsToCreate = currentItems.filter(item => !originalItemIds.has(item.id));
+        // Find items to create (in current valid items but not in original)
+        const itemsToCreate = validItems.filter(item => !originalItemIds.has(item.id));
         console.log('[SOV save] Items to create:', itemsToCreate.length, itemsToCreate.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
-        // Find items to update (in both, but potentially changed)
-        const itemsToUpdate = currentItems.filter(currentItem => {
+        // Find items to update (in both valid lists, but potentially changed)
+        const itemsToUpdate = validItems.filter(currentItem => {
           const originalItem = originalItems.find(orig => orig.id === currentItem.id);
           if (!originalItem) return false;
 
