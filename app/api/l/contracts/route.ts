@@ -177,21 +177,39 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: newContract, error: insertError } = await supabase
-      .from('jobs_l')
-      .insert(insertData)
-      .select()
-      .single();
+    const { data: result, error: upsertError } = contractId 
+      ? await supabase
+        .from('jobs_l')
+        .update({ ...dbData, updated_at: new Date().toISOString() })
+        .eq('id', contractId)
+        .select()
+        .single()
+      : await supabase
+        .from('jobs_l')
+        .insert(insertData)
+        .select()
+        .single();
 
-    if (insertError) {
-      console.error('Error creating contract:', insertError);
-      return NextResponse.json({ error: 'Failed to create contract' }, { status: 500 });
+    if (upsertError) {
+      console.error('Error upserting contract:', upsertError);
+      return NextResponse.json({ error: 'Failed to upsert contract' }, { status: 500 });
     }
 
-    return NextResponse.json({
-      contract: newContract,
-      message: 'Contract created successfully'
-    });
+    // Transform to camelCase for frontend
+    const toCamelCase = (row: any) => ({
+      id: row.id,
+      projectName: row.project_name,
+      contractNumber: row.contract_number,
+      customerName: row.customer_name,
+      customerJobNumber: row.customer_job_number,
+      projectOwner: row.project_owner,
+      etcJobNumber: row.etc_job_number,
+      etcBranch: row.etc_branch,
+      county: row.county,
+      stateRoute: row.state_route,
+      projectStartDate: row.project_start_date,
+      projectEndDate: row.project_end_date,
+      additionalNotes
   } catch (error) {
     console.error('Error in contract create API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
