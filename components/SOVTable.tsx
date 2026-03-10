@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
+import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface SovMasterItem {
   id: number;
@@ -423,14 +423,38 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">{item.quantity}</span>
                     ) : (
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        className="h-7 text-xs text-right w-[70px]"
-                        value={item.quantity || ''}
-                        onChange={(e) => updateRow(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateRow(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={item.quantity || 1}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const cleaned = raw.replace(/\D/g, '');
+                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                            updateRow(item.id, 'quantity', num);
+                          }}
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateRow(item.id, 'quantity', item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -438,7 +462,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                       <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     ) : (
                       <CurrencyInput
-                        value={item.unitPrice.toString()}
+                        value={(item.unitPrice * 100).toFixed(0)}
                         onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
                         className="h-7 text-xs text-right w-[100px]"
                       />
