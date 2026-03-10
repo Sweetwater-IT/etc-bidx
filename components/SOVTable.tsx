@@ -77,23 +77,33 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
 }
 
 export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
+  console.log('[SOVTable] Component initialized with:', { jobId, readOnly });
+
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
   const { items, loading: sovLoading, saving, updateItems } = useSovItems(jobId);
 
+  console.log('[SOVTable] useSovItems hook returned:', { items: items.length, loading: sovLoading, saving });
+
   useEffect(() => {
+    console.log('[SOVTable] Fetching SOV master items...');
     const fetchSovItems = async () => {
       setSovMasterLoading(true);
       try {
         const response = await fetch('/api/sov-items');
+        console.log('[SOVTable] SOV master items API response:', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
+          console.log('[SOVTable] SOV master items data received:', data.data?.length || 0, 'items');
           setSovProducts(data.data || []);
+        } else {
+          console.error('[SOVTable] Failed to fetch SOV master items:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Error fetching SOV items:', error);
+        console.error('[SOVTable] Error fetching SOV master items:', error);
       } finally {
         setSovMasterLoading(false);
+        console.log('[SOVTable] SOV master items fetch completed');
       }
     };
 
@@ -413,10 +423,13 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">{item.quantity}</span>
                     ) : (
-                      <QuantityInput
-                        value={item.quantity}
-                        onChange={(value) => updateRow(item.id, 'quantity', value)}
-                        className="justify-center"
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="h-7 text-xs text-right w-[70px]"
+                        value={item.quantity || ''}
+                        onChange={(e) => updateRow(item.id, 'quantity', parseInt(e.target.value) || 0)}
                       />
                     )}
                   </TableCell>

@@ -563,7 +563,11 @@ const ProjectDetail = () => {
 
           <div className="bg-card rounded-b-lg border border-t-0 min-h-[400px]">
             <TabsContent value="bid-items" className="m-0 p-4">
-              <SOVTable jobId={id || ""} readOnly={true} />
+              {(() => {
+                console.log('[ProjectDetail] Rendering SOV table with jobId:', id);
+                console.log('[ProjectDetail] Job data:', dbJob);
+                return <SOVTable jobId={id || ""} readOnly={true} />;
+              })()}
             </TabsContent>
 
             <TabsContent value="takeoffs" className="m-0 p-4">

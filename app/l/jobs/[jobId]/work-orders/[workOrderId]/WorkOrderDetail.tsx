@@ -206,15 +206,24 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
   // Fetch SOV items for the job
   useEffect(() => {
     const fetchSovItems = async () => {
-      if (!workOrder?.job_id) return;
+      if (!workOrder?.job_id) {
+        console.log('[WorkOrderDetail] No job_id available for SOV items fetch');
+        return;
+      }
+      console.log('[WorkOrderDetail] Fetching SOV items for job:', workOrder.job_id);
       try {
         const response = await fetch(`/api/l/jobs/${workOrder.job_id}/sov-items`);
+        console.log('[WorkOrderDetail] SOV items API response:', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
-          setSovItems(data.sovItems || []);
+          console.log('[WorkOrderDetail] SOV items data received:', data.data?.length || 0, 'items');
+          console.log('[WorkOrderDetail] SOV items sample:', data.data?.slice(0, 3));
+          setSovItems(data.data || []);
+        } else {
+          console.error('[WorkOrderDetail] Failed to fetch SOV items:', response.status, response.statusText);
         }
       } catch (err) {
-        console.error('Failed to fetch SOV items:', err);
+        console.error('[WorkOrderDetail] Error fetching SOV items:', err);
       }
     };
     fetchSovItems();
