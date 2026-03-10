@@ -36,11 +36,11 @@ export async function POST(
     const uploadedFiles: any[] = [];
 
     for (const file of files) {
-      const filePath = `${jobId}/work-orders/${id}/${Date.now()}_${file.name}`;
+      const filePath = `contracts/${jobId}/work-orders/${id}/${Date.now()}_${file.name}`;
 
       // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
-        .from("contracts")
+        .from("files")
         .upload(filePath, file);
 
       if (uploadError) {
@@ -107,7 +107,7 @@ export async function DELETE(
 
     // Delete from storage
     const { error: storageErr } = await supabase.storage
-      .from("contracts")
+      .from("files")
       .remove([doc.file_path]);
 
     if (storageErr) {

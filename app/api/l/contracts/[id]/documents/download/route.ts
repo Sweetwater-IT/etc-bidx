@@ -31,7 +31,7 @@ export async function GET(
 
     // Create signed URL for download
     const { data, error } = await supabase.storage
-      .from("contracts")
+      .from("files")
       .createSignedUrl(doc.file_path, 300); // 5 minutes expiry
 
     if (error) {

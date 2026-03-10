@@ -36,9 +36,9 @@ export async function POST(
 
     // Handle document upload if provided
     if (documentFile) {
-      const filePath = `${jobId}/change-orders/${Date.now()}-${documentFile.name}`;
+      const filePath = `contracts/${jobId}/change-orders/${Date.now()}-${documentFile.name}`;
       const { error: uploadErr } = await supabase.storage
-        .from("contracts")
+        .from("files")
         .upload(filePath, documentFile);
 
       if (uploadErr) {
