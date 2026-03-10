@@ -35,6 +35,7 @@ export async function GET(
       .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
 
+    // eslint-disable-next-line prefer-const
     const { data, error } = supabaseResult;
 
     if (error) {
@@ -221,6 +222,7 @@ export async function POST(
 
     console.log('[SOV API POST] Inserting SOV entry with data:', JSON.stringify(insertData, null, 2));
 
+    // eslint-disable-next-line prefer-const
     let { data, error } = await supabase
       .from('sov_entries')
       .insert(insertData)
