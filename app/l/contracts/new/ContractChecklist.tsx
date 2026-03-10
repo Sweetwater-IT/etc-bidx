@@ -273,7 +273,46 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
 
       saveTimeoutRef.current = window.setTimeout(async () => {
-        if (contractId && !isEqual(projectInfo, emptyProjectInfo)) {
+        // Check if we have a contractId and some meaningful content to save
+        const hasContent = contractId && (
+          projectInfo.projectName ||
+          projectInfo.contractNumber ||
+          projectInfo.customerName ||
+          projectInfo.customerJobNumber ||
+          projectInfo.projectOwner ||
+          projectInfo.etcJobNumber ||
+          projectInfo.etcBranch ||
+          projectInfo.county ||
+          projectInfo.customerPM ||
+          projectInfo.customerPMEmail ||
+          projectInfo.customerPMPhone ||
+          projectInfo.certifiedPayrollContact ||
+          projectInfo.certifiedPayrollEmail ||
+          projectInfo.certifiedPayrollPhone ||
+          projectInfo.customerBillingContact ||
+          projectInfo.customerBillingEmail ||
+          projectInfo.customerBillingPhone ||
+          projectInfo.etcProjectManager ||
+          projectInfo.etcBillingManager ||
+          projectInfo.etcProjectManagerEmail ||
+          projectInfo.etcBillingManagerEmail ||
+          projectInfo.projectStartDate ||
+          projectInfo.projectEndDate ||
+          projectInfo.otherNotes ||
+          projectInfo.isCertifiedPayroll !== "none" ||
+          projectInfo.shopRate ||
+          projectInfo.stateMptBaseRate ||
+          projectInfo.stateMptFringeRate ||
+          projectInfo.stateFlaggingBaseRate ||
+          projectInfo.stateFlaggingFringeRate ||
+          projectInfo.federalMptBaseRate ||
+          projectInfo.federalMptFringeRate ||
+          projectInfo.federalFlaggingBaseRate ||
+          projectInfo.federalFlaggingFringeRate ||
+          projectInfo.extensionDate
+        );
+
+        if (hasContent) {
           try {
             setIsSaving(true);
             const contractData = {
