@@ -172,16 +172,75 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
     );
   };
 
-  const selectMasterItem = (rowId: string, master: SovMasterItem) => {
-    updateItems(
-      items.map((item) =>
-        item.id === rowId
-          ? { ...item, itemNumber: master.item_number, description: master.display_name, uom: 'EA' }
-          : item
-      )
-    );
-    setOpenRow(null);
-    setSearch('');
+  const selectMasterItem = async (rowId: string, master: SovMasterItem) => {
+    if (!jobId) {
+      console.error('[SOVTable] No jobId available for item selection');
+      return;
+    }
+
+    console.log('[SOVTable] Selecting master item:', { rowId, master, jobId });
+
+    try {
+      // Immediately create database record when item is selected
+      const payload = {
+        sov_item_id: master.id,
+        item_number: master.item_number,
+        description: master.display_name,
+        uom: 'EA',
+        quantity: 1, // Default quantity
+        unit_price: 0, // Default unit price
+        retainage_type: 'percent' as const,
+        retainage_value: 0,
+        notes: '',
+        sort_order: items.length + 1,
+      };
+
+      console.log('[SOVTable] Creating database record for selected item:', payload);
+
+      const response = await fetch(`/api/l/jobs/${jobId}/sov-items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[SOVTable] Failed to create SOV item record:', errorData);
+        throw new Error(`Failed to create SOV item: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('[SOVTable] Successfully created SOV item record:', result);
+
+      // Replace the temp item with the real database record
+      updateItems(
+        items.map((item) =>
+          item.id === rowId
+            ? {
+                ...item,
+                id: result.data.id, // Replace temp ID with real database ID
+                itemNumber: master.item_number,
+                description: master.display_name,
+                uom: 'EA',
+                quantity: result.data.quantity,
+                unitPrice: result.data.unit_price,
+                extendedPrice: result.data.extended_price,
+                retainageType: result.data.retainage_type,
+                retainageValue: result.data.retainage_value,
+                retainageAmount: result.data.retainage_amount,
+              }
+            : item
+        )
+      );
+
+      console.log('[SOVTable] Successfully replaced temp item with database record');
+    } catch (error) {
+      console.error('[SOVTable] Error selecting master item:', error);
+      // Could show a toast error here if needed
+    } finally {
+      setOpenRow(null);
+      setSearch('');
+    }
   };
 
   const openCustomDialog = (rowId?: string) => {
