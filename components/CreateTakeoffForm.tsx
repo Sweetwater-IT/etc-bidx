@@ -137,6 +137,37 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const { user } = useAuth();
   const info = dbJob?.projectInfo;
 
+  // Fetch allowed work types from job's SOV entries
+  const [allowedWorkTypes, setAllowedWorkTypes] = useState<string[]>([]);
+  const [loadingWorkTypes, setLoadingWorkTypes] = useState(true);
+
+  // Fetch allowed work types when jobId is available
+  useEffect(() => {
+    const fetchAllowedWorkTypes = async () => {
+      if (!jobId) return;
+
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
+        if (response.ok) {
+          const data = await response.json();
+          const workTypes = [...new Set(data.data.map((item: any) => item.work_type).filter((wt): wt is string => Boolean(wt)))] as string[];
+          setAllowedWorkTypes(workTypes);
+        } else {
+          // If no SOV items exist, allow all work types (backward compatibility)
+          setAllowedWorkTypes(WORK_TYPES.map(wt => wt.value));
+        }
+      } catch (error) {
+        console.error('Error fetching SOV items for work types:', error);
+        // Allow all work types on error
+        setAllowedWorkTypes(WORK_TYPES.map(wt => wt.value));
+      } finally {
+        setLoadingWorkTypes(false);
+      }
+    };
+
+    fetchAllowedWorkTypes();
+  }, [jobId]);
+
   const [title, setTitle] = useState("");
   const [workType, setWorkType] = useState("");
   const [workOrderNumber, setWorkOrderNumber] = useState("");
@@ -638,7 +669,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   <SelectValue placeholder="Choose Work Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {WORK_TYPES.map((wt) => (
+                  {WORK_TYPES.filter(wt => loadingWorkTypes || allowedWorkTypes.includes(wt.value)).map((wt) => (
                     <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
                   ))}
                 </SelectContent>

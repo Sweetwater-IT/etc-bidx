@@ -11,6 +11,8 @@ export interface ScheduleOfValuesItem {
   uom: string;
   notes?: string;
   noNotes?: boolean;
+  sov_item_id?: number;
+  work_type?: string;
 }
 
 export interface Job {

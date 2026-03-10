@@ -8,22 +8,66 @@ export async function GET(
   try {
     const { jobId } = await params;
     const { data, error } = await supabase
-      .from('sov_items_l')
-      .select('*')
+      .from('sov_entries')
+      .select(`
+        id,
+        job_id,
+        sov_item_id,
+        quantity,
+        unit_price,
+        extended_price,
+        retainage_type,
+        retainage_value,
+        retainage_amount,
+        notes,
+        sort_order,
+        created_at,
+        updated_at,
+        sov_items (
+          id,
+          item_number,
+          display_item_number,
+          description,
+          display_name,
+          work_type
+        )
+      `)
       .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
 
     if (error) {
-      console.error('Error fetching SOV items:', error);
+      console.error('Error fetching SOV entries:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch SOV items' },
+        { error: 'Failed to fetch SOV entries' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ data: data || [] });
+    // Transform the data to match expected format
+    const transformedData = (data || []).map((entry: any) => ({
+      id: entry.id,
+      job_id: entry.job_id,
+      sov_item_id: entry.sov_item_id,
+      item_number: (entry as any).sov_items?.item_number,
+      display_item_number: (entry as any).sov_items?.display_item_number,
+      description: (entry as any).sov_items?.description,
+      display_name: (entry as any).sov_items?.display_name,
+      work_type: (entry as any).sov_items?.work_type,
+      quantity: entry.quantity,
+      unit_price: entry.unit_price,
+      extended_price: entry.extended_price,
+      retainage_type: entry.retainage_type,
+      retainage_value: entry.retainage_value,
+      retainage_amount: entry.retainage_amount,
+      notes: entry.notes,
+      sort_order: entry.sort_order,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+    }));
+
+    return NextResponse.json({ data: transformedData });
   } catch (error) {
-    console.error('Error in SOV items GET:', error);
+    console.error('Error in SOV entries GET:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -38,7 +82,7 @@ export async function POST(
   try {
     const { jobId } = await params;
     const body = await request.json();
-    const { item_number, description, uom, quantity, unit_price, retainage_type, retainage_value, notes } = body;
+    const { sov_item_id, quantity, unit_price, retainage_type, retainage_value, notes } = body;
 
     // Calculate extended price and retainage amount
     const extended_price = quantity * unit_price;
@@ -48,7 +92,7 @@ export async function POST(
 
     // Get next sort order
     const { data: maxSort } = await supabase
-      .from('sov_items_l')
+      .from('sov_entries')
       .select('sort_order')
       .eq('job_id', jobId)
       .order('sort_order', { ascending: false })
@@ -57,12 +101,10 @@ export async function POST(
     const nextSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
 
     const { data, error } = await supabase
-      .from('sov_items_l')
+      .from('sov_entries')
       .insert({
         job_id: jobId,
-        item_number,
-        description,
-        uom,
+        sov_item_id,
         quantity,
         unit_price,
         extended_price,
@@ -72,20 +114,64 @@ export async function POST(
         notes,
         sort_order: nextSortOrder,
       })
-      .select()
+      .select(`
+        id,
+        job_id,
+        sov_item_id,
+        quantity,
+        unit_price,
+        extended_price,
+        retainage_type,
+        retainage_value,
+        retainage_amount,
+        notes,
+        sort_order,
+        created_at,
+        updated_at,
+        sov_items (
+          id,
+          item_number,
+          display_item_number,
+          description,
+          display_name,
+          work_type
+        )
+      `)
       .single();
 
     if (error) {
-      console.error('Error creating SOV item:', error);
+      console.error('Error creating SOV entry:', error);
       return NextResponse.json(
-        { error: 'Failed to create SOV item' },
+        { error: 'Failed to create SOV entry' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ data });
+    // Transform response to match expected format
+    const transformedData = {
+      id: data.id,
+      job_id: data.job_id,
+      sov_item_id: data.sov_item_id,
+      item_number: (data as any).sov_items?.item_number,
+      display_item_number: (data as any).sov_items?.display_item_number,
+      description: (data as any).sov_items?.description,
+      display_name: (data as any).sov_items?.display_name,
+      work_type: (data as any).sov_items?.work_type,
+      quantity: data.quantity,
+      unit_price: data.unit_price,
+      extended_price: data.extended_price,
+      retainage_type: data.retainage_type,
+      retainage_value: data.retainage_value,
+      retainage_amount: data.retainage_amount,
+      notes: data.notes,
+      sort_order: data.sort_order,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+
+    return NextResponse.json({ data: transformedData });
   } catch (error) {
-    console.error('Error in SOV items POST:', error);
+    console.error('Error in SOV entries POST:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

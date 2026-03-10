@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +13,41 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Trash2,
   Calculator,
   DollarSign,
   Hash,
   Ruler,
-  FileText
+  FileText,
+  Search,
+  X
 } from "lucide-react";
 import type { ScheduleOfValuesItem } from "@/types/job";
+
+interface SovItem {
+  id: number;
+  item_number: string;
+  display_item_number: string;
+  description: string;
+  display_name: string;
+  work_type: string;
+}
 
 interface ScheduleOfValuesProps {
   items: ScheduleOfValuesItem[];
@@ -57,42 +83,84 @@ export const ScheduleOfValues = ({
   onChange,
   readOnly = false
 }: ScheduleOfValuesProps) => {
-  const [newItem, setNewItem] = useState<Partial<ScheduleOfValuesItem>>({
-    itemNumber: "",
-    description: "",
-    quantity: 0,
-    unitPrice: 0,
-    uom: "",
-    notes: "",
-  });
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [sovItems, setSovItems] = useState<SovItem[]>([]);
+  const [selectedSovItem, setSelectedSovItem] = useState<SovItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [workTypeFilter, setWorkTypeFilter] = useState<string>("");
+  const [quantity, setQuantity] = useState<number>(0);
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+  const [retainageType, setRetainageType] = useState<'percent' | 'dollar'>('percent');
+  const [retainageValue, setRetainageValue] = useState<number>(0);
+  const [notes, setNotes] = useState("");
 
-  const addItem = useCallback(() => {
-    if (!newItem.itemNumber || !newItem.description || !newItem.uom) return;
-
-    const item: ScheduleOfValuesItem = {
-      id: Date.now().toString(),
-      itemNumber: newItem.itemNumber,
-      description: newItem.description,
-      quantity: newItem.quantity || 0,
-      unitPrice: newItem.unitPrice || 0,
-      extendedPrice: calculateExtendedPrice(newItem.quantity || 0, newItem.unitPrice || 0),
-      retainageAmount: 0,
-      retainageType: 'percent',
-      retainageValue: 0,
-      uom: newItem.uom,
-      notes: newItem.notes || "",
+  // Fetch SOV items on component mount
+  useEffect(() => {
+    const fetchSovItems = async () => {
+      try {
+        const response = await fetch('/api/sov-items');
+        if (response.ok) {
+          const data = await response.json();
+          setSovItems(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching SOV items:', error);
+      }
     };
 
-    onChange([...items, item]);
-    setNewItem({
-      itemNumber: "",
-      description: "",
-      quantity: 0,
-      unitPrice: 0,
-      uom: "",
-      notes: "",
-    });
-  }, [items, newItem, onChange]);
+    if (!readOnly) {
+      fetchSovItems();
+    }
+  }, [readOnly]);
+
+  const filteredSovItems = sovItems.filter(item => {
+    const matchesSearch = !searchTerm ||
+      item.item_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesWorkType = !workTypeFilter || item.work_type === workTypeFilter;
+
+    return matchesSearch && matchesWorkType;
+  });
+
+  const workTypes = [...new Set(sovItems.map(item => item.work_type))].sort();
+
+  const handleAddItem = useCallback(() => {
+    if (!selectedSovItem || quantity <= 0 || unitPrice < 0) return;
+
+    const extendedPrice = calculateExtendedPrice(quantity, unitPrice);
+    const retainageAmount = retainageType === 'percent'
+      ? extendedPrice * (retainageValue / 100)
+      : retainageValue;
+
+    const newItem: ScheduleOfValuesItem = {
+      id: Date.now().toString(),
+      itemNumber: selectedSovItem.item_number,
+      description: selectedSovItem.display_name,
+      quantity,
+      unitPrice,
+      extendedPrice,
+      retainageAmount,
+      retainageType,
+      retainageValue,
+      uom: "EA", // Default UOM, could be made configurable
+      notes,
+      sov_item_id: selectedSovItem.id,
+      work_type: selectedSovItem.work_type,
+    };
+
+    onChange([...items, newItem]);
+
+    // Reset form
+    setSelectedSovItem(null);
+    setQuantity(0);
+    setUnitPrice(0);
+    setRetainageType('percent');
+    setRetainageValue(0);
+    setNotes("");
+    setShowAddDialog(false);
+  }, [selectedSovItem, quantity, unitPrice, retainageType, retainageValue, notes, items, onChange]);
 
   const updateItem = useCallback((id: string, updates: Partial<ScheduleOfValuesItem>) => {
     const updatedItems = items.map(item => {
@@ -104,6 +172,10 @@ export const ScheduleOfValues = ({
             updates.quantity !== undefined ? updates.quantity : item.quantity,
             updates.unitPrice !== undefined ? updates.unitPrice : item.unitPrice
           );
+          // Recalculate retainage if extended price changed
+          if (updated.retainageType === 'percent') {
+            updated.retainageAmount = updated.extendedPrice * (updated.retainageValue / 100);
+          }
         }
         return updated;
       }
@@ -127,7 +199,7 @@ export const ScheduleOfValues = ({
             Schedule of Values
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Define the line items, quantities, and pricing for this contract.
+            Select standardized work items and set quantities and pricing for this contract.
           </p>
         </div>
         <Badge variant="secondary" className="text-sm">
@@ -135,83 +207,14 @@ export const ScheduleOfValues = ({
         </Badge>
       </div>
 
-      {/* Add New Item */}
+      {/* Add New Item Button */}
       {!readOnly && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Add New Item</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Item #</Label>
-                <Input
-                  value={newItem.itemNumber || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, itemNumber: e.target.value }))}
-                  placeholder="1.01"
-                  className="h-8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Description</Label>
-                <Input
-                  value={newItem.description || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Item description"
-                  className="h-8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">UOM</Label>
-                <Input
-                  value={newItem.uom || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, uom: e.target.value }))}
-                  placeholder="EA, LF, SF..."
-                  className="h-8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Quantity</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newItem.quantity || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                  placeholder="0.00"
-                  className="h-8"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Unit Price ($)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newItem.unitPrice || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                  placeholder="0.00"
-                  className="h-8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Notes (Optional)</Label>
-                <Input
-                  value={newItem.notes || ""}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes"
-                  className="h-8"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={addItem} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex justify-end">
+          <Button onClick={() => setShowAddDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add SOV Item
+          </Button>
+        </div>
       )}
 
       {/* Items Table */}
@@ -230,7 +233,7 @@ export const ScheduleOfValues = ({
               <Calculator className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium text-foreground mb-2">No items yet</h3>
               <p className="text-sm text-muted-foreground">
-                Add line items to define the scope and pricing for this contract.
+                Add standardized SOV items to define the scope and pricing for this contract.
               </p>
             </div>
           ) : (
@@ -238,8 +241,9 @@ export const ScheduleOfValues = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[80px]">Item #</TableHead>
+                    <TableHead className="w-[100px]">Item #</TableHead>
                     <TableHead>Description</TableHead>
+                    <TableHead className="w-[80px]">Work Type</TableHead>
                     <TableHead className="w-[80px]">UOM</TableHead>
                     <TableHead className="w-[100px] text-right">Quantity</TableHead>
                     <TableHead className="w-[120px] text-right">Unit Price</TableHead>
@@ -251,39 +255,20 @@ export const ScheduleOfValues = ({
                   {items.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
-                        {readOnly ? (
-                          <span className="text-sm font-medium">{item.itemNumber}</span>
-                        ) : (
-                          <Input
-                            value={item.itemNumber}
-                            onChange={(e) => updateItem(item.id, { itemNumber: e.target.value })}
-                            className="h-7 text-sm"
-                          />
-                        )}
+                        <span className="text-sm font-medium">{item.itemNumber}</span>
                       </TableCell>
                       <TableCell>
-                        {readOnly ? (
-                          <div>
-                            <div className="text-sm font-medium">{item.description}</div>
-                            {item.notes && (
-                              <div className="text-xs text-muted-foreground mt-1">{item.notes}</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Input
-                              value={item.description}
-                              onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                              className="h-7 text-sm"
-                            />
-                            <Input
-                              value={item.notes || ""}
-                              onChange={(e) => updateItem(item.id, { notes: e.target.value })}
-                              placeholder="Notes"
-                              className="h-6 text-xs"
-                            />
-                          </div>
-                        )}
+                        <div>
+                          <div className="text-sm font-medium">{item.description}</div>
+                          {item.notes && (
+                            <div className="text-xs text-muted-foreground mt-1">{item.notes}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {item.work_type || 'N/A'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {readOnly ? (
@@ -359,6 +344,183 @@ export const ScheduleOfValues = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Add Item Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Add Schedule of Values Item</DialogTitle>
+            <DialogDescription>
+              Select a standardized work item from the catalog and set pricing details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Search and Filter */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search items..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <Select value={workTypeFilter} onValueChange={setWorkTypeFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by work type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All work types</SelectItem>
+                  {workTypes.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* SOV Items List */}
+            <div className="max-h-60 overflow-y-auto border rounded-md">
+              {filteredSovItems.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  No items found matching your criteria.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {filteredSovItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-3 cursor-pointer hover:bg-muted/50 ${
+                        selectedSovItem?.id === item.id ? 'bg-primary/5 border-primary' : ''
+                      }`}
+                      onClick={() => setSelectedSovItem(item)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">{item.item_number}</span>
+                            <Badge variant="outline" className="text-xs">{item.work_type}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">{item.display_name}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{item.description}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Item Details */}
+            {selectedSovItem && (
+              <Card className="border-primary/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Selected Item</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs font-medium">Item Number</Label>
+                      <div className="text-sm font-medium">{selectedSovItem.item_number}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">Work Type</Label>
+                      <div className="text-sm">{selectedSovItem.work_type}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium">Description</Label>
+                    <div className="text-sm">{selectedSovItem.display_name}</div>
+                  </div>
+
+                  {/* Pricing Form */}
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Quantity</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Unit Price ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={unitPrice}
+                        onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Retainage Type</Label>
+                      <Select value={retainageType} onValueChange={(value: 'percent' | 'dollar') => setRetainageType(value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percent">Percent</SelectItem>
+                          <SelectItem value="dollar">Dollar Amount</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">
+                        Retainage {retainageType === 'percent' ? '(%)' : '($)'}
+                      </Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={retainageValue}
+                        onChange={(e) => setRetainageValue(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Notes (Optional)</Label>
+                    <Input
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Additional notes"
+                    />
+                  </div>
+
+                  {/* Preview */}
+                  <div className="bg-muted/30 p-3 rounded-md">
+                    <div className="text-xs font-medium mb-2">Preview:</div>
+                    <div className="text-sm">
+                      Extended Price: {formatCurrency(calculateExtendedPrice(quantity, unitPrice))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddItem}
+              disabled={!selectedSovItem || quantity <= 0 || unitPrice < 0}
+            >
+              Add Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

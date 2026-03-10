@@ -44,6 +44,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate that the work type exists in the job's SOV entries
+    const { data: sovEntries, error: sovError } = await supabase
+      .from('sov_entries')
+      .select(`
+        id,
+        sov_items (
+          work_type
+        )
+      `)
+      .eq('job_id', jobId);
+
+    if (sovError) {
+      console.error('Error fetching SOV entries:', sovError);
+      return NextResponse.json(
+        { error: 'Failed to validate work type' },
+        { status: 500 }
+      );
+    }
+
+    // Extract unique work types from the job's SOV entries
+    const allowedWorkTypes: string[] = [...new Set(
+      (sovEntries || []).map((entry: any) => entry.sov_items?.work_type).filter(Boolean)
+    )];
+
+    // Check if the requested work type is allowed
+    if (!allowedWorkTypes.includes(workType)) {
+      return NextResponse.json(
+        {
+          error: `Work type "${workType}" is not allowed for this job. Allowed work types: ${allowedWorkTypes.join(', ')}`
+        },
+        { status: 400 }
+      );
+    }
+
     const takeoffData = {
       job_id: jobId,
       title: title.trim(),
