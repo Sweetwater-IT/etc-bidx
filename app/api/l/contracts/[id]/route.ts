@@ -72,8 +72,46 @@ export async function PATCH(
 
     console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, updateData);
 
+    // Convert camelCase field names to snake_case for database
+    const fieldMapping: Record<string, string> = {
+      contractStatus: 'contract_status',
+      projectStatus: 'project_status',
+      billingStatus: 'billing_status',
+      etcJobNumber: 'etc_job_number',
+      etcBranch: 'etc_branch',
+      etcProjectManager: 'etc_project_manager',
+      etcBillingManager: 'etc_billing_manager',
+      etcProjectManagerEmail: 'etc_project_manager_email',
+      etcBillingManagerEmail: 'etc_billing_manager_email',
+      projectStartDate: 'project_start_date',
+      projectEndDate: 'project_end_date',
+      customerJobNumber: 'customer_job_number',
+      certifiedPayrollType: 'certified_payroll_type',
+      isCertifiedPayroll: 'certified_payroll_type',
+      customerPM: 'customer_pm',
+      customerPMEmail: 'customer_pm_email',
+      customerPMPhone: 'customer_pm_phone',
+      certifiedPayrollContact: 'certified_payroll_contact',
+      certifiedPayrollEmail: 'certified_payroll_email',
+      certifiedPayrollPhone: 'certified_payroll_phone',
+      customerBillingContact: 'customer_billing_contact',
+      customerBillingEmail: 'customer_billing_email',
+      customerBillingPhone: 'customer_billing_phone',
+      additionalNotes: 'additional_notes',
+      otherNotes: 'additional_notes',
+      extensionDate: 'extension_date',
+      internalId: 'internal_id',
+    };
+
+    // Transform camelCase fields to snake_case
+    const transformedData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updateData)) {
+      const snakeKey = fieldMapping[key] || key;
+      transformedData[snakeKey] = value;
+    }
+
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
-    if (updateData.contract_status === 'CONTRACT_SIGNED') {
+    if (transformedData.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
         .from('jobs_l')
@@ -97,19 +135,19 @@ export async function PATCH(
             nextJobNumber = `J-${String(count + 1).padStart(4, '0')}`;
           }
 
-          updateData.etc_job_number = nextJobNumber;
+          transformedData.etc_job_number = nextJobNumber;
           console.log('[API] Generated job number:', nextJobNumber, 'for contract:', contractId);
         }
       }
     }
 
     // Add updated_at timestamp
-    updateData.updated_at = new Date().toISOString();
+    transformedData.updated_at = new Date().toISOString();
 
     // Update the contract
     const { data: updatedData, error: updateError } = await supabase
       .from('jobs_l')
-      .update(updateData)
+      .update(transformedData)
       .eq('id', contractId)
       .select()
       .single();
