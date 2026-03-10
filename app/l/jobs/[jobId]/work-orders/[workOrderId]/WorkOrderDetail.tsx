@@ -1460,7 +1460,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                       <TableRow key={t.id}>
                         <TableCell className="text-xs font-medium">{t.title}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{t.work_type}</TableCell>
-                        <TableCell className="text-xs text-center font-mono">{t.item_count}</TableCell>
+                        <TableCell className="text-xs text-center font-mono">{woItems.length}</TableCell>
                         <TableCell className="text-xs">{t.install_date || "—"}</TableCell>
                         <TableCell>
                           <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
@@ -1486,37 +1486,6 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               Work Order Items
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs gap-1"
-              onClick={async () => {
-                if (!workOrderId) return;
-                console.log('=== FETCHING WORK ORDER ITEMS ===');
-                console.log('Work Order ID:', workOrderId);
-                try {
-                  const response = await fetch(`/api/workorders/${workOrderId}/items`);
-                  console.log('GET Response status:', response.status);
-                  console.log('GET Response ok:', response.ok);
-                  if (response.ok) {
-                    const data = await response.json();
-                    console.log('GET Success data:', data);
-                    toast.success(`Found ${data.items?.length || 0} items`);
-                    // Update local state with fetched items
-                    setWoItems(data.items || []);
-                  } else {
-                    const error = await response.json();
-                    console.log('GET Error:', error);
-                    toast.error(error.error || 'Failed to fetch items');
-                  }
-                } catch (err) {
-                  console.error('Error fetching items:', err);
-                  toast.error('Failed to fetch items');
-                }
-              }}
-            >
-              <Plus className="h-3 w-3" /> Fetch Work Order Items
-            </Button>
           </div>
 
           {loadingRelated ? (

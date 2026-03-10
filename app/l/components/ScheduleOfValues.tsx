@@ -291,8 +291,8 @@ export const ScheduleOfValues = ({
                           <Input
                             type="number"
                             step="0.01"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                            value={item.quantity || 1}
+                            onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 1 })}
                             className="h-7 text-sm text-right w-20 no-spinner"
                           />
                         )}
@@ -322,13 +322,29 @@ export const ScheduleOfValues = ({
                             }
                           </span>
                         ) : (
-                          <InputGroup
-                            value={item.retainageValue.toString()}
-                            onValueChange={(value) => updateItem(item.id, { retainageValue: parseFloat(value) || 0 })}
-                            type={item.retainageType}
-                            onTypeChange={(type) => updateItem(item.id, { retainageType: type })}
-                            className="w-28"
-                          />
+                          <div className="flex items-center">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="h-7 text-sm text-right rounded-r-none border-r-0 w-20"
+                              placeholder="0.00"
+                              value={item.retainageValue || ''}
+                              onChange={(e) => updateItem(item.id, { retainageValue: parseFloat(e.target.value) || 0 })}
+                            />
+                            <Select
+                              value={item.retainageType}
+                              onValueChange={(type: 'percent' | 'dollar') => updateItem(item.id, { retainageType: type })}
+                            >
+                              <SelectTrigger className="w-[50px] h-7 rounded-l-none border-l-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percent">%</SelectItem>
+                                <SelectItem value="dollar">$</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                       </TableCell>
                       {!readOnly && (
