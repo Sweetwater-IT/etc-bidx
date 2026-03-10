@@ -68,131 +68,12 @@ export async function PATCH(
 ) {
   try {
     const { id: contractId } = await params;
-    const body = await request.json();
-    const { patch, clientVersion, ...directFields } = body;
+    const updateData = await request.json();
 
-    console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, { patch, clientVersion, directFields: Object.keys(directFields) });
-
-    // Support both patch format (for useContractDraft) and direct fields (for simple updates like ContractManager)
-    let finalPatch: Record<string, unknown>;
-    if (patch && typeof patch === 'object') {
-      // Complex form update with version conflict detection
-      finalPatch = patch as Record<string, unknown>;
-    } else if (Object.keys(directFields).length > 0) {
-      // Simple direct field update (like ContractManager)
-      finalPatch = directFields;
-    } else {
-      console.error('[API] No valid update data provided');
-      return NextResponse.json(
-        { error: 'Missing update data. Provide either patch object or direct fields.' },
-        { status: 400 }
-      );
-    }
-
-    // Get current version for optimistic locking
-    const { data: currentData, error: fetchError } = await supabase
-      .from('jobs_l')
-      .select('version')
-      .eq('id', contractId)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching contract version:', fetchError);
-      return NextResponse.json(
-        { error: 'Failed to fetch contract version' },
-        { status: 500 }
-      );
-    }
-
-    const currentVersion = currentData.version || 1;
-
-    // Check version conflict
-    if (clientVersion !== undefined && clientVersion !== currentVersion) {
-      // Get latest data for conflict resolution
-      const { data: latestData, error: latestError } = await supabase
-        .from('jobs_l')
-        .select('*')
-        .eq('id', contractId)
-        .single();
-
-      if (latestError) {
-        console.error('Error fetching latest contract data:', latestError);
-        return NextResponse.json(
-          {
-            error: 'Version conflict detected',
-            code: 'VERSION_CONFLICT',
-            latest: latestData
-          },
-          { status: 409 }
-        );
-      }
-
-      return NextResponse.json(
-        {
-          error: 'Version conflict detected',
-          code: 'VERSION_CONFLICT',
-          latest: latestData
-        },
-        { status: 409 }
-      );
-    }
-
-    // Transform camelCase field names to snake_case for database
-    const fieldMapping: Record<string, string> = {
-      projectName: 'project_name',
-      contractNumber: 'contract_number',
-      customerName: 'customer_name',
-      customerJobNumber: 'customer_job_number',
-      projectOwner: 'project_owner',
-      etcJobNumber: 'etc_job_number',
-      etcBranch: 'etc_branch',
-      county: 'county',
-      stateRoute: 'state_route',
-      projectStartDate: 'project_start_date',
-      projectEndDate: 'project_end_date',
-      additionalNotes: 'additional_notes',
-      otherNotes: 'additional_notes', // alias
-      certifiedPayrollType: 'certified_payroll_type',
-      isCertifiedPayroll: 'certified_payroll_type', // alias
-      shopRate: 'shop_rate',
-      stateMptBaseRate: 'state_base_rate',
-      stateMptFringeRate: 'state_fringe_rate',
-      stateFlaggingBaseRate: 'state_flagging_base_rate',
-      stateFlaggingFringeRate: 'state_flagging_fringe_rate',
-      federalMptBaseRate: 'federal_base_rate',
-      federalMptFringeRate: 'federal_fringe_rate',
-      federalFlaggingBaseRate: 'federal_flagging_base_rate',
-      federalFlaggingFringeRate: 'federal_flagging_fringe_rate',
-      contractStatus: 'contract_status',
-      projectStatus: 'project_status',
-      billingStatus: 'billing_status',
-      customerPM: 'customer_pm',
-      customerPMEmail: 'customer_pm_email',
-      customerPMPhone: 'customer_pm_phone',
-      certifiedPayrollContact: 'certified_payroll_contact',
-      certifiedPayrollEmail: 'certified_payroll_email',
-      certifiedPayrollPhone: 'certified_payroll_phone',
-      customerBillingContact: 'customer_billing_contact',
-      customerBillingEmail: 'customer_billing_email',
-      customerBillingPhone: 'customer_billing_phone',
-      etcProjectManager: 'etc_project_manager',
-      etcBillingManager: 'etc_billing_manager',
-      etcProjectManagerEmail: 'etc_project_manager_email',
-      etcBillingManagerEmail: 'etc_billing_manager_email',
-      extensionDate: 'extension_date',
-    };
-
-    // Transform patch data to snake_case
-    const transformedPatch: Record<string, unknown> = {};
-    for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
-      if (finalPatch[camelKey] !== undefined) {
-        transformedPatch[snakeKey] = finalPatch[camelKey];
-      }
-    }
+    console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, updateData);
 
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
-    const updatePatch = { ...transformedPatch };
-    if (transformedPatch.contract_status === 'CONTRACT_SIGNED') {
+    if (updateData.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
         .from('jobs_l')
@@ -216,49 +97,25 @@ export async function PATCH(
             nextJobNumber = `J-${String(count + 1).padStart(4, '0')}`;
           }
 
-          finalPatch.etc_job_number = nextJobNumber;
+          updateData.etc_job_number = nextJobNumber;
           console.log('[API] Generated job number:', nextJobNumber, 'for contract:', contractId);
         }
       }
     }
 
-    // Apply the patch
-    const updateData = {
-      ...finalPatch,
-      version: currentVersion + 1,
-      updated_at: new Date().toISOString()
-    };
+    // Add updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
 
+    // Update the contract
     const { data: updatedData, error: updateError } = await supabase
       .from('jobs_l')
       .update(updateData)
       .eq('id', contractId)
-      .eq('version', currentVersion)
       .select()
       .single();
 
     if (updateError) {
       console.error('Error updating contract:', updateError);
-
-      // Check if it's a version conflict
-      if (updateError.code === 'PGRST116') {
-        // Get latest data
-        const { data: latestData } = await supabase
-          .from('jobs_l')
-          .select('*')
-          .eq('id', contractId)
-          .single();
-
-        return NextResponse.json(
-          {
-            error: 'Version conflict detected',
-            code: 'VERSION_CONFLICT',
-            latest: latestData
-          },
-          { status: 409 }
-        );
-      }
-
       return NextResponse.json(
         { error: 'Failed to update contract' },
         { status: 500 }

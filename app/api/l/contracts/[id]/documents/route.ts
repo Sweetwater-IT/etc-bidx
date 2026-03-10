@@ -57,7 +57,6 @@ export async function POST(
         file_path: filePath,
         file_size: file.size,
         file_type: category,
-        checklist_item_id: associatedItemId || null,
       }).select("*").single();
 
       if (docErr) {
