@@ -20,6 +20,7 @@ import {
   Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
 import type { ContractListItem } from "@/types/contract";
 
@@ -49,16 +50,7 @@ function validateFile(file: File): string | null {
   return null;
 }
 
-async function uploadWithRetry(
-  bucket: string,
-  path: string,
-  file: File,
-  maxRetries = 2,
-): Promise<void> {
-  // This will need to be implemented with your API
-  // For now, just simulate success
-  await new Promise(resolve => setTimeout(resolve, 1000));
-}
+
 
 // Simplified pipeline — no approval stages
 const PIPELINE_STAGES: {
@@ -94,15 +86,7 @@ const canMoveTo = (from: ContractPipelineStatus, to: ContractPipelineStatus) =>
 
 const SIGNED_STATUSES: ContractPipelineStatus[] = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
 
-async function resolveVersion(
-  jobId: string,
-  cachedJobs: ContractListItem[] | undefined
-): Promise<number | null> {
-  const cached = cachedJobs?.find((j) => j.id === jobId);
-  if (cached?.version != null && cached.version > 0) return cached.version;
-  // This will need to be implemented with your API
-  return null;
-}
+
 
 // Map legacy approval statuses into the "Received" bucket
 function mapToDisplayStage(status: string): ContractPipelineStatus {
@@ -198,15 +182,14 @@ const ContractManager = () => {
         )
       );
 
-      // Persist to database
+      // Persist to database - use direct PATCH like other creation pages
       const response = await fetch(`/api/l/contracts/${jobId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patch: { contractStatus: newStatus },
-          clientVersion: job.version
+          contractStatus: newStatus
         }),
       });
 
@@ -261,7 +244,21 @@ const ContractManager = () => {
     setUploadProgress(0);
 
     try {
-      // This will need to be implemented with your API
+      // Upload files first
+      const formData = new FormData();
+      signedFiles.forEach(file => formData.append('files', file));
+      formData.append('contractId', pendingSignedJobId);
+
+      const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Failed to upload files');
+      }
+
       setUploadProgress(100);
 
       // Update local state immediately for UI feedback
@@ -273,15 +270,14 @@ const ContractManager = () => {
         )
       );
 
-      // Persist to database
+      // Persist contract status to database - use direct PATCH like other creation pages
       const response = await fetch(`/api/l/contracts/${pendingSignedJobId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patch: { contractStatus: "CONTRACT_SIGNED" },
-          clientVersion: job.version
+          contractStatus: "CONTRACT_SIGNED"
         }),
       });
 
