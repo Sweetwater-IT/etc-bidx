@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useSovItems } from '@/hooks/useSovItems';
 import {
   Popover,
   PopoverContent,
@@ -40,8 +41,9 @@ import {
 } from '@/components/ui/table';
 import { ClipboardList, Plus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProductsSearch } from '@/hooks/useProductsSearch';
-import { useSovItems } from '@/hooks/useSovItems';
+interface SovMasterItem {
+  id: number;
+  item_number: string
 import type { ScheduleOfValuesItem } from '@/types/job';
 
 interface SOVTableProps {
