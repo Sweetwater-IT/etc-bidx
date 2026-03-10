@@ -247,8 +247,6 @@ export async function POST(
       `)
       .single();
 
-    console.log('[SOV API POST] Supabase insert result:', { data: !!data, error });
-
     // Handle duplicate key constraint violation - try to update existing entry instead
     if (error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key')) {
       console.log('[SOV API POST] Duplicate key violation detected, attempting to update existing entry');
@@ -305,6 +303,8 @@ export async function POST(
         { status: 500 }
       );
     }
+
+
 
     console.log('[SOV API POST] Raw data from insert:', JSON.stringify(data, null, 2));
 
