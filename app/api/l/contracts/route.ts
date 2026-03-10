@@ -154,14 +154,19 @@ export async function POST(request: NextRequest) {
     // Transform incoming data to snake_case
     const dbData: Record<string, unknown> = {};
 
-    // Date fields that should be converted from empty strings to null
+    // Fields that should be converted from empty strings to null
     const dateFields = ['project_start_date', 'project_end_date', 'extension_date'];
+    const numericFields = [
+      'shop_rate',
+      'state_base_rate', 'state_fringe_rate', 'state_flagging_base_rate', 'state_flagging_fringe_rate',
+      'federal_base_rate', 'federal_fringe_rate', 'federal_flagging_base_rate', 'federal_flagging_fringe_rate'
+    ];
 
     for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
       if (camelKey in contractData) {
         let value = contractData[camelKey];
-        // Convert empty strings to null for date fields
-        if (dateFields.includes(camelKey) && value === '') {
+        // Convert empty strings to null for date and numeric fields
+        if ((dateFields.includes(camelKey) || numericFields.includes(camelKey)) && value === '') {
           value = null;
         }
         dbData[snakeKey] = value;
