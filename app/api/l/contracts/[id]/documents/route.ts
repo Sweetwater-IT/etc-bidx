@@ -9,7 +9,7 @@ export async function GET(
     const { id: jobId } = await params;
 
     const { data: docs, error } = await supabase
-      .from("documents")
+      .from("documents_l")
       .select("*")
       .eq("job_id", jobId);
 
@@ -51,7 +51,7 @@ export async function POST(
         continue; // Skip this file but continue with others
       }
 
-      const { data: docRow, error: docErr } = await supabase.from("documents").insert({
+      const { data: docRow, error: docErr } = await supabase.from("documents_l").insert({
         job_id: jobId,
         file_name: file.name,
         file_path: filePath,
@@ -98,7 +98,7 @@ export async function DELETE(
 
     // Get document info first
     const { data: doc, error: fetchErr } = await supabase
-      .from("documents")
+      .from("documents_l")
       .select("file_path")
       .eq("id", documentId)
       .single();
@@ -114,7 +114,7 @@ export async function DELETE(
 
     // Delete from database
     const { error: deleteErr } = await supabase
-      .from("documents")
+      .from("documents_l")
       .delete()
       .eq("id", documentId);
 
@@ -142,7 +142,7 @@ export async function PUT(
     }
 
     const { error } = await supabase
-      .from("documents")
+      .from("documents_l")
       .update({ file_type: category })
       .eq("id", documentId);
 

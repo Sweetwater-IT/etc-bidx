@@ -47,7 +47,7 @@ export async function POST(
       }
 
       // Insert document record
-      await supabase.from("documents").insert({
+      await supabase.from("documents_l").insert({
         job_id: jobId,
         file_name: documentFile.name,
         file_path: filePath,

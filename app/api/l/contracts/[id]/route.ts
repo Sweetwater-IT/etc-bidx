@@ -69,14 +69,22 @@ export async function PATCH(
   try {
     const { id: contractId } = await params;
     const body = await request.json();
-    const { patch, clientVersion } = body;
+    const { patch, clientVersion, ...directFields } = body;
 
-    console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, { patch, clientVersion });
+    console.log('[API] PATCH /api/l/contracts/[id] - Updating contract:', contractId, { patch, clientVersion, directFields: Object.keys(directFields) });
 
-    if (!patch || typeof patch !== 'object') {
-      console.error('[API] Invalid patch data:', patch);
+    // Support both patch format (for useContractDraft) and direct fields (for simple updates like ContractManager)
+    let finalPatch: Record<string, unknown>;
+    if (patch && typeof patch === 'object') {
+      // Complex form update with version conflict detection
+      finalPatch = patch as Record<string, unknown>;
+    } else if (Object.keys(directFields).length > 0) {
+      // Simple direct field update (like ContractManager)
+      finalPatch = directFields;
+    } else {
+      console.error('[API] No valid update data provided');
       return NextResponse.json(
-        { error: 'Missing or invalid patch data' },
+        { error: 'Missing update data. Provide either patch object or direct fields.' },
         { status: 400 }
       );
     }
@@ -177,13 +185,13 @@ export async function PATCH(
     // Transform patch data to snake_case
     const transformedPatch: Record<string, unknown> = {};
     for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
-      if (patch[camelKey] !== undefined) {
-        transformedPatch[snakeKey] = patch[camelKey];
+      if (finalPatch[camelKey] !== undefined) {
+        transformedPatch[snakeKey] = finalPatch[camelKey];
       }
     }
 
     // Check if contract status is changing to CONTRACT_SIGNED and generate job number
-    const finalPatch = { ...transformedPatch };
+    const updatePatch = { ...transformedPatch };
     if (transformedPatch.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
