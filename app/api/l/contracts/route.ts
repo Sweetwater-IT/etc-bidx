@@ -153,27 +153,20 @@ export async function POST(request: NextRequest) {
 
     // Transform incoming data to snake_case
     const dbData: Record<string, unknown> = {};
-    console.log('API: Starting field mapping transformation');
-    console.log('API: contractData keys:', Object.keys(contractData));
-    console.log('API: fieldMapping keys:', Object.keys(fieldMapping));
 
     // Date fields that should be converted from empty strings to null
     const dateFields = ['project_start_date', 'project_end_date', 'extension_date'];
 
     for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
-      console.log(`API: Checking field ${camelKey} -> ${snakeKey}, exists in contractData:`, camelKey in contractData);
       if (camelKey in contractData) {
         let value = contractData[camelKey];
         // Convert empty strings to null for date fields
         if (dateFields.includes(camelKey) && value === '') {
-          console.log(`API: Converting empty string to null for date field ${camelKey}`);
           value = null;
         }
-        console.log(`API: Mapping ${camelKey} = ${value} to ${snakeKey}`);
         dbData[snakeKey] = value;
       }
     }
-    console.log('API: Final dbData after mapping:', dbData);
 
 
 
