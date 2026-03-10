@@ -10,6 +10,7 @@ export type SaveStatus = "idle" | "saving" | "saved" | "unsaved" | "error";
 interface ContractRow {
   id: string;
   projectName: string;
+  contract_status: string;
   // other fields
 }
 
@@ -19,6 +20,7 @@ interface ContractState {
   dirtyFields: Record<string, unknown>;
   saveStatus: SaveStatus;
   isSaving: boolean;
+  lastSavedAt: Date | null;
 }
 
 const useContractStore = create<ContractState & {
@@ -27,17 +29,20 @@ const useContractStore = create<ContractState & {
   setDirtyFields: (fields: Record<string, unknown>) => void;
   setSaveStatus: (status: SaveStatus) => void;
   setIsSaving: (saving: boolean) => void;
+  setLastSavedAt: (date: Date | null) => void;
 }>((set) => ({
   contractRow: null,
   projectInfo: null,
   dirtyFields: {},
   saveStatus: "idle",
   isSaving: false,
+  lastSavedAt: null,
   setContractRow: (row) => set({ contractRow: row }),
   setProjectInfo: (info) => set({ projectInfo: info }),
   setDirtyFields: (fields) => set({ dirtyFields: fields }),
   setSaveStatus: (status) => set({ saveStatus: status }),
   setIsSaving: (saving) => set({ isSaving: saving }),
+  setLastSavedAt: (date) => set({ lastSavedAt: date }),
 }));
 
 async function upsertDraft(params: { contractId?: string; data: Record<string, unknown> }) {
@@ -71,11 +76,13 @@ export const useContractDraft = (contractId?: string) => {
     dirtyFields,
     saveStatus,
     isSaving,
+    lastSavedAt,
     setContractRow,
     setProjectInfo,
     setDirtyFields,
     setSaveStatus,
     setIsSaving,
+    setLastSavedAt,
   } = useContractStore();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -118,6 +125,7 @@ export const useContractDraft = (contractId?: string) => {
       setDirtyFields({});
       setSaveStatus("saved");
       setIsSaving(false);
+      setLastSavedAt(new Date());
       toast.success("Contract saved successfully");
     } catch (err) {
       setSaveStatus("error");
@@ -135,6 +143,7 @@ export const useContractDraft = (contractId?: string) => {
       setProjectInfo(result.projectInfo);
       setSaveStatus("saved");
       setIsSaving(false);
+      setLastSavedAt(new Date());
       return result.contract.id;
     } catch (err) {
       setSaveStatus("error");
@@ -172,6 +181,8 @@ export const useContractDraft = (contractId?: string) => {
     saveStatus,
     isSaving,
     isLoading,
+    lastSavedAt,
+    hasDirtyFields: Object.keys(dirtyFields).length > 0,
     markDirty,
     manualSave,
     createContract,

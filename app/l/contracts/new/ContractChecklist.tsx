@@ -92,7 +92,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     isSaving,
     hasDirtyFields,
     markDirty,
-    saveOnBlur,
     manualSave,
     createContract,
   } = useContractDraft(contractId);
