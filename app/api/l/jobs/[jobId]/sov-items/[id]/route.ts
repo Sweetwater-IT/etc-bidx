@@ -5,10 +5,23 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string; id: string }> }
 ) {
+  console.log('[SOV API PUT] Starting PUT request');
   try {
     const { jobId, id } = await params;
+    console.log('[SOV API PUT] Job ID:', jobId, 'Entry ID:', id);
+
     const body = await request.json();
+    console.log('[SOV API PUT] Request body:', JSON.stringify(body, null, 2));
+
     const { quantity, unit_price, retainage_type, retainage_value, notes, sort_order } = body;
+    console.log('[SOV API PUT] Extracted fields:', {
+      quantity,
+      unit_price,
+      retainage_type,
+      retainage_value,
+      notes,
+      sort_order
+    });
 
     // Calculate extended price and retainage amount
     const extended_price = quantity * unit_price;
@@ -16,19 +29,31 @@ export async function PUT(
       ? extended_price * (retainage_value / 100)
       : retainage_value;
 
+    console.log('[SOV API PUT] Calculated values:', {
+      extended_price,
+      retainage_amount,
+      calculation: retainage_type === 'percent'
+        ? `${extended_price} * (${retainage_value} / 100) = ${retainage_amount}`
+        : `fixed amount: ${retainage_amount}`
+    });
+
+    const updateData = {
+      quantity,
+      unit_price,
+      extended_price,
+      retainage_type,
+      retainage_value,
+      retainage_amount,
+      notes,
+      sort_order,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('[SOV API PUT] Updating SOV entry with data:', JSON.stringify(updateData, null, 2));
+
     const { data, error } = await supabase
       .from('sov_entries')
-      .update({
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .eq('job_id', jobId) // Extra security check
       .select(`
@@ -56,13 +81,17 @@ export async function PUT(
       `)
       .single();
 
+    console.log('[SOV API PUT] Supabase update result:', { data: !!data, error });
+
     if (error) {
-      console.error('Error updating SOV entry:', error);
+      console.error('[SOV API PUT] Error updating SOV entry:', error);
       return NextResponse.json(
-        { error: 'Failed to update SOV entry' },
+        { error: 'Failed to update SOV entry', details: error },
         { status: 500 }
       );
     }
+
+    console.log('[SOV API PUT] Raw data from update:', JSON.stringify(data, null, 2));
 
     // Transform response to match expected format
     const transformedData = {
@@ -86,11 +115,15 @@ export async function PUT(
       updated_at: data.updated_at,
     };
 
+    console.log('[SOV API PUT] Transformed response data:', JSON.stringify(transformedData, null, 2));
+    console.log('[SOV API PUT] PUT request completed successfully');
+
     return NextResponse.json({ data: transformedData });
   } catch (error) {
-    console.error('Error in SOV entries PUT:', error);
+    console.error('[SOV API PUT] Unexpected error in PUT handler:', error);
+    console.error('[SOV API PUT] Error stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: (error as Error).message },
       { status: 500 }
     );
   }
@@ -100,27 +133,35 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string; id: string }> }
 ) {
+  console.log('[SOV API DELETE] Starting DELETE request');
   try {
     const { jobId, id } = await params;
+    console.log('[SOV API DELETE] Job ID:', jobId, 'Entry ID:', id);
+
+    console.log('[SOV API DELETE] Deleting SOV entry...');
     const { error } = await supabase
       .from('sov_entries')
       .delete()
       .eq('id', id)
       .eq('job_id', jobId); // Extra security check
 
+    console.log('[SOV API DELETE] Supabase delete result:', { error });
+
     if (error) {
-      console.error('Error deleting SOV entry:', error);
+      console.error('[SOV API DELETE] Error deleting SOV entry:', error);
       return NextResponse.json(
-        { error: 'Failed to delete SOV entry' },
+        { error: 'Failed to delete SOV entry', details: error },
         { status: 500 }
       );
     }
 
+    console.log('[SOV API DELETE] DELETE request completed successfully');
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in SOV entries DELETE:', error);
+    console.error('[SOV API DELETE] Unexpected error in DELETE handler:', error);
+    console.error('[SOV API DELETE] Error stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: (error as Error).message },
       { status: 500 }
     );
   }

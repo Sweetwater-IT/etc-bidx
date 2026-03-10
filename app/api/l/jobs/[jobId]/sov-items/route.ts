@@ -79,9 +79,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
+  console.log('[SOV API POST] Starting POST request');
   try {
     const { jobId } = await params;
+    console.log('[SOV API POST] Job ID:', jobId);
+
     const body = await request.json();
+    console.log('[SOV API POST] Request body:', JSON.stringify(body, null, 2));
+
     const {
       sov_item_id,
       item_number,
@@ -95,20 +100,40 @@ export async function POST(
       sort_order
     } = body;
 
+    console.log('[SOV API POST] Extracted fields:', {
+      sov_item_id,
+      item_number,
+      description,
+      uom,
+      quantity,
+      unit_price,
+      retainage_type,
+      retainage_value,
+      notes,
+      sort_order
+    });
+
     let finalSovItemId = sov_item_id;
+    console.log('[SOV API POST] Initial sov_item_id:', finalSovItemId);
 
     // If no sov_item_id provided, try to find existing master item or create one
     if (!finalSovItemId && item_number) {
+      console.log('[SOV API POST] No sov_item_id provided, looking for existing master item with item_number:', item_number);
+
       // First, try to find existing master item
-      const { data: existingItem } = await supabase
+      const { data: existingItem, error: findError } = await supabase
         .from('sov_items')
         .select('id')
         .eq('item_number', item_number)
         .single();
 
+      console.log('[SOV API POST] Existing item search result:', { existingItem, findError });
+
       if (existingItem) {
         finalSovItemId = existingItem.id;
+        console.log('[SOV API POST] Found existing master item:', finalSovItemId);
       } else {
+        console.log('[SOV API POST] Creating new master item for custom item');
         // Create new master item for custom item
         const { data: newItem, error: createError } = await supabase
           .from('sov_items')
@@ -122,25 +147,31 @@ export async function POST(
           .select('id')
           .single();
 
+        console.log('[SOV API POST] Master item creation result:', { newItem, createError });
+
         if (createError) {
-          console.error('Error creating master SOV item:', createError);
+          console.error('[SOV API POST] Error creating master SOV item:', createError);
           return NextResponse.json(
-            { error: 'Failed to create master SOV item' },
+            { error: 'Failed to create master SOV item', details: createError },
             { status: 500 }
           );
         }
 
         finalSovItemId = newItem.id;
+        console.log('[SOV API POST] Created new master item:', finalSovItemId);
       }
     }
 
     // Validate we have a sov_item_id
     if (!finalSovItemId) {
+      console.error('[SOV API POST] Missing sov_item_id or item_number - validation failed');
       return NextResponse.json(
         { error: 'Missing sov_item_id or item_number' },
         { status: 400 }
       );
     }
+
+    console.log('[SOV API POST] Final sov_item_id:', finalSovItemId);
 
     // Calculate extended price and retainage amount
     const extended_price = quantity * unit_price;
@@ -148,33 +179,49 @@ export async function POST(
       ? extended_price * (retainage_value / 100)
       : retainage_value;
 
+    console.log('[SOV API POST] Calculated values:', {
+      extended_price,
+      retainage_amount,
+      calculation: retainage_type === 'percent'
+        ? `${extended_price} * (${retainage_value} / 100) = ${retainage_amount}`
+        : `fixed amount: ${retainage_amount}`
+    });
+
     // Get next sort order if not provided
     let finalSortOrder = sort_order;
     if (!finalSortOrder) {
-      const { data: maxSort } = await supabase
+      console.log('[SOV API POST] No sort_order provided, calculating next sort order');
+      const { data: maxSort, error: sortError } = await supabase
         .from('sov_entries')
         .select('sort_order')
         .eq('job_id', jobId)
         .order('sort_order', { ascending: false })
         .limit(1);
 
+      console.log('[SOV API POST] Sort order query result:', { maxSort, sortError });
+
       finalSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
+      console.log('[SOV API POST] Calculated final sort order:', finalSortOrder);
     }
+
+    const insertData = {
+      job_id: jobId,
+      sov_item_id: finalSovItemId,
+      quantity,
+      unit_price,
+      extended_price,
+      retainage_type,
+      retainage_value,
+      retainage_amount,
+      notes,
+      sort_order: finalSortOrder,
+    };
+
+    console.log('[SOV API POST] Inserting SOV entry with data:', JSON.stringify(insertData, null, 2));
 
     const { data, error } = await supabase
       .from('sov_entries')
-      .insert({
-        job_id: jobId,
-        sov_item_id: finalSovItemId,
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order: finalSortOrder,
-      })
+      .insert(insertData)
       .select(`
         id,
         job_id,
@@ -200,13 +247,17 @@ export async function POST(
       `)
       .single();
 
+    console.log('[SOV API POST] Supabase insert result:', { data: !!data, error });
+
     if (error) {
-      console.error('Error creating SOV entry:', error);
+      console.error('[SOV API POST] Error creating SOV entry:', error);
       return NextResponse.json(
-        { error: 'Failed to create SOV entry' },
+        { error: 'Failed to create SOV entry', details: error },
         { status: 500 }
       );
     }
+
+    console.log('[SOV API POST] Raw data from insert:', JSON.stringify(data, null, 2));
 
     // Transform response to match expected format
     const transformedData = {
@@ -230,11 +281,15 @@ export async function POST(
       updated_at: data.updated_at,
     };
 
+    console.log('[SOV API POST] Transformed response data:', JSON.stringify(transformedData, null, 2));
+    console.log('[SOV API POST] POST request completed successfully');
+
     return NextResponse.json({ data: transformedData });
   } catch (error) {
-    console.error('Error in SOV entries POST:', error);
+    console.error('[SOV API POST] Unexpected error in POST handler:', error);
+    console.error('[SOV API POST] Error stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: (error as Error).message },
       { status: 500 }
     );
   }

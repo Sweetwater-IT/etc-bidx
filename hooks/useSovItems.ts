@@ -61,10 +61,16 @@ export function useSovItems(jobId: string | undefined) {
 
   // Save items to database with proper change tracking
   const saveItems = useCallback(async (currentItems: ScheduleOfValuesItem[]) => {
-    if (!jobId) return;
+    if (!jobId) {
+      console.error('[SOV save error] No jobId provided');
+      return;
+    }
+
+    console.log('[SOV save] Starting save operation for jobId:', jobId);
 
     // Wait for any in-flight save
     if (inFlightRef.current) {
+      console.log('[SOV save] Waiting for in-flight save to complete...');
       try { await inFlightRef.current; } catch { /* proceed */ }
     }
 
@@ -74,14 +80,19 @@ export function useSovItems(jobId: string | undefined) {
     const promise = (async () => {
       try {
         const originalItems = originalItemsRef.current;
+        console.log('[SOV save] Original items count:', originalItems.length);
+        console.log('[SOV save] Current items count:', currentItems.length);
+
         const currentItemIds = new Set(currentItems.map(item => item.id));
         const originalItemIds = new Set(originalItems.map(item => item.id));
 
         // Find items to delete (in original but not in current)
         const itemsToDelete = originalItems.filter(item => !currentItemIds.has(item.id));
+        console.log('[SOV save] Items to delete:', itemsToDelete.length, itemsToDelete.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
         // Find items to create (in current but not in original)
         const itemsToCreate = currentItems.filter(item => !originalItemIds.has(item.id));
+        console.log('[SOV save] Items to create:', itemsToCreate.length, itemsToCreate.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
         // Find items to update (in both, but potentially changed)
         const itemsToUpdate = currentItems.filter(currentItem => {
@@ -89,95 +100,179 @@ export function useSovItems(jobId: string | undefined) {
           if (!originalItem) return false;
 
           // Check if any significant fields changed
-          return (
+          const hasChanged = (
             originalItem.quantity !== currentItem.quantity ||
             originalItem.unitPrice !== currentItem.unitPrice ||
             originalItem.retainageType !== currentItem.retainageType ||
             originalItem.retainageValue !== currentItem.retainageValue ||
             originalItem.notes !== currentItem.notes
           );
+
+          if (hasChanged) {
+            console.log('[SOV save] Item changed:', {
+              id: currentItem.id,
+              itemNumber: currentItem.itemNumber,
+              changes: {
+                quantity: originalItem.quantity !== currentItem.quantity ? `${originalItem.quantity} -> ${currentItem.quantity}` : null,
+                unitPrice: originalItem.unitPrice !== currentItem.unitPrice ? `${originalItem.unitPrice} -> ${currentItem.unitPrice}` : null,
+                retainageType: originalItem.retainageType !== currentItem.retainageType ? `${originalItem.retainageType} -> ${currentItem.retainageType}` : null,
+                retainageValue: originalItem.retainageValue !== currentItem.retainageValue ? `${originalItem.retainageValue} -> ${currentItem.retainageValue}` : null,
+                notes: originalItem.notes !== currentItem.notes ? 'changed' : null,
+              }
+            });
+          }
+
+          return hasChanged;
         });
+        console.log('[SOV save] Items to update:', itemsToUpdate.length, itemsToUpdate.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
         // Execute operations in order: delete, create, update
         const operations: Promise<any>[] = [];
+        let operationIndex = 0;
 
         // Delete operations
+        console.log('[SOV save] Starting delete operations...');
         for (const item of itemsToDelete) {
+          console.log(`[SOV save] Delete operation ${operationIndex}: item ${item.itemNumber} (id: ${item.id})`);
           operations.push(
             fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, { method: 'DELETE' })
-              .then(response => {
-                if (!response.ok) throw new Error(`Failed to delete item ${item.itemNumber}`);
+              .then(async response => {
+                console.log(`[SOV save] Delete response for ${item.itemNumber}:`, response.status, response.statusText);
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error(`[SOV save] Delete failed for ${item.itemNumber}:`, errorText);
+                  throw new Error(`Failed to delete item ${item.itemNumber}: ${response.status} ${response.statusText}`);
+                }
                 return response;
               })
+              .catch(error => {
+                console.error(`[SOV save] Delete operation failed for ${item.itemNumber}:`, error);
+                throw error;
+              })
           );
+          operationIndex++;
         }
 
         // Create operations
+        console.log('[SOV save] Starting create operations...');
         for (const item of itemsToCreate) {
+          const payload = {
+            item_number: item.itemNumber,
+            description: item.description,
+            uom: item.uom,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            retainage_type: item.retainageType,
+            retainage_value: item.retainageValue,
+            notes: item.notes,
+            sort_order: currentItems.indexOf(item) + 1,
+          };
+          console.log(`[SOV save] Create operation ${operationIndex}: item ${item.itemNumber}`, payload);
+
           operations.push(
             fetch(`/api/l/jobs/${jobId}/sov-items`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                item_number: item.itemNumber,
-                description: item.description,
-                uom: item.uom,
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-                retainage_type: item.retainageType,
-                retainage_value: item.retainageValue,
-                notes: item.notes,
-                sort_order: currentItems.indexOf(item) + 1,
-              }),
-            }).then(response => {
-              if (!response.ok) throw new Error(`Failed to create item ${item.itemNumber}`);
-              return response.json();
+              body: JSON.stringify(payload),
             })
+              .then(async response => {
+                console.log(`[SOV save] Create response for ${item.itemNumber}:`, response.status, response.statusText);
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error(`[SOV save] Create failed for ${item.itemNumber}:`, errorText);
+                  throw new Error(`Failed to create item ${item.itemNumber}: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+                const result = await response.json();
+                console.log(`[SOV save] Create success for ${item.itemNumber}:`, result);
+                return result;
+              })
+              .catch(error => {
+                console.error(`[SOV save] Create operation failed for ${item.itemNumber}:`, error);
+                throw error;
+              })
           );
+          operationIndex++;
         }
 
         // Update operations
+        console.log('[SOV save] Starting update operations...');
         for (const item of itemsToUpdate) {
+          const payload = {
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            retainage_type: item.retainageType,
+            retainage_value: item.retainageValue,
+            notes: item.notes,
+            sort_order: currentItems.indexOf(item) + 1,
+          };
+          console.log(`[SOV save] Update operation ${operationIndex}: item ${item.itemNumber} (id: ${item.id})`, payload);
+
           operations.push(
             fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-                retainage_type: item.retainageType,
-                retainage_value: item.retainageValue,
-                notes: item.notes,
-                sort_order: currentItems.indexOf(item) + 1,
-              }),
-            }).then(response => {
-              if (!response.ok) throw new Error(`Failed to update item ${item.itemNumber}`);
-              return response.json();
+              body: JSON.stringify(payload),
             })
+              .then(async response => {
+                console.log(`[SOV save] Update response for ${item.itemNumber}:`, response.status, response.statusText);
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error(`[SOV save] Update failed for ${item.itemNumber}:`, errorText);
+                  throw new Error(`Failed to update item ${item.itemNumber}: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+                const result = await response.json();
+                console.log(`[SOV save] Update success for ${item.itemNumber}:`, result);
+                return result;
+              })
+              .catch(error => {
+                console.error(`[SOV save] Update operation failed for ${item.itemNumber}:`, error);
+                throw error;
+              })
           );
+          operationIndex++;
         }
 
+        console.log(`[SOV save] Executing ${operations.length} operations...`);
         // Execute all operations
-        await Promise.all(operations);
+        const results = await Promise.all(operations);
+        console.log('[SOV save] All operations completed successfully:', results.length, 'results');
 
         // Update original items reference with current state
         originalItemsRef.current = currentItems.map(item => ({ ...item }));
+        console.log('[SOV save] Updated original items reference');
 
         setSaveStatus('saved');
+        console.log('[SOV save] Save operation completed successfully');
         // Reset to idle after a moment
         setTimeout(() => setSaveStatus((prev) => prev === 'saved' ? 'idle' : prev), 2000);
       } catch (err: any) {
-        console.error('[SOV save error]', err);
+        console.error('[SOV save error] Detailed error information:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+          jobId,
+          currentItemsCount: currentItems.length,
+          originalItemsCount: originalItemsRef.current.length,
+        });
         setSaveStatus('error');
         toast.error(`SOV save failed: ${err.message}`);
         throw err; // Re-throw to allow caller to handle
       } finally {
         setSaving(false);
+        console.log('[SOV save] Save operation finished (finally block)');
       }
     })();
 
     inFlightRef.current = promise;
-    try { await promise; } catch { /* handled */ } finally { inFlightRef.current = null; }
+    try {
+      await promise;
+      console.log('[SOV save] Promise resolved successfully');
+    } catch (error) {
+      console.error('[SOV save] Promise rejected:', error);
+    } finally {
+      inFlightRef.current = null;
+      console.log('[SOV save] In-flight reference cleared');
+    }
   }, [jobId]);
 
   // Debounced save
