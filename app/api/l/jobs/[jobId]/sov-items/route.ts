@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { jobId } = await params;
-    const { data, error } = await supabase
+    const supabaseResult = await supabase
       .from('sov_entries')
       .select(`
         id,
@@ -34,6 +34,8 @@ export async function GET(
       `)
       .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
+
+    const { data, error } = supabaseResult;
 
     if (error) {
       console.error('Error fetching SOV entries:', error);
