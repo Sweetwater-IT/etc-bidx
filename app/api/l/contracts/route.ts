@@ -153,11 +153,19 @@ export async function POST(request: NextRequest) {
 
     // Transform incoming data to snake_case
     const dbData: Record<string, unknown> = {};
+    console.log('API: Starting field mapping transformation');
+    console.log('API: contractData keys:', Object.keys(contractData));
+    console.log('API: fieldMapping keys:', Object.keys(fieldMapping));
+
     for (const [camelKey, snakeKey] of Object.entries(fieldMapping)) {
+      console.log(`API: Checking field ${camelKey} -> ${snakeKey}, exists in contractData:`, camelKey in contractData);
       if (camelKey in contractData) {
-        dbData[snakeKey] = contractData[camelKey];
+        const value = contractData[camelKey];
+        console.log(`API: Mapping ${camelKey} = ${value} to ${snakeKey}`);
+        dbData[snakeKey] = value;
       }
     }
+    console.log('API: Final dbData after mapping:', dbData);
 
 
 
