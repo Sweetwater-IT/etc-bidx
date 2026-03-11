@@ -150,6 +150,13 @@ const AdminField = ({ label, value, mono }: { label: string; value: string; mono
   </div>
 );
 
+const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
+  if (workOrderNumber === null || workOrderNumber === undefined) return "—";
+  const asString = String(workOrderNumber).trim();
+  if (!asString) return "—";
+  return asString.padStart(3, "0");
+};
+
 const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; takeoffId?: string }) => {
   const router = useRouter();
   const { user } = useAuth();
@@ -861,7 +868,9 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
-                {workOrder?.wo_number && <span className="ml-2 font-semibold">· {workOrder.wo_number}</span>}
+                {workOrder?.wo_number && (
+                  <span className="ml-2 font-semibold">· {formatWorkOrderNumber(workOrder.wo_number)}</span>
+                )}
               </p>
             </div>
             <Badge className={`ml-2 text-[10px] font-bold ${statusConfig.color}`}>
@@ -1197,7 +1206,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">WO Number</label>
                 <div className="h-9 flex items-center px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground font-mono">
-                  {workOrder?.wo_number || "—"}
+                  {formatWorkOrderNumber(workOrder?.wo_number)}
                 </div>
               </div>
               <div>

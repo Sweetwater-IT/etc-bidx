@@ -502,7 +502,9 @@ const ProjectDetail = () => {
                   {workOrders.slice(0, 3).map((wo) => (
                     <div key={wo.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">{formatWorkOrderNumber(wo.workOrderNumber)}</div>
+                        <div className="text-xs font-medium truncate">
+                          {formatWorkOrderNumber(wo.workOrderNumber ?? wo.wo_number)}
+                        </div>
                         <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
                       </div>
                       <Button
