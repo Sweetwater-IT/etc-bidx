@@ -754,8 +754,7 @@ const KanbanCard = ({
         onDragEnd();
       }}
       onClick={() => {
-        const isSigned = SIGNED_STATUSES.includes(stage.id);
-        router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`);
+        router.push(`/l/contracts/view/${job.id}`);
       }}
     >
       {/* Lock banner for signed contracts */}
@@ -786,8 +785,8 @@ const KanbanCard = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`)}>
-                {isSigned ? <><Eye className="h-3.5 w-3.5 mr-2" />Open Contract</> : <>Edit Contract</>}
+              <DropdownMenuItem onClick={() => router.push(`/l/contracts/view/${job.id}`)}>
+                <><Eye className="h-3.5 w-3.5 mr-2" />Open Contract</>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {allowedTargets.map((targetId) => {
@@ -974,9 +973,9 @@ const ListView = ({
                       <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`)}>
-                        {isSigned ? "Open Contract" : "Edit Contract"}
-                      </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/l/contracts/view/${job.id}`)}>
+                Open Contract
+              </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {allowedTargets.map((targetId) => {
                         const s = stages.find((st) => st.id === targetId);
