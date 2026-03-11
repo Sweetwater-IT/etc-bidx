@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QuantityInput } from '@/components/ui/quantity-input';
@@ -53,6 +53,11 @@ interface SovMasterItem {
   display_name: string;
   work_type: string;
 }
+
+// Work type constants
+const WORK_TYPE_CUSTOM = 'CUSTOM';
+const WORK_TYPE_DELIVERY = 'DELIVERY';
+const WORK_TYPE_SERVICE = 'SERVICE';
 
 import type { ScheduleOfValuesItem } from '@/types/job';
 
@@ -118,6 +123,11 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('percent');
   const [bulkValue, setBulkValue] = useState('');
+
+  // Notes editing state
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState('');
+  const notesTimeoutRef = useRef<number | null>(null);
 
   const filteredItems = useMemo(
     () =>
@@ -373,7 +383,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
             type={bulkType}
             onTypeChange={(type) => setBulkType(type)}
             placeholder="0.00"
-            className="h-7 w-[150px] text-xs"
+            className="h-7 w-[320px] text-xs"
           />
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
@@ -396,7 +406,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
                 <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
-                <TableHead className="w-[160px] text-xs text-right">Retainage</TableHead>
+                <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>
                 <TableHead className="w-[40px] text-xs text-center">Notes</TableHead>
                 <TableHead className="w-[40px]" />
@@ -441,8 +451,49 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                               <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                 No matching items found.
                               </CommandEmpty>
-                              <CommandGroup>
-                                {filteredItems.slice(0, 50).map((p) => (
+                              {/* Custom items at top */}
+                              <CommandGroup heading="Custom">
+                                {filteredItems.filter(p => p.work_type === WORK_TYPE_CUSTOM).slice(0, 50).map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    value={`${p.item_number} ${p.display_name}`}
+                                    onSelect={() => selectMasterItem(item.id, p)}
+                                    className="text-xs"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-1.5 h-3 w-3",
+                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                    <span className="truncate">{p.display_name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              {/* Delivery items */}
+                              <CommandGroup heading="Delivery">
+                                {filteredItems.filter(p => p.work_type === WORK_TYPE_DELIVERY).slice(0, 50).map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    value={`${p.item_number} ${p.display_name}`}
+                                    onSelect={() => selectMasterItem(item.id, p)}
+                                    className="text-xs"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-1.5 h-3 w-3",
+                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                    <span className="truncate">{p.display_name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              {/* Service items */}
+                              <CommandGroup heading="Service">
+                                {filteredItems.filter(p => p.work_type === WORK_TYPE_SERVICE).slice(0, 50).map((p) => (
                                   <CommandItem
                                     key={p.id}
                                     value={`${p.item_number} ${p.display_name}`}
@@ -537,7 +588,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
                         type={item.retainageType}
                         onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                        className="w-[150px]"
+                        className="w-[320px]"
                       />
                     )}
                   </TableCell>
@@ -550,7 +601,18 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         <MessageSquare className="h-3.5 w-3.5" />
                       </div>
                     ) : (
-                      <Popover>
+                      <Popover
+                        open={editingNotesId === item.id}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setEditingNotesId(item.id);
+                            setNotesDraft(item.notes || '');
+                          } else {
+                            setEditingNotesId(null);
+                            setNotesDraft('');
+                          }
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="ghost"
@@ -561,15 +623,28 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[300px] p-3" align="end">
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <label className="text-xs font-semibold text-foreground">Scope Notes</label>
                             <textarea
                               className="text-xs min-h-[80px] resize-none w-full p-2 border rounded"
                               placeholder="Add notes about scope, special instructions, etc."
-                              value={item.notes || ''}
-                              onChange={(e) => updateRow(item.id, 'notes', e.target.value)}
+                              value={notesDraft}
+                              onChange={(e) => setNotesDraft(e.target.value)}
                             />
-                            <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  updateRow(item.id, 'notes', notesDraft);
+                                  setEditingNotesId(null);
+                                  setNotesDraft('');
+                                }}
+                              >
+                                Save
+                              </Button>
+                            </div>
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -602,6 +677,22 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                 </TableRow>
                 );
               })}
+              {/* Notes display rows - show notes below each item */}
+              {items.map((item) => (
+                item.notes && item.notes.trim() && (
+                  <TableRow key={`notes-${item.id}`} className="bg-muted/20">
+                    <TableCell colSpan={10} className="p-2">
+                      <div className="flex items-start gap-2">
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-semibold text-foreground mr-2">Notes:</span>
+                          {item.notes}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              ))}
               {/* Totals row */}
               <TableRow className="bg-muted/30 font-semibold">
                 <TableCell colSpan={5} className="p-1.5 text-xs text-right">
