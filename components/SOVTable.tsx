@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { InputGroup } from '@/components/ui/input-group';
+console.log('🔧 SOVTable: InputGroup imported successfully');
 import { useSovItems } from '@/hooks/useSovItems';
 import {
   Popover,
@@ -376,7 +377,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
             </SelectContent>
           </Select>
           <Input
-            className="h-7 w-[60px] text-xs"
+            className="h-7 w-[40px] text-xs"
             type="number"
             step="0.01"
             placeholder="Value"
@@ -522,11 +523,11 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         ) : (
-                          <CurrencyInput
-                            value={(item as any)._unitPriceCents || Math.round(item.unitPrice * 100).toFixed(0)}
-                            onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                            className="h-7 text-xs text-right w-[100px]"
-                          />
+                        <CurrencyInput
+                          value={Math.round(item.unitPrice * 100).toFixed(0)}
+                          onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                          className="h-7 text-xs text-right w-[100px]"
+                        />
                         )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -540,28 +541,13 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         {item.retainageType === 'percent' ? `${item.retainageValue}%` : `$${item.retainageValue}`}
                       </span>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        <Select
-                          value={item.retainageType}
-                          onValueChange={(v) => updateRow(item.id, 'retainageType', v)}
-                        >
-                          <SelectTrigger className="h-7 w-[50px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="percent">%</SelectItem>
-                            <SelectItem value="dollar">$</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          className="h-7 text-xs text-right w-[70px]"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.retainageValue || ''}
-                          onChange={(e) => updateRow(item.id, 'retainageValue', parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
+                      <InputGroup
+                        value={item.retainageValue?.toString() || ''}
+                        onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
+                        type={item.retainageType}
+                        onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                        className="w-[100px]"
+                      />
                     )}
                   </TableCell>
                   <TableCell className="p-1.5 text-right text-xs font-medium text-primary">

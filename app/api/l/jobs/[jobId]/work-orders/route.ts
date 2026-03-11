@@ -16,7 +16,7 @@ export async function GET(
       .from('work_orders_l')
       .select('id, wo_number, title, status, updated_at')
       .eq('job_id', jobId)
-      .in('status', ['completed', 'ready', 'scheduled'])
+      .in('status', ['completed', 'ready', 'scheduled', 'draft'])
       .order('updated_at', { ascending: false });
 
     if (error) {
