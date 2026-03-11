@@ -98,6 +98,13 @@ const ProjectDetail = () => {
   const [editJobSaving, setEditJobSaving] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
 
+  const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
+    if (workOrderNumber === null || workOrderNumber === undefined) return "—";
+    const asString = String(workOrderNumber).trim();
+    if (!asString) return "—";
+    return asString.padStart(3, "0");
+  };
+
   // Fetch job data on mount
   useEffect(() => {
     if (!id) return;
@@ -495,7 +502,7 @@ const ProjectDetail = () => {
                   {workOrders.slice(0, 3).map((wo) => (
                     <div key={wo.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">{wo.workOrderNumber}</div>
+                        <div className="text-xs font-medium truncate">{formatWorkOrderNumber(wo.workOrderNumber)}</div>
                         <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
                       </div>
                       <Button
