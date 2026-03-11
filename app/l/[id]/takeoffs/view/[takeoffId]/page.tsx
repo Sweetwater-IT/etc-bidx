@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 
 export default function TakeoffViewPage() {
@@ -43,16 +43,7 @@ export default function TakeoffViewPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Project
           </Button>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoffId}`)}
-              className="gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Takeoff
-            </Button>
-          </div>
+          <div className="flex items-center gap-3" />
         </div>
       </header>
 

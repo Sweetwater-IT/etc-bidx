@@ -365,6 +365,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       setPermanentEntryRows(draftTakeoff.permanent_entry_rows || {});
       setDefaultPermanentSignMaterial(draftTakeoff.default_permanent_sign_material || "ALUMINUM");
       setSavedTakeoffId(draftTakeoff.id);
+      setTakeoffSaved(true);
+      setSaveStatus('saved');
+      setLastSaved(draftTakeoff.updated_at ? new Date(draftTakeoff.updated_at) : new Date());
     }
   }, [draftTakeoff]);
 

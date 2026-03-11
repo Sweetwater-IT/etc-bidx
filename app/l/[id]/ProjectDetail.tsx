@@ -923,7 +923,11 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
             </thead>
             <tbody className="divide-y">
               {takeoffs.map((takeoff) => (
-                <tr key={takeoff.id} className="cursor-pointer hover:bg-muted/20" onClick={() => router.push(`/l/${jobId}/takeoffs/create/${takeoff.id}`)}>
+                <tr
+                  key={takeoff.id}
+                  className="cursor-pointer hover:bg-muted/20"
+                  onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoff.id}`)}
+                >
                   <td className="px-3 py-1.5 font-medium">{takeoff.title}</td>
                   <td className="px-3 py-1.5 font-mono">
                     {takeoff.work_order_number ? (

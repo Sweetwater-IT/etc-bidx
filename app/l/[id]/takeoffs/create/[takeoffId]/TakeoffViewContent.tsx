@@ -68,7 +68,15 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
   }, [takeoffId]);
 
   const handleEdit = () => {
-    router.push(`/l/${jobId}/takeoffs/create`);
+    const resolvedJobId = takeoff?.job_id ?? jobId;
+    const resolvedTakeoffId = takeoff?.id ?? takeoffId;
+
+    if (!resolvedJobId || !resolvedTakeoffId) {
+      toast.error('Unable to open edit view. Missing takeoff details.');
+      return;
+    }
+
+    router.push(`/l/${resolvedJobId}/takeoffs/edit/${resolvedTakeoffId}`);
   };
 
   const handleDownloadPdf = async () => {
