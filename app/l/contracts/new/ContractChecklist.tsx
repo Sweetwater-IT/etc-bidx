@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Lock, Edit } from "lucide-react";
+import { ArrowLeft, Lock, Edit, Pencil } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
@@ -100,6 +100,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
+
+  // Check if we're in view mode (forceReadOnly is true and contract exists)
+  const isViewMode = forceReadOnly && contractId;
 
   // Contract creation mutex
   const creatingRef = useRef<Promise<string | undefined> | null>(null);
@@ -274,7 +277,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   );
 
   // Autosave logic - exactly like sign-orders
+  // Skip autosave when in view mode (forceReadOnly)
   useEffect(() => {
+    if (isViewMode) return; // Don't autosave in view mode
+
     const currentState = { projectInfo, contractId };
     const prevState = prevStateRef.current;
 
@@ -385,7 +391,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         }
       }, 5000); // Autosave every 5 seconds like sign-orders
     }
-  }, [projectInfo, contractId]);
+  }, [projectInfo, contractId, isViewMode]);
 
   const manualSave = useCallback(async () => {
     if (!contractId) {
@@ -539,17 +545,28 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Button variant="ghost" onClick={async () => { await manualSave(); router.push("/l/contracts"); }} className="gap-2">
+          <Button variant="ghost" onClick={async () => { 
+            if (!isViewMode) await manualSave(); 
+            router.push("/l/contracts"); 
+          }} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Contracts
           </Button>
           <div className="flex items-center gap-3">
-            <SaveStatusIndicator
-              status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
-              lastSavedAt={lastSavedAt}
-              onManualSave={manualSave}
-              isSaving={isSaving}
-            />
+            {/* Show Edit button in view mode, SaveStatusIndicator in edit mode */}
+            {isViewMode ? (
+              <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Edit Contract
+              </Button>
+            ) : (
+              <SaveStatusIndicator
+                status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
+                lastSavedAt={lastSavedAt}
+                onManualSave={manualSave}
+                isSaving={isSaving}
+              />
+            )}
           </div>
         </div>
       </header>
