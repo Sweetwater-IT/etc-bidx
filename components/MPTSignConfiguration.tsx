@@ -118,6 +118,19 @@ export const MPTSignConfiguration = ({
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">MPT Sign Configuration</h2>
         {!disabled && (
           <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Import signs from previous takeoffs</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] gap-1.5"
+              onClick={() => {
+                // TODO: Implement import functionality
+                console.log('Import signs clicked');
+              }}
+            >
+              <Package className="h-3 w-3" />
+              Import Signs
+            </Button>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Default Material:</span>
             <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
               {SIGN_MATERIALS.filter(m => m.value === "PLASTIC" || m.value === "ALUMINUM").map((m) => (

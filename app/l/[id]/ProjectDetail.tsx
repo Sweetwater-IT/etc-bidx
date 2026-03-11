@@ -96,6 +96,7 @@ const ProjectDetail = () => {
   const [editCustomerPMPhone, setEditCustomerPMPhone] = useState("");
   const [editExtensionDate, setEditExtensionDate] = useState("");
   const [editJobSaving, setEditJobSaving] = useState(false);
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
 
   // Fetch job data on mount
   useEffect(() => {
@@ -139,6 +140,26 @@ const ProjectDetail = () => {
 
     fetchCounts();
     // Removed realtime subscription for now
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchWorkOrders = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/work-orders`);
+        if (response.ok) {
+          const workOrdersData = await response.json();
+          setWorkOrders(workOrdersData);
+        } else {
+          console.error('Failed to fetch work orders');
+        }
+      } catch (error) {
+        console.error('Error fetching work orders:', error);
+      }
+    };
+
+    fetchWorkOrders();
   }, [id]);
 
   if (jobLoading) {
@@ -464,10 +485,43 @@ const ProjectDetail = () => {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Work Orders</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Badge variant="secondary" className="text-[10px]">0</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{workOrders.length}</Badge>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">No work orders yet.</p>
+              {workOrders.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No work orders yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {workOrders.slice(0, 3).map((wo) => (
+                    <div key={wo.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{wo.workOrderNumber}</div>
+                        <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => router.push(`/l/jobs/${id}/work-orders/${wo.id}`)}
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {workOrders.length > 3 && (
+                    <div className="text-center pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => setActiveTab("takeoffs")}
+                      >
+                        View all {workOrders.length} work orders
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className={`rounded-lg border bg-card p-4 flex flex-col ${editingNotes ? "" : "max-h-[200px]"}`}>

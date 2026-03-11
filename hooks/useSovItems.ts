@@ -35,6 +35,8 @@ export function useSovItems(jobId: string | undefined) {
           retainageValue: item.retainage_value || 0,
           retainageAmount: item.retainage_amount || 0,
           notes: item.notes || '',
+          // Store unit price in cents format for CurrencyInput compatibility
+          _unitPriceCents: Math.round((item.unit_price || 0) * 100).toString(),
         }));
         setItems(formattedItems);
         originalItemsRef.current = formattedItems;

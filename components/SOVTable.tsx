@@ -376,7 +376,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
             </SelectContent>
           </Select>
           <Input
-            className="h-7 w-[80px] text-xs"
+            className="h-7 w-[60px] text-xs"
             type="number"
             step="0.01"
             placeholder="Value"
@@ -394,8 +394,8 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
           No line items yet. Click Add Line Item to begin.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto max-w-full">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
@@ -521,13 +521,13 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                   <TableCell className="p-1.5">
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                    ) : (
-                      <CurrencyInput
-                        value={(item.unitPrice * 100).toFixed(0)}
-                        onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                        className="h-7 text-xs text-right w-[100px]"
-                      />
-                    )}
+                        ) : (
+                          <CurrencyInput
+                            value={(item as any)._unitPriceCents || Math.round(item.unitPrice * 100).toFixed(0)}
+                            onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                            className="h-7 text-xs text-right w-[100px]"
+                          />
+                        )}
                   </TableCell>
                   <TableCell className="p-1.5">
                     <span className="text-xs text-right block px-1 font-medium">

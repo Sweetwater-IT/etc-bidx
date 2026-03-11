@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useAuth } from "@/contexts/auth-context";
@@ -34,6 +34,7 @@ import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
+import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 
 interface Props {
   jobId: string;
@@ -191,6 +192,14 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [showWorkTypeChangeDialog, setShowWorkTypeChangeDialog] = useState(false);
   const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
 
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [titleEnteredAt, setTitleEnteredAt] = useState<Date | null>(null);
+  const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
   const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
@@ -217,6 +226,120 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    if (!title.trim() || !workType || !dbJob || saving) return;
+
+    setSaveStatus('saving');
+    try {
+      const response = await fetch('/api/l/takeoffs/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+          title,
+          workType,
+          workOrderNumber,
+          contractedOrAdditional,
+          installDate,
+          pickupDate,
+          neededByDate,
+          priority,
+          notes,
+          crewNotes,
+          buildShopNotes,
+          pmNotes,
+          // Include MPT sign data
+          activeSections,
+          signRows,
+          defaultSignMaterial,
+          // Include permanent signs data
+          activePermanentItems,
+          permanentSignRows,
+          permanentEntryRows,
+          defaultPermanentSignMaterial,
+          // Include flagging/lane closure data
+          vehicleItems,
+          rollingStockItems,
+          additionalItems,
+          // Include takeoffId for updates
+          takeoffId: savedTakeoffId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to auto-save takeoff');
+      }
+
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+      setSavedTakeoffId(data.takeoff.id);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Error auto-saving takeoff:", error);
+      setSaveStatus('error');
+    }
+  }, [
+    title, workType, dbJob, saving, jobId, workOrderNumber, contractedOrAdditional,
+    installDate, pickupDate, neededByDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
+    activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
+    permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
+    additionalItems, savedTakeoffId
+  ]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (hasUnsavedChanges && title.trim() && workType) {
+      // Check if we need to wait for the creation delay
+      const shouldDelay = !savedTakeoffId && titleEnteredAt && (Date.now() - titleEnteredAt.getTime()) < 4000;
+
+      if (shouldDelay) {
+        // Wait for the remaining delay time
+        const remainingDelay = 4000 - (Date.now() - titleEnteredAt.getTime());
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
+          autoSave();
+        }, remainingDelay);
+      } else {
+        // Normal 5-second debounce
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
+          autoSave();
+        }, 5000); // 5 second debounce
+      }
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, title, workType, autoSave, savedTakeoffId, titleEnteredAt]);
+
+  // Mark as having unsaved changes when form data changes
+  useEffect(() => {
+    if (title || workType || activeSections.length > 0 || Object.keys(signRows).length > 0) {
+      setHasUnsavedChanges(true);
+    }
+  }, [title, workType, activeSections, signRows, activePermanentItems, permanentSignRows, permanentEntryRows, vehicleItems, rollingStockItems, additionalItems]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load draft takeoff data when provided
   useEffect(() => {
@@ -515,8 +638,8 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
       toast.success(`Takeoff "${title}" saved successfully`);
       setTakeoffSaved(true);
       setSavedTakeoffId(data.takeoff.id);
-      // Navigate to the view page
-      router.push(`/l/${jobId}/takeoffs/create/${data.takeoff.id}`);
+      // Navigate to the view page (we'll create this route structure)
+      router.push(`/l/${jobId}/takeoffs/view/${data.takeoff.id}`);
     } catch (error) {
       console.error("Error saving takeoff:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
@@ -552,6 +675,12 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
           )}
         </div>
         <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          <SaveStatusIndicator
+            status={saveStatus}
+            lastSavedAt={lastSaved}
+            onManualSave={handleSave}
+            isSaving={saving}
+          />
           <Button variant="outline" size="sm" onClick={onBack}>
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Back
@@ -560,7 +689,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             <Save className="h-3.5 w-3.5" />
             {saving ? "Saving…" : "Save Draft"}
           </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf || !savedTakeoffId}>
             <Download className="h-3.5 w-3.5" />
             {generatingPdf ? "Generating…" : "Download PDF"}
           </Button>
@@ -575,10 +704,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               {saving ? "Creating…" : "Generate Work Order"}
             </Button>
           )}
-          <Button size="sm" variant="secondary" className="gap-1.5">
-            <Send className="h-3.5 w-3.5" />
-            Send to Build Shop
-          </Button>
+
         </div>
       </div>
 
@@ -641,7 +767,17 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
               <Input
                 className="text-sm"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  setTitle(newTitle);
+                  // Track when title is first entered for creation delay
+                  if (newTitle.trim() && !titleEnteredAt && !savedTakeoffId) {
+                    setTitleEnteredAt(new Date());
+                  } else if (!newTitle.trim() && titleEnteredAt) {
+                    // Reset if title is cleared
+                    setTitleEnteredAt(null);
+                  }
+                }}
                 placeholder="e.g. Phase 1 MPT Setup"
               />
             </div>

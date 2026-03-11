@@ -250,9 +250,22 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setProjectInfo(newInfo);
 
       if (!contractId) {
-        const hasContent = newInfo.projectName || newInfo.contractNumber || newInfo.customerName;
-        if (hasContent) {
-          await ensureContractExists(newInfo);
+        // Only create contract if job name is entered
+        if (newInfo.projectName && newInfo.projectName.trim()) {
+          // Clear any existing timeout
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+
+          // Set a 4-second delay before creating the contract
+          saveTimeoutRef.current = window.setTimeout(async () => {
+            await ensureContractExists(newInfo);
+          }, 4000);
+        } else {
+          // If job name is cleared, cancel the timeout
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
         }
         return;
       }

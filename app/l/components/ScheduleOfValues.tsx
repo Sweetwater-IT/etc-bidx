@@ -470,30 +470,16 @@ export const ScheduleOfValues = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Retainage Type</Label>
-                      <Select value={retainageType} onValueChange={(value: 'percent' | 'dollar') => setRetainageType(value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percent">Percent</SelectItem>
-                          <SelectItem value="dollar">Dollar Amount</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">
-                        Retainage {retainageType === 'percent' ? '(%)' : '($)'}
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={retainageValue}
-                        onChange={(e) => setRetainageValue(parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Retainage</Label>
+                    <InputGroup
+                      value={retainageValue.toString()}
+                      onValueChange={(value) => setRetainageValue(parseFloat(value) || 0)}
+                      type={retainageType}
+                      onTypeChange={setRetainageType}
+                      placeholder="0.00"
+                    />
+                  </div>
                   </div>
 
                   <div className="space-y-2">
