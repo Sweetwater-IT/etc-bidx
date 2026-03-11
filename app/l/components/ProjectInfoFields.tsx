@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -24,7 +25,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { User, Mail, Phone, Building, Calendar, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
+import { format } from "date-fns";
+import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import type { JobProjectInfo } from "@/types/job";
@@ -393,6 +395,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
 
+  const parseDateValue = (value?: string | null) => {
+    if (!value) return undefined;
+    const parsed = new Date(`${value}T00:00:00`);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  };
+
   return (
     <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
       {/* Project Details */}
@@ -607,33 +615,87 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
           <div>
             <Label htmlFor="projectStartDate" className="flex items-center gap-1 text-xs">
-              <Calendar className="h-3 w-3" /> Project Start Date<RequiredMark />
+              <CalendarIcon className="h-3 w-3" /> Project Start Date<RequiredMark />
             </Label>
-            <Input
-              id="projectStartDate"
-              type="date"
-              max={projectInfo.projectEndDate || undefined}
-              className={cn("h-8 text-sm", isInvalid("projectStartDate") && "border-destructive ring-1 ring-destructive/30")}
-              value={projectInfo.projectStartDate || ""}
-              onChange={(e) => update("projectStartDate", e.target.value)}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-8 w-full justify-start text-left text-sm font-normal",
+                    !projectInfo.projectStartDate && "text-muted-foreground",
+                    isInvalid("projectStartDate") && "border-destructive ring-1 ring-destructive/30"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3 w-3" />
+                  {projectInfo.projectStartDate
+                    ? format(parseDateValue(projectInfo.projectStartDate)!, "PPP")
+                    : "Pick a start date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseDateValue(projectInfo.projectStartDate)}
+                  onSelect={(date) => {
+                    if (!date) {
+                      update("projectStartDate", "");
+                      return;
+                    }
+                    update("projectStartDate", format(date, "yyyy-MM-dd"));
+                  }}
+                  disabled={(date) =>
+                    !!projectInfo.projectEndDate &&
+                    date > parseDateValue(projectInfo.projectEndDate)!
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <Label htmlFor="projectEndDate" className="flex items-center gap-1 text-xs">
-              <Calendar className="h-3 w-3" /> Project End Date<RequiredMark />
+              <CalendarIcon className="h-3 w-3" /> Project End Date<RequiredMark />
             </Label>
-            <Input
-              id="projectEndDate"
-              type="date"
-              min={projectInfo.projectStartDate || undefined}
-              className={cn("h-8 text-sm", isInvalid("projectEndDate") && "border-destructive ring-1 ring-destructive/30")}
-              value={projectInfo.projectEndDate || ""}
-              onChange={(e) => update("projectEndDate", e.target.value)}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-8 w-full justify-start text-left text-sm font-normal",
+                    !projectInfo.projectEndDate && "text-muted-foreground",
+                    isInvalid("projectEndDate") && "border-destructive ring-1 ring-destructive/30"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3 w-3" />
+                  {projectInfo.projectEndDate
+                    ? format(parseDateValue(projectInfo.projectEndDate)!, "PPP")
+                    : "Pick an end date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={parseDateValue(projectInfo.projectEndDate)}
+                  onSelect={(date) => {
+                    if (!date) {
+                      update("projectEndDate", "");
+                      return;
+                    }
+                    update("projectEndDate", format(date, "yyyy-MM-dd"));
+                  }}
+                  disabled={(date) =>
+                    !!projectInfo.projectStartDate &&
+                    date < parseDateValue(projectInfo.projectStartDate)!
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           {dateWarning && (
             <div className="sm:col-span-2 flex items-center gap-1.5 text-destructive">
-              <Calendar className="h-3 w-3 shrink-0" />
+              <CalendarIcon className="h-3 w-3 shrink-0" />
               <p className="text-[11px] font-medium">{dateWarning}</p>
             </div>
           )}

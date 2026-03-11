@@ -367,22 +367,13 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <Select value={bulkType} onValueChange={(v) => setBulkType(v as 'percent' | 'dollar')}>
-            <SelectTrigger className="h-7 w-[80px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percent">%</SelectItem>
-              <SelectItem value="dollar">$</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            className="h-7 w-[40px] text-xs"
-            type="number"
-            step="0.01"
-            placeholder="Value"
+          <InputGroup
             value={bulkValue}
-            onChange={(e) => setBulkValue(e.target.value)}
+            onValueChange={setBulkValue}
+            type={bulkType}
+            onTypeChange={(type) => setBulkType(type)}
+            placeholder="0.00"
+            className="h-7 w-[150px] text-xs"
           />
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
@@ -546,7 +537,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
                         type={item.retainageType}
                         onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                        className="w-[100px]"
+                        className="w-[150px]"
                       />
                     )}
                   </TableCell>
