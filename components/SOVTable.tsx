@@ -9,6 +9,14 @@ import { InputGroup } from '@/components/ui/input-group';
 console.log('🔧 SOVTable: InputGroup imported successfully');
 import { useSovItems } from '@/hooks/useSovItems';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -21,13 +29,6 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -116,8 +117,8 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
     fetchSovItems();
   }, []);
 
-  const [openRow, setOpenRow] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
+  const [selectorSearch, setSelectorSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
 
   // Bulk retainage controls
@@ -133,11 +134,11 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
     () =>
       sovProducts.filter(
         (p) =>
-          p.item_number.toLowerCase().includes(search.toLowerCase()) ||
-          p.display_name.toLowerCase().includes(search.toLowerCase()) ||
-          p.description.toLowerCase().includes(search.toLowerCase())
+          p.item_number.toLowerCase().includes(selectorSearch.toLowerCase()) ||
+          p.display_name.toLowerCase().includes(selectorSearch.toLowerCase()) ||
+          p.description.toLowerCase().includes(selectorSearch.toLowerCase())
       ),
-    [sovProducts, search]
+    [sovProducts, selectorSearch]
   );
 
   const addRow = () => {
@@ -249,9 +250,36 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
       console.error('[SOVTable] Error selecting master item:', error);
       // Could show a toast error here if needed
     } finally {
-      setOpenRow(null);
-      setSearch('');
+      setSelectorOpen(null);
+      setSelectorSearch('');
     }
+  };
+
+  const handleQuickAdd = (rowId: string, type: 'custom' | 'delivery' | 'service') => {
+    if (type === 'custom') {
+      openCustomDialog(rowId);
+      return;
+    }
+
+    // For delivery and service, auto-fill the row
+    const newItem: ScheduleOfValuesItem = {
+      id: rowId,
+      itemNumber: type === 'delivery' ? 'Delivery' : 'Service',
+      description: type === 'delivery' ? 'Delivery' : 'Service',
+      uom: 'LS',
+      quantity: 1,
+      unitPrice: 0,
+      extendedPrice: 0,
+      retainageType: 'percent',
+      retainageValue: 0,
+      retainageAmount: 0,
+      notes: '',
+    };
+
+    updateItems(
+      items.map((item) => (item.id === rowId ? newItem : item))
+    );
+    setSelectorOpen(null);
   };
 
   const openCustomDialog = (rowId?: string) => {
@@ -298,8 +326,8 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
         retainageValue: 0,
       });
     }
-    setOpenRow(null);
-    setSearch('');
+    setSelectorOpen(null);
+    setSelectorSearch('');
   };
 
   const saveCustomItem = () => {
@@ -427,86 +455,92 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                     ) : isCustom ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
-                      <Popover
-                        open={openRow === item.id}
-                        onOpenChange={(open) => {
-                          setOpenRow(open ? item.id : null);
-                          if (!open) setSearch('');
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between h-7 text-xs font-normal"
-                          >
-                            {item.itemNumber || 'Select item…'}
-                            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[400px] p-0 z-50 bg-popover" align="start">
-                          <Command>
-                            <CommandInput
-                              placeholder="Search by # or name…"
-                              value={search}
-                              onValueChange={setSearch}
-                            />
-                            <CommandList className="max-h-[300px]">
-                              <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
-                                No matching items found.
-                              </CommandEmpty>
-                              {/* Quick-add rows for custom items */}
-                              <CommandItem
-                                value="custom-add"
-                                onSelect={() => openCustomDialog()}
-                                className="text-xs font-medium"
-                              >
-                                <Plus className="mr-2 h-3 w-3" />
-                                Custom
-                              </CommandItem>
-                              <div className="h-px bg-border my-1" />
-                              <CommandItem
-                                value="delivery-add"
-                                onSelect={() => openCustomDialog()}
-                                className="text-xs font-medium"
-                              >
-                                <Plus className="mr-2 h-3 w-3" />
-                                Delivery
-                              </CommandItem>
-                              <div className="h-px bg-border my-1" />
-                              <CommandItem
-                                value="service-add"
-                                onSelect={() => openCustomDialog()}
-                                className="text-xs font-medium"
-                              >
-                                <Plus className="mr-2 h-3 w-3" />
-                                Service
-                              </CommandItem>
-                              <div className="h-px bg-border my-2" />
-                              {/* All SOV items in a flat list */}
-                              <CommandGroup heading="All Items">
-                                {filteredItems.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={`${p.item_number} ${p.display_name}`}
-                                    onSelect={() => selectMasterItem(item.id, p)}
-                                    className="text-xs"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-1.5 h-3 w-3",
-                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                    <span className="truncate">{p.display_name}</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <>
+                        <Dialog open={selectorOpen === item.id} onOpenChange={(open) => {
+                          setSelectorOpen(open ? item.id : null);
+                          if (!open) setSelectorSearch('');
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-between h-7 text-xs font-normal"
+                            >
+                              {item.itemNumber || 'Select item…'}
+                              <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                              <DialogTitle>Select Item</DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-4">
+                              <Command className="border rounded-lg">
+                                <CommandInput
+                                  placeholder="Search by # or name…"
+                                  value={selectorSearch}
+                                  onValueChange={setSelectorSearch}
+                                  className="border-b"
+                                />
+                                <CommandList className="max-h-[400px]">
+                                  <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
+                                    No matching items found.
+                                  </CommandEmpty>
+                                  {/* Quick-add rows for custom items */}
+                                  <CommandGroup>
+                                    <CommandItem
+                                      value="custom-add"
+                                      onSelect={() => handleQuickAdd(item.id, 'custom')}
+                                      className="text-xs font-medium cursor-pointer"
+                                    >
+                                      <Plus className="mr-2 h-3 w-3" />
+                                      Custom
+                                    </CommandItem>
+                                    <div className="h-px bg-border my-1" />
+                                    <CommandItem
+                                      value="delivery-add"
+                                      onSelect={() => handleQuickAdd(item.id, 'delivery')}
+                                      className="text-xs font-medium cursor-pointer"
+                                    >
+                                      <Plus className="mr-2 h-3 w-3" />
+                                      Delivery
+                                    </CommandItem>
+                                    <div className="h-px bg-border my-1" />
+                                    <CommandItem
+                                      value="service-add"
+                                      onSelect={() => handleQuickAdd(item.id, 'service')}
+                                      className="text-xs font-medium cursor-pointer"
+                                    >
+                                      <Plus className="mr-2 h-3 w-3" />
+                                      Service
+                                    </CommandItem>
+                                  </CommandGroup>
+                                  <div className="h-px bg-border my-2" />
+                                  {/* All SOV items in a flat list */}
+                                  <CommandGroup heading="All Items">
+                                    {filteredItems.map((p) => (
+                                      <CommandItem
+                                        key={p.id}
+                                        value={`${p.item_number} ${p.display_name}`}
+                                        onSelect={() => selectMasterItem(item.id, p)}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-1.5 h-3 w-3",
+                                            item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                        <span className="truncate">{p.display_name}</span>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -575,15 +609,18 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         {item.retainageType === 'percent' ? `${item.retainageValue}%` : `$${item.retainageValue}`}
                       </span>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        <div className="flex-1 min-w-[160px]">
-                          <InputGroup
-                            value={item.retainageValue?.toString() || ''}
-                            onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
-                            type={item.retainageType}
-                            onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                            className="h-7 text-xs"
-                          />
+                      <div className="flex items-center gap-1 w-full">
+                        <div className="flex w-full gap-1">
+                          <div className="flex-[3] min-w-0">
+                            <InputGroup
+                              value={item.retainageValue?.toString() || ''}
+                              onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
+                              type={item.retainageType}
+                              onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                              className="h-7 text-xs"
+                              inputClassName="flex-1"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
