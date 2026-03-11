@@ -452,95 +452,103 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                   <TableCell className="p-1.5">
                     {readOnly ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
-                    ) : isCustom ? (
-                      <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
-                      <>
-                        <Dialog open={selectorOpen === item.id} onOpenChange={(open) => {
-                          setSelectorOpen(open ? item.id : null);
-                          if (!open) setSelectorSearch('');
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between h-7 text-xs font-normal"
-                            >
-                              {item.itemNumber || 'Select item…'}
-                              <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                              <DialogTitle>Select Item</DialogTitle>
-                            </DialogHeader>
-                            <div className="mt-4">
-                              <Command className="border rounded-lg">
-                                <CommandInput
-                                  placeholder="Search by # or name…"
-                                  value={selectorSearch}
-                                  onValueChange={setSelectorSearch}
-                                  className="border-b"
-                                />
-                                <CommandList className="max-h-[400px]">
-                                  <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
-                                    No matching items found.
-                                  </CommandEmpty>
-                                  {/* Quick-add rows for custom items */}
-                                  <CommandGroup>
+                      <Dialog open={selectorOpen === item.id} onOpenChange={(open) => {
+                        setSelectorOpen(open ? item.id : null);
+                        if (!open) setSelectorSearch('');
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between h-7 text-xs font-normal"
+                          >
+                            {item.itemNumber || 'Select item…'}
+                            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                          <DialogHeader>
+                            <DialogTitle>Select Item</DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4">
+                            <Command className="border rounded-lg">
+                              <CommandInput
+                                placeholder="Search by # or name…"
+                                value={selectorSearch}
+                                onValueChange={setSelectorSearch}
+                                className="border-b"
+                              />
+                              <CommandList className="max-h-[400px]">
+                                <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
+                                  No matching items found.
+                                </CommandEmpty>
+                                {/* Quick-add rows for custom items */}
+                                <CommandGroup>
+                                  <CommandItem
+                                    value="custom-add"
+                                    onSelect={() => {
+                                      handleQuickAdd(item.id, 'custom');
+                                      setSelectorOpen(null);
+                                    }}
+                                    className="text-xs font-medium cursor-pointer"
+                                  >
+                                    <Plus className="mr-2 h-3 w-3" />
+                                    Custom
+                                  </CommandItem>
+                                  <div className="h-px bg-border my-1" />
+                                  <CommandItem
+                                    value="delivery-add"
+                                    onSelect={() => {
+                                      handleQuickAdd(item.id, 'delivery');
+                                      setSelectorOpen(null);
+                                    }}
+                                    className="text-xs font-medium cursor-pointer"
+                                  >
+                                    <Plus className="mr-2 h-3 w-3" />
+                                    Delivery
+                                  </CommandItem>
+                                  <div className="h-px bg-border my-1" />
+                                  <CommandItem
+                                    value="service-add"
+                                    onSelect={() => {
+                                      handleQuickAdd(item.id, 'service');
+                                      setSelectorOpen(null);
+                                    }}
+                                    className="text-xs font-medium cursor-pointer"
+                                  >
+                                    <Plus className="mr-2 h-3 w-3" />
+                                    Service
+                                  </CommandItem>
+                                </CommandGroup>
+                                <div className="h-px bg-border my-2" />
+                                {/* All SOV items in a flat list */}
+                                <CommandGroup heading="All Items">
+                                  {filteredItems.map((p) => (
                                     <CommandItem
-                                      value="custom-add"
-                                      onSelect={() => handleQuickAdd(item.id, 'custom')}
-                                      className="text-xs font-medium cursor-pointer"
+                                      key={p.id}
+                                      value={`${p.item_number} ${p.display_name}`}
+                                      onSelect={() => {
+                                        selectMasterItem(item.id, p);
+                                        setSelectorOpen(null);
+                                      }}
+                                      className="text-xs cursor-pointer"
                                     >
-                                      <Plus className="mr-2 h-3 w-3" />
-                                      Custom
+                                      <Check
+                                        className={cn(
+                                          "mr-1.5 h-3 w-3",
+                                          item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                      <span className="truncate">{p.display_name}</span>
                                     </CommandItem>
-                                    <div className="h-px bg-border my-1" />
-                                    <CommandItem
-                                      value="delivery-add"
-                                      onSelect={() => handleQuickAdd(item.id, 'delivery')}
-                                      className="text-xs font-medium cursor-pointer"
-                                    >
-                                      <Plus className="mr-2 h-3 w-3" />
-                                      Delivery
-                                    </CommandItem>
-                                    <div className="h-px bg-border my-1" />
-                                    <CommandItem
-                                      value="service-add"
-                                      onSelect={() => handleQuickAdd(item.id, 'service')}
-                                      className="text-xs font-medium cursor-pointer"
-                                    >
-                                      <Plus className="mr-2 h-3 w-3" />
-                                      Service
-                                    </CommandItem>
-                                  </CommandGroup>
-                                  <div className="h-px bg-border my-2" />
-                                  {/* All SOV items in a flat list */}
-                                  <CommandGroup heading="All Items">
-                                    {filteredItems.map((p) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={`${p.item_number} ${p.display_name}`}
-                                        onSelect={() => selectMasterItem(item.id, p)}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-1.5 h-3 w-3",
-                                            item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                        <span className="truncate">{p.display_name}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
