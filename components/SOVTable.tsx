@@ -119,7 +119,6 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
-  const [itemSelectorMode, setItemSelectorMode] = useState<'all' | 'custom' | 'delivery' | 'service' | null>(null);
 
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('percent');
@@ -436,12 +435,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         open={openRow === item.id}
                         onOpenChange={(open) => {
                           setOpenRow(open ? item.id : null);
-                          if (!open) {
-                            setSearch('');
-                            setItemSelectorMode(null);
-                          } else {
-                            setItemSelectorMode('all');
-                          }
+                          if (!open) setSearch('');
                         }}
                       >
                         <PopoverTrigger asChild>
@@ -465,171 +459,64 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                               <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                 No matching items found.
                               </CommandEmpty>
-                              {/* Quick action buttons at top */}
-                              {!search && (
-                                <div className="flex items-center gap-1 p-2 border-b">
-                                  <Button
-                                    size="sm"
-                                    variant={itemSelectorMode === 'custom' ? 'default' : 'outline'}
-                                    className="h-6 text-xs flex-1"
-                                    onClick={() => setItemSelectorMode(itemSelectorMode === 'custom' ? 'all' : 'custom')}
+                              {/* All SOV items grouped by work type */}
+                              <CommandGroup heading="Custom">
+                                {customItems.map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    value={`${p.item_number} ${p.display_name}`}
+                                    onSelect={() => selectMasterItem(item.id, p)}
+                                    className="text-xs"
                                   >
-                                    Custom
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant={itemSelectorMode === 'delivery' ? 'default' : 'outline'}
-                                    className="h-6 text-xs flex-1"
-                                    onClick={() => setItemSelectorMode(itemSelectorMode === 'delivery' ? 'all' : 'delivery')}
+                                    <Check
+                                      className={cn(
+                                        "mr-1.5 h-3 w-3",
+                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                    <span className="truncate">{p.display_name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              <CommandGroup heading="Delivery">
+                                {deliveryItems.map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    value={`${p.item_number} ${p.display_name}`}
+                                    onSelect={() => selectMasterItem(item.id, p)}
+                                    className="text-xs"
                                   >
-                                    Delivery
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant={itemSelectorMode === 'service' ? 'default' : 'outline'}
-                                    className="h-6 text-xs flex-1"
-                                    onClick={() => setItemSelectorMode(itemSelectorMode === 'service' ? 'all' : 'service')}
+                                    <Check
+                                      className={cn(
+                                        "mr-1.5 h-3 w-3",
+                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                    <span className="truncate">{p.display_name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                              <CommandGroup heading="Service">
+                                {serviceItems.map((p) => (
+                                  <CommandItem
+                                    key={p.id}
+                                    value={`${p.item_number} ${p.display_name}`}
+                                    onSelect={() => selectMasterItem(item.id, p)}
+                                    className="text-xs"
                                   >
-                                    Service
-                                  </Button>
-                                  {itemSelectorMode !== 'all' && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 w-6 p-0"
-                                      onClick={() => setItemSelectorMode('all')}
-                                    >
-                                      <Check className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                              {/* Show filtered items based on mode */}
-                              {(itemSelectorMode === 'all' || !itemSelectorMode) && (
-                                <>
-                                  <CommandGroup heading="Custom">
-                                    {customItems.slice(0, 50).map((p) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={`${p.item_number} ${p.display_name}`}
-                                        onSelect={() => selectMasterItem(item.id, p)}
-                                        className="text-xs"
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-1.5 h-3 w-3",
-                                            item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                        <span className="truncate">{p.display_name}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                  <CommandGroup heading="Delivery">
-                                    {deliveryItems.slice(0, 50).map((p) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={`${p.item_number} ${p.display_name}`}
-                                        onSelect={() => selectMasterItem(item.id, p)}
-                                        className="text-xs"
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-1.5 h-3 w-3",
-                                            item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                        <span className="truncate">{p.display_name}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                  <CommandGroup heading="Service">
-                                    {serviceItems.slice(0, 50).map((p) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={`${p.item_number} ${p.display_name}`}
-                                        onSelect={() => selectMasterItem(item.id, p)}
-                                        className="text-xs"
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-1.5 h-3 w-3",
-                                            item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                        <span className="truncate">{p.display_name}</span>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </>
-                              )}
-                              {/* Show filtered results when a mode is selected */}
-                              {itemSelectorMode === 'custom' && (
-                                <CommandGroup heading="Custom Items">
-                                  {customItems.slice(0, 50).map((p) => (
-                                    <CommandItem
-                                      key={p.id}
-                                      value={`${p.item_number} ${p.display_name}`}
-                                      onSelect={() => selectMasterItem(item.id, p)}
-                                      className="text-xs"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-1.5 h-3 w-3",
-                                          item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                      <span className="truncate">{p.display_name}</span>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
-                              {itemSelectorMode === 'delivery' && (
-                                <CommandGroup heading="Delivery Items">
-                                  {deliveryItems.slice(0, 50).map((p) => (
-                                    <CommandItem
-                                      key={p.id}
-                                      value={`${p.item_number} ${p.display_name}`}
-                                      onSelect={() => selectMasterItem(item.id, p)}
-                                      className="text-xs"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-1.5 h-3 w-3",
-                                          item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                      <span className="truncate">{p.display_name}</span>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
-                              {itemSelectorMode === 'service' && (
-                                <CommandGroup heading="Service Items">
-                                  {serviceItems.slice(0, 50).map((p) => (
-                                    <CommandItem
-                                      key={p.id}
-                                      value={`${p.item_number} ${p.display_name}`}
-                                      onSelect={() => selectMasterItem(item.id, p)}
-                                      className="text-xs"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-1.5 h-3 w-3",
-                                          item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                      <span className="truncate">{p.display_name}</span>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              )}
+                                    <Check
+                                      className={cn(
+                                        "mr-1.5 h-3 w-3",
+                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                    <span className="truncate">{p.display_name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
                             </CommandList>
                           </Command>
                         </PopoverContent>
