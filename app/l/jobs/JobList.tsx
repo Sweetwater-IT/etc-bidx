@@ -249,7 +249,7 @@ const JobList = () => {
                   <span className="text-xs text-muted-foreground">No PMs assigned yet</span>
                 )}
               </div>
-              <Button onClick={() => router.push("/contract/new")} className="gap-2 w-full sm:w-auto">
+              <Button onClick={() => router.push("/l/contracts/new")} className="gap-2 w-full sm:w-auto">
                 <Plus className="h-4 w-4" />
                 New Contract
               </Button>
@@ -282,7 +282,7 @@ const JobList = () => {
                   Complete a contract review to add a job.
                 </p>
                 <Button
-                  onClick={() => router.push("/contract/new")}
+                  onClick={() => router.push("/l/contracts/new")}
                   variant="outline"
                   className="gap-1.5 mt-4"
                 >
