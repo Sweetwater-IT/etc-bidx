@@ -192,6 +192,8 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   const [workOrderExists, setWorkOrderExists] = useState(false);
   const [showWorkTypeChangeDialog, setShowWorkTypeChangeDialog] = useState(false);
   const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
+  const [workTypeSelectedAt, setWorkTypeSelectedAt] = useState<Date | null>(null);
+  const hasCreatedTakeoff = Boolean(savedTakeoffId);
 
   // Auto-save state
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -279,8 +281,12 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
 
       setSaveStatus('saved');
       setLastSaved(new Date());
-      setSavedTakeoffId(data.takeoff.id);
+      const newTakeoffId = data.takeoff.id as string;
+      setSavedTakeoffId(newTakeoffId);
       setHasUnsavedChanges(false);
+      if (!savedTakeoffId && newTakeoffId) {
+        router.replace(`/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
+      }
     } catch (error) {
       console.error("Error auto-saving takeoff:", error);
       setSaveStatus('error');
@@ -290,33 +296,26 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
     installDate, pickupDate, neededByDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
     activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
     permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
-    additionalItems, savedTakeoffId
+    additionalItems, savedTakeoffId, router
   ]);
 
   // Debounced auto-save effect
   useEffect(() => {
     if (hasUnsavedChanges && title.trim() && workType) {
-      // Check if we need to wait for the creation delay
-      const shouldDelay = !savedTakeoffId && titleEnteredAt && (Date.now() - titleEnteredAt.getTime()) < 4000;
+      const now = Date.now();
+      const latestTrigger = Math.max(
+        titleEnteredAt?.getTime() ?? 0,
+        workTypeSelectedAt?.getTime() ?? 0
+      );
+      const shouldDelay = !savedTakeoffId && latestTrigger > 0 && now - latestTrigger < 2000;
+      const delay = shouldDelay ? 2000 - (now - latestTrigger) : 2000;
 
-      if (shouldDelay) {
-        // Wait for the remaining delay time
-        const remainingDelay = 4000 - (Date.now() - titleEnteredAt.getTime());
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(() => {
-          autoSave();
-        }, remainingDelay);
-      } else {
-        // Normal 5-second debounce
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(() => {
-          autoSave();
-        }, 5000); // 5 second debounce
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
+      saveTimeoutRef.current = setTimeout(() => {
+        autoSave();
+      }, Math.max(0, delay));
     }
 
     return () => {
@@ -324,7 +323,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [hasUnsavedChanges, title, workType, autoSave, savedTakeoffId, titleEnteredAt]);
+  }, [hasUnsavedChanges, title, workType, autoSave, savedTakeoffId, titleEnteredAt, workTypeSelectedAt]);
 
   // Mark as having unsaved changes when form data changes
   useEffect(() => {
@@ -678,38 +677,35 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          <SaveStatusIndicator
-            status={saveStatus}
-            lastSavedAt={lastSaved}
-            onManualSave={handleSave}
-            isSaving={saving}
-          />
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSave} disabled={saving}>
-            <Save className="h-3.5 w-3.5" />
-            {saving ? "Saving…" : "Save Draft"}
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf || !savedTakeoffId}>
-            <Download className="h-3.5 w-3.5" />
-            {generatingPdf ? "Generating…" : "Download PDF"}
-          </Button>
-          {workOrderExists ? (
-            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
-              <ClipboardList className="h-3.5 w-3.5" />
-              View Work Order
+      <div className="flex items-center gap-2 flex-nowrap shrink-0">
+        <SaveStatusIndicator
+          status={saveStatus}
+          lastSavedAt={lastSaved}
+          onManualSave={handleSave}
+          isSaving={saving}
+        />
+        {/* Removed Save Draft + Back button from header as per requirement */}
+        {/* Only show Generate Work Order + Download PDF when a takeoff ID exists */}
+        {savedTakeoffId && (
+          <>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+              <Download className="h-3.5 w-3.5" />
+              {generatingPdf ? "Generating…" : "Download PDF"}
             </Button>
-          ) : (
-            <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving || !takeoffSaved}>
-              <ClipboardList className="h-3.5 w-3.5" />
-              {saving ? "Creating…" : "Generate Work Order"}
-            </Button>
-          )}
-
-        </div>
+            {workOrderExists ? (
+              <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
+                <ClipboardList className="h-3.5 w-3.5" />
+                View Work Order
+              </Button>
+            ) : (
+              <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
+                <ClipboardList className="h-3.5 w-3.5" />
+                {saving ? "Creating…" : "Generate Work Order"}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
       </div>
 
       {/* Project Info */}
@@ -803,6 +799,11 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   setShowWorkTypeChangeDialog(true);
                 } else {
                   setWorkType(newWorkType);
+                  if (newWorkType) {
+                    setWorkTypeSelectedAt(new Date());
+                  } else {
+                    setWorkTypeSelectedAt(null);
+                  }
                 }
               }}>
                 <SelectTrigger className="text-sm mt-0">
