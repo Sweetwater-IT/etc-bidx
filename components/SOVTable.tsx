@@ -140,10 +140,6 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
     [sovProducts, search]
   );
 
-  const customItems = useMemo(() => filteredItems.filter(p => p.work_type === WORK_TYPE_CUSTOM), [filteredItems]);
-  const deliveryItems = useMemo(() => filteredItems.filter(p => p.work_type === WORK_TYPE_DELIVERY), [filteredItems]);
-  const serviceItems = useMemo(() => filteredItems.filter(p => p.work_type === WORK_TYPE_SERVICE), [filteredItems]);
-
   const addRow = () => {
     const newItem: ScheduleOfValuesItem = {
       id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
@@ -459,47 +455,37 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                               <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                 No matching items found.
                               </CommandEmpty>
-                              {/* All SOV items grouped by work type */}
-                              <CommandGroup heading="Custom">
-                                {customItems.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={`${p.item_number} ${p.display_name}`}
-                                    onSelect={() => selectMasterItem(item.id, p)}
-                                    className="text-xs"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-1.5 h-3 w-3",
-                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                    <span className="truncate">{p.display_name}</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                              <CommandGroup heading="Delivery">
-                                {deliveryItems.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={`${p.item_number} ${p.display_name}`}
-                                    onSelect={() => selectMasterItem(item.id, p)}
-                                    className="text-xs"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-1.5 h-3 w-3",
-                                        item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                    <span className="truncate">{p.display_name}</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                              <CommandGroup heading="Service">
-                                {serviceItems.map((p) => (
+                              {/* Quick-add rows for custom items */}
+                              <CommandItem
+                                value="custom-add"
+                                onSelect={() => openCustomDialog()}
+                                className="text-xs font-medium"
+                              >
+                                <Plus className="mr-2 h-3 w-3" />
+                                Custom
+                              </CommandItem>
+                              <div className="h-px bg-border my-1" />
+                              <CommandItem
+                                value="delivery-add"
+                                onSelect={() => openCustomDialog()}
+                                className="text-xs font-medium"
+                              >
+                                <Plus className="mr-2 h-3 w-3" />
+                                Delivery
+                              </CommandItem>
+                              <div className="h-px bg-border my-1" />
+                              <CommandItem
+                                value="service-add"
+                                onSelect={() => openCustomDialog()}
+                                className="text-xs font-medium"
+                              >
+                                <Plus className="mr-2 h-3 w-3" />
+                                Service
+                              </CommandItem>
+                              <div className="h-px bg-border my-2" />
+                              {/* All SOV items in a flat list */}
+                              <CommandGroup heading="All Items">
+                                {filteredItems.map((p) => (
                                   <CommandItem
                                     key={p.id}
                                     value={`${p.item_number} ${p.display_name}`}
