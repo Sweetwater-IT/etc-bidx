@@ -66,6 +66,17 @@ export const MPTSignConfiguration = ({
 }: MPTSignConfigurationProps) => {
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
+  const getSandbagsForRow = (sectionKey: string, row: MPTSignRow) => {
+    if (!row.structureType) return 0;
+    if (sectionKey === "trailblazers") {
+      return row.structureType.toUpperCase().includes("H-STAND") ? 6 * row.quantity : 0;
+    }
+    if (sectionKey === "type_iii") {
+      return row.structureType === "Loose" ? 0 : 12 * row.quantity;
+    }
+    return 0;
+  };
+
   // Debugging refs
   const mainContainerRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -195,6 +206,9 @@ export const MPTSignConfiguration = ({
           ) : (
             activeSections.map((sectionKey) => {
               const section = MPT_SECTIONS.find((s) => s.key === sectionKey)!;
+              const sectionSandbags = (signRows[sectionKey] || []).reduce((total, row) => {
+                return total + getSandbagsForRow(sectionKey, row);
+              }, 0);
               return (
                 <div key={sectionKey} className="mb-6">
                   <MPTSignTable
@@ -206,6 +220,12 @@ export const MPTSignConfiguration = ({
                     disabled={disabled}
                     defaultMaterial={defaultSignMaterial}
                   />
+                  {sectionSandbags > 0 && (
+                    <div className="mt-1.5 mb-4 px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 inline-flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sand Bags</span>
+                      <span className="text-sm font-bold tabular-nums text-amber-700">{sectionSandbags}</span>
+                    </div>
+                  )}
                 </div>
               );
             })

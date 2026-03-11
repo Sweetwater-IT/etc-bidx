@@ -745,6 +745,30 @@ export const MPTSignTable = ({
     }
   };
 
+  const summary = rows.reduce(
+    (acc, row) => {
+      if (!row.signDesignation) return acc;
+
+      const rowQty = row.quantity || 0;
+      const primarySqft = (row.totalSqft || 0) || Math.round((row.sqft || 0) * rowQty * 100) / 100;
+      const sqftTotal = primarySqft + (row.secondarySigns || []).reduce((secTotal, sec) => {
+        const secSqft = sec.sqft || 0;
+        return secTotal + Math.round(secSqft * rowQty * 100) / 100;
+      }, 0);
+      acc.totalSqft = Math.round((acc.totalSqft + sqftTotal) * 100) / 100;
+      acc.uniqueSigns += 1;
+      acc.totalStructures += row.structureType && row.structureType !== 'Loose' ? rowQty : 0;
+      const bLightsValue = row.bLights || 'none';
+      if (bLightsValue !== 'none') {
+        const parsed = parseInt(bLightsValue.replace(/\D/g, ''), 10);
+        const count = Number.isNaN(parsed) ? 1 : parsed;
+        acc.totalBLights += count * rowQty;
+      }
+      return acc;
+    },
+    { totalSqft: 0, uniqueSigns: 0, totalStructures: 0, totalBLights: 0 }
+  );
+
   return (
     <div className="rounded-lg border bg-card shadow-sm">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
@@ -963,6 +987,27 @@ export const MPTSignTable = ({
           </div>
         )}
       </div>
+
+      {rows.length > 0 && summary.uniqueSigns > 0 && (
+        <div className="bg-muted/20 px-4 py-2 flex flex-wrap items-center gap-6 text-xs border-t">
+          <div>
+            <span className="text-muted-foreground font-medium">Total Sq Ft: </span>
+            <span className="font-bold tabular-nums">{summary.totalSqft.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground font-medium">Unique Signs: </span>
+            <span className="font-bold tabular-nums">{summary.uniqueSigns}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground font-medium">Total Structures: </span>
+            <span className="font-bold tabular-nums">{summary.totalStructures}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground font-medium">B-Lights: </span>
+            <span className="font-bold tabular-nums">{summary.totalBLights}</span>
+          </div>
+        </div>
+      )}
 
       {/* Controlled DesignationSearcher */}
       {localSign && (

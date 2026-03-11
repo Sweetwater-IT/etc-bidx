@@ -854,8 +854,8 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6">
+    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
+      <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1439,7 +1439,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               )}
             </div>
           </div>
-          <div className="p-5">
+          <div className="p-5 overflow-x-auto">
             {loadingRelated || (takeoffId && takeoffLoading) ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1489,7 +1489,7 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
         </div>
 
         {/* ─── Work Order Items Card — matches SOV table style ─── */}
-        <div className="rounded-xl border bg-card p-4">
+        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-muted-foreground" />

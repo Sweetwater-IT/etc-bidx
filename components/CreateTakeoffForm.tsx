@@ -93,14 +93,15 @@ const SIGN_MATERIALS = [
   { value: "ALUMINUM", label: "Aluminum", abbrev: "AL" },
 ];
 
-const SANDBAG_MAP: Record<string, number> = {
-  "6FT RIGHT": 2,
-  "6FT LEFT": 2,
-  "4FT RIGHT": 2,
-  "4FT LEFT": 2,
-  "6FT LEFT/RIGHT": 4,
-  "4FT LEFT/RIGHT": 4,
-  "6FT WING BARRICADE": 4,
+const getSandbagsForRow = (sectionKey: string, structureType: string, quantity: number) => {
+  if (!structureType) return 0;
+  if (sectionKey === "trailblazers") {
+    return structureType.toUpperCase().includes("H-STAND") ? 6 * quantity : 0;
+  }
+  if (sectionKey === "type_iii") {
+    return structureType === "Loose" ? 0 : 12 * quantity;
+  }
+  return 0;
 };
 
 const FLAGGING_VEHICLE_OPTIONS = [
@@ -1056,8 +1057,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
                   activeSections.map((sectionKey) => {
                     const section = MPT_SECTIONS.find((s) => s.key === sectionKey)!;
                     const sectionSandbags = (signRows[sectionKey] || []).reduce((total, row) => {
-                      const bags = SANDBAG_MAP[row.structureType] || 0;
-                      return total + bags * row.quantity;
+                      return total + getSandbagsForRow(sectionKey, row.structureType, row.quantity);
                     }, 0);
                     return (
                       <div key={sectionKey}>
