@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
       takeoffId, // For updates
     } = await request.json();
 
-    if (!jobId || !title || !workType) {
+    const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+    const normalizedWorkType = typeof workType === 'string' ? workType.trim() : '';
+
+    if (!jobId || !normalizedTitle || !normalizedWorkType) {
       return NextResponse.json(
         { error: 'Missing required fields: jobId, title, workType' },
         { status: 400 }
@@ -56,8 +59,8 @@ export async function POST(request: NextRequest) {
 
     const takeoffData = {
       job_id: jobId,
-      title: title.trim(),
-      work_type: workType,
+      title: normalizedTitle,
+      work_type: normalizedWorkType,
       work_order_number: workOrderNumber || null,
       work_order_id: workOrderId || null,
       contracted_or_additional: contractedOrAdditional || 'contracted',
