@@ -884,43 +884,39 @@ const WorkOrderDetail = ({
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
       <div className="w-full px-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
-        <div className="sticky top-0 z-30 -mx-6 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ClipboardList className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-foreground leading-tight">
+        <div className="sticky top-0 z-30 -mx-6 px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex h-14 items-center justify-between gap-3 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <h1 className="text-sm font-semibold text-foreground truncate">
                 {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
                 {workOrder?.wo_number && (
                   <span className="ml-2 font-semibold">· {formatWorkOrderNumber(workOrder.wo_number)}</span>
                 )}
               </p>
+              <Badge className={`text-[10px] font-bold shrink-0 ${statusConfig.color}`}>
+                {statusConfig.label}
+              </Badge>
+              {(workOrder?.is_pickup) && (
+                <Badge className="text-[10px] font-bold bg-orange-500/15 text-orange-700 shrink-0">Pickup</Badge>
+              )}
             </div>
-            <Badge className={`ml-2 text-[10px] font-bold ${statusConfig.color}`}>
-              {statusConfig.label}
-            </Badge>
-            {(workOrder?.is_pickup) && (
-              <Badge className="ml-1 text-[10px] font-bold bg-orange-500/15 text-orange-700">Pickup</Badge>
-            )}
-          </div>
 
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
-            {lastSavedAt && (
-              <span className="text-[10px] text-muted-foreground mr-2 whitespace-nowrap">
-                Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            )}
+            <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
+              {lastSavedAt && (
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                  Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
             {isViewMode && (
-              <Button variant="outline" size="sm" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
+              <Button variant="outline" size="sm" className="shrink-0" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
             )}
             {isViewMode && workOrder?.job_id && (
               <Button
                 size="sm"
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 onClick={() => {
                   const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
                   router.push(`/l/jobs/${workOrder.job_id}/work-orders/edit/${workOrderId}${qs}`);
@@ -930,7 +926,7 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {canEdit && (
-              <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={saving}>
+              <Button size="sm" className="gap-1.5 shrink-0" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 {saving ? "Saving…" : "Save"}
               </Button>
@@ -940,7 +936,7 @@ const WorkOrderDetail = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 onClick={async () => {
                   try {
                     const woBytes = await generateBillingPacketPdf({
@@ -1004,7 +1000,7 @@ const WorkOrderDetail = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 onClick={async () => {
                   try {
                     const takeoffId = takeoffs[0]?.id;
@@ -1035,7 +1031,7 @@ const WorkOrderDetail = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 onClick={async () => {
                   try {
                     const takeoffId = workOrder?.takeoff_id;
@@ -1146,13 +1142,13 @@ const WorkOrderDetail = ({
             )}
             {/* Quick action: Mark Ready */}
             {canManageFromView && isDraft && hasTakeoff && (
-              <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => handleStatusChange("ready")}>
+              <Button size="sm" variant="secondary" className="gap-1.5 shrink-0" onClick={() => handleStatusChange("ready")}>
                 <Send className="h-3.5 w-3.5" /> Mark Ready
               </Button>
             )}
             {/* Delete Draft Work Order */}
             {canManageFromView && isDraft && (
-              <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setShowDeleteDialog(true)}>
+              <Button size="sm" variant="destructive" className="gap-1.5 shrink-0" onClick={() => setShowDeleteDialog(true)}>
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
             )}
@@ -1161,7 +1157,7 @@ const WorkOrderDetail = ({
               <Button
                 size="sm"
                 variant="secondary"
-                className="gap-1.5"
+                className="gap-1.5 shrink-0"
                 onClick={async () => {
                   if (!workOrderId) return;
                   try {
@@ -1188,10 +1184,11 @@ const WorkOrderDetail = ({
             )}
             {/* Link to existing Pickup WO */}
             {isViewMode && pickupWO && (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${pickupWO.id}`)}>
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${pickupWO.id}`)}>
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
               </Button>
             )}
+            </div>
           </div>
         </div>
 

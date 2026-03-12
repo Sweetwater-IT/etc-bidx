@@ -44,7 +44,7 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   }, [jobId, router]);
 
   const handleBack = () => {
-    router.push(`/l/jobs`);
+    router.push(`/l/${jobId}`);
   };
 
   if (loading) {

@@ -40,8 +40,8 @@ export default async function TakeoffViewPage({ params }: any) {
         <Suspense fallback={null}>
           <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
             {/* Sticky Header */}
-            <header className="border-b bg-card sticky top-0 z-20">
-              <div className="max-w-7xl mx-auto px-4 py-2">
+            <header className="border-b bg-card sticky top-0 z-10">
+              <div className="max-w-7xl mx-auto px-4 h-14 flex items-center">
                 <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
               </div>
             </header>
@@ -147,22 +147,20 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   };
 
   return (
-    <div className="w-full min-w-0">
-      <div className="mb-1">
-        <Button variant="ghost" onClick={() => router.push(`/l/${jobId}`)} className="gap-2 h-8 px-2">
+    <div className="w-full min-w-0 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Button variant="ghost" onClick={() => router.push(`/l/${jobId}`)} className="gap-2 h-8 px-2 shrink-0">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-      </div>
-
-      <div className="flex items-center justify-between gap-4 min-w-0">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
           <p className="text-xs text-muted-foreground truncate">
             {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={handleEdit}>
           <Edit className="h-3.5 w-3.5 mr-1.5" />
           Edit
@@ -182,7 +180,6 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               {loading ? "Creating…" : "Generate Work Order"}
             </Button>
           )}
-        </div>
       </div>
     </div>
   );
