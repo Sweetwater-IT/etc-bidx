@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 
 export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -93,6 +94,10 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
         </button>
       </div>
       <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
+        <PageTitleBlock
+          title="New Takeoff"
+          description="Create a new material takeoff for this project."
+        />
         <CreateTakeoffForm
           jobId={jobId}
           onBack={handleBack}

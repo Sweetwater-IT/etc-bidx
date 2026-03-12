@@ -81,6 +81,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 
 /* ─── Status config ─── */
 
@@ -879,6 +880,12 @@ const WorkOrderDetail = ({
   const canEdit = (isAdmin || isPM) && !isViewMode;
   const canManageFromView = (isAdmin || isPM) && isViewMode;
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
+  const pageTitle = isNewWorkOrder ? "New Work Order" : isViewMode ? "View Work Order" : "Edit Work Order";
+  const pageDescription = isNewWorkOrder
+    ? "Create and configure a new work order for this project."
+    : isViewMode
+      ? "Review work order details, status, and linked takeoff information."
+      : "Update work order details, items, and execution readiness.";
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -1192,6 +1199,7 @@ const WorkOrderDetail = ({
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 overflow-x-hidden">
+        <PageTitleBlock title={pageTitle} description={pageDescription} />
 
         {/* Takeoff Required Alert - only show if no takeoff is linked */}
         {!hasTakeoff && !loadingRelated && (

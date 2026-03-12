@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import EditTakeoffPageContent from "./EditTakeoffPageContent";
 import TakeoffEditPageHeader from "./TakeoffEditPageHeader";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 
 export default async function EditTakeoffPage({ params }: any) {
   const resolvedParams = await params;
@@ -32,6 +33,10 @@ export default async function EditTakeoffPage({ params }: any) {
             </header>
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+              <PageTitleBlock
+                title="Edit Takeoff"
+                description="Update takeoff details, materials, and scheduling information."
+              />
               <EditTakeoffPageContent jobId={jobId} takeoffId={takeoffId} />
             </div>
           </div>
