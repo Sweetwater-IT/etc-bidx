@@ -444,21 +444,19 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <div className="flex items-center gap-1 flex-1">
-            <div className="flex-1 min-w-[180px]">
-              <InputGroup
-                value={bulkValue}
-                onValueChange={setBulkValue}
-                type={bulkType}
-                onTypeChange={(type) => setBulkType(type)}
-                placeholder="0.00"
-                className="h-7 text-xs"
-              />
-            </div>
-            <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
-              Apply All
-            </Button>
+          <div className="w-[120px]">
+            <InputGroup
+              value={bulkValue}
+              onValueChange={setBulkValue}
+              type={bulkType}
+              onTypeChange={(type) => setBulkType(type)}
+              placeholder="0.00"
+              className="h-7 text-xs"
+            />
           </div>
+          <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
+            Apply All
+          </Button>
         </div>
       )}
 
@@ -669,7 +667,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                   <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
                     ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell className="p-1.5 text-center">
+                  <TableCell className="p-1.5 text-center relative">
                     {readOnly ? (
                       <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
                         <MessageSquare className="h-3.5 w-3.5" />
@@ -691,9 +689,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                           <Button
                             variant="ghost"
                             size="icon"
-                            className={cn('h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
+                            className={cn('h-6 w-6 relative', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
+                            {item.notes && (
+                              <div className="absolute top-0.5 right-0.5 h-1.5 w-1.5 bg-red-500 rounded-full" />
+                            )}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[300px] p-3" align="end">
@@ -749,6 +750,17 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                     )}
                   </TableCell>
                 </TableRow>
+                {item.notes && !readOnly && (
+                  <TableRow key={`${item.id}-notes`} className="bg-muted/20">
+                    <TableCell colSpan={10} className="p-2">
+                      <div className="flex items-start gap-2">
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-muted-foreground italic">{item.notes}</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                </>
                 );
               })}
 

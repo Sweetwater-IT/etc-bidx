@@ -30,14 +30,14 @@ export function InputGroup({
         type="number"
         step="0.01"
         min="0"
-        className={`flex-1 min-w-[160px] rounded-r-none border-r-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${inputClassName}`}
+        className={`flex-1 rounded-r-none border-r-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${inputClassName}`}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
         disabled={disabled}
       />
       <Select value={type} onValueChange={onTypeChange} disabled={disabled}>
-        <SelectTrigger className="w-[64px] rounded-l-none border-l-0">
+        <SelectTrigger className="w-[44px] rounded-l-none border-l-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
