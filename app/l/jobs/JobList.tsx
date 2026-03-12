@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useJobsList } from "@/hooks/useJobsList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,18 +68,30 @@ const JobList = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [currentPM, setCurrentPM] = useState<string>("");
+  const [pmOptions, setPmOptions] = useState<string[]>([]);
 
   // Fetch jobs from database using Zustand
   const { jobs, isLoading } = useJobsList();
 
-  // Derive unique PMs for the selector
-  const allPMs = useMemo(() => {
-    const set = new Set<string>();
-    jobs.forEach((j) => {
-      if (j.etcProjectManager) set.add(j.etcProjectManager);
-    });
-    return Array.from(set).sort();
-  }, [jobs]);
+  useEffect(() => {
+    const fetchProjectManagers = async () => {
+      try {
+        const response = await fetch('/api/l/project-managers');
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          const names = result.data
+            .map((pm: any) => pm.full_name)
+            .filter((name: string) => !!name)
+            .sort((a: string, b: string) => a.localeCompare(b));
+          setPmOptions(names);
+        }
+      } catch (error) {
+        console.error('Error loading project managers:', error);
+      }
+    };
+
+    fetchProjectManagers();
+  }, []);
 
   // Derive unique branches for tabs
   const branches = useMemo(() => {
@@ -232,13 +244,13 @@ const JobList = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                {allPMs.length > 0 ? (
+                {pmOptions.length > 0 ? (
                   <Select value={currentPM} onValueChange={setCurrentPM}>
                     <SelectTrigger className="w-[200px] h-9 text-sm">
                       <SelectValue placeholder="Select your name" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allPMs.map((pm) => (
+                      {pmOptions.map((pm) => (
                         <SelectItem key={pm} value={pm}>
                           {pm}
                         </SelectItem>

@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
-import { ETCUser, defaultETCUsers, CertifiedPayrollType } from "@/data/masterItems";
+import { CertifiedPayrollType } from "@/data/masterItems";
 // import { generateJobNumber } from "@/utils/generateJobNumber"; // Removed - will implement with business logic later
 
 interface ProjectInfoFieldsProps {
@@ -213,10 +213,13 @@ const CertifiedPayrollSection = ({
 
 export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
+  const [projectStartOpen, setProjectStartOpen] = useState(false);
+  const [projectEndOpen, setProjectEndOpen] = useState(false);
 
   // Database-driven data
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
   const [counties, setCounties] = useState<string[]>([]);
+  const [projectManagers, setProjectManagers] = useState<Array<{ id: string; branch_id: number | null; full_name: string }>>([]);
 
   useEffect(() => {
     const fetchBranchesAndCounties = async () => {
@@ -233,6 +236,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         const countiesResult = await countiesResponse.json();
         if (countiesResult.success && countiesResult.data) {
           setCounties(countiesResult.data);
+        }
+
+        const pmResponse = await fetch('/api/l/project-managers');
+        const pmResult = await pmResponse.json();
+        if (pmResult.success && pmResult.data) {
+          setProjectManagers(pmResult.data);
         }
       } catch (error) {
         console.error("Error fetching branches/counties:", error);
@@ -351,35 +360,27 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   };
 
   // ETC PM combobox state
-  const [etcUsers, setEtcUsers] = useState<ETCUser[]>(defaultETCUsers);
   const [pmOpen, setPmOpen] = useState(false);
   const [pmSearch, setPmSearch] = useState("");
 
-  const availablePMs = useMemo(() => {
+  const selectedBranchId = useMemo(() => {
     const branch = projectInfo.etcBranch?.trim();
-    return etcUsers.filter((u) => {
-      if (!branch) return true;
-      if (u.allowedBranches.length === 0) return true;
-      return u.allowedBranches.some((b) => b.toLowerCase() === branch.toLowerCase());
-    });
-  }, [etcUsers, projectInfo.etcBranch]);
+    if (!branch) return null;
+    return branches.find((b) => b.name.toLowerCase() === branch.toLowerCase())?.id ?? null;
+  }, [projectInfo.etcBranch, branches]);
+
+  const availablePMs = useMemo(() => {
+    if (!selectedBranchId) return projectManagers;
+    return projectManagers.filter((pm) => pm.branch_id === selectedBranchId);
+  }, [projectManagers, selectedBranchId]);
 
   const filteredPMs = useMemo(
     () =>
       availablePMs.filter((u) =>
-        u.name.toLowerCase().includes(pmSearch.toLowerCase())
+        (u.full_name || "").toLowerCase().includes(pmSearch.toLowerCase())
       ),
     [availablePMs, pmSearch]
   );
-
-  const handleAddPM = () => {
-    if (!pmSearch.trim()) return;
-    const newUser: ETCUser = { id: crypto.randomUUID(), name: pmSearch.trim(), allowedBranches: [] };
-    setEtcUsers((prev) => [...prev, newUser]);
-    update("etcProjectManager", newUser.name);
-    setPmSearch("");
-    setPmOpen(false);
-  };
 
   // County combobox state
   const [countyOpen, setCountyOpen] = useState(false);
@@ -550,26 +551,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-[240px] p-0 z-50 bg-popover" align="start">
                 <Command>
                   <CommandInput
-                    placeholder="Search or add PM…"
+                    placeholder="Search PM…"
                     value={pmSearch}
                     onValueChange={setPmSearch}
                   />
                   <CommandList>
-                    <CommandEmpty className="p-0">
-                      <button
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
-                        onMouseDown={(e) => { e.preventDefault(); handleAddPM(); }}
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Add {pmSearch}
-                      </button>
-                    </CommandEmpty>
+                    <CommandEmpty>No project managers found.</CommandEmpty>
                     <CommandGroup>
                       {filteredPMs.map((u) => (
                         <CommandItem
                           key={u.id}
-                          value={u.name}
+                          value={u.full_name}
                           onSelect={() => {
-                            update("etcProjectManager", u.name);
+                            update("etcProjectManager", u.full_name);
                             setPmOpen(false);
                             setPmSearch("");
                           }}
@@ -577,31 +571,13 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                           <Check
                             className={cn(
                               "mr-2 h-3 w-3",
-                              projectInfo.etcProjectManager === u.name ? "opacity-100" : "opacity-0"
+                              projectInfo.etcProjectManager === u.full_name ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <span className="text-sm">{u.name}</span>
-                          {u.allowedBranches.length > 0 && (
-                            <span className="ml-auto text-[10px] text-muted-foreground">
-                              {u.allowedBranches.join(", ")}
-                            </span>
-                          )}
+                          <span className="text-sm">{u.full_name}</span>
                         </CommandItem>
                       ))}
                     </CommandGroup>
-                    {pmSearch && filteredPMs.length > 0 && (
-                      <>
-                        <CommandSeparator />
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={handleAddPM}
-                            className="text-sm"
-                          >
-                            <Plus className="mr-2 h-3 w-3" /> Add {pmSearch}
-                          </CommandItem>
-                        </CommandGroup>
-                      </>
-                    )}
                   </CommandList>
                 </Command>
               </PopoverContent>
@@ -617,7 +593,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             <Label htmlFor="projectStartDate" className="flex items-center gap-1 text-xs">
               <CalendarIcon className="h-3 w-3" /> Project Start Date<RequiredMark />
             </Label>
-            <Popover>
+            <Popover open={projectStartOpen} onOpenChange={setProjectStartOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -640,9 +616,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   onSelect={(date) => {
                     if (!date) {
                       update("projectStartDate", "");
+                      setProjectStartOpen(false);
                       return;
                     }
                     update("projectStartDate", format(date, "yyyy-MM-dd"));
+                    setProjectStartOpen(false);
                   }}
                   disabled={(date) =>
                     !!projectInfo.projectEndDate &&
@@ -657,7 +635,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             <Label htmlFor="projectEndDate" className="flex items-center gap-1 text-xs">
               <CalendarIcon className="h-3 w-3" /> Project End Date<RequiredMark />
             </Label>
-            <Popover>
+            <Popover open={projectEndOpen} onOpenChange={setProjectEndOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -680,9 +658,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   onSelect={(date) => {
                     if (!date) {
                       update("projectEndDate", "");
+                      setProjectEndOpen(false);
                       return;
                     }
                     update("projectEndDate", format(date, "yyyy-MM-dd"));
+                    setProjectEndOpen(false);
                   }}
                   disabled={(date) =>
                     !!projectInfo.projectStartDate &&
