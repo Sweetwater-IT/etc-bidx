@@ -1,7 +1,5 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { Database } from '@/lib/database.types';
 
 type PickupItemUpdate = {
   item_id: string;
@@ -9,18 +7,28 @@ type PickupItemUpdate = {
   images: string[]; // public URLs
 };
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { jobId: string; workOrderId: string } }
-) {
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+function getServerSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase server environment variables');
   }
 
-  const { jobId, workOrderId } = params;
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ jobId: string; workOrderId: string }> }
+) {
+  const { jobId, workOrderId } = await params;
+  const supabase = getServerSupabase();
 
   const { data, error } = await supabase
     .from('work_order_items_l')
@@ -40,18 +48,12 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { jobId: string; workOrderId: string } }
+  { params }: { params: Promise<{ jobId: string; workOrderId: string }> }
 ) {
-  const supabase = createRouteHandlerClient<Database>({ cookies });
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const body = await req.json() as { items: PickupItemUpdate[] };
 
-  const { jobId, workOrderId } = params;
+  const { jobId, workOrderId } = await params;
+  const supabase = getServerSupabase();
 
   const updates = body.items.map(({ item_id, condition, images }) => ({
     id: item_id,

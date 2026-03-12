@@ -83,10 +83,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
-import { supabase } from "@/lib/supabase";
 import useSWR from 'swr';
 import { Camera, ImagePlus, Trash } from "lucide-react";
-import { useState } from "react";
 
 /* ─── Status config ─── */
 

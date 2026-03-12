@@ -1,9 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+function getSupabase(): SupabaseClient | null {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return null;
+    }
+
+    return createClient(supabaseUrl, supabaseAnonKey);
+}
 
 // Types for the query response structure
 export interface BidMetrics {
@@ -104,6 +110,12 @@ export interface EstimateQueryResult {
 
 export async function getEstimateData(startDate?: string, endDate?: string): Promise<EstimateQueryResult | null> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) {
+            console.warn('Supabase env vars missing; dashboard metrics unavailable during build.');
+            return null;
+        }
+
         // 1. First, let's get the basic bid metrics
         const bidMetrics = await getBidMetrics(startDate, endDate);
 
@@ -153,6 +165,9 @@ export async function getEstimateData(startDate?: string, endDate?: string): Pro
 // Get the top 6 card metrics
 async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidMetrics> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // 1. Total bids (excluding drafts)
         const { count: totalBids, error: totalBidsError } = await supabase
             .from('bid_estimates')
@@ -332,6 +347,9 @@ async function getBidMetrics(startDate?: string, endDate?: string): Promise<BidM
 // These would be implemented similarly to getBidMetrics above
 async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Promise<BranchWinLossMetrics[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get bid estimates with admin data
         const { data: rawData, error: rawError } = await supabase
             .from('bid_estimates')
@@ -420,6 +438,9 @@ async function getBranchWinLossMetrics(startDate?: string, endDate?: string): Pr
 
 async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Promise<BranchJobTypeMetrics[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get won bid estimates with admin data to determine branch and division
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
@@ -501,6 +522,9 @@ async function getBranchJobTypeMetrics(startDate?: string, endDate?: string): Pr
 
 async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): Promise<BranchRevenueByBidItem[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get won bid estimates with admin data to determine branch
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
@@ -617,6 +641,9 @@ async function getBranchRevenueByBidItem(startDate?: string, endDate?: string): 
 
 async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string): Promise<BranchGrossProfitMetrics[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get the revenue by branch and bid item
         const branchRevenueByBidItem = await getBranchRevenueByBidItem(startDate, endDate);
 
@@ -764,6 +791,9 @@ async function getBranchGrossProfitMetrics(startDate?: string, endDate?: string)
 
 async function getProjectStarts(startDate?: string, endDate?: string): Promise<ProjectStartMetrics[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get won bid estimates with admin data to get start dates
         const { data: estimatesData, error: estimatesError } = await supabase
             .from('bid_estimates')
@@ -823,6 +853,9 @@ async function getProjectStarts(startDate?: string, endDate?: string): Promise<P
 
 async function getMonthlyHours(startDate?: string, endDate?: string): Promise<MonthlyHourMetrics[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get won bid estimates with admin data, joining with mpt_rental_entries
         const { data: mptData, error: mptError } = await supabase
             .from('bid_estimates')
@@ -959,6 +992,9 @@ async function getMonthlyHours(startDate?: string, endDate?: string): Promise<Mo
 
 async function getCustomerRevenue(startDate?: string, endDate?: string): Promise<CustomerRevenue[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get jobs with won bid items, project metadata, and contractor info
         const { data: jobsData, error: jobsError } = await supabase
             .from('jobs')
@@ -1064,6 +1100,9 @@ async function getCustomerRevenue(startDate?: string, endDate?: string): Promise
 
 async function getMPTBids(startDate?: string, endDate?: string): Promise<MPTBid[]> {
     try {
+        const supabase = getSupabase();
+        if (!supabase) throw new Error('Supabase env vars missing');
+
         // Get MPT rental entries with bid_estimate data
         const { data: mptData, error: mptError } = await supabase
             .from('mpt_rental_entries')
