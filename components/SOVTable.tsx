@@ -27,6 +27,13 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -114,6 +121,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
 
   // Bulk retainage controls
+  const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('dollar');
   const [bulkValueDigits, setBulkValueDigits] = useState('');
 
   // Notes editing state
@@ -177,11 +185,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
 
   const updateRetainage = (
     id: string,
+    nextType: 'percent' | 'dollar',
     rawValue: number
   ) => {
     let nextValue = Number.isFinite(rawValue) ? rawValue : 0;
-    const nextType = 'dollar' as const;
-    nextValue = clampNumber(nextValue, 0, Number.MAX_SAFE_INTEGER);
+    if (nextType === 'percent') nextValue = clampNumber(nextValue, 0, 100);
+    else nextValue = clampNumber(nextValue, 0, Number.MAX_SAFE_INTEGER);
     nextValue = Math.round(nextValue * 100) / 100;
 
     updateItems(
@@ -406,7 +415,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
 
   const applyBulkRetainage = () => {
     let val = bulkValueDigits ? (parseInt(bulkValueDigits, 10) || 0) / 100 : 0;
-    const bulkType = 'dollar' as const;
+    if (bulkType === 'percent') val = clampNumber(val, 0, 100);
     val = Math.round(val * 100) / 100;
 
     updateItems(
@@ -460,13 +469,22 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
           <div className="flex items-center gap-1">
             <div className="flex items-center h-7 border rounded-md bg-background">
-              <span className="px-2 text-xs text-muted-foreground border-r">$</span>
+              <span className="px-2 text-xs text-muted-foreground border-r">{bulkType === 'percent' ? '%' : '$'}</span>
               <CurrencyInput
                 value={bulkValueDigits}
                 onChange={setBulkValueDigits}
                 className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
               />
             </div>
+            <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
+              <SelectTrigger className="h-7 w-14 text-xs px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percent">%</SelectItem>
+                <SelectItem value="dollar">$</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
@@ -644,11 +662,14 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         ) : (
-                        <CurrencyInput
-                          value={Math.round(item.unitPrice * 100).toFixed(0)}
-                          onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                          className="h-7 text-xs text-right w-[100px]"
-                        />
+                        <div className="flex items-center h-7 border rounded-md bg-background">
+                          <span className="px-2 text-xs text-muted-foreground border-r">$</span>
+                          <CurrencyInput
+                            value={Math.round(item.unitPrice * 100).toFixed(0)}
+                            onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                            className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                          />
+                        </div>
                         )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -659,20 +680,34 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                   <TableCell className="p-1.5">
                     {readOnly ? (
                       <span className="text-xs text-right block px-1">
-                        ${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {item.retainageType === 'percent'
+                          ? `${item.retainageValue}%`
+                          : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                       </span>
                     ) : (
                       <div className="flex items-center justify-end gap-1">
                         <div className="flex items-center h-7 border rounded-md bg-background">
-                          <span className="px-2 text-xs text-muted-foreground border-r">$</span>
+                          <span className="px-2 text-xs text-muted-foreground border-r">{item.retainageType === 'percent' ? '%' : '$'}</span>
                           <CurrencyInput
                             value={Math.round(item.retainageValue * 100).toString()}
                             onChange={(digits) =>
-                              updateRetainage(item.id, (parseInt(digits || '0', 10) || 0) / 100)
+                              updateRetainage(item.id, item.retainageType, (parseInt(digits || '0', 10) || 0) / 100)
                             }
                             className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
                           />
                         </div>
+                        <Select
+                          value={item.retainageType}
+                          onValueChange={(type) => updateRetainage(item.id, type as 'percent' | 'dollar', item.retainageValue)}
+                        >
+                          <SelectTrigger className="h-7 w-14 text-xs px-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percent">%</SelectItem>
+                            <SelectItem value="dollar">$</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </TableCell>
