@@ -344,15 +344,26 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               />
             )}
 
-            {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p>Vehicle and equipment configuration would be displayed here.</p>
-                </div>
+            {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE" || takeoff.work_type === "SERVICE" || takeoff.work_type === "DELIVERY") && (
+              <MPTSignConfiguration
+                activeSections={takeoff.active_sections || []}
+                signRows={takeoff.sign_rows || {}}
+                defaultSignMaterial={takeoff.default_sign_material || 'PLASTIC'}
+                onToggleSection={() => {}}
+                onSignRowsChange={() => {}}
+                onDefaultMaterialChange={() => {}}
+                onApplyMaterialToAll={() => {}}
+                disabled={true}
+              />
+            )}
+
+            {takeoff.work_type === "DELIVERY" && (
+              <div className="mt-4 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Delivery rolling stock remains disabled and read-only.
               </div>
             )}
 
-            {(takeoff.work_type === "SERVICE" || takeoff.work_type === "DELIVERY" || takeoff.work_type === "RENTAL") && (
+            {takeoff.work_type === "RENTAL" && (
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
                   <p>Additional items configuration would be displayed here.</p>

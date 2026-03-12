@@ -1162,7 +1162,7 @@ export const CreateTakeoffForm = ({
         />
       )}
 
-      {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
+      {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
         <>
           {/* Sign Configuration Section */}
           <div className="rounded-lg border bg-card shadow-sm max-w-[calc(100vw-272px-64px)]">
@@ -1261,6 +1261,7 @@ export const CreateTakeoffForm = ({
           </div>
 
           {/* Vehicles Section */}
+          {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
           <div className="rounded-lg border bg-card shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
@@ -1338,8 +1339,10 @@ export const CreateTakeoffForm = ({
               )}
             </div>
           </div>
+          )}
 
           {/* Rolling Stock Section */}
+          {workType === "DELIVERY" && (
           <div className="rounded-lg border bg-card shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
@@ -1492,6 +1495,7 @@ export const CreateTakeoffForm = ({
               )}
             </div>
           </div>
+          )}
         </>
       )}
 
