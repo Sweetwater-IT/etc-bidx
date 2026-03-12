@@ -750,17 +750,6 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                     )}
                   </TableCell>
                 </TableRow>
-                {item.notes && !readOnly && (
-                  <TableRow key={`${item.id}-notes`} className="bg-muted/20">
-                    <TableCell colSpan={10} className="p-2">
-                      <div className="flex items-start gap-2">
-                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-muted-foreground italic">{item.notes}</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-                </>
                 );
               })}
 
