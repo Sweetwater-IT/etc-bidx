@@ -15,6 +15,7 @@ import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfi
 interface Props {
   jobId: string;
   takeoffId: string;
+  isViewMode?: boolean;
 }
 
 const WORK_TYPES = [
@@ -27,7 +28,7 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
-export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
+export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const info = dbJob?.projectInfo;
@@ -193,23 +194,32 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          <Button variant="outline" size="sm" onClick={handleEdit}>
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            Edit
-          </Button>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
-            <Download className="h-3.5 w-3.5" />
-            {generatingPdf ? "Generating…" : "Download PDF"}
-          </Button>
-          {takeoff.work_order_id ? (
-            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
-              <ClipboardList className="h-3.5 w-3.5" />
-              View Work Order
-            </Button>
+          {isViewMode ? (
+            <>
+              <Button variant="outline" size="sm" onClick={handleEdit}>
+                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                Edit
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+                <Download className="h-3.5 w-3.5" />
+                {generatingPdf ? "Generating…" : "Download PDF"}
+              </Button>
+              {takeoff.work_order_id ? (
+                <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  View Work Order
+                </Button>
+              ) : (
+                <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  {loading ? "Creating…" : "Generate Work Order"}
+                </Button>
+              )}
+            </>
           ) : (
-            <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
-              <ClipboardList className="h-3.5 w-3.5" />
-              {loading ? "Creating…" : "Generate Work Order"}
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit
             </Button>
           )}
         </div>
