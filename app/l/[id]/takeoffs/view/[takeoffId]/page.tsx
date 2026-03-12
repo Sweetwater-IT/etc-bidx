@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit, Download, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 
 export default async function TakeoffViewPage({ params }: any) {
@@ -36,7 +37,7 @@ export default async function TakeoffViewPage({ params }: any) {
             </header>
             {/* Content Area */}
             <div className="flex-1 overflow-hidden">
-              <div className="max-w-7xl mx-auto px-4 py-8 h-full overflow-y-auto">
+              <div className="max-w-7xl mx-auto px-4 py-8 h-full overflow-y-auto overflow-x-hidden">
                 <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
               </div>
             </div>
@@ -49,6 +50,91 @@ export default async function TakeoffViewPage({ params }: any) {
 
 function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId: string }) {
   const router = useRouter();
+  const [takeoff, setTakeoff] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  useEffect(() => {
+    const loadTakeoff = async () => {
+      try {
+        const response = await fetch(`/api/takeoffs/${takeoffId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load takeoff: ${response.status}`);
+        }
+        const data = await response.json();
+        setTakeoff(data);
+      } catch (error) {
+        console.error('Error loading takeoff:', error);
+        toast.error('Failed to load takeoff');
+      }
+    };
+    if (takeoffId) {
+      loadTakeoff();
+    }
+  }, [takeoffId]);
+
+  const handleEdit = () => {
+    const resolvedJobId = takeoff?.job_id ?? jobId;
+    const resolvedTakeoffId = takeoff?.id ?? takeoffId;
+    if (!resolvedJobId || !resolvedTakeoffId) {
+      toast.error('Unable to open edit view. Missing takeoff details.');
+      return;
+    }
+    router.push(`/l/${resolvedJobId}/takeoffs/edit/${resolvedTakeoffId}`);
+  };
+
+  const handleDownloadPdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const response = await fetch(`/api/takeoffs/${takeoffId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `takeoff-${takeoff?.title || 'untitled'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleCreateWorkOrder = async () => {
+    setLoading(true);
+    try {
+      const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: 'unknown@example.com'
+        })
+      });
+      if (woResponse.ok) {
+        const result = await woResponse.json();
+        toast.success('Work order generated successfully!');
+        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}/edit`);
+      } else {
+        const err = await woResponse.json();
+        toast.error(err.error || 'Failed to generate work order');
+      }
+    } catch (error) {
+      console.error("Error generating work order:", error);
+      toast.error("Failed to generate work order");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -56,6 +142,27 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
         <ArrowLeft className="h-4 w-4" />
         Back
       </Button>
+      <div className="flex items-center gap-2 flex-nowrap shrink-0">
+        <Button variant="outline" size="sm" onClick={handleEdit}>
+          <Edit className="h-3.5 w-3.5 mr-1.5" />
+          Edit
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+          <Download className="h-3.5 w-3.5" />
+          {generatingPdf ? "Generating…" : "Download PDF"}
+        </Button>
+        {takeoff?.work_order_id ? (
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
+            <ClipboardList className="h-3.5 w-3.5" />
+            View Work Order
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
+            <ClipboardList className="h-3.5 w-3.5" />
+            {loading ? "Creating…" : "Generate Work Order"}
+          </Button>
+        )}
+      </div>
     </>
   );
 }

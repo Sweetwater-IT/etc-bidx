@@ -170,60 +170,8 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <div className="w-full px-6 py-6 flex-1">
-        <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FileText className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground leading-tight">
-              {takeoff.title}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Takeoff ID: {takeoff.id}
-            </p>
-          </div>
-          {takeoff.work_type && (
-            <span className="ml-2 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700">
-              {WORK_TYPES.find(wt => wt.value === takeoff.work_type)?.label || takeoff.work_type}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          {isViewMode ? (
-            <>
-              <Button variant="outline" size="sm" onClick={handleEdit}>
-                <Edit className="h-3.5 w-3.5 mr-1.5" />
-                Edit
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
-                <Download className="h-3.5 w-3.5" />
-                {generatingPdf ? "Generating…" : "Download PDF"}
-              </Button>
-              {takeoff.work_order_id ? (
-                <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  View Work Order
-                </Button>
-              ) : (
-                <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  {loading ? "Creating…" : "Generate Work Order"}
-                </Button>
-              )}
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit className="h-3.5 w-3.5 mr-1.5" />
-              Edit
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="w-full px-4 flex-1 overflow-x-auto">
+      <div className="space-y-6">
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">
@@ -335,7 +283,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               {WORK_TYPES.find(wt => wt.value === takeoff.work_type)?.label} Configuration
             </h2>
           </div>
-          <div className="p-5">
+          <div className="p-5 overflow-x-auto">
             {takeoff.work_type === "MPT" && (
               <MPTSignConfiguration
                 activeSections={takeoff.active_sections || []}
@@ -414,7 +362,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       )}
         </div>
-      </div>
     </div>
   );
 }

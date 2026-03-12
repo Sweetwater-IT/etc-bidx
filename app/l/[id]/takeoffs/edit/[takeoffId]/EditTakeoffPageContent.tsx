@@ -50,7 +50,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
+        <div className="w-full px-6 py-6 flex-1 overflow-x-auto">
         <CreateTakeoffForm jobId={jobId} onBack={handleBack} draftTakeoff={takeoff} />
       </div>
     </div>
