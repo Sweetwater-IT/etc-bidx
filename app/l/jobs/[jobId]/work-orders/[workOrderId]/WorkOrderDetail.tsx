@@ -915,25 +915,6 @@ const WorkOrderDetail = ({
           }
           router.back();
         }}
-        leftContent={
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-              <h1 className="text-sm font-semibold text-foreground truncate">
-                {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
-              </h1>
-              <p className="text-xs text-muted-foreground truncate">
-                {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
-                {workOrder?.wo_number && (
-                  <span className="ml-2 font-semibold">· {formatWorkOrderNumber(workOrder.wo_number)}</span>
-                )}
-              </p>
-              <Badge className={`text-[10px] font-bold shrink-0 ${statusConfig.color}`}>
-                {statusConfig.label}
-              </Badge>
-              {(workOrder?.is_pickup) && (
-                <Badge className="text-[10px] font-bold bg-orange-500/15 text-orange-700 shrink-0">Pickup</Badge>
-              )}
-          </div>
-        }
         rightContent={
           <>
               {lastSavedAt && (

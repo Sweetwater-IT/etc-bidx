@@ -5,7 +5,6 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import EditTakeoffPageContent from "./EditTakeoffPageContent";
-import TakeoffEditPageHeader from "./TakeoffEditPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 
@@ -29,7 +28,6 @@ export default function EditTakeoffPage({ params }: any) {
         <SiteHeader />
         <Suspense fallback={null}>
           <div className="min-h-screen bg-background">
-            <TakeoffEditPageHeader jobId={jobId} takeoffId={takeoffId} />
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
               <PageTitleBlock

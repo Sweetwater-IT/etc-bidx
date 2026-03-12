@@ -36,12 +36,13 @@ import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from 
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { QuantityInput } from "@/components/ui/quantity-input";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 interface Props {
   jobId: string;
   onBack: () => void;
   draftTakeoff?: any;
-  stickyHeader?: boolean;
+  backLabel?: string;
   mode?: "create" | "edit";
 }
 
@@ -157,7 +158,13 @@ const MPT_ADDITIONAL_ITEM_OPTIONS = [
   "SIGN STAND",
 ];
 
-export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = false, mode = "create" }: Props) => {
+export const CreateTakeoffForm = ({
+  jobId,
+  onBack,
+  draftTakeoff,
+  backLabel = "Back",
+  mode = "create",
+}: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const { user } = useAuth();
@@ -701,62 +708,39 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
 
   return (
     <div className="space-y-6">
-      {/* Page Header - Salesforce Style */}
-      <div
-        className={
-          stickyHeader
-            ? "sticky top-[var(--header-height)] z-20 -mx-6 px-6 py-2 border-b bg-[hsl(var(--muted)/0.3)] backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--muted)/0.3)]/95 flex items-center justify-between"
-            : "flex items-center justify-between"
-        }
-      >
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <ClipboardList className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground leading-tight">
-              {isEditMode ? "Edit Material Takeoff" : "New Material Takeoff"}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Second iteration of the workflow · 102026001
-            </p>
-          </div>
-          {workType && (
-            <span className="ml-2 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700">
-              {WORK_TYPES.find(wt => wt.value === workType)?.label || workType}
-            </span>
-          )}
-        </div>
-      <div className="flex items-center gap-2 flex-nowrap shrink-0">
-        <SaveStatusIndicator
-          status={saveStatus}
-          lastSavedAt={lastSaved}
-          onManualSave={handleSave}
-          isSaving={saving}
-        />
-        {/* Removed Save Draft + Back button from header as per requirement */}
-        {/* Only show Generate Work Order + Download PDF when a takeoff ID exists */}
-        {!isEditMode && savedTakeoffId && (
+      <StickyPageHeader
+        backLabel={backLabel}
+        onBack={onBack}
+        rightContent={
           <>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
-              <Download className="h-3.5 w-3.5" />
-              {generatingPdf ? "Generating…" : "Download PDF"}
-            </Button>
-            {workOrderExists ? (
-              <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
-                <ClipboardList className="h-3.5 w-3.5" />
-                View Work Order
-              </Button>
-            ) : (
-              <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
-                <ClipboardList className="h-3.5 w-3.5" />
-                {saving ? "Creating…" : "Generate Work Order"}
-              </Button>
+            <SaveStatusIndicator
+              status={saveStatus}
+              lastSavedAt={lastSaved}
+              onManualSave={handleSave}
+              isSaving={saving}
+            />
+            {!isEditMode && savedTakeoffId && (
+              <>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+                  <Download className="h-3.5 w-3.5" />
+                  {generatingPdf ? "Generating…" : "Download PDF"}
+                </Button>
+                {workOrderExists ? (
+                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    View Work Order
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    {saving ? "Creating…" : "Generate Work Order"}
+                  </Button>
+                )}
+              </>
             )}
           </>
-        )}
-      </div>
-      </div>
+        }
+      />
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">

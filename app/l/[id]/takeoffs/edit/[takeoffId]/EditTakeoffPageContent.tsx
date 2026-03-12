@@ -50,6 +50,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
         jobId={jobId}
         onBack={handleBack}
         draftTakeoff={takeoff}
+        backLabel="Takeoff"
         mode="edit"
       />
     </div>

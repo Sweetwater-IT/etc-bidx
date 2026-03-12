@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -85,7 +84,6 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-      <StickyPageHeader backLabel="Job" onBack={handleBack} />
       <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
         <PageTitleBlock
           title={`New Takeoff for ${jobName}`}
@@ -95,7 +93,7 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
           jobId={jobId}
           onBack={handleBack}
           draftTakeoff={draftTakeoff}
-          stickyHeader
+          backLabel="Job"
         />
       </div>
     </div>
