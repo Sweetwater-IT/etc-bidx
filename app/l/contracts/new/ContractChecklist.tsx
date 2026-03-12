@@ -230,12 +230,15 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     if (contractId) return contractId;
     if (creatingRef.current) return creatingRef.current;
 
+    const trimmedProjectName = info.projectName?.trim();
+    if (!trimmedProjectName) return undefined;
+
     const promise = (async () => {
       try {
         const contractData = {
           contractId: undefined,
           data: {
-            project_name: info.projectName || "Untitled Contract",
+            project_name: trimmedProjectName,
             contract_number: info.contractNumber,
             customer_name: info.customerName,
             etc_branch: info.etcBranch,
@@ -407,6 +410,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   const manualSave = useCallback(async () => {
     if (!contractId) {
+      const hasProjectName = Boolean(projectInfo.projectName?.trim());
+      if (!hasProjectName) return;
       await ensureContractExists(projectInfo);
       return;
     }

@@ -108,6 +108,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Guard against creating empty placeholder contracts.
+    // New contract records require a real project name.
+    if (!contractId) {
+      const projectName = typeof contractData.project_name === 'string'
+        ? contractData.project_name.trim()
+        : '';
+
+      if (!projectName) {
+        return NextResponse.json(
+          { error: 'project_name is required to create a contract' },
+          { status: 400 }
+        );
+      }
+
+      contractData.project_name = projectName;
+    }
+
     // Field mapping: frontend snake_case → database snake_case
     const fieldMapping: Record<string, string> = {
       project_name: 'project_name',
