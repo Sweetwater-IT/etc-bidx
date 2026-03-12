@@ -37,6 +37,7 @@ import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { QuantityInput } from "@/components/ui/quantity-input";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 
 interface Props {
   jobId: string;
