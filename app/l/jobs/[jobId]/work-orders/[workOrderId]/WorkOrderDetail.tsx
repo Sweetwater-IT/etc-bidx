@@ -873,16 +873,16 @@ const WorkOrderDetail = ({
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
       <div className="w-full px-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
-        <div className="sticky top-0 z-20 -mx-6 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="sticky top-[var(--header-height)] z-30 -mx-6 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <ClipboardList className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-xl font-bold text-foreground leading-tight">
                 {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {dbJob?.projectInfo?.projectName || "Untitled Project"} · {dbJob?.projectInfo?.etcJobNumber || "—"}
                 {workOrder?.wo_number && (
                   <span className="ml-2 font-semibold">· {formatWorkOrderNumber(workOrder.wo_number)}</span>
@@ -896,9 +896,10 @@ const WorkOrderDetail = ({
               <Badge className="ml-1 text-[10px] font-bold bg-orange-500/15 text-orange-700">Pickup</Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-nowrap shrink-0">
+
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
             {lastSavedAt && (
-              <span className="text-[10px] text-muted-foreground mr-2">
+              <span className="text-[10px] text-muted-foreground mr-2 whitespace-nowrap">
                 Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
