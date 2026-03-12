@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       const pickupTakeoffPayload = {
         job_id: takeoff.job_id,
         work_type: takeoff.work_type,
-        title: title || `${takeoff.title} - Pickup`,
+        title: title || `PU-${takeoff.title}`,
         status: 'draft',
         notes: notes || takeoff.notes || null,
         install_date: null,
