@@ -468,23 +468,22 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
           <div className="flex items-center gap-1">
-            <div className="flex items-center h-7 border rounded-md bg-background">
-              <span className="px-2 text-xs text-muted-foreground border-r">{bulkType === 'percent' ? '%' : '$'}</span>
+            <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
+              <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
+                <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
+                  <SelectValue>{bulkType === 'percent' ? '%' : '$'}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">%</SelectItem>
+                  <SelectItem value="dollar">$</SelectItem>
+                </SelectContent>
+              </Select>
               <CurrencyInput
                 value={bulkValueDigits}
                 onChange={setBulkValueDigits}
                 className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
               />
             </div>
-            <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
-              <SelectTrigger className="h-7 w-14 text-xs px-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percent">%</SelectItem>
-                <SelectItem value="dollar">$</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
@@ -685,9 +684,20 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                           : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                       </span>
                     ) : (
-                      <div className="flex items-center justify-end gap-1">
-                        <div className="flex items-center h-7 border rounded-md bg-background">
-                          <span className="px-2 text-xs text-muted-foreground border-r">{item.retainageType === 'percent' ? '%' : '$'}</span>
+                      <div className="flex items-center justify-end">
+                        <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
+                          <Select
+                            value={item.retainageType}
+                            onValueChange={(type) => updateRetainage(item.id, type as 'percent' | 'dollar', item.retainageValue)}
+                          >
+                            <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
+                              <SelectValue>{item.retainageType === 'percent' ? '%' : '$'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percent">%</SelectItem>
+                              <SelectItem value="dollar">$</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <CurrencyInput
                             value={Math.round(item.retainageValue * 100).toString()}
                             onChange={(digits) =>
@@ -696,18 +706,6 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                             className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
                           />
                         </div>
-                        <Select
-                          value={item.retainageType}
-                          onValueChange={(type) => updateRetainage(item.id, type as 'percent' | 'dollar', item.retainageValue)}
-                        >
-                          <SelectTrigger className="h-7 w-14 text-xs px-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="percent">%</SelectItem>
-                            <SelectItem value="dollar">$</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     )}
                   </TableCell>
