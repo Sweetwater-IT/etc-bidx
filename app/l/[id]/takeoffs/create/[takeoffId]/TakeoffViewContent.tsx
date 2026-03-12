@@ -201,10 +201,17 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
             <Download className="h-3.5 w-3.5" />
             {generatingPdf ? "Generating…" : "Download PDF"}
           </Button>
-          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
-            <ClipboardList className="h-3.5 w-3.5" />
-            {loading ? "Creating…" : "Generate Work Order"}
-          </Button>
+          {takeoff.work_order_id ? (
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              View Work Order
+            </Button>
+          ) : (
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
+              <ClipboardList className="h-3.5 w-3.5" />
+              {loading ? "Creating…" : "Generate Work Order"}
+            </Button>
+          )}
         </div>
       </div>
 
