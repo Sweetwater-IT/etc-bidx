@@ -509,7 +509,34 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                           <DialogHeader>
                             <DialogTitle>Select Schedule of Values Item</DialogTitle>
                           </DialogHeader>
-                          <div className="mt-4">
+                          <div className="mt-3">
+                            {/* Quick-add buttons above search */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                                onClick={() => { handleQuickAdd(item.id, 'custom'); setSelectorOpen(null); }}
+                              >
+                                <Plus className="h-3 w-3" /> Custom Item
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50"
+                                onClick={() => { handleQuickAdd(item.id, 'delivery'); setSelectorOpen(null); }}
+                              >
+                                <Plus className="h-3 w-3" /> Delivery
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1.5 border-purple-300 text-purple-700 hover:bg-purple-50"
+                                onClick={() => { handleQuickAdd(item.id, 'service'); setSelectorOpen(null); }}
+                              >
+                                <Plus className="h-3 w-3" /> Service
+                              </Button>
+                            </div>
                             <Command className="border rounded-lg">
                               <CommandInput
                                 placeholder="Search by # or name…"
@@ -521,66 +548,35 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                                 <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                   No matching items found.
                                 </CommandEmpty>
-                                {/* Quick-add rows for custom items */}
-                                <CommandGroup heading="Quick Add">
-                                  <CommandItem
-                                    value="custom-add"
-                                    onSelect={() => {
-                                      handleQuickAdd(item.id, 'custom');
-                                      setSelectorOpen(null);
-                                    }}
-                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
-                                  >
-                                    <Plus className="mr-2 h-4 w-4 text-blue-600" />
-                                    <span>Custom Item</span>
-                                  </CommandItem>
-                                  <CommandItem
-                                    value="delivery-add"
-                                    onSelect={() => {
-                                      handleQuickAdd(item.id, 'delivery');
-                                      setSelectorOpen(null);
-                                    }}
-                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
-                                  >
-                                    <Plus className="mr-2 h-4 w-4 text-green-600" />
-                                    <span>Delivery</span>
-                                  </CommandItem>
-                                  <CommandItem
-                                    value="service-add"
-                                    onSelect={() => {
-                                      handleQuickAdd(item.id, 'service');
-                                      setSelectorOpen(null);
-                                    }}
-                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
-                                  >
-                                    <Plus className="mr-2 h-4 w-4 text-purple-600" />
-                                    <span>Service</span>
-                                  </CommandItem>
-                                </CommandGroup>
-                                <div className="h-px bg-border my-2" />
-                                {/* All SOV items in a flat list */}
-                                <CommandGroup heading="Standard Items">
-                                  {filteredItems.map((p) => (
-                                    <CommandItem
-                                      key={p.id}
-                                      value={`${p.item_number} ${p.display_name}`}
-                                      onSelect={() => {
-                                        selectMasterItem(item.id, p);
-                                        setSelectorOpen(null);
-                                      }}
-                                      className="text-xs cursor-pointer"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                      <span className="truncate">{p.display_name}</span>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                                {/* Items grouped by work type in fixed order */}
+                                {(['MPT', 'LANE CLOSURE', 'FLAGGING', 'PERMANENT SIGN'] as const).map((workType) => {
+                                  const groupItems = filteredItems.filter(p => p.work_type === workType);
+                                  if (groupItems.length === 0) return null;
+                                  return (
+                                    <CommandGroup key={workType} heading={workType}>
+                                      {groupItems.map((p) => (
+                                        <CommandItem
+                                          key={p.id}
+                                          value={`${p.item_number} ${p.display_name}`}
+                                          onSelect={() => {
+                                            selectMasterItem(item.id, p);
+                                            setSelectorOpen(null);
+                                          }}
+                                          className="text-xs cursor-pointer"
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                          <span className="truncate">{p.display_name}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  );
+                                })}
                               </CommandList>
                             </Command>
                           </div>
