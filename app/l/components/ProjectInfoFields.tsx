@@ -25,7 +25,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -402,6 +402,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     return isNaN(parsed.getTime()) ? undefined : parsed;
   };
 
+  const endCalendarDefaultMonth = useMemo(() => {
+    const startDate = parseDateValue(projectInfo.projectStartDate);
+    if (startDate) return addDays(startDate, 30);
+    return parseDateValue(projectInfo.projectEndDate) ?? new Date();
+  }, [projectInfo.projectStartDate, projectInfo.projectEndDate]);
+
   return (
     <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
       {/* Project Details */}
@@ -655,6 +661,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                 <Calendar
                   mode="single"
                   selected={parseDateValue(projectInfo.projectEndDate)}
+                  defaultMonth={endCalendarDefaultMonth}
                   onSelect={(date) => {
                     if (!date) {
                       update("projectEndDate", "");

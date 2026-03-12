@@ -543,26 +543,31 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                             <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0">
+                        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 data-[state=open]:slide-in-from-top-[48%] data-[state=open]:slide-in-from-left-[50%] data-[state=closed]:slide-out-to-top-[48%] data-[state=closed]:slide-out-to-left-[50%]">
                           <DialogHeader className="p-6 pb-4 shrink-0">
-                            <DialogTitle>Select Schedule of Values Item</DialogTitle>
+                            <DialogTitle>Select Schedule of Values Item Number</DialogTitle>
                           </DialogHeader>
                           <Separator className="w-full shrink-0" />
                           <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
+                            <div className="mb-3 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+                              <p className="text-xs font-medium text-foreground">
+                                Select an SOV item number from the list, or use quick actions to add a custom item number.
+                              </p>
+                            </div>
                             {/* Quick-add buttons above search */}
                             <div className="flex flex-wrap items-center gap-2 mb-3">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
                                 onClick={() => { handleQuickAdd(item.id, 'custom'); setSelectorOpen(null); }}
                               >
-                                <Plus className="h-3.5 w-3.5" /> Custom Item
+                                <Plus className="h-3.5 w-3.5" /> Custom Item Number
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100"
+                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
                                 onClick={() => { handleQuickAdd(item.id, 'delivery'); setSelectorOpen(null); }}
                               >
                                 <Plus className="h-3.5 w-3.5" /> Delivery
@@ -570,7 +575,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100"
+                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
                                 onClick={() => { handleQuickAdd(item.id, 'service'); setSelectorOpen(null); }}
                               >
                                 <Plus className="h-3.5 w-3.5" /> Service
@@ -883,7 +888,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       }}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-sm">Add Custom Line Item</DialogTitle>
+            <DialogTitle className="text-sm">Add Custom Item Number</DialogTitle>
           </DialogHeader>
           {customDraft && (
             <div className="grid gap-3 py-2">

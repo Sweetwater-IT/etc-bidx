@@ -131,7 +131,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       if (woResponse.ok) {
         const result = await woResponse.json();
         toast.success('Work order generated successfully!');
-        router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
+        router.push(`/l/jobs/${jobId}/work-orders/view/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
         toast.error(err.error || 'Failed to generate work order');

@@ -3,24 +3,10 @@ import { supabase } from '@/lib/supabase';
 export async function getTakeoffPdfData(takeoffId: string) {
   console.log('getTakeoffPdfData: Called with takeoffId:', takeoffId);
 
-  // Fetch takeoff with job and customer data
+  // Fetch takeoff record first
   const { data: takeoff, error: takeoffError } = await supabase
     .from('takeoffs_l')
-    .select(`
-      *,
-      jobs_l!takeoffs_l_job_id_fkey (
-        id,
-        project_name,
-        customer_name,
-        customer_job_number,
-        customer_pm,
-        project_owner,
-        county,
-        etc_branch,
-        etc_project_manager,
-        etc_job_number
-      )
-    `)
+    .select('*')
     .eq('id', takeoffId)
     .single();
 
@@ -33,38 +19,63 @@ export async function getTakeoffPdfData(takeoffId: string) {
     throw new Error('Takeoff not found');
   }
 
-  const job = takeoff.jobs_l;
+  // Fetch related job explicitly to avoid relation-name mismatches
+  const { data: job } = await supabase
+    .from('jobs_l')
+    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, county, etc_branch, etc_project_manager, etc_job_number')
+    .eq('id', takeoff.job_id)
+    .single();
 
-  // Transform sign_rows into items array
+  // Prefer relational takeoff items table (used by current takeoff flows)
+  const { data: takeoffItems } = await supabase
+    .from('takeoff_items_l')
+    .select('product_name, category, unit, quantity, notes, material')
+    .eq('takeoff_id', takeoffId)
+    .order('load_order', { ascending: true });
+
   const items: any[] = [];
-  const signRowsData = takeoff.sign_rows as Record<string, any[]> || {};
 
-  for (const [category, rows] of Object.entries(signRowsData)) {
-    for (const row of rows) {
+  if (takeoffItems && takeoffItems.length > 0) {
+    for (const item of takeoffItems) {
       items.push({
-        product_name: row.signDesignation || '',
-        category: category,
-        unit: 'EA',
-        quantity: row.quantity || 0,
-        notes: JSON.stringify({
-          signLegend: row.signLegend || '',
-          dimensionLabel: row.dimensionLabel || '',
-          sheeting: row.sheeting || '',
-          structureType: row.structureType || '',
-          bLights: row.bLights || '',
-          sqft: row.sqft || 0,
-          totalSqft: row.totalSqft || 0,
-          material: row.material || '',
-          itemNumber: row.itemNumber || '',
-          postSize: row.postSize || '',
-          planSheetNum: row.planSheetNum || '',
-          planSheetTotal: row.planSheetTotal || '',
-          loadOrder: row.loadOrder || 0,
-          cover: row.cover || false,
-          secondarySigns: row.secondarySigns || []
-        }),
-        material: row.material || ''
+        product_name: item.product_name || '',
+        category: item.category || '',
+        unit: item.unit || 'EA',
+        quantity: item.quantity || 0,
+        notes: item.notes ? JSON.stringify(item.notes) : null,
+        material: item.material || ''
       });
+    }
+  } else {
+    // Fallback for legacy records still storing sign_rows JSON
+    const signRowsData = takeoff.sign_rows as Record<string, any[]> || {};
+    for (const [category, rows] of Object.entries(signRowsData)) {
+      for (const row of rows) {
+        items.push({
+          product_name: row.signDesignation || '',
+          category: category,
+          unit: 'EA',
+          quantity: row.quantity || 0,
+          notes: JSON.stringify({
+            signLegend: row.signLegend || '',
+            dimensionLabel: row.dimensionLabel || '',
+            sheeting: row.sheeting || '',
+            structureType: row.structureType || '',
+            bLights: row.bLights || '',
+            sqft: row.sqft || 0,
+            totalSqft: row.totalSqft || 0,
+            material: row.material || '',
+            itemNumber: row.itemNumber || '',
+            postSize: row.postSize || '',
+            planSheetNum: row.planSheetNum || '',
+            planSheetTotal: row.planSheetTotal || '',
+            loadOrder: row.loadOrder || 0,
+            cover: row.cover || false,
+            secondarySigns: row.secondarySigns || []
+          }),
+          material: row.material || ''
+        });
+      }
     }
   }
 

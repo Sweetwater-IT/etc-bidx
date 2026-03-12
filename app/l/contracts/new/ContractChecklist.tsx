@@ -250,7 +250,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         const newId = result.id;
         setContractId(newId);
         setContractRow(result);
-        window.history.replaceState(null, "", `/l/${newId}`);
+        router.replace(`/l/contracts/edit/${newId}`);
         return newId;
       } catch {
         return undefined;

@@ -131,7 +131,8 @@ export async function GET(
             display_item_number,
             description,
             display_name,
-            work_type
+            work_type,
+            uom
           )
         `)
         .eq("job_id", jobId)
@@ -156,7 +157,8 @@ export async function GET(
             display_item_number,
             description,
             display_name,
-            work_type
+            work_type,
+            uom
           )
         `)
         .eq("job_id", jobId)
@@ -227,7 +229,7 @@ export async function GET(
         item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
         description: s.sov_items?.description || s.sov_items?.display_name || "",
         quantity: Number(s.quantity) || 0,
-        uom: "EA", // Default UOM since it's not in the joined data
+        uom: s.sov_items?.uom || "EA",
       }));
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
@@ -253,7 +255,7 @@ export async function GET(
         id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
         itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
         description: s.sov_items?.description || s.sov_items?.display_name || "",
-        uom: "EA", // Default UOM
+        uom: s.sov_items?.uom || "EA",
         quantity: Number(s.quantity) || 0,
         unitPrice: Number(s.unit_price) || 0,
         extendedPrice: Number(s.extended_price) || 0,

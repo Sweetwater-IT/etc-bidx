@@ -261,17 +261,6 @@ const WorkOrderDetail = ({
     [sovItems, itemPickerSearch]
   );
 
-  const specialSovItems = useMemo(() => {
-    const specialWorkTypes = new Set(["SERVICE", "DELIVERY", "CUSTOM", "OTHER"]);
-    const specialItemNumbers = new Set(["SERVICE", "DELIVERY", "CUSTOM"]);
-
-    return filteredSOVItems.filter((sov: any) => {
-      const itemNum = (sov.item_number || "").toString().trim().toUpperCase();
-      const workType = (sov.work_type || "").toString().trim().toUpperCase();
-      return specialItemNumbers.has(itemNum) || specialWorkTypes.has(workType);
-    });
-  }, [filteredSOVItems]);
-
   // Blocking modal
   const [blockingModalOpen, setBlockingModalOpen] = useState(false);
   const [blockingModalType, setBlockingModalType] = useState<"takeoff" | "items">("takeoff");
@@ -1666,58 +1655,6 @@ const WorkOrderDetail = ({
                                       );
                                     })}
                                   </CommandGroup>
-                                  {!(workOrder as any).is_pickup && specialSovItems.length > 0 && (
-                                    <CommandGroup heading="Special Items">
-                                      {specialSovItems.slice(0, 25).map((sov: any) => {
-                                        const itemNumber = (sov.item_number || "").toString();
-                                        const alreadyUsed = selectedItemNumbers.has(itemNumber) && item.item_number !== itemNumber;
-                                        return (
-                                          <CommandItem
-                                            key={`special-${sov.id}`}
-                                            value={`${sov.item_number} ${sov.description}`}
-                                            onSelect={async () => {
-                                              if (alreadyUsed) {
-                                                toast.warning(`Item ${itemNumber} is already on this work order.`);
-                                                return;
-                                              }
-
-                                              const updated = {
-                                                item_number: itemNumber,
-                                                description: sov.description,
-                                                contract_quantity: sov.quantity,
-                                                uom: sov.uom || "EA",
-                                                sov_item_id: sov.id,
-                                              };
-
-                                              setWoItems((prev) => prev.map((i) => i.id === item.id ? { ...i, ...updated } : i));
-                                              const response = await fetch(`/api/workorders/${workOrderId}/items`, {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                  action: 'update',
-                                                  itemData: { itemId: item.id, updates: updated },
-                                                }),
-                                              });
-
-                                              if (!response.ok) {
-                                                const error = await response.json();
-                                                toast.error(error.error || 'Failed to update item');
-                                                setWoItems((prev) => prev.map((i) => i.id === item.id ? item : i));
-                                              }
-
-                                              setOpenItemPickerRow(null);
-                                              setItemPickerSearch("");
-                                            }}
-                                            className={cn("text-xs", alreadyUsed && "opacity-50")}
-                                          >
-                                            <Check className={cn("mr-1.5 h-3 w-3", item.item_number === itemNumber ? "opacity-100" : "opacity-0")} />
-                                            <span className="font-mono mr-2 text-muted-foreground">{itemNumber}</span>
-                                            <span className="truncate">{sov.description}</span>
-                                          </CommandItem>
-                                        );
-                                      })}
-                                    </CommandGroup>
-                                  )}
                                 </CommandList>
                               </Command>
                             </PopoverContent>

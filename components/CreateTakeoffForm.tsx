@@ -581,8 +581,10 @@ export const CreateTakeoffForm = ({
         const result = await woResponse.json();
         // Update the work order number field
         setWorkOrderNumber(result.workOrder.workOrderNumber);
+        setWorkOrderId(result.workOrder.id);
+        setWorkOrderExists(true);
         toast.success('Work order generated successfully!');
-        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}`);
+        router.push(`/l/jobs/${jobId}/work-orders/view/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
         toast.error(err.error || 'Failed to generate work order');
@@ -726,7 +728,7 @@ export const CreateTakeoffForm = ({
                   {generatingPdf ? "Generating…" : "Download PDF"}
                 </Button>
                 {workOrderExists ? (
-                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}>
+                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}>
                     <ClipboardList className="h-3.5 w-3.5" />
                     View Work Order
                   </Button>
@@ -855,7 +857,7 @@ export const CreateTakeoffForm = ({
               {workOrderNumber ? (
                 <div
                   className="text-sm text-primary hover:text-primary/80 cursor-pointer underline"
-                  onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${workOrderNumber}`)}
+                  onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}
                 >
                   {workOrderNumber}
                 </div>
