@@ -330,7 +330,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       id: rowId,
       itemNumber: type === 'delivery' ? 'Delivery' : 'Service',
       description: type === 'delivery' ? 'Delivery' : 'Service',
-      uom: 'LS',
+      uom: 'EA',
       quantity: 1,
       unitPrice: 0,
       extendedPrice: 0,
