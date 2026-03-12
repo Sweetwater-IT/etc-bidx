@@ -180,7 +180,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
     rawValue: number
   ) => {
     let nextValue = Number.isFinite(rawValue) ? rawValue : 0;
-    const nextType: 'dollar' = 'dollar';
+    const nextType = 'dollar' as const;
     nextValue = clampNumber(nextValue, 0, Number.MAX_SAFE_INTEGER);
     nextValue = Math.round(nextValue * 100) / 100;
 
@@ -406,7 +406,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
 
   const applyBulkRetainage = () => {
     let val = bulkValueDigits ? (parseInt(bulkValueDigits, 10) || 0) / 100 : 0;
-    const bulkType: 'dollar' = 'dollar';
+    const bulkType = 'dollar' as const;
     val = Math.round(val * 100) / 100;
 
     updateItems(
