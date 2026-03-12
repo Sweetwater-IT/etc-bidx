@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { SovUpsertError, upsertSovEntry } from '@/lib/server/sov/upsertSovEntry';
 
 export async function POST(
   request: NextRequest,
@@ -21,8 +21,6 @@ export async function POST(
       return NextResponse.json({ error: 'Items array is required' }, { status: 400 });
     }
 
-    // Use local API route instead of edge function to avoid function deployment dependency.
-    // This keeps SOV upsert in the same Next.js deployment surface.
     const results: any[] = [];
 
     for (let index = 0; index < items.length; index++) {
@@ -40,55 +38,41 @@ export async function POST(
         sort_order: item.sort_order ?? null,
       };
 
-      const targetUrl = `${request.nextUrl.origin}/api/l/jobs/${jobId}/sov-items`;
-
       console.log('[SOV contract upsert] Forwarding item to jobs endpoint', {
         requestId,
         jobId,
         index,
-        targetUrl,
         payload,
       });
 
-      const resp = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const rawBody = await resp.text();
-      let parsedBody: any = null;
-      if (rawBody) {
-        try {
-          parsedBody = JSON.parse(rawBody);
-        } catch {
-          parsedBody = null;
-        }
-      }
-
-      if (!resp.ok) {
-        const errorDetails = {
-          requestId,
+      let normalized: any;
+      try {
+        normalized = await upsertSovEntry({
           jobId,
-          index,
-          status: resp.status,
-          statusText: resp.statusText,
-          payload,
-          responseBody: parsedBody ?? rawBody ?? null,
-        };
+          ...payload,
+        });
+      } catch (error) {
+        if (error instanceof SovUpsertError) {
+          const errorDetails = {
+            requestId,
+            jobId,
+            index,
+            status: error.status,
+            payload,
+            responseBody: error.details ?? error.message,
+          };
 
-        console.error('[SOV contract upsert] Error upserting item via API fallback', errorDetails);
+          console.error('[SOV contract upsert] Error upserting item via shared helper', errorDetails);
 
-        return NextResponse.json(
-          { error: 'Failed to upsert SOV items', details: errorDetails },
-          { status: resp.status || 500 }
-        );
+          return NextResponse.json(
+            { error: 'Failed to upsert SOV items', details: errorDetails },
+            { status: error.status || 500 }
+          );
+        }
+
+        throw error;
       }
 
-      const normalized = parsedBody?.data ?? parsedBody ?? { rawBody };
       results.push(normalized);
 
       console.log('[SOV contract upsert] Successfully upserted item', {
