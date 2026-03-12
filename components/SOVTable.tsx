@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import {
   Popover,
   PopoverContent,
@@ -481,7 +482,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
               <CurrencyInput
                 value={bulkValueDigits}
                 onChange={setBulkValueDigits}
-                className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
               />
             </div>
           </div>
@@ -534,46 +535,47 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                             <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[600px]">
-                          <DialogHeader>
+                        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0">
+                          <DialogHeader className="p-6 pb-4 shrink-0">
                             <DialogTitle>Select Schedule of Values Item</DialogTitle>
                           </DialogHeader>
-                          <div className="mt-3">
+                          <Separator className="w-full shrink-0" />
+                          <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
                             {/* Quick-add buttons above search */}
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                                className="h-8 text-xs gap-1.5 rounded-md border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
                                 onClick={() => { handleQuickAdd(item.id, 'custom'); setSelectorOpen(null); }}
                               >
-                                <Plus className="h-3 w-3" /> Custom Item
+                                <Plus className="h-3.5 w-3.5" /> Custom Item
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50"
+                                className="h-8 text-xs gap-1.5 rounded-md border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100"
                                 onClick={() => { handleQuickAdd(item.id, 'delivery'); setSelectorOpen(null); }}
                               >
-                                <Plus className="h-3 w-3" /> Delivery
+                                <Plus className="h-3.5 w-3.5" /> Delivery
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-xs gap-1.5 border-purple-300 text-purple-700 hover:bg-purple-50"
+                                className="h-8 text-xs gap-1.5 rounded-md border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100"
                                 onClick={() => { handleQuickAdd(item.id, 'service'); setSelectorOpen(null); }}
                               >
-                                <Plus className="h-3 w-3" /> Service
+                                <Plus className="h-3.5 w-3.5" /> Service
                               </Button>
                             </div>
-                            <Command className="border rounded-lg">
+                            <Command className="border rounded-lg h-full flex flex-col overflow-hidden">
                               <CommandInput
                                 placeholder="Search by # or name…"
                                 value={selectorSearch}
                                 onValueChange={setSelectorSearch}
                                 className="border-b"
                               />
-                              <CommandList className="max-h-[400px]">
+                              <CommandList className="max-h-none flex-1 overflow-y-auto">
                                 <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                   No matching items found.
                                 </CommandEmpty>
@@ -608,6 +610,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                                 })}
                               </CommandList>
                             </Command>
+                          </div>
+                          <Separator className="w-full shrink-0" />
+                          <div className="flex justify-end items-center p-4 px-6 shrink-0">
+                            <Button variant="outline" onClick={() => setSelectorOpen(null)}>
+                              Cancel
+                            </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -703,7 +711,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                             onChange={(digits) =>
                               updateRetainage(item.id, item.retainageType, (parseInt(digits || '0', 10) || 0) / 100)
                             }
-                            className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                            className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
                           />
                         </div>
                       </div>

@@ -19,8 +19,13 @@ export function CurrencyInput({
 }: CurrencyInputProps) {
   const formatDecimal = (digits: string): string => {
     if (!digits || digits === "0") return "0.00";
-    const num = parseInt(digits, 10) / 100;
-    return num.toFixed(2);
+    const parsed = parseInt(digits, 10);
+    if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return "0.00";
+    const num = parsed / 100;
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   const handleNextDigits = (current: string, inputType: string, data: string): string => {
@@ -28,7 +33,7 @@ export function CurrencyInput({
 
     if (inputType === "insertText" && /\d/.test(data)) {
       const candidate = current + data;
-      if (parseInt(candidate, 10) <= 999999) digits = candidate; // Max 6 digits for $99,999.99
+      if (candidate.length <= 8) digits = candidate; // Max 8 digits for $999,999.99
     } else if (inputType === "deleteContentBackward") {
       digits = current.slice(0, -1);
     }
