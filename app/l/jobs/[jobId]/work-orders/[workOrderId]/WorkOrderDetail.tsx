@@ -890,7 +890,7 @@ const WorkOrderDetail = ({
   const backLabel = backToTakeoffPath ? "Takeoff" : "Job";
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <StickyPageHeader
         backLabel={backLabel}
         onBack={() => {
@@ -1190,7 +1190,7 @@ const WorkOrderDetail = ({
         }
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         <PageTitleBlock title={pageTitle} description={pageDescription} />
 
         {/* Takeoff Required Alert - only show if no takeoff is linked */}

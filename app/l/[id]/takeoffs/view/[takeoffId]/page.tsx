@@ -42,10 +42,10 @@ export default function TakeoffViewPage({ params }: any) {
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background overflow-x-hidden">
+          <div className="min-h-screen bg-background">
             <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
             {/* Content Area */}
-            <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto px-4 py-8">
               <PageTitleBlock
                 title={`Takeoff for ${jobName}`}
                 description="Review takeoff details, materials, and linked work order actions."
