@@ -2,12 +2,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-interface WorkOrderItem {
+type SOVLookupItem = {
+  id: number;
+  item_number: string;
   description: string;
-  quantity: number;
-  unit: string;
-  unit_price: number;
-  total: number;
+  work_type?: string | null;
+};
+
+const normalize = (value: unknown): string => String(value || '').trim();
+const normalizeUpper = (value: unknown): string => normalize(value).toUpperCase();
+
+const VEHICLE_LABEL_BY_ID: Record<string, string> = {
+  pickup_truck: 'Pick Up Truck',
+  tma: 'TMA',
+  message_board: 'Message Board',
+  arrow_panel: 'Arrow Panel',
+  speed_trailer: 'Speed Trailer',
+};
+
+function resolveSov(
+  candidates: Array<unknown>,
+  sovItems: SOVLookupItem[]
+): { item_number: string; sov_item_id: number | null } {
+  const sovByItemNumber = new Map<string, SOVLookupItem>();
+  const sovByDescription = new Map<string, SOVLookupItem>();
+
+  for (const s of sovItems) {
+    const numKey = normalizeUpper(s.item_number);
+    if (numKey) sovByItemNumber.set(numKey, s);
+
+    const descKey = normalizeUpper(s.description);
+    if (descKey && !sovByDescription.has(descKey)) sovByDescription.set(descKey, s);
+  }
+
+  for (const candidate of candidates) {
+    const key = normalizeUpper(candidate);
+    if (!key) continue;
+
+    const byNum = sovByItemNumber.get(key);
+    if (byNum) {
+      return { item_number: byNum.item_number, sov_item_id: byNum.id };
+    }
+
+    const byDesc = sovByDescription.get(key);
+    if (byDesc) {
+      return { item_number: byDesc.item_number, sov_item_id: byDesc.id };
+    }
+  }
+
+  // Loose description contains fallback
+  const nonEmptyCandidates = candidates.map((c) => normalizeUpper(c)).filter(Boolean);
+  for (const candidate of nonEmptyCandidates) {
+    const found = sovItems.find((s) => {
+      const desc = normalizeUpper(s.description);
+      return desc.includes(candidate) || candidate.includes(desc);
+    });
+    if (found) return { item_number: found.item_number, sov_item_id: found.id };
+  }
+
+  return { item_number: '', sov_item_id: null };
 }
 
 export async function POST(request: NextRequest) {
@@ -56,10 +109,10 @@ export async function POST(request: NextRequest) {
 
     console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type });
 
-    // Fetch takeoff data with sign rows to create work order items
+    // Fetch takeoff data with all sections to create work order items
     const { data: takeoffData, error: takeoffDataError } = await supabase
       .from('takeoffs_l')
-      .select('sign_rows')
+      .select('sign_rows, vehicle_items, additional_items, rolling_stock_items, work_type')
       .eq('id', takeoffId)
       .single();
 
@@ -68,16 +121,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch takeoff data' }, { status: 500 });
     }
 
+    // Fetch SOV items for lookup/carry-over mapping
+    const { data: sovEntries } = await supabase
+      .from('sov_entries')
+      .select('sov_items!inner(id, item_number, description, work_type)')
+      .eq('job_id', takeoff.job_id);
+
+    const sovItems: SOVLookupItem[] = (sovEntries || [])
+      .map((entry: any) => entry?.sov_items)
+      .filter(Boolean)
+      .map((s: any) => ({
+        id: Number(s.id),
+        item_number: String(s.item_number || ''),
+        description: String(s.description || ''),
+        work_type: s.work_type ?? null,
+      }));
+
     // Create work order items from takeoff sign designations
     const workOrderItems: Array<{
       work_order_id: string | null;
-      item_number: string; // Will be selected from SOV later
+      item_number: string;
       description: string;
       contract_quantity: number;
       work_order_quantity: number;
       uom: string;
       sort_order: number;
-      sov_item_id: string | null;
+      sov_item_id: number | null;
     }> = [];
 
     const signRowsData = takeoffData.sign_rows || {};
@@ -98,19 +167,101 @@ export async function POST(request: NextRequest) {
           const description = descriptionParts.join(' ').trim();
           const quantity = row.quantity || 1;
           const uom = row.sqft > 0 ? 'SF' : 'SF'; // All signs use SF
+          const resolved = resolveSov(
+            [
+              row.itemNumber,
+              row.item_number,
+              row.sovItemNumber,
+              row.sov_item_number,
+              row.signDesignation,
+              description,
+            ],
+            sovItems
+          );
 
           workOrderItems.push({
             work_order_id: null, // will be set after work order creation
-            item_number: '', // Empty initially, user selects SOV item
+            item_number: resolved.item_number,
             description,
             contract_quantity: quantity,
             work_order_quantity: quantity, // Start with takeoff quantity
             uom,
             sort_order: sortOrder++,
-            sov_item_id: null, // Will be set when user selects SOV item
+            sov_item_id: resolved.sov_item_id,
           });
         }
       }
+    }
+
+    // Vehicles -> work order items
+    const vehicleItems = Array.isArray(takeoffData.vehicle_items) ? takeoffData.vehicle_items : [];
+    for (const vehicle of vehicleItems) {
+      const vehicleType = normalize(vehicle?.vehicleType);
+      const vehicleLabel = VEHICLE_LABEL_BY_ID[vehicleType] || vehicleType || 'Vehicle';
+      const quantity = Number(vehicle?.quantity || 1) || 1;
+      const description = `Vehicle: ${vehicleLabel}`;
+      const resolved = resolveSov(
+        [vehicle?.itemNumber, vehicle?.item_number, vehicleType, vehicleLabel, description],
+        sovItems
+      );
+
+      workOrderItems.push({
+        work_order_id: null,
+        item_number: resolved.item_number,
+        description,
+        contract_quantity: quantity,
+        work_order_quantity: quantity,
+        uom: 'EA',
+        sort_order: sortOrder++,
+        sov_item_id: resolved.sov_item_id,
+      });
+    }
+
+    // Additional items -> work order items
+    const additionalItems = Array.isArray(takeoffData.additional_items) ? takeoffData.additional_items : [];
+    for (const item of additionalItems) {
+      const name = normalize(item?.name);
+      const customName = name === '__custom' ? normalize(item?.description) : '';
+      const displayName = customName || name || 'Additional Item';
+      const descriptionNote = normalize(item?.description);
+      const description = descriptionNote && descriptionNote !== customName
+        ? `${displayName} — ${descriptionNote}`
+        : displayName;
+      const quantity = Number(item?.quantity || 1) || 1;
+      const resolved = resolveSov(
+        [item?.itemNumber, item?.item_number, name, customName, description],
+        sovItems
+      );
+
+      workOrderItems.push({
+        work_order_id: null,
+        item_number: resolved.item_number,
+        description,
+        contract_quantity: quantity,
+        work_order_quantity: quantity,
+        uom: 'EA',
+        sort_order: sortOrder++,
+        sov_item_id: resolved.sov_item_id,
+      });
+    }
+
+    // Rolling stock is intentionally read-only/disabled right now, but preserve legacy rows if present
+    const rollingStockItems = Array.isArray(takeoffData.rolling_stock_items) ? takeoffData.rolling_stock_items : [];
+    for (const rs of rollingStockItems) {
+      const label = normalize(rs?.equipmentLabel) || normalize(rs?.equipmentId) || 'Rolling Stock';
+      const description = `Rolling Stock: ${label}`;
+      const resolved = resolveSov([rs?.itemNumber, rs?.item_number, label, description], sovItems);
+
+      workOrderItems.push({
+        work_order_id: null,
+        item_number: resolved.item_number,
+        description,
+        contract_quantity: 1,
+        work_order_quantity: 1,
+        uom: 'EA',
+        sort_order: sortOrder++,
+        sov_item_id: resolved.sov_item_id,
+      });
     }
 
     console.log('Generated work order items:', workOrderItems.map(i => ({

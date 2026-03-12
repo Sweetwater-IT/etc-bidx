@@ -35,6 +35,7 @@ import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 interface Props {
   jobId: string;
@@ -202,6 +203,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
   const [title, setTitle] = useState("");
   const [workType, setWorkType] = useState("");
   const [workOrderNumber, setWorkOrderNumber] = useState("");
+  const [workOrderId, setWorkOrderId] = useState("");
   const [contractedOrAdditional, setContractedOrAdditional] = useState("contracted");
   const [installDate, setInstallDate] = useState("");
   const [pickupDate, setPickupDate] = useState("");
@@ -276,10 +278,13 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
           title,
           workType,
           workOrderNumber,
+          workOrderId,
           contractedOrAdditional,
           installDate,
           pickupDate,
           neededByDate,
+          isMultiDayJob,
+          endDate,
           priority,
           notes,
           crewNotes,
@@ -322,8 +327,8 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
       setSaveStatus('error');
     }
   }, [
-    title, workType, dbJob, saving, jobId, workOrderNumber, contractedOrAdditional,
-    installDate, pickupDate, neededByDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
+    title, workType, dbJob, saving, jobId, workOrderNumber, workOrderId, contractedOrAdditional,
+    installDate, pickupDate, neededByDate, isMultiDayJob, endDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
     activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
     permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
     additionalItems, savedTakeoffId, router
@@ -377,6 +382,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
       setTitle(draftTakeoff.title || "");
       setWorkType(draftTakeoff.work_type || "");
       setWorkOrderNumber(draftTakeoff.work_order_number || "");
+      setWorkOrderId(draftTakeoff.work_order_id || "");
       setContractedOrAdditional(draftTakeoff.contracted_or_additional || "contracted");
       setInstallDate(draftTakeoff.install_date || "");
       setPickupDate(draftTakeoff.pickup_date || "");
@@ -386,6 +392,8 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
       setCrewNotes(draftTakeoff.crew_notes || "");
       setBuildShopNotes(draftTakeoff.build_shop_notes || "");
       setPmNotes(draftTakeoff.pm_notes || "");
+      setIsMultiDayJob(Boolean(draftTakeoff.is_multi_day_job));
+      setEndDate(draftTakeoff.end_date || "");
       setActiveSections(draftTakeoff.active_sections || []);
       setSignRows(draftTakeoff.sign_rows || {});
       setDefaultSignMaterial(draftTakeoff.default_sign_material || DEFAULT_SIGN_MATERIAL);
@@ -394,6 +402,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
       setPermanentSignRows(draftTakeoff.permanent_sign_rows || {});
       setPermanentEntryRows(draftTakeoff.permanent_entry_rows || {});
       setDefaultPermanentSignMaterial(draftTakeoff.default_permanent_sign_material || "ALUMINUM");
+      setVehicleItems(draftTakeoff.vehicle_items || []);
+      setRollingStockItems(draftTakeoff.rolling_stock_items || []);
+      setAdditionalItems(draftTakeoff.additional_items || []);
       setSavedTakeoffId(draftTakeoff.id);
       setTakeoffSaved(true);
       setSaveStatus('saved');
@@ -635,10 +646,13 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
           title,
           workType,
           workOrderNumber,
+          workOrderId,
           contractedOrAdditional,
           installDate,
           pickupDate,
           neededByDate,
+          isMultiDayJob,
+          endDate,
           priority,
           notes,
           crewNotes,
@@ -1151,7 +1165,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
               ) : (
                 <div className="space-y-2">
                   {vehicleItems.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
+                    <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background max-w-fit">
                       <Select
                         value={item.vehicleType}
                         onValueChange={(v) =>
@@ -1171,18 +1185,16 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
                           ))}
                         </SelectContent>
                       </Select>
-                      <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex flex-col items-start gap-0.5">
                         <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
-                        <Input
-                          type="number"
+                        <QuantityInput
+                          value={item.quantity || 1}
                           min={1}
-                          className="h-8 w-16 text-xs"
-                          value={item.quantity}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             setVehicleItems((prev) =>
                               prev.map((vi) =>
                                 vi.id === item.id
-                                  ? { ...vi, quantity: Math.max(1, parseInt(e.target.value) || 1) }
+                                  ? { ...vi, quantity: Math.max(1, value) }
                                   : vi
                               )
                             )
@@ -1212,6 +1224,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
                 size="sm"
                 variant="outline"
                 className="gap-1.5 h-7 text-xs"
+                disabled
                 onClick={() =>
                   setRollingStockItems((prev) => [
                     ...prev,
@@ -1223,11 +1236,14 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
               </Button>
             </div>
             <div className="p-5">
+              <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Rolling stock is temporarily disabled and read-only.
+              </div>
               {rollingStockItems.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center">
                   <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
-                  <p className="text-xs text-muted-foreground mt-1">Click Add Equipment to select from available rental inventory.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1268,6 +1284,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
                             <Button
                               variant="outline"
                               role="combobox"
+                              disabled
                               className="h-8 text-xs flex-1 min-w-[300px] justify-between font-normal"
                             >
                               {item.equipmentId ? (
@@ -1339,6 +1356,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
                         <Button
                           variant="ghost"
                           size="icon"
+                          disabled
                           className="h-8 w-8"
                           onClick={() => setRollingStockItems((prev) => prev.filter((rs) => rs.id !== item.id))}
                         >
@@ -1352,6 +1370,22 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
             </div>
           </div>
         </>
+      )}
+
+      {workType === "RENTAL" && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+            <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" disabled>
+              <Plus className="h-3 w-3" /> Add Equipment
+            </Button>
+          </div>
+          <div className="p-5">
+            <div className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Rolling stock is temporarily disabled and read-only.
+            </div>
+          </div>
+        </div>
       )}
 
 
@@ -1373,9 +1407,9 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
         ) : (
           <div className="divide-y">
             {additionalItems.map((item) => (
-              <div key={item.id} className="px-5 py-2.5 flex items-center gap-4">
+              <div key={item.id} className="px-5 py-2.5 flex items-start gap-3 flex-wrap">
                 <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                  <SelectTrigger className="h-8 text-xs w-[240px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs w-[220px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
                   <SelectContent>
                     {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
                       <SelectItem key={opt} value={opt}>{opt}</SelectItem>
@@ -1387,46 +1421,34 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
                   <Input className="h-8 text-xs w-[140px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom item name" />
                 )}
                 {workType === "SERVICE" ? (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i)))}
-                      disabled={item.quantity <= 1}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
+                    <QuantityInput
                       value={item.quantity || 1}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const cleaned = raw.replace(/\D/g, '');
-                        const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                        setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: num } : i)));
-                      }}
+                      min={1}
+                      onChange={(value) =>
+                        setAdditionalItems((prev) =>
+                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                        )
+                      }
                     />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i)))}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-0.5">
+                  <div className="flex flex-col items-start gap-0.5">
                     <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
-                    <Input type="number" min={1} className="h-8 w-16 text-xs" value={item.quantity} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, parseInt(e.target.value) || 1) } : i)))} />
+                    <QuantityInput
+                      value={item.quantity || 1}
+                      min={1}
+                      onChange={(value) =>
+                        setAdditionalItems((prev) =>
+                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                        )
+                      }
+                    />
                   </div>
                 )}
                 {item.name !== "__custom" && (
-                  <Input className="h-8 text-xs flex-1 max-w-[300px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
+                  <Input className="h-8 text-xs w-[280px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
                   <Trash2 className="h-3 w-3 text-destructive" />

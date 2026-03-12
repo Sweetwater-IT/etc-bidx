@@ -26,6 +26,8 @@ export async function GET(
         install_date,
         pickup_date,
         needed_by_date,
+        is_multi_day_job,
+        end_date,
         work_order_number,
         work_order_id,
         job_id,
@@ -37,7 +39,14 @@ export async function GET(
         pm_notes,
         active_sections,
         sign_rows,
-        default_sign_material
+        default_sign_material,
+        active_permanent_items,
+        permanent_sign_rows,
+        permanent_entry_rows,
+        default_permanent_sign_material,
+        vehicle_items,
+        rolling_stock_items,
+        additional_items
       `)
       .eq('id', id)
       .single();
