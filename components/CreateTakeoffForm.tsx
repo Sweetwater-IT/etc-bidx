@@ -41,6 +41,7 @@ interface Props {
   onBack: () => void;
   draftTakeoff?: any;
   stickyHeader?: boolean;
+  mode?: "create" | "edit";
 }
 
 const WORK_TYPES = [
@@ -134,7 +135,7 @@ const MPT_ADDITIONAL_ITEM_OPTIONS = [
   "SIGN STAND",
 ];
 
-export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = false }: Props) => {
+export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = false, mode = "create" }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const { user } = useAuth();
@@ -195,6 +196,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
   const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
   const [workTypeSelectedAt, setWorkTypeSelectedAt] = useState<Date | null>(null);
   const hasCreatedTakeoff = Boolean(savedTakeoffId);
+  const isEditMode = mode === "edit";
 
   // Auto-save state
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -672,7 +674,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground leading-tight">
-              New Material Takeoff
+              {isEditMode ? "Edit Material Takeoff" : "New Material Takeoff"}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Second iteration of the workflow · 102026001
@@ -693,7 +695,7 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
         />
         {/* Removed Save Draft + Back button from header as per requirement */}
         {/* Only show Generate Work Order + Download PDF when a takeoff ID exists */}
-        {savedTakeoffId && (
+        {!isEditMode && savedTakeoffId && (
           <>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
               <Download className="h-3.5 w-3.5" />

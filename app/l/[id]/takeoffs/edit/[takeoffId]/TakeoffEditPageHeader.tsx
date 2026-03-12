@@ -64,15 +64,6 @@ export default function TakeoffEditPageHeader({
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-nowrap shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoffId}`)}
-        >
-          View
-        </Button>
-      </div>
     </>
   );
 }
