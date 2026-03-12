@@ -103,6 +103,17 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
+  const jobName = projectInfo.projectName?.trim() || "Untitled Project";
+  const checklistTitle = isViewMode
+    ? `Contract for ${jobName}`
+    : isNew
+      ? `New Contract for ${jobName}`
+      : `Edit Contract for ${jobName}`;
+  const checklistDescription = isViewMode
+    ? "Review contract requirements, schedule of values, and supporting documents."
+    : isNew
+      ? "Set up contract requirements, schedule of values, and supporting documents."
+      : "Update contract requirements, schedule of values, and supporting documents.";
 
   // Contract creation mutex
   const creatingRef = useRef<Promise<string | undefined> | null>(null);
@@ -589,7 +600,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12 space-y-8">
-        <ChecklistHeader />
+        <ChecklistHeader title={checklistTitle} description={checklistDescription} />
 
         {/* Admin Info — always editable */}
         <ProjectInfoFields

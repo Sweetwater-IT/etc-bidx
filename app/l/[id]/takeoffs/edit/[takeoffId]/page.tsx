@@ -1,3 +1,5 @@
+"use client";
+
 import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -5,11 +7,13 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import EditTakeoffPageContent from "./EditTakeoffPageContent";
 import TakeoffEditPageHeader from "./TakeoffEditPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
 
-export default async function EditTakeoffPage({ params }: any) {
-  const resolvedParams = await params;
-  const jobId = resolvedParams.id;
-  const takeoffId = resolvedParams.takeoffId;
+export default function EditTakeoffPage({ params }: any) {
+  const jobId = params.id;
+  const takeoffId = params.takeoffId;
+  const { data: dbJob } = useJobFromDB(jobId);
+  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
 
   return (
     <SidebarProvider
@@ -34,7 +38,7 @@ export default async function EditTakeoffPage({ params }: any) {
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
               <PageTitleBlock
-                title="Edit Takeoff"
+                title={`Edit Takeoff for ${jobName}`}
                 description="Update takeoff details, materials, and scheduling information."
               />
               <EditTakeoffPageContent jobId={jobId} takeoffId={takeoffId} />

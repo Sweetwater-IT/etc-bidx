@@ -1,14 +1,17 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
 
 export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   const router = useRouter();
   const [draftTakeoff, setDraftTakeoff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { data: dbJob } = useJobFromDB(jobId);
+  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
 
   // Always create a fresh draft takeoff on mount
   useEffect(() => {
@@ -95,7 +98,7 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
       </div>
       <div className="w-full px-6 py-6 flex-1 overflow-x-hidden">
         <PageTitleBlock
-          title="New Takeoff"
+          title={`New Takeoff for ${jobName}`}
           description="Create a new material takeoff for this project."
         />
         <CreateTakeoffForm

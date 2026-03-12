@@ -10,6 +10,7 @@ import { ArrowLeft, Edit, Download, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
@@ -24,6 +25,8 @@ const WORK_TYPES = [
 export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
   const takeoffId = params.takeoffId;
+  const { data: dbJob } = useJobFromDB(jobId);
+  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
 
   return (
     <SidebarProvider
@@ -48,7 +51,7 @@ export default function TakeoffViewPage({ params }: any) {
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
               <PageTitleBlock
-                title="View Takeoff"
+                title={`Takeoff for ${jobName}`}
                 description="Review takeoff details, materials, and linked work order actions."
               />
               <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />

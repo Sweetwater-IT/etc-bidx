@@ -880,7 +880,12 @@ const WorkOrderDetail = ({
   const canEdit = (isAdmin || isPM) && !isViewMode;
   const canManageFromView = (isAdmin || isPM) && isViewMode;
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
-  const pageTitle = isNewWorkOrder ? "New Work Order" : isViewMode ? "View Work Order" : "Edit Work Order";
+  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
+  const pageTitle = isNewWorkOrder
+    ? `New Work Order for ${jobName}`
+    : isViewMode
+      ? `Work Order for ${jobName}`
+      : `Edit Work Order for ${jobName}`;
   const pageDescription = isNewWorkOrder
     ? "Create and configure a new work order for this project."
     : isViewMode
