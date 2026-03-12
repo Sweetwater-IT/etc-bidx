@@ -709,7 +709,7 @@ export const CreateTakeoffForm = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       <StickyPageHeader
         backLabel={backLabel}
         onBack={onBack}
@@ -743,6 +743,8 @@ export const CreateTakeoffForm = ({
           </>
         }
       />
+
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">
@@ -1531,6 +1533,7 @@ export const CreateTakeoffForm = ({
         </DialogContent>
       </Dialog>
 
+      </div>
     </div>
   );
 };

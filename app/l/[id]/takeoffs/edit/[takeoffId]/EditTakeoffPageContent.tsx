@@ -45,14 +45,12 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
   }
 
   return (
-    <div className="overflow-x-hidden">
-      <CreateTakeoffForm
-        jobId={jobId}
-        onBack={handleBack}
-        draftTakeoff={takeoff}
-        backLabel="Takeoff"
-        mode="edit"
-      />
-    </div>
+    <CreateTakeoffForm
+      jobId={jobId}
+      onBack={handleBack}
+      draftTakeoff={takeoff}
+      backLabel="Takeoff"
+      mode="edit"
+    />
   );
 }
