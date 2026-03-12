@@ -170,7 +170,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   }
 
   return (
-    <div className="w-full px-4 flex-1 overflow-x-auto">
+    <div className="w-full px-4 flex-1 overflow-x-hidden">
       <div className="space-y-6">
 
       {/* Project Info */}

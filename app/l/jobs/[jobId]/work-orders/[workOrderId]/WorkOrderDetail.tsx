@@ -1157,7 +1157,7 @@ const WorkOrderDetail = ({
                     });
                     if (response.ok) {
                       const result = await response.json();
-                      router.push(`/l/${workOrder?.job_id}/work-orders/${result.workOrder.id}`);
+                      router.push(`/l/jobs/${workOrder?.job_id}/work-orders/${result.workOrder.id}/view`);
                     } else {
                       const error = await response.json();
                       toast.error(error.error || 'Failed to create pickup work order');
@@ -1173,7 +1173,7 @@ const WorkOrderDetail = ({
             )}
             {/* Link to existing Pickup WO */}
             {pickupWO && (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/work-order/${pickupWO.id}`)}>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/${pickupWO.id}/view`)}>
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
               </Button>
             )}

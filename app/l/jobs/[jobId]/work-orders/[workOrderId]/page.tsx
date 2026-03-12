@@ -10,5 +10,8 @@ export default async function WorkOrderPage({
   const { takeoffId } = await searchParams;
 
   const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
+  if (workOrderId === "new") {
+    redirect(`/l/jobs/${jobId}/work-orders/new${qs}`);
+  }
   redirect(`/l/jobs/${jobId}/work-orders/${workOrderId}/view${qs}`);
 }

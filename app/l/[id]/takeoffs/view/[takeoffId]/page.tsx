@@ -10,6 +10,16 @@ import { ArrowLeft, Edit, Download, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 
+const WORK_TYPES = [
+  { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
+  { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
+  { value: "FLAGGING", label: "Flagging" },
+  { value: "LANE_CLOSURE", label: "Lane Closure" },
+  { value: "SERVICE", label: "Service" },
+  { value: "DELIVERY", label: "Delivery" },
+  { value: "RENTAL", label: "Rental" },
+];
+
 export default async function TakeoffViewPage({ params }: any) {
   const resolvedParams = await params;
   const jobId = resolvedParams.id;
@@ -31,13 +41,13 @@ export default async function TakeoffViewPage({ params }: any) {
           <div className="min-h-screen bg-background flex flex-col">
             {/* Sticky Header */}
             <header className="border-b bg-card sticky top-0 z-10">
-              <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+              <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
                 <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
               </div>
             </header>
             {/* Content Area */}
             <div className="flex-1 overflow-hidden">
-              <div className="max-w-7xl mx-auto px-4 py-8 h-full overflow-y-auto overflow-x-hidden">
+              <div className="max-w-7xl mx-auto px-4 py-8 h-full overflow-x-hidden">
                 <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
               </div>
             </div>
@@ -138,10 +148,18 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
 
   return (
     <>
-      <Button variant="ghost" onClick={() => router.push(`/l/${jobId}`)} className="gap-2">
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Button>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Button variant="ghost" onClick={() => router.push(`/l/${jobId}`)} className="gap-2 shrink-0">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
+          <p className="text-xs text-muted-foreground truncate">
+            {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
+          </p>
+        </div>
+      </div>
       <div className="flex items-center gap-2 flex-nowrap shrink-0">
         <Button variant="outline" size="sm" onClick={handleEdit}>
           <Edit className="h-3.5 w-3.5 mr-1.5" />
