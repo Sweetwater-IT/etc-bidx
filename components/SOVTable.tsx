@@ -51,6 +51,7 @@ interface SovMasterItem {
   description: string;
   display_name: string;
   work_type: string;
+  uom: string;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -227,7 +228,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 ...item,
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: 'EA',
+                uom: master.uom || 'EA',
                 quantity: item.quantity || 1,
                 unitPrice: item.unitPrice || 0,
                 extendedPrice: item.extendedPrice || 0,
@@ -249,7 +250,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
         sov_item_id: master.id,
         item_number: master.item_number,
         description: master.display_name,
-        uom: 'EA',
+        uom: master.uom || 'EA',
         quantity: 1, // Default quantity
         unit_price: 0, // Default unit price
         retainage_type: 'dollar' as const,
@@ -296,7 +297,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: 'EA',
+                uom: createdItem.uom || master.uom || 'EA',
                 quantity: createdItem.quantity || payload.quantity,
                 unitPrice: createdItem.unit_price || payload.unit_price,
                 extendedPrice: createdItem.extended_price || (createdItem.quantity * createdItem.unit_price),

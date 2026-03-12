@@ -30,7 +30,8 @@ export async function GET(
           display_item_number,
           description,
           display_name,
-          work_type
+          work_type,
+          uom
         )
       `)
       .eq('job_id', jobId)
@@ -57,6 +58,7 @@ export async function GET(
       description: (entry as any).sov_items?.description,
       display_name: (entry as any).sov_items?.display_name,
       work_type: (entry as any).sov_items?.work_type,
+      uom: (entry as any).sov_items?.uom,
       quantity: entry.quantity,
       unit_price: entry.unit_price,
       extended_price: entry.extended_price,

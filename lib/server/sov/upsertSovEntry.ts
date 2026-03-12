@@ -65,6 +65,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
           description: description ?? '',
           display_name: description || item_number,
           work_type: 'OTHER',
+        uom: uom ?? 'UNKNOWN',
         })
         .select('id')
         .single();
@@ -144,7 +145,8 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
         display_item_number,
         description,
         display_name,
-        work_type
+        work_type,
+        uom
       )
     `)
     .single();
@@ -176,7 +178,8 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
           display_item_number,
           description,
           display_name,
-          work_type
+          work_type,
+          uom
         )
       `)
       .single();
@@ -206,6 +209,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     description: (data as any).sov_items?.description,
     display_name: (data as any).sov_items?.display_name,
     work_type: (data as any).sov_items?.work_type,
+    uom: (data as any).sov_items?.uom,
     quantity: data.quantity,
     unit_price: data.unit_price,
     extended_price: data.extended_price,
