@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QuantityInput } from '@/components/ui/quantity-input';
@@ -84,6 +84,23 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
   return Math.round(value * 100) / 100;
 }
 
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function parseRetainageDraft(raw: string) {
+  // Allow users to type partial states without us forcing a number
+  // e.g. '', '.', '0.', '10.'
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '.') return { ok: false as const };
+
+  // Normalize comma to dot for accidental locale input
+  const normalized = trimmed.replace(',', '.');
+  const n = Number.parseFloat(normalized);
+  if (Number.isNaN(n)) return { ok: false as const };
+  return { ok: true as const, value: n };
+}
+
 export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
@@ -127,6 +144,44 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('percent');
   const [bulkValue, setBulkValue] = useState('');
+
+  // Per-row retainage drafts: keep string while typing to avoid cursor jumps / decimal issues
+  const [retainageDraftById, setRetainageDraftById] = useState<Record<string, string>>({});
+
+  const getRowRetainageDraft = useCallback(
+    (id: string, numericValue: number) => {
+      const draft = retainageDraftById[id];
+      if (draft !== undefined) return draft;
+      // Show blank for 0 to keep UI clean
+      return numericValue ? String(numericValue) : '';
+    },
+    [retainageDraftById]
+  );
+
+  const commitRowRetainage = useCallback(
+    (itemId: string, raw: string, type: 'percent' | 'dollar', extendedPrice: number) => {
+      const parsed = parseRetainageDraft(raw);
+      if (!parsed.ok) {
+        // If invalid/blank, commit 0
+        updateRow(itemId, 'retainageValue', 0);
+        setRetainageDraftById((prev) => ({ ...prev, [itemId]: '' }));
+        return;
+      }
+
+      let next = parsed.value;
+      if (type === 'percent') next = clampNumber(next, 0, 100);
+      else next = clampNumber(next, 0, Math.max(0, extendedPrice));
+
+      // Round to cents
+      next = Math.round(next * 100) / 100;
+
+      updateRow(itemId, 'retainageValue', next);
+      setRetainageDraftById((prev) => ({ ...prev, [itemId]: next ? String(next) : '' }));
+    },
+    // updateRow is stable inside this component and safe to reference
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [retainageDraftById]
+  );
 
   // Notes editing state
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
@@ -395,7 +450,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   };
 
   const applyBulkRetainage = () => {
-    const val = parseFloat(bulkValue) || 0;
+    const parsed = parseRetainageDraft(bulkValue);
+    let val = parsed.ok ? parsed.value : 0;
+
+    if (bulkType === 'percent') val = clampNumber(val, 0, 100);
+    val = Math.round(val * 100) / 100;
+
     updateItems(
       items.map((item) => ({
         ...item,
@@ -404,6 +464,15 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
         retainageAmount: calcRetainageAmount(item.extendedPrice, bulkType, val),
       }))
     );
+
+    // Sync drafts to match the bulk update so the input shows the applied value.
+    setRetainageDraftById((prev) => {
+      const nextDrafts = { ...prev };
+      for (const item of items) {
+        nextDrafts[item.id] = val ? String(val) : '';
+      }
+      return nextDrafts;
+    });
   };
 
   const totalExtended = items.reduce((sum, i) => sum + i.extendedPrice, 0);
@@ -444,7 +513,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <div className="w-[120px]">
+          <div className="w-[180px]">
             <InputGroup
               value={bulkValue}
               onValueChange={setBulkValue}
@@ -452,6 +521,13 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
               onTypeChange={(type) => setBulkType(type)}
               placeholder="0.00"
               className="h-7 text-xs"
+              ariaLabel="Bulk retainage"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyBulkRetainage();
+                }
+              }}
             />
           </div>
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
@@ -649,11 +725,45 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                       </span>
                     ) : (
                       <InputGroup
-                        value={item.retainageValue?.toString() || ''}
-                        onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
+                        value={getRowRetainageDraft(item.id, item.retainageValue)}
+                        onValueChange={(value) => {
+                          // Always update draft
+                          setRetainageDraftById((prev) => ({ ...prev, [item.id]: value }));
+
+                          // Live preview: if parseable, update retainage amount without rewriting input
+                          const parsed = parseRetainageDraft(value);
+                          if (!parsed.ok) {
+                            // If blank/invalid, show 0 amount live
+                            updateRow(item.id, 'retainageValue', 0);
+                            return;
+                          }
+
+                          let next = parsed.value;
+                          if (item.retainageType === 'percent') next = clampNumber(next, 0, 100);
+                          else next = clampNumber(next, 0, Math.max(0, item.extendedPrice));
+                          next = Math.round(next * 100) / 100;
+                          updateRow(item.id, 'retainageValue', next);
+                        }}
                         type={item.retainageType}
-                        onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                        onTypeChange={(type) => {
+                          updateRow(item.id, 'retainageType', type);
+                          // Re-commit current draft under new type constraints
+                          const raw = getRowRetainageDraft(item.id, item.retainageValue);
+                          commitRowRetainage(item.id, raw, type, item.extendedPrice);
+                        }}
                         className="h-7 text-xs"
+                        ariaLabel={`Retainage for row ${item.itemNumber || item.id}`}
+                        onBlur={() => {
+                          const raw = getRowRetainageDraft(item.id, item.retainageValue);
+                          commitRowRetainage(item.id, raw, item.retainageType, item.extendedPrice);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const raw = getRowRetainageDraft(item.id, item.retainageValue);
+                            commitRowRetainage(item.id, raw, item.retainageType, item.extendedPrice);
+                          }
+                        }}
                       />
                     )}
                   </TableCell>
