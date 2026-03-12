@@ -158,6 +158,9 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
     };
     // Add to items but don't trigger save yet (validation will prevent it)
     updateItems([...items, newItem]);
+    // Open selector immediately to reduce one extra click
+    setSelectorOpen(newItem.id);
+    setSelectorSearch('');
   };
 
   const removeRow = (id: string) => {

@@ -250,15 +250,30 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
 
                 if (!response.ok) {
                   const errorText = await response.text();
+                  let parsedError: any = null;
+                  try {
+                    parsedError = errorText ? JSON.parse(errorText) : null;
+                  } catch {
+                    parsedError = null;
+                  }
+
                   console.error(`[SOV save] Create failed for ${item.itemNumber}:`, {
                     timestamp: responseTimestamp,
                     status: response.status,
                     statusText: response.statusText,
                     errorText,
+                    parsedError,
                     payload,
                     id
                   });
-                  throw new Error(`Failed to create item ${item.itemNumber}: ${response.status} ${response.statusText} - ${errorText}`);
+                  const errorSummary = parsedError?.error || parsedError?.message || response.statusText;
+                  const detailSummary = parsedError?.details
+                    ? JSON.stringify(parsedError.details)
+                    : (errorText || 'no response body');
+
+                  throw new Error(
+                    `Failed to create item ${item.itemNumber}: ${response.status} ${errorSummary} | details: ${detailSummary}`
+                  );
                 }
 
                 const result = await response.json();
