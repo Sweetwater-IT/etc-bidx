@@ -38,7 +38,7 @@ export default async function TakeoffViewPage({ params }: any) {
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background flex flex-col">
+          <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
             {/* Sticky Header */}
             <header className="border-b bg-card sticky top-0 z-10">
               <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
@@ -46,8 +46,8 @@ export default async function TakeoffViewPage({ params }: any) {
               </div>
             </header>
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden">
-              <div className="max-w-7xl mx-auto px-4 py-8 h-full overflow-x-hidden">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
                 <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
               </div>
             </div>
@@ -133,7 +133,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
       if (woResponse.ok) {
         const result = await woResponse.json();
         toast.success('Work order generated successfully!');
-        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}/edit`);
+        router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
         toast.error(err.error || 'Failed to generate work order');
@@ -170,7 +170,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
           {generatingPdf ? "Generating…" : "Download PDF"}
         </Button>
         {takeoff?.work_order_id ? (
-          <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}>
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/view/${takeoff.work_order_id}`)}>
             <ClipboardList className="h-3.5 w-3.5" />
             View Work Order
           </Button>

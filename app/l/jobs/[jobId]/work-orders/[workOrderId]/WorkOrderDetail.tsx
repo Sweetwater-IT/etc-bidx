@@ -491,7 +491,7 @@ const WorkOrderDetail = ({
         const result = await response.json();
         toast.success(`Work order "${editTitle}" created successfully`);
         // Navigate to edit (to preserve the "generate → edit first" flow) with takeoffId to enable immediate loading
-        router.push(`/l/jobs/${dbJob?.id}/work-orders/${result.workOrder.id}/edit?takeoffId=${takeoffId}`);
+        router.push(`/l/jobs/${dbJob?.id}/work-orders/edit/${result.workOrder.id}?takeoffId=${takeoffId}`);
       } else {
         // Update existing work order
         const response = await fetch(`/api/workorders/${workOrderId}`, {
@@ -552,7 +552,7 @@ const WorkOrderDetail = ({
         // When saving from the edit page, send the user back to the read-only view
         if (mode === "edit" && workOrder?.job_id) {
           const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
-          router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/view${qs}`);
+          router.push(`/l/jobs/${workOrder.job_id}/work-orders/view/${workOrderId}${qs}`);
         }
       }
     } catch (err: any) {
@@ -866,13 +866,14 @@ const WorkOrderDetail = ({
   const statusConfig = getStatusConfig(workOrder?.status || "draft");
   const isViewMode = mode === "view";
   const canEdit = (isAdmin || isPM) && !isViewMode;
+  const canManageFromView = (isAdmin || isPM) && isViewMode;
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
-      <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
+      <div className="w-full px-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-20 -mx-6 px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <ClipboardList className="h-5 w-5 text-primary" />
@@ -901,14 +902,16 @@ const WorkOrderDetail = ({
                 Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
-            <Button variant="outline" size="sm" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
+            {isViewMode && (
+              <Button variant="outline" size="sm" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
+            )}
             {isViewMode && workOrder?.job_id && (
               <Button
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {
                   const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
-                  router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/edit${qs}`);
+                  router.push(`/l/jobs/${workOrder.job_id}/work-orders/edit/${workOrderId}${qs}`);
                 }}
               >
                 Edit
@@ -921,7 +924,7 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {/* Download Work Order Only */}
-            {hasWoItems && (
+            {isViewMode && hasWoItems && (
               <Button
                 size="sm"
                 variant="outline"
@@ -985,7 +988,7 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {/* Download Takeoff PDF */}
-            {hasTakeoff && (
+            {isViewMode && hasTakeoff && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1016,7 +1019,7 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {/* Combine WO + Takeoff into one document */}
-            {hasTakeoff && (
+            {isViewMode && hasTakeoff && (
               <Button
                 size="sm"
                 variant="outline"
@@ -1130,19 +1133,19 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {/* Quick action: Mark Ready */}
-            {canEdit && isDraft && hasTakeoff && (
+            {canManageFromView && isDraft && hasTakeoff && (
               <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => handleStatusChange("ready")}>
                 <Send className="h-3.5 w-3.5" /> Mark Ready
               </Button>
             )}
             {/* Delete Draft Work Order */}
-            {canEdit && isDraft && (
+            {canManageFromView && isDraft && (
               <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setShowDeleteDialog(true)}>
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
             )}
             {/* Create Pickup WO — only for MPT/Rental parent WOs */}
-            {canEdit && !workOrder?.is_pickup && hasTakeoff && !pickupWO && takeoffs.some(t => ["MPT", "RENTAL"].includes(t.work_type)) && (
+            {canManageFromView && !workOrder?.is_pickup && hasTakeoff && !pickupWO && takeoffs.some(t => ["MPT", "RENTAL"].includes(t.work_type)) && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -1157,7 +1160,7 @@ const WorkOrderDetail = ({
                     });
                     if (response.ok) {
                       const result = await response.json();
-                      router.push(`/l/jobs/${workOrder?.job_id}/work-orders/${result.workOrder.id}/view`);
+                      router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${result.workOrder.id}`);
                     } else {
                       const error = await response.json();
                       toast.error(error.error || 'Failed to create pickup work order');
@@ -1172,8 +1175,8 @@ const WorkOrderDetail = ({
               </Button>
             )}
             {/* Link to existing Pickup WO */}
-            {pickupWO && (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/${pickupWO.id}/view`)}>
+            {isViewMode && pickupWO && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${pickupWO.id}`)}>
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
               </Button>
             )}

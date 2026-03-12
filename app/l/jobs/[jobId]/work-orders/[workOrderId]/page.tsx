@@ -13,5 +13,5 @@ export default async function WorkOrderPage({
   if (workOrderId === "new") {
     redirect(`/l/jobs/${jobId}/work-orders/new${qs}`);
   }
-  redirect(`/l/jobs/${jobId}/work-orders/${workOrderId}/view${qs}`);
+  redirect(`/l/jobs/${jobId}/work-orders/view/${workOrderId}${qs}`);
 }
