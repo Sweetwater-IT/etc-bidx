@@ -648,20 +648,13 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                         {item.retainageType === 'percent' ? `${item.retainageValue}%` : `$${item.retainageValue}`}
                       </span>
                     ) : (
-                      <div className="flex items-center gap-1 w-full">
-                        <div className="flex w-full gap-1">
-                          <div className="flex-[3] min-w-0">
-                            <InputGroup
-                              value={item.retainageValue?.toString() || ''}
-                              onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
-                              type={item.retainageType}
-                              onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
-                              className="h-7 text-xs"
-                              inputClassName="flex-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      <InputGroup
+                        value={item.retainageValue?.toString() || ''}
+                        onValueChange={(value) => updateRow(item.id, 'retainageValue', parseFloat(value) || 0)}
+                        type={item.retainageType}
+                        onTypeChange={(type) => updateRow(item.id, 'retainageType', type)}
+                        className="h-7 text-xs"
+                      />
                     )}
                   </TableCell>
                   <TableCell className="p-1.5 text-right text-xs font-medium text-primary">

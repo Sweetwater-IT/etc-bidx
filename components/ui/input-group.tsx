@@ -25,19 +25,19 @@ export function InputGroup({
   disabled = false
 }: InputGroupProps) {
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex items-center w-[140px] ${className}`}>
       <Input
         type="number"
         step="0.01"
         min="0"
-        className={`flex-1 rounded-r-none border-r-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${inputClassName}`}
+        className={`flex-1 min-w-0 rounded-r-none border-r-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${inputClassName}`}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
         disabled={disabled}
       />
       <Select value={type} onValueChange={onTypeChange} disabled={disabled}>
-        <SelectTrigger className="w-[44px] rounded-l-none border-l-0">
+        <SelectTrigger className="w-[44px] flex-shrink-0 rounded-l-none border-l-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
