@@ -82,6 +82,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 /* ─── Status config ─── */
 
@@ -892,12 +893,30 @@ const WorkOrderDetail = ({
       ? "Review work order details, status, and linked takeoff information."
       : "Update work order details, items, and execution readiness.";
 
+  const backToTakeoffId = workOrder?.takeoff_id || takeoffs[0]?.id;
+  const backToTakeoffPath = backToTakeoffId && workOrder?.job_id
+    ? `/l/${workOrder.job_id}/takeoffs/view/${backToTakeoffId}`
+    : null;
+  const backToJobPath = workOrder?.job_id ? `/l/${workOrder.job_id}` : null;
+  const backLabel = backToTakeoffPath ? "Takeoff" : "Job";
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Sticky Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3 min-w-0">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+      <StickyPageHeader
+        backLabel={backLabel}
+        onBack={() => {
+          if (backToTakeoffPath) {
+            router.push(backToTakeoffPath);
+            return;
+          }
+          if (backToJobPath) {
+            router.push(backToJobPath);
+            return;
+          }
+          router.back();
+        }}
+        leftContent={
+          <div className="flex items-center gap-2 min-w-0 flex-1">
               <h1 className="text-sm font-semibold text-foreground truncate">
                 {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
               </h1>
@@ -913,17 +932,15 @@ const WorkOrderDetail = ({
               {(workOrder?.is_pickup) && (
                 <Badge className="text-[10px] font-bold bg-orange-500/15 text-orange-700 shrink-0">Pickup</Badge>
               )}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
+          </div>
+        }
+        rightContent={
+          <>
               {lastSavedAt && (
                 <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
                   Last saved {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               )}
-            {isViewMode && (
-              <Button variant="outline" size="sm" className="shrink-0" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
-            )}
             {isViewMode && workOrder?.job_id && (
               <Button
                 size="sm"
@@ -1199,9 +1216,9 @@ const WorkOrderDetail = ({
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
               </Button>
             )}
-            </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 overflow-x-hidden">
         <PageTitleBlock title={pageTitle} description={pageDescription} />

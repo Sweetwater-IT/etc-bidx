@@ -6,11 +6,12 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Download, ClipboardList } from "lucide-react";
+import { Edit, Download, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
@@ -42,12 +43,7 @@ export default function TakeoffViewPage({ params }: any) {
         <SiteHeader />
         <Suspense fallback={null}>
           <div className="min-h-screen bg-background overflow-x-hidden">
-            {/* Sticky Header */}
-            <header className="border-b bg-card sticky top-0 z-10">
-              <div className="max-w-7xl mx-auto px-4 h-14 flex items-center">
-                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
-              </div>
-            </header>
+            <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
               <PageTitleBlock
@@ -152,23 +148,22 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   };
 
   return (
-    <div className="w-full min-w-0 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <Button variant="ghost" onClick={() => router.push(`/l/${jobId}`)} className="gap-2 h-8 px-2 shrink-0">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
+    <StickyPageHeader
+      backLabel="Job"
+      onBack={() => router.push(`/l/${jobId}`)}
+      leftContent={
         <div className="min-w-0">
           <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
           <p className="text-xs text-muted-foreground truncate">
             {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
           </p>
         </div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
+      }
+      rightContent={
+        <>
           <Button variant="outline" size="sm" onClick={handleEdit}>
-          <Edit className="h-3.5 w-3.5 mr-1.5" />
-          Edit
+            <Edit className="h-3.5 w-3.5 mr-1.5" />
+            Edit
           </Button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
             <Download className="h-3.5 w-3.5" />
@@ -185,7 +180,8 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               {loading ? "Creating…" : "Generate Work Order"}
             </Button>
           )}
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Lock, Edit, Pencil } from "lucide-react";
+import { Lock, Pencil } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
@@ -21,6 +21,7 @@ import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { saveContract } from "@/lib/api-client";
 import isEqual from "lodash/isEqual";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -554,38 +555,33 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Button variant="ghost" onClick={async () => { 
-            // Cancel any pending contract creation timeout
-            if (saveTimeoutRef.current) {
-              clearTimeout(saveTimeoutRef.current);
-              saveTimeoutRef.current = null;
-            }
-            if (!isViewMode) await manualSave(); 
-            router.push("/l/contracts"); 
-          }} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Contracts
-          </Button>
-          <div className="flex items-center gap-3">
-            {/* Show Edit button in view mode, SaveStatusIndicator in edit mode */}
-            {isViewMode ? (
-              <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
-                <Pencil className="h-4 w-4" />
-                Edit Contract
-              </Button>
-            ) : (
-              <SaveStatusIndicator
-                status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
-                lastSavedAt={lastSavedAt}
-                onManualSave={manualSave}
-                isSaving={isSaving}
-              />
-            )}
-          </div>
-        </div>
-      </header>
+      <StickyPageHeader
+        backLabel="Contracts"
+        onBack={async () => {
+          // Cancel any pending contract creation timeout
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+          }
+          if (!isViewMode) await manualSave();
+          router.push("/l/contracts");
+        }}
+        rightContent={
+          isViewMode ? (
+            <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
+              <Pencil className="h-4 w-4" />
+              Edit Contract
+            </Button>
+          ) : (
+            <SaveStatusIndicator
+              status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
+              lastSavedAt={lastSavedAt}
+              onManualSave={manualSave}
+              isSaving={isSaving}
+            />
+          )
+        }
+      />
 
       {/* Signed contract info banner */}
       {isSigned && (

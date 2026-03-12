@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
@@ -47,23 +46,17 @@ export default function TakeoffEditPageHeader({
   }, [takeoffId]);
 
   return (
-    <>
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <Button
-          variant="ghost"
-          onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoffId}`)}
-          className="gap-2 shrink-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
+    <StickyPageHeader
+      backLabel="Job"
+      onBack={() => router.push(`/l/${jobId}`)}
+      leftContent={
         <div className="min-w-0">
           <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Edit Takeoff"}</h1>
           <p className="text-xs text-muted-foreground truncate">
             {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
           </p>
         </div>
-      </div>
-    </>
+      }
+    />
   );
 }
