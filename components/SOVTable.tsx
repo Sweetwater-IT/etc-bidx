@@ -189,12 +189,35 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
 
   const selectMasterItem = async (rowId: string, master: SovMasterItem) => {
     const effectiveId = contractId || jobId;
-    if (!effectiveId) {
-      console.error('[SOVTable] No effective ID (jobId or contractId) available for item selection');
-      return;
-    }
 
     console.log('[SOVTable] Selecting master item:', { rowId, master, effectiveId, isContract: !!contractId });
+
+    // If no effectiveId yet (new unsaved contract), update local state optimistically.
+    // useSovItems will persist the items once a contractId becomes available.
+    if (!effectiveId) {
+      console.log('[SOVTable] No effectiveId yet — updating local state optimistically');
+      updateItems(
+        items.map((item) =>
+          item.id === rowId
+            ? {
+                ...item,
+                itemNumber: master.item_number,
+                description: master.display_name,
+                uom: 'EA',
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+                extendedPrice: item.extendedPrice || 0,
+                retainageType: item.retainageType || 'percent',
+                retainageValue: item.retainageValue || 0,
+                retainageAmount: item.retainageAmount || 0,
+              }
+            : item
+        )
+      );
+      setSelectorOpen(null);
+      setSelectorSearch('');
+      return;
+    }
 
     try {
       // Immediately create database record when item is selected

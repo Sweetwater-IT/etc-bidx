@@ -55,7 +55,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
     }
   }, [id, isContract]);
 
-  // Load items on mount and jobId change
+  // Load items on mount and id change
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
@@ -363,6 +363,16 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
       console.log('[SOV save] In-flight reference cleared');
     }
   }, [id, isContract]);
+
+  // When id transitions from undefined to a real value, persist any locally-queued items
+  const prevIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (id && !prevIdRef.current && items.length > 0) {
+      console.log('[useSovItems] id became available, triggering save for queued items');
+      saveItems(items);
+    }
+    prevIdRef.current = id;
+  }, [id, items, saveItems]);
 
   // Debounced save
   const scheduleSave = useCallback(() => {
