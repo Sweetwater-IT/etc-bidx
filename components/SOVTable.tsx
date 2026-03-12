@@ -5,8 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { InputGroup } from '@/components/ui/input-group';
-console.log('🔧 SOVTable: InputGroup imported successfully');
 import { useSovItems } from '@/hooks/useSovItems';
 import {
   Dialog,
@@ -88,19 +86,6 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function parseRetainageDraft(raw: string) {
-  // Allow users to type partial states without us forcing a number
-  // e.g. '', '.', '0.', '10.'
-  const trimmed = raw.trim();
-  if (!trimmed || trimmed === '.') return { ok: false as const };
-
-  // Normalize comma to dot for accidental locale input
-  const normalized = trimmed.replace(',', '.');
-  const n = Number.parseFloat(normalized);
-  if (Number.isNaN(n)) return { ok: false as const };
-  return { ok: true as const, value: n };
-}
-
 export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
@@ -143,7 +128,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
 
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('percent');
-  const [bulkValue, setBulkValue] = useState('');
+  const [bulkValueDigits, setBulkValueDigits] = useState('');
 
   // Notes editing state
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
@@ -435,8 +420,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   };
 
   const applyBulkRetainage = () => {
-    const parsed = parseRetainageDraft(bulkValue);
-    let val = parsed.ok ? parsed.value : 0;
+    let val = bulkValueDigits ? (parseInt(bulkValueDigits, 10) || 0) / 100 : 0;
 
     if (bulkType === 'percent') val = clampNumber(val, 0, 100);
     val = Math.round(val * 100) / 100;
@@ -490,22 +474,21 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <div className="w-[180px]">
-            <InputGroup
-              value={bulkValue}
-              onValueChange={setBulkValue}
-              type={bulkType}
-              onTypeChange={(type) => setBulkType(type)}
-              placeholder="0.00"
-              className="h-7 text-xs"
-              ariaLabel="Bulk retainage"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  applyBulkRetainage();
-                }
-              }}
+          <div className="flex items-center gap-1">
+            <CurrencyInput
+              value={bulkValueDigits}
+              onChange={setBulkValueDigits}
+              className="h-7 text-xs text-right w-[100px]"
             />
+            <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
+              <SelectTrigger className="h-7 w-14 text-xs px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percent">%</SelectItem>
+                <SelectItem value="dollar">$</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
@@ -702,21 +685,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                       </span>
                     ) : (
                       <div className="flex items-center justify-end gap-1">
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          min="0"
-                          className="h-7 text-xs text-right w-[90px]"
-                          value={item.retainageValue || ''}
-                          onChange={(e) => {
-                            const nextValue = parseFloat(e.target.value);
-                            updateRetainage(
-                              item.id,
-                              item.retainageType,
-                              Number.isNaN(nextValue) ? 0 : nextValue
-                            );
-                          }}
+                        <CurrencyInput
+                          value={Math.round(item.retainageValue * 100).toString()}
+                          onChange={(digits) =>
+                            updateRetainage(item.id, item.retainageType, (parseInt(digits || '0', 10) || 0) / 100)
+                          }
+                          className="h-7 text-xs text-right w-[100px]"
                         />
                         <Select
                           value={item.retainageType}
