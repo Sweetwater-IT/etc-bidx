@@ -546,6 +546,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <Button variant="ghost" onClick={async () => { 
+            // Cancel any pending contract creation timeout
+            if (saveTimeoutRef.current) {
+              clearTimeout(saveTimeoutRef.current);
+              saveTimeoutRef.current = null;
+            }
             if (!isViewMode) await manualSave(); 
             router.push("/l/contracts"); 
           }} className="gap-2">
