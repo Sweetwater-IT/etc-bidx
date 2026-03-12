@@ -309,7 +309,7 @@ export const MPTSignTable = ({
       { key: 'qty', label: 'Qty', width: 'w-32' },
       { key: 'structure', label: 'Structure', width: 'w-40' },
       { key: 'bLights', label: 'B-Lights', width: 'w-24' },
-      { key: 'sqft', label: 'Sq Ft', width: 'w-24' },
+      { key: 'sqft', label: 'Sq Ft', width: 'w-32' },
       { key: 'material', label: 'Material', width: 'w-24' },
       { key: 'cover', label: 'Cover', width: 'w-16' },
     ];
@@ -600,7 +600,7 @@ export const MPTSignTable = ({
             value={row.dimensionLabel}
             onChange={(e) => updateRow(row.id, { dimensionLabel: e.target.value })}
             placeholder="e.g. 48x96"
-            disabled={disabled}
+            disabled={disabled || !!row.signDesignation}
           />
         );
       case 'sheeting':
@@ -693,14 +693,19 @@ export const MPTSignTable = ({
         );
       case 'sqft':
         return (
-          <Input
-            type="number"
-            step="0.01"
-            className="h-8 text-xs w-16 w-full"
-            value={row.sqft}
-            onChange={(e) => updateRow(row.id, { sqft: parseFloat(e.target.value) || 0 })}
-            disabled={disabled}
-          />
+          <div className="flex items-center">
+            <Input
+              type="number"
+              step="0.01"
+              className="h-8 text-xs flex-1 rounded-r-none border-r-0"
+              value={row.sqft}
+              onChange={(e) => updateRow(row.id, { sqft: Math.round((parseFloat(e.target.value) || 0) * 100) / 100 })}
+              disabled={disabled}
+            />
+            <span className="h-8 px-2 bg-muted border border-l-0 rounded-r flex items-center text-xs text-muted-foreground">
+              sq ft
+            </span>
+          </div>
         );
       case 'material':
         return (

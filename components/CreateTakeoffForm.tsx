@@ -1394,56 +1394,60 @@ export const CreateTakeoffForm = ({
         {additionalItems.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">No additional items.</div>
         ) : (
-          <div className="divide-y">
-            {additionalItems.map((item) => (
-              <div key={item.id} className="px-5 py-2.5 flex items-start gap-3 flex-wrap">
-                <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                  <SelectTrigger className="h-8 text-xs w-[220px]"><SelectValue placeholder="Select item…" /></SelectTrigger>
-                  <SelectContent>
-                    {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                    <SelectItem value="__custom">Custom…</SelectItem>
-                  </SelectContent>
-                </Select>
-                {item.name === "__custom" && (
-                  <Input className="h-8 text-xs w-[140px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom item name" />
-                )}
-                {workType === "SERVICE" ? (
-                  <div className="flex flex-col items-start gap-0.5">
-                    <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
-                    <QuantityInput
-                      value={item.quantity || 1}
-                      min={1}
-                      onChange={(value) =>
-                        setAdditionalItems((prev) =>
-                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
-                        )
-                      }
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-start gap-0.5">
-                    <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
-                    <QuantityInput
-                      value={item.quantity || 1}
-                      min={1}
-                      onChange={(value) =>
-                        setAdditionalItems((prev) =>
-                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
-                        )
-                      }
-                    />
-                  </div>
-                )}
-                {item.name !== "__custom" && (
-                  <Input className="h-8 text-xs w-[280px]" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
-                )}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
-                  <Trash2 className="h-3 w-3 text-destructive" />
-                </Button>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
+              <thead className="bg-muted/20">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/3">Item</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/6">Quantity</th>
+                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/2">Notes</th>
+                  <th className="px-4 py-2 w-12"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {additionalItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-muted/10">
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                          <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                          <SelectContent>
+                            {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                            <SelectItem value="__custom">Custom…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {item.name === "__custom" && (
+                          <Input className="h-8 text-xs w-32" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom name" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <QuantityInput
+                        value={item.quantity || 1}
+                        min={1}
+                        onChange={(value) =>
+                          setAdditionalItems((prev) =>
+                            prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      {item.name !== "__custom" && (
+                        <Input className="h-8 text-xs w-full" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
