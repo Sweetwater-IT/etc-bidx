@@ -130,7 +130,7 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
       if (woResponse.ok) {
         const result = await woResponse.json();
         toast.success('Work order generated successfully!');
-        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}`);
+        router.push(`/l/jobs/${jobId}/work-orders/${result.workOrder.id}/edit`);
       } else {
         const err = await woResponse.json();
         toast.error(err.error || 'Failed to generate work order');
@@ -276,9 +276,10 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
                 <div className="text-sm font-medium font-mono">{formattedWorkOrderNumber || "—"}</div>
                 {takeoff.work_order_id && (
                   <button
-                    onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}`)}
+                    onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/view`)}
                     className="text-primary hover:text-primary/80 transition-colors p-1 rounded hover:bg-primary/10"
                     title="View Work Order"
+                    type="button"
                   >
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>

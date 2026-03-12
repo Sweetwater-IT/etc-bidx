@@ -239,8 +239,8 @@ export const ScheduleOfValues = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <Table>
+            <div className="space-y-4 overflow-x-auto">
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[100px]">Item #</TableHead>

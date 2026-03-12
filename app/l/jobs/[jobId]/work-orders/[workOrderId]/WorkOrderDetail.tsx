@@ -157,7 +157,15 @@ const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
   return asString.padStart(3, "0");
 };
 
-const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; takeoffId?: string }) => {
+const WorkOrderDetail = ({
+  workOrderId,
+  takeoffId,
+  mode = "edit",
+}: {
+  workOrderId: string;
+  takeoffId?: string;
+  mode?: "view" | "edit";
+}) => {
   const router = useRouter();
   const { user } = useAuth();
   const isAdmin = !!user;
@@ -482,8 +490,8 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
 
         const result = await response.json();
         toast.success(`Work order "${editTitle}" created successfully`);
-        // Navigate to the newly created work order with takeoffId to enable immediate loading
-        router.push(`/l/${dbJob?.id}/work-orders/${result.workOrder.id}?takeoffId=${takeoffId}`);
+        // Navigate to edit (to preserve the "generate → edit first" flow) with takeoffId to enable immediate loading
+        router.push(`/l/jobs/${dbJob?.id}/work-orders/${result.workOrder.id}/edit?takeoffId=${takeoffId}`);
       } else {
         // Update existing work order
         const response = await fetch(`/api/workorders/${workOrderId}`, {
@@ -540,6 +548,12 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
           setWorkOrder(data);
         }
         fetchRelated();
+
+        // When saving from the edit page, send the user back to the read-only view
+        if (mode === "edit" && workOrder?.job_id) {
+          const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
+          router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/view${qs}`);
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save work order');
@@ -850,14 +864,15 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
   }
 
   const statusConfig = getStatusConfig(workOrder?.status || "draft");
-  const canEdit = isAdmin || isPM;
+  const isViewMode = mode === "view";
+  const canEdit = (isAdmin || isPM) && !isViewMode;
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
       <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
         {/* ─── Page Title Bar — matches Takeoff style ─── */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <ClipboardList className="h-5 w-5 text-primary" />
@@ -887,6 +902,18 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
               </span>
             )}
             <Button variant="outline" size="sm" onClick={() => dbJob ? router.push(`/l/${dbJob.id}`) : router.back()}>Back</Button>
+            {isViewMode && workOrder?.job_id && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
+                  router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/edit${qs}`);
+                }}
+              >
+                Edit
+              </Button>
+            )}
             {canEdit && (
               <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -1165,6 +1192,25 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                 <Plus className="h-3.5 w-3.5" /> Create or Attach Takeoff
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Backlink to linked takeoff (when present) */}
+        {!!workOrder?.takeoff_id && !!workOrder?.job_id && (
+          <div className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground shrink-0">Linked takeoff</span>
+              <span className="text-xs font-mono truncate">{workOrder.takeoff_id}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1.5 shrink-0"
+              onClick={() => router.push(`/l/${workOrder.job_id}/takeoffs/view/${workOrder.takeoff_id}`)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> View Takeoff
+            </Button>
           </div>
         )}
 
@@ -1475,7 +1521,12 @@ const WorkOrderDetail = ({ workOrderId, takeoffId }: { workOrderId: string; take
                           <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => router.push(`/l/${dbJob?.id}/takeoff/${t.id}`)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => router.push(`/l/${dbJob?.id}/takeoffs/view/${t.id}`)}
+                          >
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </TableCell>
