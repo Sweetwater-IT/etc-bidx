@@ -108,7 +108,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const checklistTitle = isViewMode
     ? `Contract for ${jobName}`
     : isNew
-      ? `New Contract for ${jobName}`
+      ? (projectInfo.projectName?.trim() ? `New Contract for ${jobName}` : "New Contract")
       : `Edit Contract for ${jobName}`;
   const checklistDescription = isViewMode
     ? "Review contract requirements, schedule of values, and supporting documents."

@@ -131,17 +131,24 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
 
-  const filteredItems = useMemo(
-    () =>
-      sovProducts.filter(
-        (p) =>
-          p.item_number.toLowerCase().includes(selectorSearch.toLowerCase()) ||
-          p.work_type.toLowerCase().includes(selectorSearch.toLowerCase()) ||
-          p.display_name.toLowerCase().includes(selectorSearch.toLowerCase()) ||
-          p.description.toLowerCase().includes(selectorSearch.toLowerCase())
-      ),
-    [sovProducts, selectorSearch]
-  );
+  const filteredItems = useMemo(() => {
+    if (!selectorSearch.trim()) return sovProducts;
+
+    const searchTerm = selectorSearch.toLowerCase().trim();
+    const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
+
+    return sovProducts.filter((p) => {
+      const searchableText = [
+        p.item_number,
+        p.work_type,
+        p.display_name,
+        p.description
+      ].join(' ').toLowerCase();
+
+      // Check if all search words are present in the searchable text
+      return searchWords.every(word => searchableText.includes(word));
+    });
+  }, [sovProducts, selectorSearch]);
 
   const addRow = () => {
     const newItem: ScheduleOfValuesItem = {
