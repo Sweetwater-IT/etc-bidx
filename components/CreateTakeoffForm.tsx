@@ -51,8 +51,29 @@ const WORK_TYPES = [
   { value: "LANE_CLOSURE", label: "Lane Closure" },
   { value: "SERVICE", label: "Service" },
   { value: "DELIVERY", label: "Delivery" },
+  { value: "CUSTOM", label: "Custom" },
   { value: "RENTAL", label: "Rental" },
 ];
+
+const normalizeSovWorkTypeToTakeoffValue = (workType?: string | null): string | null => {
+  if (!workType) return null;
+
+  const normalized = workType.trim().toUpperCase();
+
+  const mapping: Record<string, string> = {
+    MPT: "MPT",
+    "PERMANENT SIGN": "PERMANENT_SIGNS",
+    "PERMANENT SIGNS": "PERMANENT_SIGNS",
+    FLAGGING: "FLAGGING",
+    "LANE CLOSURE": "LANE_CLOSURE",
+    SERVICE: "SERVICE",
+    DELIVERY: "DELIVERY",
+    CUSTOM: "CUSTOM",
+    OTHER: "CUSTOM",
+  };
+
+  return mapping[normalized] || null;
+};
 
 const MPT_SECTIONS = [
   {
@@ -154,7 +175,13 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = 
         const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
         if (response.ok) {
           const data = await response.json();
-          const workTypes = [...new Set(data.data.map((item: any) => item.work_type).filter((wt): wt is string => Boolean(wt)))] as string[];
+          const workTypes = [
+            ...new Set(
+              (data.data || [])
+                .map((item: any) => normalizeSovWorkTypeToTakeoffValue(item.work_type))
+                .filter((wt): wt is string => Boolean(wt))
+            ),
+          ] as string[];
           setAllowedWorkTypes(workTypes);
         } else {
           // If no SOV items exist, allow all work types (backward compatibility)

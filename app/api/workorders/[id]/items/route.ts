@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+const normalizeItemNumber = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+async function getAllowedItemNumbersForWorkOrder(workOrderId: string): Promise<Set<string>> {
+  const { data: wo } = await supabase
+    .from('work_orders_l')
+    .select('job_id')
+    .eq('id', workOrderId)
+    .single();
+
+  if (!wo?.job_id) return new Set<string>();
+
+  const { data: entries } = await supabase
+    .from('sov_entries')
+    .select('sov_items(item_number)')
+    .eq('job_id', wo.job_id);
+
+  const allowed = new Set<string>();
+  for (const entry of entries || []) {
+    const itemNumber = normalizeItemNumber((entry as any)?.sov_items?.item_number);
+    if (itemNumber) allowed.add(itemNumber);
+  }
+
+  return allowed;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -52,6 +77,12 @@ export async function POST(
     }
 
     if (action === 'add') {
+      const allowedItemNumbers = await getAllowedItemNumbersForWorkOrder(id);
+      const requestedItemNumber = normalizeItemNumber(itemData.item_number);
+      if (requestedItemNumber && !allowedItemNumbers.has(requestedItemNumber)) {
+        return NextResponse.json({ error: `Item number ${requestedItemNumber} is not on this job's Schedule of Values` }, { status: 400 });
+      }
+
       // Add new item
       const nextSort = body.nextSort || 0;
       const { data, error } = await supabase
@@ -79,6 +110,14 @@ export async function POST(
       // Update existing item
       const { itemId, updates } = itemData;
       console.log('[WO Items API] Update request:', { itemId: itemId, itemIdType: typeof itemId, updates });
+
+      if (updates?.item_number !== undefined) {
+        const allowedItemNumbers = await getAllowedItemNumbersForWorkOrder(id);
+        const requestedItemNumber = normalizeItemNumber(updates.item_number);
+        if (requestedItemNumber && !allowedItemNumbers.has(requestedItemNumber)) {
+          return NextResponse.json({ error: `Item number ${requestedItemNumber} is not on this job's Schedule of Values` }, { status: 400 });
+        }
+      }
 
       // The itemId is the database primary key - use it directly
       let dbItemId: string | number;

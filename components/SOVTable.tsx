@@ -135,6 +135,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       sovProducts.filter(
         (p) =>
           p.item_number.toLowerCase().includes(selectorSearch.toLowerCase()) ||
+          p.work_type.toLowerCase().includes(selectorSearch.toLowerCase()) ||
           p.display_name.toLowerCase().includes(selectorSearch.toLowerCase()) ||
           p.description.toLowerCase().includes(selectorSearch.toLowerCase())
       ),
@@ -582,35 +583,53 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                                 <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
                                   No matching items found.
                                 </CommandEmpty>
-                                {/* Items grouped by work type in fixed order */}
-                                {(['MPT', 'LANE CLOSURE', 'FLAGGING', 'PERMANENT SIGN'] as const).map((workType) => {
-                                  const groupItems = filteredItems.filter(p => p.work_type === workType);
-                                  if (groupItems.length === 0) return null;
-                                  return (
-                                    <CommandGroup key={workType} heading={workType}>
-                                      {groupItems.map((p) => (
-                                        <CommandItem
-                                          key={p.id}
-                                          value={`${p.item_number} ${p.display_name}`}
-                                          onSelect={() => {
-                                            selectMasterItem(item.id, p);
-                                            setSelectorOpen(null);
-                                          }}
-                                          className="text-xs cursor-pointer"
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                          <span className="truncate">{p.display_name}</span>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  );
-                                })}
+                                {/* Items grouped by work type */}
+                                {(() => {
+                                  const preferredOrder = ['MPT', 'PERMANENT SIGN', 'LANE CLOSURE', 'FLAGGING', 'SERVICE', 'DELIVERY', 'CUSTOM', 'OTHER'];
+                                  const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
+                                    const key = (curr.work_type || 'OTHER').trim().toUpperCase();
+                                    if (!acc[key]) acc[key] = [];
+                                    acc[key].push(curr);
+                                    return acc;
+                                  }, {});
+
+                                  const orderedWorkTypes = [
+                                    ...preferredOrder.filter((type) => grouped[type]?.length),
+                                    ...Object.keys(grouped)
+                                      .filter((type) => !preferredOrder.includes(type))
+                                      .sort(),
+                                  ];
+
+                                  return orderedWorkTypes.map((workType) => {
+                                    const groupItems = grouped[workType] || [];
+                                    if (groupItems.length === 0) return null;
+
+                                    return (
+                                      <CommandGroup key={workType} heading={workType}>
+                                        {groupItems.map((p) => (
+                                          <CommandItem
+                                            key={p.id}
+                                            value={`${p.item_number} ${p.display_name}`}
+                                            onSelect={() => {
+                                              selectMasterItem(item.id, p);
+                                              setSelectorOpen(null);
+                                            }}
+                                            className="text-xs cursor-pointer"
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                            <span className="truncate">{p.display_name}</span>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    );
+                                  });
+                                })()}
                               </CommandList>
                             </Command>
                           </div>

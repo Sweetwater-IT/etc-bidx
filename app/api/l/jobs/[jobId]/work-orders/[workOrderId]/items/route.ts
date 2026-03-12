@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+const normalizeItemNumber = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+async function getAllowedItemNumbersForJob(jobId: string): Promise<Set<string>> {
+  const { data: entries } = await supabase
+    .from('sov_entries')
+    .select('sov_items(item_number)')
+    .eq('job_id', jobId);
+
+  const allowed = new Set<string>();
+  for (const entry of entries || []) {
+    const itemNumber = normalizeItemNumber((entry as any)?.sov_items?.item_number);
+    if (itemNumber) allowed.add(itemNumber);
+  }
+
+  return allowed;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string, workOrderId: string }> }
@@ -15,6 +32,12 @@ export async function POST(
     }
 
     if (action === 'add') {
+      const allowedItemNumbers = await getAllowedItemNumbersForJob(jobId);
+      const requestedItemNumber = normalizeItemNumber(itemData.item_number);
+      if (requestedItemNumber && !allowedItemNumbers.has(requestedItemNumber)) {
+        return NextResponse.json({ error: `Item number ${requestedItemNumber} is not on this job's Schedule of Values` }, { status: 400 });
+      }
+
       // Add new item
       const nextSort = body.nextSort || 0;
       const { data, error } = await supabase
@@ -41,6 +64,14 @@ export async function POST(
     } else if (action === 'update') {
       // Update existing item
       const { itemId, updates } = itemData;
+
+      if (updates?.item_number !== undefined) {
+        const allowedItemNumbers = await getAllowedItemNumbersForJob(jobId);
+        const requestedItemNumber = normalizeItemNumber(updates.item_number);
+        if (requestedItemNumber && !allowedItemNumbers.has(requestedItemNumber)) {
+          return NextResponse.json({ error: `Item number ${requestedItemNumber} is not on this job's Schedule of Values` }, { status: 400 });
+        }
+      }
 
       // Create a copy of updates to modify
       const processedUpdates = { ...updates };
