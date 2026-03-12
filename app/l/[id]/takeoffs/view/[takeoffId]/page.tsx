@@ -20,10 +20,9 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
-export default async function TakeoffViewPage({ params }: any) {
-  const resolvedParams = await params;
-  const jobId = resolvedParams.id;
-  const takeoffId = resolvedParams.takeoffId;
+export default function TakeoffViewPage({ params }: any) {
+  const jobId = params.id;
+  const takeoffId = params.takeoffId;
 
   return (
     <SidebarProvider
@@ -38,7 +37,7 @@ export default async function TakeoffViewPage({ params }: any) {
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
+          <div className="min-h-screen bg-background overflow-x-hidden">
             {/* Sticky Header */}
             <header className="border-b bg-card sticky top-0 z-10">
               <div className="max-w-7xl mx-auto px-4 h-14 flex items-center">
@@ -46,10 +45,8 @@ export default async function TakeoffViewPage({ params }: any) {
               </div>
             </header>
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
-                <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
-              </div>
+            <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+              <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
             </div>
           </div>
         </Suspense>

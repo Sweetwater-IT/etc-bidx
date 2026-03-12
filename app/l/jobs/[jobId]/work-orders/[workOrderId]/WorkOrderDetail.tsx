@@ -448,7 +448,7 @@ const WorkOrderDetail = ({
           });
       }
     }
-  }, [dbTakeoff, takeoffLoading, isNewWorkOrder, woItems.length]);
+  }, [dbTakeoff, takeoffLoading, isNewWorkOrder, woItems.length, takeoffId]);
 
   // Sync editing fields
   useEffect(() => {
@@ -881,11 +881,10 @@ const WorkOrderDetail = ({
   const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
-      <div className="w-full px-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
-        {/* ─── Page Title Bar — matches Takeoff style ─── */}
-        <div className="sticky top-0 z-30 -mx-6 px-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex h-14 items-center justify-between gap-3 min-w-0">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Sticky Header */}
+      <header className="border-b bg-card sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3 min-w-0">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <h1 className="text-sm font-semibold text-foreground truncate">
                 {(workOrder?.is_pickup) ? "Pickup Work Order" : "Work Order"}
@@ -1189,8 +1188,10 @@ const WorkOrderDetail = ({
               </Button>
             )}
             </div>
-          </div>
         </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6 overflow-x-hidden">
 
         {/* Takeoff Required Alert - only show if no takeoff is linked */}
         {!hasTakeoff && !loadingRelated && (

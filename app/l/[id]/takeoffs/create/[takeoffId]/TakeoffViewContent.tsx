@@ -146,12 +146,10 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-sm text-muted-foreground">Loading takeoff...</p>
-          </div>
+      <div className="py-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading takeoff...</p>
         </div>
       </div>
     );
@@ -159,19 +157,16 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
   if (!takeoff) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Takeoff not found</p>
-          </div>
+      <div className="py-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Takeoff not found</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-4 flex-1 overflow-x-hidden">
-      <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">
@@ -361,7 +356,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           </div>
         </div>
       )}
-        </div>
     </div>
   );
 }

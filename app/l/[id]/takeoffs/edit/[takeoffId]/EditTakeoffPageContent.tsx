@@ -19,12 +19,10 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-sm text-muted-foreground">Loading takeoff...</p>
-          </div>
+      <div className="py-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading takeoff...</p>
         </div>
       </div>
     );
@@ -32,24 +30,22 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
 
   if (error || !takeoff) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col">
-        <div className="w-full px-6 py-6 flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Failed to load takeoff</p>
-            <button
-              onClick={handleBack}
-              className="mt-4 text-sm text-primary hover:underline"
-            >
-              Go back
-            </button>
-          </div>
+      <div className="py-16 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Failed to load takeoff</p>
+          <button
+            onClick={handleBack}
+            className="mt-4 text-sm text-primary hover:underline"
+          >
+            Go back
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full px-6 py-6 overflow-x-hidden">
+    <div className="overflow-x-hidden">
       <CreateTakeoffForm
         jobId={jobId}
         onBack={handleBack}
