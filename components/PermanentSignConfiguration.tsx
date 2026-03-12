@@ -185,6 +185,7 @@ export const PermanentSignConfiguration = ({
           dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
           sheeting: updatedSign.sheeting as any,
           sqft: calcSqft(updatedSign.width, updatedSign.height),
+          totalSqft: Math.round(calcSqft(updatedSign.width, updatedSign.height) * (row.quantity || updatedSign.quantity || 1) * 100) / 100,
           quantity: updatedSign.quantity,
         } : row
       );
@@ -357,7 +358,7 @@ const PermanentSignTable = ({
       totalSqft: 0,
       isCustom: false,
       needsOrder: false,
-      material: "ALUMINUM",
+      material: defaultMaterial,
       secondarySigns: [],
     };
     onRowsChange([...rows, newRow]);

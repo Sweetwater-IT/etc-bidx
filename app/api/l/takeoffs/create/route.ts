@@ -1,6 +1,228 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+type JsonRecord = Record<string, any>;
+
+const roundTo = (value: number, decimals = 4) => {
+  const factor = 10 ** decimals;
+  return Math.round((Number(value) || 0) * factor) / factor;
+};
+
+const calcSqft = (width: number, height: number) => roundTo(((Number(width) || 0) * (Number(height) || 0)) / 144, 4);
+
+function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
+  const items: JsonRecord[] = [];
+
+  Object.entries(signRows || {}).forEach(([sectionKey, rows]) => {
+    if (!Array.isArray(rows)) return;
+
+    rows.forEach((row, index) => {
+      const width = Number(row?.width || 0);
+      const height = Number(row?.height || 0);
+      const sqft = calcSqft(width, height);
+      const quantity = Number(row?.quantity || 0);
+      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
+      const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
+        const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
+        return sum + roundTo(secSqft * quantity, 4);
+      }, 0);
+      const totalSqft = roundTo((Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4)) + secondaryTotal, 4);
+
+      items.push({
+        takeoff_id: takeoffId,
+        product_name: row?.signDesignation || row?.signDescription || 'MPT Sign',
+        category: `MPT:${sectionKey}`,
+        unit: 'SF',
+        quantity,
+        requisition_type: 'none',
+        notes: row?.signLegend || null,
+        in_stock_qty: 0,
+        to_order_qty: 0,
+        inventory_status: 'pending_review',
+        material: row?.material || null,
+        sign_details: row,
+        sign_description: row?.signDescription || null,
+        sheeting: row?.sheeting || null,
+        width_inches: width || null,
+        height_inches: height || null,
+        sqft,
+        total_sqft: totalSqft,
+        load_order: Number(row?.loadOrder || index + 1),
+        cover: Boolean(row?.cover),
+        secondary_signs: secondarySigns,
+      });
+    });
+  });
+
+  return items;
+}
+
+function buildPermanentItems(
+  takeoffId: string,
+  permanentSignRows: Record<string, any[]>,
+  permanentEntryRows: Record<string, any[]>
+) {
+  const items: JsonRecord[] = [];
+
+  Object.entries(permanentSignRows || {}).forEach(([itemNumber, rows]) => {
+    if (!Array.isArray(rows)) return;
+
+    rows.forEach((row, index) => {
+      const width = Number(row?.width || 0);
+      const height = Number(row?.height || 0);
+      const sqft = calcSqft(width, height);
+      const quantity = Number(row?.quantity || 0);
+      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
+      const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
+        const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
+        return sum + roundTo(secSqft * quantity, 4);
+      }, 0);
+      const totalSqft = roundTo((Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4)) + secondaryTotal, 4);
+
+      items.push({
+        takeoff_id: takeoffId,
+        product_name: row?.signDesignation || row?.signDescription || itemNumber || 'Permanent Sign',
+        category: `PERMANENT_SIGNS:${itemNumber}`,
+        unit: 'SF',
+        quantity,
+        requisition_type: 'none',
+        notes: row?.signLegend || row?.planSheetNum || null,
+        in_stock_qty: 0,
+        to_order_qty: 0,
+        inventory_status: 'pending_review',
+        material: row?.material || null,
+        sign_details: row,
+        sign_description: row?.signDescription || null,
+        sheeting: row?.sheeting || null,
+        width_inches: width || null,
+        height_inches: height || null,
+        sqft,
+        total_sqft: totalSqft,
+        load_order: index + 1,
+        cover: true,
+        secondary_signs: secondarySigns,
+      });
+    });
+  });
+
+  Object.entries(permanentEntryRows || {}).forEach(([itemNumber, rows]) => {
+    if (!Array.isArray(rows)) return;
+
+    rows.forEach((row, index) => {
+      items.push({
+        takeoff_id: takeoffId,
+        product_name: itemNumber || 'Permanent Sign Item',
+        category: `PERMANENT_SIGNS:${itemNumber}`,
+        unit: 'EA',
+        quantity: Number(row?.quantity || 0),
+        requisition_type: 'none',
+        notes: row?.description || null,
+        in_stock_qty: 0,
+        to_order_qty: 0,
+        inventory_status: 'pending_review',
+        material: null,
+        sign_details: row,
+        sign_description: row?.description || null,
+        sheeting: null,
+        width_inches: null,
+        height_inches: null,
+        sqft: null,
+        total_sqft: null,
+        load_order: index + 1,
+        cover: true,
+        secondary_signs: [],
+      });
+    });
+  });
+
+  return items;
+}
+
+function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: any[], rollingStockItems: any[], additionalItems: any[]) {
+  const items: JsonRecord[] = [];
+
+  vehicleItems.forEach((item, index) => {
+    items.push({
+      takeoff_id: takeoffId,
+      product_name: item?.vehicleType || 'Vehicle',
+      category: `${workType}:VEHICLE`,
+      unit: 'EA',
+      quantity: Number(item?.quantity || 0),
+      requisition_type: 'none',
+      notes: null,
+      in_stock_qty: 0,
+      to_order_qty: 0,
+      inventory_status: 'pending_review',
+      material: null,
+      sign_details: item,
+      sign_description: item?.vehicleType || null,
+      sheeting: null,
+      width_inches: null,
+      height_inches: null,
+      sqft: null,
+      total_sqft: null,
+      load_order: index + 1,
+      cover: true,
+      secondary_signs: [],
+    });
+  });
+
+  rollingStockItems.forEach((item, index) => {
+    items.push({
+      takeoff_id: takeoffId,
+      product_name: item?.equipmentLabel || item?.equipmentId || 'Rolling Stock',
+      category: `${workType}:ROLLING_STOCK`,
+      unit: 'EA',
+      quantity: 1,
+      requisition_type: 'none',
+      notes: null,
+      in_stock_qty: 0,
+      to_order_qty: 0,
+      inventory_status: 'pending_review',
+      material: null,
+      sign_details: item,
+      sign_description: item?.equipmentLabel || null,
+      sheeting: null,
+      width_inches: null,
+      height_inches: null,
+      sqft: null,
+      total_sqft: null,
+      load_order: index + 1,
+      cover: true,
+      secondary_signs: [],
+    });
+  });
+
+  additionalItems.forEach((item, index) => {
+    const productName = item?.name === '__custom' ? item?.description || 'Custom Item' : item?.name || 'Additional Item';
+    items.push({
+      takeoff_id: takeoffId,
+      product_name: productName,
+      category: `${workType}:ADDITIONAL`,
+      unit: 'EA',
+      quantity: Number(item?.quantity || 0),
+      requisition_type: 'none',
+      notes: item?.description || null,
+      in_stock_qty: 0,
+      to_order_qty: 0,
+      inventory_status: 'pending_review',
+      material: null,
+      sign_details: item,
+      sign_description: item?.description || null,
+      sheeting: null,
+      width_inches: null,
+      height_inches: null,
+      sqft: null,
+      total_sqft: null,
+      load_order: index + 1,
+      cover: true,
+      secondary_signs: [],
+    });
+  });
+
+  return items;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const {
@@ -126,9 +348,43 @@ export async function POST(request: NextRequest) {
       takeoff = newTakeoff;
     }
 
+    const normalizedItems = [
+      ...buildMptItems(takeoff.id, signRows || {}),
+      ...buildPermanentItems(takeoff.id, permanentSignRows || {}, permanentEntryRows || {}),
+      ...buildGeneralItems(takeoff.id, normalizedWorkType, vehicleItems || [], rollingStockItems || [], additionalItems || []),
+    ];
+
+    const { error: deleteItemsError } = await supabase
+      .from('takeoff_items_l')
+      .delete()
+      .eq('takeoff_id', takeoff.id);
+
+    if (deleteItemsError) {
+      console.error('Error clearing existing takeoff items:', deleteItemsError);
+      return NextResponse.json(
+        { error: 'Failed to sync takeoff items' },
+        { status: 500 }
+      );
+    }
+
+    if (normalizedItems.length > 0) {
+      const { error: insertItemsError } = await supabase
+        .from('takeoff_items_l')
+        .insert(normalizedItems);
+
+      if (insertItemsError) {
+        console.error('Error inserting takeoff items:', insertItemsError);
+        return NextResponse.json(
+          { error: 'Failed to sync takeoff items' },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       takeoff,
+      itemCount: normalizedItems.length,
     });
 
   } catch (error) {

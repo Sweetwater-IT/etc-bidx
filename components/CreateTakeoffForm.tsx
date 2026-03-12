@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -21,7 +22,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown, AlertTriangle } from "lucide-react";
+import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon } from "lucide-react";
+import { format, addDays, subDays } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,7 @@ import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { QuantityInput } from "@/components/ui/quantity-input";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { cn } from "@/lib/utils";
 
 interface Props {
   jobId: string;
@@ -159,6 +162,17 @@ const MPT_ADDITIONAL_ITEM_OPTIONS = [
   "SIGN STAND",
 ];
 
+const parseDateString = (value?: string | null) => {
+  if (!value) return undefined;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const toDateString = (value?: Date) => {
+  if (!value) return "";
+  return format(value, "yyyy-MM-dd");
+};
+
 export const CreateTakeoffForm = ({
   jobId,
   onBack,
@@ -266,6 +280,12 @@ export const CreateTakeoffForm = ({
 
   // Additional Items State
   const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string }[]>([]);
+
+  const isPermanentSigns = workType === "PERMANENT_SIGNS";
+
+  const installDateValue = parseDateString(installDate);
+  const pickupDateValue = parseDateString(pickupDate);
+  const neededByDateValue = parseDateString(neededByDate);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -513,6 +533,46 @@ export const CreateTakeoffForm = ({
   }, [workType, installDate]);
 
   // MPT Configuration Handlers
+  const handlePermanentInstallDateChange = (date?: Date) => {
+    const nextInstall = toDateString(date);
+    setInstallDate(nextInstall);
+
+    if (!date) return;
+
+    const currentPickup = parseDateString(pickupDate);
+    const currentNeededBy = parseDateString(neededByDate);
+
+    if (!currentPickup || currentPickup <= date) {
+      setPickupDate(toDateString(addDays(date, 1)));
+    }
+
+    if (!currentNeededBy || currentNeededBy >= date) {
+      setNeededByDate(toDateString(subDays(date, 1)));
+    }
+  };
+
+  const handlePermanentPickupDateChange = (date?: Date) => {
+    if (!date) {
+      setPickupDate("");
+      return;
+    }
+
+    const baseInstall = parseDateString(installDate);
+    const normalized = baseInstall && date <= baseInstall ? addDays(baseInstall, 1) : date;
+    setPickupDate(toDateString(normalized));
+  };
+
+  const handlePermanentNeededByDateChange = (date?: Date) => {
+    if (!date) {
+      setNeededByDate("");
+      return;
+    }
+
+    const baseInstall = parseDateString(installDate);
+    const normalized = baseInstall && date >= baseInstall ? subDays(baseInstall, 1) : date;
+    setNeededByDate(toDateString(normalized));
+  };
+
   const handleToggleSection = (key: string) => {
     if (activeSections.includes(key)) {
       setActiveSections((prev) => prev.filter((s) => s !== key));
@@ -895,6 +955,27 @@ export const CreateTakeoffForm = ({
                   onChange={(e) => setInstallDate(e.target.value)}
                 />
               </div>
+            ) : isPermanentSigns ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select install date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={handlePermanentInstallDateChange} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
@@ -933,6 +1014,33 @@ export const CreateTakeoffForm = ({
                   </div>
                 )}
               </div>
+            ) : isPermanentSigns ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !pickupDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {pickupDateValue ? format(pickupDateValue, "PPP") : "Select pickup date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={pickupDateValue}
+                      onSelect={handlePermanentPickupDateChange}
+                      disabled={(date) => Boolean(installDateValue && date <= installDateValue)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
@@ -946,12 +1054,38 @@ export const CreateTakeoffForm = ({
             )}
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
-              <Input
-                type="date"
-                className="text-sm"
-                value={neededByDate}
-                onChange={(e) => setNeededByDate(e.target.value)}
-              />
+              {isPermanentSigns ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !neededByDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={neededByDateValue}
+                      onSelect={handlePermanentNeededByDateChange}
+                      disabled={(date) => Boolean(installDateValue && date >= installDateValue)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Input
+                  type="date"
+                  className="text-sm"
+                  value={neededByDate}
+                  onChange={(e) => setNeededByDate(e.target.value)}
+                />
+              )}
               <span className="text-[9px] text-muted-foreground mt-1 block">Internal suspense date for build/sign shop prioritization</span>
             </div>
             {workType === "PERMANENT_SIGNS" ? (

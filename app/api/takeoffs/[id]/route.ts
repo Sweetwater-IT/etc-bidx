@@ -135,11 +135,23 @@ export async function GET(
       pickupTakeoff = child || null;
     }
 
+    const { data: takeoffItems, error: takeoffItemsError } = await supabase
+      .from('takeoff_items_l')
+      .select('*')
+      .eq('takeoff_id', id)
+      .is('deleted_at', null)
+      .order('load_order', { ascending: true });
+
+    if (takeoffItemsError) {
+      console.error('API: Error fetching takeoff items:', takeoffItemsError);
+    }
+
     console.log('API: Successfully fetched takeoff:', data);
     return NextResponse.json({
       ...data,
       parent_takeoff: parentTakeoff,
       pickup_takeoff: pickupTakeoff,
+      takeoff_items: takeoffItems || [],
     });
   } catch (error) {
     console.error('API: Unexpected error:', error);

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ClipboardList, Download, Send, Edit, FileText, ArrowRight } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
+import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 
 interface Props {
   jobId: string;
@@ -329,11 +330,18 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             )}
 
             {takeoff.work_type === "PERMANENT_SIGNS" && (
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  <p>Permanent signs configuration would be displayed here.</p>
-                </div>
-              </div>
+              <PermanentSignConfiguration
+                activeItems={takeoff.active_permanent_items || []}
+                signRows={takeoff.permanent_sign_rows || {}}
+                entryRows={takeoff.permanent_entry_rows || {}}
+                defaultSignMaterial={takeoff.default_permanent_sign_material || 'ALUMINUM'}
+                onToggleItem={() => {}}
+                onSignRowsChange={() => {}}
+                onEntryRowsChange={() => {}}
+                onDefaultMaterialChange={() => {}}
+                onApplyMaterialToAll={() => {}}
+                disabled={true}
+              />
             )}
 
             {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
@@ -351,6 +359,48 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {Array.isArray(takeoff.takeoff_items) && takeoff.takeoff_items.length > 0 && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Items</h2>
+          </div>
+          <div className="p-5 overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead className="bg-muted/20">
+                <tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dimensions</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sq Ft</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Sq Ft</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Material</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sheeting</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {takeoff.takeoff_items.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-muted/10">
+                    <td className="px-3 py-2 font-medium">{item.product_name}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{item.category}</td>
+                    <td className="px-3 py-2">{item.quantity}</td>
+                    <td className="px-3 py-2">
+                      {item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—'}
+                    </td>
+                    <td className="px-3 py-2">{item.sqft ?? '—'}</td>
+                    <td className="px-3 py-2">{item.total_sqft ?? '—'}</td>
+                    <td className="px-3 py-2">{item.material || '—'}</td>
+                    <td className="px-3 py-2">{item.sheeting || '—'}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{item.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
