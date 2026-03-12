@@ -1000,7 +1000,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
             </p>
           </div>
           <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.push("/l/jobs")}
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
             <Button
