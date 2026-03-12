@@ -36,6 +36,14 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
   const [loading, setLoading] = useState(true);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
+  const formattedWorkOrderNumber = (() => {
+    const raw = takeoff?.work_order_number;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return String(raw);
+    return String(Math.trunc(n)).padStart(3, '0');
+  })();
+
   // Load takeoff data
   useEffect(() => {
     const loadTakeoff = async () => {
@@ -265,7 +273,7 @@ export default function TakeoffViewContent({ jobId, takeoffId }: Props) {
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
               <div className="flex items-center gap-2">
-                <div className="text-sm font-medium font-mono">{takeoff.work_order_number || "—"}</div>
+                <div className="text-sm font-medium font-mono">{formattedWorkOrderNumber || "—"}</div>
                 {takeoff.work_order_id && (
                   <button
                     onClick={() => router.push(`/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}`)}

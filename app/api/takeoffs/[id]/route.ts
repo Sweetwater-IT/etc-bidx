@@ -27,6 +27,7 @@ export async function GET(
         pickup_date,
         needed_by_date,
         work_order_number,
+        work_order_id,
         job_id,
         contracted_or_additional,
         priority,
@@ -50,6 +51,45 @@ export async function GET(
         code: error.code
       });
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
+    }
+
+    // Auto-backfill work_order_id/work_order_number if missing but work orders exist
+    // (Older records may have work_orders_l rows without the takeoff header fields being populated)
+    if (!data.work_order_id) {
+      const { data: latestWO, error: latestWOError } = await supabase
+        .from('work_orders_l')
+        .select('id, wo_number')
+        .eq('takeoff_id', id)
+        .order('wo_number', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestWOError) {
+        console.error('API: Error looking up latest work order for takeoff:', latestWOError);
+      } else if (latestWO?.id) {
+        const backfill: { work_order_id: string; work_order_number?: string } = {
+          work_order_id: latestWO.id,
+        };
+
+        // takeoffs_l.work_order_number is TEXT in the current schema
+        if (latestWO.wo_number !== null && latestWO.wo_number !== undefined) {
+          backfill.work_order_number = String(latestWO.wo_number);
+        }
+
+        const { error: backfillError } = await supabase
+          .from('takeoffs_l')
+          .update(backfill)
+          .eq('id', id);
+
+        if (backfillError) {
+          console.error('API: Failed to backfill takeoff work order fields:', backfillError);
+        } else {
+          data.work_order_id = latestWO.id;
+          if (backfill.work_order_number) {
+            data.work_order_number = backfill.work_order_number;
+          }
+        }
+      }
     }
 
     console.log('API: Successfully fetched takeoff:', data);
