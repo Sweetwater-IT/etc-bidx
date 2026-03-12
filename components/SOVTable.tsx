@@ -64,6 +64,7 @@ import type { ScheduleOfValuesItem } from '@/types/job';
 
 interface SOVTableProps {
   jobId?: string;
+  contractId?: string;
   readOnly?: boolean;
 }
 
@@ -83,12 +84,14 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
   return Math.round(value * 100) / 100;
 }
 
-export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
-  console.log('[SOVTable] Component initialized with:', { jobId, readOnly });
+export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
+  console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
-  const { items, loading: sovLoading, saving, updateItems, saveNow } = useSovItems(jobId);
+  // Use contractId if available, otherwise use jobId for the hook
+  const effectiveId = contractId || jobId;
+  const { items, loading: sovLoading, saving, updateItems, saveNow } = useSovItems(effectiveId, !!contractId);
 
   console.log('[SOVTable] useSovItems hook returned:', { items: items.length, loading: sovLoading, saving });
 
@@ -185,12 +188,13 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
   };
 
   const selectMasterItem = async (rowId: string, master: SovMasterItem) => {
-    if (!jobId) {
-      console.error('[SOVTable] No jobId available for item selection');
+    const effectiveId = contractId || jobId;
+    if (!effectiveId) {
+      console.error('[SOVTable] No effective ID (jobId or contractId) available for item selection');
       return;
     }
 
-    console.log('[SOVTable] Selecting master item:', { rowId, master, jobId });
+    console.log('[SOVTable] Selecting master item:', { rowId, master, effectiveId, isContract: !!contractId });
 
     try {
       // Immediately create database record when item is selected
@@ -209,10 +213,17 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
 
       console.log('[SOVTable] Creating database record for selected item:', payload);
 
-      const response = await fetch(`/api/l/jobs/${jobId}/sov-items`, {
+      // Determine the correct API endpoint based on whether we're dealing with a contract or job
+      const apiEndpoint = contractId 
+        ? `/api/l/contracts/${contractId}/sov-items`
+        : `/api/l/jobs/${jobId}/sov-items`;
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          items: [payload] // The contract endpoint expects an array of items
+        }),
       });
 
       if (!response.ok) {
@@ -224,22 +235,27 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
       const result = await response.json();
       console.log('[SOVTable] Successfully created SOV item record:', result);
 
+      // For contracts, the response structure might be different, so adapt accordingly
+      const createdItem = Array.isArray(result.data) && result.data.length > 0 
+        ? result.data[0] 
+        : result.data;
+
       // Replace the temp item with the real database record
       updateItems(
         items.map((item) =>
           item.id === rowId
             ? {
                 ...item,
-                id: result.data.id, // Replace temp ID with real database ID
+                id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
                 description: master.display_name,
                 uom: 'EA',
-                quantity: result.data.quantity,
-                unitPrice: result.data.unit_price,
-                extendedPrice: result.data.extended_price,
-                retainageType: result.data.retainage_type,
-                retainageValue: result.data.retainage_value,
-                retainageAmount: result.data.retainage_amount,
+                quantity: createdItem.quantity || payload.quantity,
+                unitPrice: createdItem.unit_price || payload.unit_price,
+                extendedPrice: createdItem.extended_price || (createdItem.quantity * createdItem.unit_price),
+                retainageType: createdItem.retainage_type || payload.retainage_type,
+                retainageValue: createdItem.retainage_value || payload.retainage_value,
+                retainageAmount: createdItem.retainage_amount || 0,
               }
             : item
         )
@@ -468,7 +484,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[600px]">
                           <DialogHeader>
-                            <DialogTitle>Select Item</DialogTitle>
+                            <DialogTitle>Select Schedule of Values Item</DialogTitle>
                           </DialogHeader>
                           <div className="mt-4">
                             <Command className="border rounded-lg">
@@ -483,46 +499,44 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                                   No matching items found.
                                 </CommandEmpty>
                                 {/* Quick-add rows for custom items */}
-                                <CommandGroup>
+                                <CommandGroup heading="Quick Add">
                                   <CommandItem
                                     value="custom-add"
                                     onSelect={() => {
                                       handleQuickAdd(item.id, 'custom');
                                       setSelectorOpen(null);
                                     }}
-                                    className="text-xs font-medium cursor-pointer"
+                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
                                   >
-                                    <Plus className="mr-2 h-3 w-3" />
-                                    Custom
+                                    <Plus className="mr-2 h-4 w-4 text-blue-600" />
+                                    <span>Custom Item</span>
                                   </CommandItem>
-                                  <div className="h-px bg-border my-1" />
                                   <CommandItem
                                     value="delivery-add"
                                     onSelect={() => {
                                       handleQuickAdd(item.id, 'delivery');
                                       setSelectorOpen(null);
                                     }}
-                                    className="text-xs font-medium cursor-pointer"
+                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
                                   >
-                                    <Plus className="mr-2 h-3 w-3" />
-                                    Delivery
+                                    <Plus className="mr-2 h-4 w-4 text-green-600" />
+                                    <span>Delivery</span>
                                   </CommandItem>
-                                  <div className="h-px bg-border my-1" />
                                   <CommandItem
                                     value="service-add"
                                     onSelect={() => {
                                       handleQuickAdd(item.id, 'service');
                                       setSelectorOpen(null);
                                     }}
-                                    className="text-xs font-medium cursor-pointer"
+                                    className="text-xs font-medium cursor-pointer flex items-center gap-2"
                                   >
-                                    <Plus className="mr-2 h-3 w-3" />
-                                    Service
+                                    <Plus className="mr-2 h-4 w-4 text-purple-600" />
+                                    <span>Service</span>
                                   </CommandItem>
                                 </CommandGroup>
                                 <div className="h-px bg-border my-2" />
                                 {/* All SOV items in a flat list */}
-                                <CommandGroup heading="All Items">
+                                <CommandGroup heading="Standard Items">
                                   {filteredItems.map((p) => (
                                     <CommandItem
                                       key={p.id}
@@ -535,7 +549,7 @@ export const SOVTable = ({ jobId, readOnly = false }: SOVTableProps) => {
                                     >
                                       <Check
                                         className={cn(
-                                          "mr-1.5 h-3 w-3",
+                                          "mr-2 h-4 w-4",
                                           item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
                                         )}
                                       />

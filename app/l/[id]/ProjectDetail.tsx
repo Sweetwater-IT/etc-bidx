@@ -228,7 +228,7 @@ const ProjectDetail = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => router.push("/")}
+                onClick={() => router.push("/l/jobs")}
                 className="shrink-0 h-7 w-7"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
@@ -1000,7 +1000,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
             </p>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+          <Button variant="outline" onClick={() => router.push("/l/jobs")}
               Cancel
             </Button>
             <Button

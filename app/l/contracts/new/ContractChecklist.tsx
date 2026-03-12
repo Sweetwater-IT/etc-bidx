@@ -597,7 +597,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
         {/* Schedule of Values */}
         <div>
-          <SOVTable jobId={contractId} readOnly={isReadOnly} />
+          <SOVTable contractId={contractId} readOnly={isReadOnly} />
           {isSigned && (
             <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
               <p className="text-xs text-warning font-medium">

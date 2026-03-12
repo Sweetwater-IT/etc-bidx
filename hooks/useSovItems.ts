@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 
 const DEBOUNCE_MS = 750;
 
-export function useSovItems(jobId: string | undefined) {
+export function useSovItems(id: string | undefined, isContract: boolean = false) {
   const [items, setItems] = useState<ScheduleOfValuesItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -16,11 +16,16 @@ export function useSovItems(jobId: string | undefined) {
 
   // Fetch SOV items
   const fetchItems = useCallback(async () => {
-    if (!jobId) return;
+    if (!id) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
+      // Determine the correct API endpoint based on whether we're dealing with a contract or job
+      const apiEndpoint = isContract 
+        ? `/api/l/contracts/${id}/sov-items`
+        : `/api/l/jobs/${id}/sov-items`;
+      
+      const response = await fetch(apiEndpoint);
       if (response.ok) {
         const data = await response.json();
         const formattedItems: ScheduleOfValuesItem[] = data.data.map((item: any) => ({
@@ -48,7 +53,7 @@ export function useSovItems(jobId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [jobId]);
+  }, [id, isContract]);
 
   // Load items on mount and jobId change
   useEffect(() => {
@@ -80,12 +85,12 @@ export function useSovItems(jobId: string | undefined) {
 
   // Save items to database with proper change tracking
   const saveItems = useCallback(async (currentItems: ScheduleOfValuesItem[]) => {
-    if (!jobId) {
-      console.error('[SOV save error] No jobId provided');
+    if (!id) {
+      console.error('[SOV save error] No id provided');
       return;
     }
 
-    console.log('[SOV save] Starting save operation for jobId:', jobId);
+    console.log('[SOV save] Starting save operation for id:', id);
 
     // Filter out invalid items that shouldn't be saved yet
     const validItems = currentItems.filter(item => isItemValidForSave(item));
@@ -166,12 +171,17 @@ export function useSovItems(jobId: string | undefined) {
         const operations: Promise<any>[] = [];
         let operationIndex = 0;
 
+        // Determine the correct API endpoint based on whether we're dealing with a contract or job
+        const apiEndpointBase = isContract 
+          ? `/api/l/contracts/${id}/sov-items`
+          : `/api/l/jobs/${id}/sov-items`;
+
         // Delete operations
         console.log('[SOV save] Starting delete operations...');
         for (const item of itemsToDelete) {
           console.log(`[SOV save] Delete operation ${operationIndex}: item ${item.itemNumber} (id: ${item.id})`);
           operations.push(
-            fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, { method: 'DELETE' })
+            fetch(`${apiEndpointBase}/${item.id}`, { method: 'DELETE' })
               .then(async response => {
                 console.log(`[SOV save] Delete response for ${item.itemNumber}:`, response.status, response.statusText);
                 if (!response.ok) {
@@ -203,9 +213,14 @@ export function useSovItems(jobId: string | undefined) {
             notes: item.notes,
             sort_order: currentItems.indexOf(item) + 1,
           };
+          
+          // For contracts, we need to send the payload differently
+          const requestBody = isContract ? { items: [payload] } : payload;
+          const requestUrl = isContract ? apiEndpointBase : `${apiEndpointBase}`;
+          
           console.log(`[SOV save] Create operation ${operationIndex}: item ${item.itemNumber}`, {
             timestamp: new Date().toISOString(),
-            url: `/api/l/jobs/${jobId}/sov-items`,
+            url: requestUrl,
             method: 'POST',
             payload,
             itemDetails: {
@@ -218,10 +233,10 @@ export function useSovItems(jobId: string | undefined) {
           });
 
           operations.push(
-            fetch(`/api/l/jobs/${jobId}/sov-items`, {
+            fetch(requestUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
+              body: JSON.stringify(requestBody),
             })
               .then(async response => {
                 const responseTimestamp = new Date().toISOString();
@@ -241,7 +256,7 @@ export function useSovItems(jobId: string | undefined) {
                     statusText: response.statusText,
                     errorText,
                     payload,
-                    jobId
+                    id
                   });
                   throw new Error(`Failed to create item ${item.itemNumber}: ${response.status} ${response.statusText} - ${errorText}`);
                 }
@@ -282,7 +297,7 @@ export function useSovItems(jobId: string | undefined) {
           console.log(`[SOV save] Update operation ${operationIndex}: item ${item.itemNumber} (id: ${item.id})`, payload);
 
           operations.push(
-            fetch(`/api/l/jobs/${jobId}/sov-items/${item.id}`, {
+            fetch(`${apiEndpointBase}/${item.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
@@ -324,7 +339,7 @@ export function useSovItems(jobId: string | undefined) {
           message: err.message,
           stack: err.stack,
           name: err.name,
-          jobId,
+          id,
           currentItemsCount: currentItems.length,
           originalItemsCount: originalItemsRef.current.length,
         });
@@ -347,7 +362,7 @@ export function useSovItems(jobId: string | undefined) {
       inFlightRef.current = null;
       console.log('[SOV save] In-flight reference cleared');
     }
-  }, [jobId]);
+  }, [id, isContract]);
 
   // Debounced save
   const scheduleSave = useCallback(() => {
