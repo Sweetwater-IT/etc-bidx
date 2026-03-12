@@ -97,6 +97,7 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
           jobId={jobId}
           onBack={handleBack}
           draftTakeoff={draftTakeoff}
+          stickyHeader
         />
       </div>
     </div>

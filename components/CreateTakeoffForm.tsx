@@ -40,6 +40,7 @@ interface Props {
   jobId: string;
   onBack: () => void;
   draftTakeoff?: any;
+  stickyHeader?: boolean;
 }
 
 const WORK_TYPES = [
@@ -133,7 +134,7 @@ const MPT_ADDITIONAL_ITEM_OPTIONS = [
   "SIGN STAND",
 ];
 
-export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
+export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff, stickyHeader = false }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const { user } = useAuth();
@@ -658,7 +659,13 @@ export const CreateTakeoffForm = ({ jobId, onBack, draftTakeoff }: Props) => {
   return (
     <div className="space-y-6">
       {/* Page Header - Salesforce Style */}
-      <div className="flex items-center justify-between">
+      <div
+        className={
+          stickyHeader
+            ? "sticky top-[var(--header-height)] z-20 -mx-6 px-6 py-2 border-b bg-[hsl(var(--muted)/0.3)] backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--muted)/0.3)]/95 flex items-center justify-between"
+            : "flex items-center justify-between"
+        }
+      >
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <ClipboardList className="h-5 w-5 text-primary" />
