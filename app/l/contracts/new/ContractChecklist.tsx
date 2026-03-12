@@ -78,6 +78,48 @@ const emptyProjectInfo: JobProjectInfo = {
 
 const SIGNED_STATUSES = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
 
+const mapProjectInfoToContractData = (projectInfo: JobProjectInfo, contractStatus?: string) => ({
+  contract_status: contractStatus || "CONTRACT_RECEIPT",
+  project_name: projectInfo.projectName,
+  contract_number: projectInfo.contractNumber,
+  customer_name: projectInfo.customerName,
+  customer_job_number: projectInfo.customerJobNumber,
+  project_owner: projectInfo.projectOwner,
+  etc_job_number: projectInfo.etcJobNumber,
+  etc_branch: projectInfo.etcBranch,
+  county: projectInfo.county,
+  customer_pm: projectInfo.customerPM,
+  customer_pm_email: projectInfo.customerPMEmail,
+  customer_pm_phone: projectInfo.customerPMPhone,
+  certified_payroll_contact: projectInfo.certifiedPayrollContact,
+  certified_payroll_email: projectInfo.certifiedPayrollEmail,
+  certified_payroll_phone: projectInfo.certifiedPayrollPhone,
+  customer_billing_contact: projectInfo.customerBillingContact,
+  customer_billing_email: projectInfo.customerBillingEmail,
+  customer_billing_phone: projectInfo.customerBillingPhone,
+  etc_project_manager: projectInfo.etcProjectManager,
+  etc_billing_manager: projectInfo.etcBillingManager,
+  etc_project_manager_email: projectInfo.etcProjectManagerEmail,
+  etc_billing_manager_email: projectInfo.etcBillingManagerEmail,
+  project_start_date: projectInfo.projectStartDate,
+  project_end_date: projectInfo.projectEndDate,
+  additional_notes: projectInfo.otherNotes,
+  certified_payroll_type: projectInfo.isCertifiedPayroll,
+  shop_rate: projectInfo.shopRate,
+  state_base_rate: projectInfo.stateMptBaseRate,
+  state_fringe_rate: projectInfo.stateMptFringeRate,
+  state_flagging_base_rate: projectInfo.stateFlaggingBaseRate,
+  state_flagging_fringe_rate: projectInfo.stateFlaggingFringeRate,
+  federal_base_rate: projectInfo.federalMptBaseRate,
+  federal_fringe_rate: projectInfo.federalMptFringeRate,
+  federal_flagging_base_rate: projectInfo.federalFlaggingBaseRate,
+  federal_flagging_fringe_rate: projectInfo.federalFlaggingFringeRate,
+  extension_date: projectInfo.extensionDate,
+});
+
+const getContractStatus = (contractRow: any) =>
+  contractRow?.contractStatus || contractRow?.contract_status || "CONTRACT_RECEIPT";
+
 const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean }) => {
   const router = useRouter();
   const params = useParams();
@@ -94,7 +136,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const saveTimeoutRef = useRef<number | null>(null);
 
   // Signed-contract status
-  const isSigned = contractRow ? SIGNED_STATUSES.includes(contractRow.contract_status) : false;
+  const isSigned = contractRow ? SIGNED_STATUSES.includes(getContractStatus(contractRow)) : false;
   const isReadOnly = forceReadOnly || isSigned;
 
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
@@ -237,14 +279,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       try {
         const contractData = {
           contractId: undefined,
-          data: {
-            project_name: trimmedProjectName,
-            contract_number: info.contractNumber,
-            customer_name: info.customerName,
-            etc_branch: info.etcBranch,
-            county: info.county,
-            contract_status: "CONTRACT_RECEIPT",
-          }
+          data: mapProjectInfoToContractData({
+            ...info,
+            projectName: trimmedProjectName,
+          }, getContractStatus(contractRow)),
         };
         const result = await saveContract(contractData);
         const newId = result.id;
@@ -261,7 +299,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
     creatingRef.current = promise;
     return promise;
-  }, [contractId]);
+  }, [contractId, contractRow, router]);
 
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {
@@ -351,45 +389,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setIsSaving(true);
             const contractData = {
               contractId,
-              data: {
-                // Preserve existing contract status or default to CONTRACT_RECEIPT
-                contract_status: contractRow?.contract_status || "CONTRACT_RECEIPT",
-                project_name: projectInfo.projectName,
-                contract_number: projectInfo.contractNumber,
-                customer_name: projectInfo.customerName,
-                customer_job_number: projectInfo.customerJobNumber,
-                project_owner: projectInfo.projectOwner,
-                etc_job_number: projectInfo.etcJobNumber,
-                etc_branch: projectInfo.etcBranch,
-                county: projectInfo.county,
-                customer_pm: projectInfo.customerPM,
-                customer_pm_email: projectInfo.customerPMEmail,
-                customer_pm_phone: projectInfo.customerPMPhone,
-                certified_payroll_contact: projectInfo.certifiedPayrollContact,
-                certified_payroll_email: projectInfo.certifiedPayrollEmail,
-                certified_payroll_phone: projectInfo.certifiedPayrollPhone,
-                customer_billing_contact: projectInfo.customerBillingContact,
-                customer_billing_email: projectInfo.customerBillingEmail,
-                customer_billing_phone: projectInfo.customerBillingPhone,
-                etc_project_manager: projectInfo.etcProjectManager,
-                etc_billing_manager: projectInfo.etcBillingManager,
-                etc_project_manager_email: projectInfo.etcProjectManagerEmail,
-                etc_billing_manager_email: projectInfo.etcBillingManagerEmail,
-                project_start_date: projectInfo.projectStartDate,
-                project_end_date: projectInfo.projectEndDate,
-                additional_notes: projectInfo.otherNotes,
-                certified_payroll_type: projectInfo.isCertifiedPayroll,
-                shop_rate: projectInfo.shopRate,
-                state_base_rate: projectInfo.stateMptBaseRate,
-                state_fringe_rate: projectInfo.stateMptFringeRate,
-                state_flagging_base_rate: projectInfo.stateFlaggingBaseRate,
-                state_flagging_fringe_rate: projectInfo.stateFlaggingFringeRate,
-                federal_base_rate: projectInfo.federalMptBaseRate,
-                federal_fringe_rate: projectInfo.federalMptFringeRate,
-                federal_flagging_base_rate: projectInfo.federalFlaggingBaseRate,
-                federal_flagging_fringe_rate: projectInfo.federalFlaggingFringeRate,
-                extension_date: projectInfo.extensionDate,
-              }
+              data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
             };
             console.log('Autosave: sending contract data:', contractData);
             const result = await saveContract(contractData);
@@ -420,45 +420,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setIsSaving(true);
       const contractData = {
         contractId,
-        data: {
-          // Preserve existing contract status or default to CONTRACT_RECEIPT
-          contract_status: contractRow?.contract_status || "CONTRACT_RECEIPT",
-          project_name: projectInfo.projectName,
-          contract_number: projectInfo.contractNumber,
-          customer_name: projectInfo.customerName,
-          customer_job_number: projectInfo.customerJobNumber,
-          project_owner: projectInfo.projectOwner,
-          etc_job_number: projectInfo.etcJobNumber,
-          etc_branch: projectInfo.etcBranch,
-          county: projectInfo.county,
-          customer_pm: projectInfo.customerPM,
-          customer_pm_email: projectInfo.customerPMEmail,
-          customer_pm_phone: projectInfo.customerPMPhone,
-          certified_payroll_contact: projectInfo.certifiedPayrollContact,
-          certified_payroll_email: projectInfo.certifiedPayrollEmail,
-          certified_payroll_phone: projectInfo.certifiedPayrollPhone,
-          customer_billing_contact: projectInfo.customerBillingContact,
-          customer_billing_email: projectInfo.customerBillingEmail,
-          customer_billing_phone: projectInfo.customerBillingPhone,
-          etc_project_manager: projectInfo.etcProjectManager,
-          etc_billing_manager: projectInfo.etcBillingManager,
-          etc_project_manager_email: projectInfo.etcProjectManagerEmail,
-          etc_billing_manager_email: projectInfo.etcBillingManagerEmail,
-          project_start_date: projectInfo.projectStartDate,
-          project_end_date: projectInfo.projectEndDate,
-          additional_notes: projectInfo.otherNotes,
-          certified_payroll_type: projectInfo.isCertifiedPayroll,
-          shop_rate: projectInfo.shopRate,
-          state_base_rate: projectInfo.stateMptBaseRate,
-          state_fringe_rate: projectInfo.stateMptFringeRate,
-          state_flagging_base_rate: projectInfo.stateFlaggingBaseRate,
-          state_flagging_fringe_rate: projectInfo.stateFlaggingFringeRate,
-          federal_base_rate: projectInfo.federalMptBaseRate,
-          federal_fringe_rate: projectInfo.federalMptFringeRate,
-          federal_flagging_base_rate: projectInfo.federalFlaggingBaseRate,
-          federal_flagging_fringe_rate: projectInfo.federalFlaggingFringeRate,
-          extension_date: projectInfo.extensionDate,
-        }
+        data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
       };
       console.log('Manual save: sending contract data:', contractData);
       const result = await saveContract(contractData);
@@ -473,7 +435,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     } finally {
       setIsSaving(false);
     }
-  }, [contractId, projectInfo, ensureContractExists]);
+  }, [contractId, projectInfo, ensureContractExists, contractRow]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {
