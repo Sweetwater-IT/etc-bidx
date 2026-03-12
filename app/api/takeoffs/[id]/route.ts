@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+type RelatedTakeoffSummary = {
+  id: string;
+  title: string;
+  work_type: string;
+  work_order_id: string | null;
+  work_order_number: string | null;
+  is_pickup: boolean;
+  parent_takeoff_id: string | null;
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -103,8 +113,8 @@ export async function GET(
       }
     }
 
-    let parentTakeoff = null;
-    let pickupTakeoff = null;
+    let parentTakeoff: RelatedTakeoffSummary | null = null;
+    let pickupTakeoff: RelatedTakeoffSummary | null = null;
 
     if (data.parent_takeoff_id) {
       const { data: parent } = await supabase
