@@ -224,7 +224,14 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</Label>
-              <div className="text-sm font-medium">{takeoff.title}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium">{takeoff.title}</div>
+                {takeoff.is_pickup && (
+                  <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                    Pickup
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</Label>
@@ -267,6 +274,35 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               <div className="text-sm font-medium capitalize">{takeoff.priority}</div>
             </div>
           </div>
+
+          {(takeoff.parent_takeoff || takeoff.pickup_takeoff) && (
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+              {takeoff.parent_takeoff && (
+                <div>
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Parent Takeoff</Label>
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-primary hover:underline"
+                    onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoff.parent_takeoff.id}`)}
+                  >
+                    {takeoff.parent_takeoff.title}
+                  </button>
+                </div>
+              )}
+              {takeoff.pickup_takeoff && (
+                <div>
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pickup Takeoff</Label>
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-primary hover:underline"
+                    onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoff.pickup_takeoff.id}`)}
+                  >
+                    {takeoff.pickup_takeoff.title}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

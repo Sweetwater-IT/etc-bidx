@@ -67,6 +67,8 @@ export async function POST(request: NextRequest) {
   try {
     const {
       userEmail,
+      is_pickup,
+      parentWorkOrderId,
       title,
       description,
       notes,
@@ -75,12 +77,17 @@ export async function POST(request: NextRequest) {
       contracted_or_additional,
       customer_poc_phone,
       install_date,
-      pickup_date
+      pickup_date,
+      crewNotes,
+      buildShopNotes,
+      pmNotes,
     } = await request.json();
 
     if (!userEmail) {
       return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
     }
+
+    const isPickup = Boolean(is_pickup);
 
     // Extract takeoffId from the URL path (bypasses params Promise entirely)
     const url = new URL(request.url);
@@ -107,13 +114,101 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
     }
 
-    console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type });
+    console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type, isPickup });
+
+    let sourceTakeoff = takeoff;
+    let workingTakeoffId = takeoffId;
+    let parentTakeoffId: string | null = null;
+
+    if (isPickup) {
+      const resolvedParentWorkOrderId = parentWorkOrderId || takeoff.work_order_id || null;
+      if (!resolvedParentWorkOrderId) {
+        return NextResponse.json({ error: 'Parent work order is required for pickup creation' }, { status: 400 });
+      }
+
+      if (!['MPT', 'RENTAL'].includes(String(takeoff.work_type || '').toUpperCase())) {
+        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT or RENTAL takeoffs' }, { status: 400 });
+      }
+
+      const { data: existingPickupWO } = await supabase
+        .from('work_orders_l')
+        .select('id, takeoff_id, wo_number')
+        .eq('parent_work_order_id', resolvedParentWorkOrderId)
+        .eq('is_pickup', true)
+        .maybeSingle();
+
+      if (existingPickupWO?.id) {
+        return NextResponse.json(
+          {
+            error: 'Pickup work order already exists',
+            code: 'PICKUP_EXISTS',
+            existingWorkOrderId: existingPickupWO.id,
+            existingTakeoffId: existingPickupWO.takeoff_id,
+          },
+          { status: 409 }
+        );
+      }
+
+      parentTakeoffId = takeoff.id;
+
+      const pickupTakeoffPayload = {
+        job_id: takeoff.job_id,
+        work_type: takeoff.work_type,
+        title: title || `${takeoff.title} - Pickup`,
+        status: 'draft',
+        notes: notes || takeoff.notes || null,
+        install_date: null,
+        pickup_date: pickup_date || takeoff.pickup_date || null,
+        contracted_or_additional: contracted_or_additional || takeoff.contracted_or_additional || 'contracted',
+        needed_by_date: takeoff.needed_by_date || null,
+        revision_of_takeoff_id: null,
+        revision_number: 1,
+        chain_root_takeoff_id: null,
+        destination: takeoff.destination || null,
+        default_sign_material: takeoff.default_sign_material || null,
+        priority: takeoff.priority || 'standard',
+        crew_notes: crewNotes || takeoff.crew_notes || null,
+        build_shop_notes: buildShopNotes || takeoff.build_shop_notes || null,
+        canceled_at: null,
+        canceled_by: null,
+        cancel_reason: null,
+        cancel_notes: null,
+        active_sections: takeoff.active_sections || [],
+        sign_rows: takeoff.sign_rows || {},
+        pm_notes: pmNotes || takeoff.pm_notes || null,
+        is_multi_day_job: false,
+        end_date: null,
+        active_permanent_items: takeoff.active_permanent_items || [],
+        permanent_sign_rows: takeoff.permanent_sign_rows || {},
+        permanent_entry_rows: takeoff.permanent_entry_rows || {},
+        default_permanent_sign_material: takeoff.default_permanent_sign_material || 'ALUMINUM',
+        vehicle_items: takeoff.vehicle_items || [],
+        rolling_stock_items: takeoff.rolling_stock_items || [],
+        additional_items: takeoff.additional_items || [],
+        is_pickup: true,
+        parent_takeoff_id: parentTakeoffId,
+      };
+
+      const { data: pickupTakeoff, error: pickupTakeoffError } = await supabase
+        .from('takeoffs_l')
+        .insert(pickupTakeoffPayload)
+        .select()
+        .single();
+
+      if (pickupTakeoffError || !pickupTakeoff) {
+        console.error('Pickup takeoff insert error:', pickupTakeoffError);
+        return NextResponse.json({ error: 'Failed to create pickup takeoff', details: pickupTakeoffError }, { status: 500 });
+      }
+
+      sourceTakeoff = pickupTakeoff;
+      workingTakeoffId = pickupTakeoff.id;
+    }
 
     // Fetch takeoff data with all sections to create work order items
     const { data: takeoffData, error: takeoffDataError } = await supabase
       .from('takeoffs_l')
       .select('sign_rows, vehicle_items, additional_items, rolling_stock_items, work_type')
-      .eq('id', takeoffId)
+      .eq('id', workingTakeoffId)
       .single();
 
     if (takeoffDataError) {
@@ -125,7 +220,7 @@ export async function POST(request: NextRequest) {
     const { data: sovEntries } = await supabase
       .from('sov_entries')
       .select('sov_items!inner(id, item_number, description, work_type)')
-      .eq('job_id', takeoff.job_id);
+      .eq('job_id', sourceTakeoff.job_id);
 
     const sovItems: SOVLookupItem[] = (sovEntries || [])
       .map((entry: any) => entry?.sov_items)
@@ -274,7 +369,7 @@ export async function POST(request: NextRequest) {
     const { data: maxWO } = await supabase
       .from('work_orders_l')
       .select('wo_number')
-      .eq('takeoff_id', takeoffId)
+      .eq('takeoff_id', workingTakeoffId)
       .order('wo_number', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
@@ -286,18 +381,20 @@ export async function POST(request: NextRequest) {
     const { data: workOrder, error: insertError } = await supabase
       .from('work_orders_l')
       .insert({
-        job_id: takeoff.job_id,
-        takeoff_id: takeoffId,
+        job_id: sourceTakeoff.job_id,
+        takeoff_id: workingTakeoffId,
         wo_number: workOrderNumber,
-        title: title || takeoff.title,
+        title: title || sourceTakeoff.title,
         description: description || null,
         notes: notes || null,
         scheduled_date: scheduled_date || null,
         assigned_to: assigned_to || null,
-        contracted_or_additional: contracted_or_additional || 'contracted',
+        contracted_or_additional: contracted_or_additional || sourceTakeoff.contracted_or_additional || 'contracted',
         customer_poc_phone: customer_poc_phone || null,
         created_by: userEmail,
-        status: 'draft'
+        status: 'draft',
+        is_pickup: isPickup,
+        parent_work_order_id: isPickup ? (parentWorkOrderId || takeoff.work_order_id || null) : null,
       })
       .select()
       .single();
@@ -314,7 +411,7 @@ export async function POST(request: NextRequest) {
         work_order_number: workOrderNumber,
         work_order_id: workOrder.id
       })
-      .eq('id', takeoffId);
+      .eq('id', workingTakeoffId);
 
     if (updateTakeoffError) {
       console.error('Error updating takeoff with WO number:', updateTakeoffError);
@@ -350,8 +447,14 @@ export async function POST(request: NextRequest) {
         id: workOrder.id,
         title: workOrder.title,
         workOrderNumber,
-        itemCount: workOrderItems.length
-      }
+        itemCount: workOrderItems.length,
+        isPickup,
+      },
+      takeoff: {
+        id: workingTakeoffId,
+        parentTakeoffId,
+        isPickup,
+      },
     });
   } catch (error) {
     console.error('Unexpected error in work order generation:', error);

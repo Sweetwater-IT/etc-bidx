@@ -5,13 +5,34 @@ interface TakeoffData {
   id: string;
   title: string;
   work_type: string;
+  is_pickup?: boolean;
+  parent_takeoff_id?: string | null;
   status: string;
   created_at: string;
   install_date: string | null;
   pickup_date: string | null;
   needed_by_date: string | null;
   work_order_number: string | null;
+  work_order_id?: string | null;
   job_id: string;
+  parent_takeoff?: {
+    id: string;
+    title: string;
+    work_type: string;
+    work_order_id: string | null;
+    work_order_number: string | null;
+    is_pickup: boolean;
+    parent_takeoff_id: string | null;
+  } | null;
+  pickup_takeoff?: {
+    id: string;
+    title: string;
+    work_type: string;
+    work_order_id: string | null;
+    work_order_number: string | null;
+    is_pickup: boolean;
+    parent_takeoff_id: string | null;
+  } | null;
 }
 
 interface TakeoffState {

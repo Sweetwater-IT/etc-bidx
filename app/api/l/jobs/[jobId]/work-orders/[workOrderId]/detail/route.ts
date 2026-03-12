@@ -6,6 +6,8 @@ interface TakeoffSummary {
   title: string;
   status: string;
   work_type: string;
+  is_pickup?: boolean;
+  parent_takeoff_id?: string | null;
   install_date: string | null;
   pickup_date: string | null;
   item_count: number;
@@ -58,7 +60,7 @@ export async function GET(
     // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, is_pickup, takeoff_id')
+      .select('job_id, is_pickup, takeoff_id, parent_work_order_id')
       .eq('id', id)
       .single();
 
@@ -71,12 +73,12 @@ export async function GET(
     const takeoffId = workOrder.takeoff_id;
 
     // Fetch all related data in parallel
-    const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes] = await Promise.all([
+    const [jobRes, takeoffRes, woItemsRes, sovRes, docsRes, pickupRes, parentWORes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
       // Takeoffs linked to this work order (by takeoff_id)
-      takeoffId ? supabase.from("takeoffs_l").select("id, title, status, work_type, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
+      takeoffId ? supabase.from("takeoffs_l").select("id, title, status, work_type, is_pickup, parent_takeoff_id, install_date, pickup_date").eq("id", takeoffId) : Promise.resolve({ data: null }),
 
       // Work order items
       supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
@@ -89,6 +91,11 @@ export async function GET(
 
       // Pickup work order if this is a parent
       !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),
+
+      // Parent work order if this is a pickup
+      isPickup && workOrder.parent_work_order_id
+        ? supabase.from("work_orders_l").select("id, wo_number, status, takeoff_id").eq("id", workOrder.parent_work_order_id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     // Process job data (transform like jobs API)
@@ -184,6 +191,8 @@ export async function GET(
       sovItems,
       documents,
       pickupWO,
+      parentWO: parentWORes.data || null,
+      isPickup,
     });
 
   } catch (error) {

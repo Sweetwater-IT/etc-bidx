@@ -20,6 +20,8 @@ export async function GET(
         id,
         title,
         work_type,
+        is_pickup,
+        parent_takeoff_id,
         status,
         created_at,
         updated_at,
@@ -101,8 +103,34 @@ export async function GET(
       }
     }
 
+    let parentTakeoff = null;
+    let pickupTakeoff = null;
+
+    if (data.parent_takeoff_id) {
+      const { data: parent } = await supabase
+        .from('takeoffs_l')
+        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id')
+        .eq('id', data.parent_takeoff_id)
+        .maybeSingle();
+      parentTakeoff = parent || null;
+    }
+
+    if (!data.is_pickup) {
+      const { data: child } = await supabase
+        .from('takeoffs_l')
+        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id')
+        .eq('parent_takeoff_id', id)
+        .eq('is_pickup', true)
+        .maybeSingle();
+      pickupTakeoff = child || null;
+    }
+
     console.log('API: Successfully fetched takeoff:', data);
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...data,
+      parent_takeoff: parentTakeoff,
+      pickup_takeoff: pickupTakeoff,
+    });
   } catch (error) {
     console.error('API: Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

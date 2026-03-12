@@ -187,6 +187,7 @@ const WorkOrderDetail = ({
   const [woItems, setWoItems] = useState<WOItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
   const [pickupWO, setPickupWO] = useState<{ id: string; wo_number: string | null; status: string } | null>(null);
+  const [parentWO, setParentWO] = useState<{ id: string; wo_number: string | null; status: string; takeoff_id?: string | null } | null>(null);
 
   // Get job data using the hook
   const { data: dbJob, isLoading: jobLoading } = useJobFromDB(workOrder?.job_id);
@@ -360,6 +361,7 @@ const WorkOrderDetail = ({
       setSovItemsFull(data.sovItemsFull || []);
       setDocuments(data.documents || []);
       setPickupWO(data.pickupWO || null);
+      setParentWO(data.parentWO || null);
     } catch (err) {
       console.error("Failed to fetch related data", err);
     } finally {
@@ -1162,13 +1164,17 @@ const WorkOrderDetail = ({
                     const response = await fetch(`/api/workorders/from-takeoff/${workOrder.takeoff_id}`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ is_pickup: true, userEmail: user?.email || 'unknown@example.com' })
+                      body: JSON.stringify({ is_pickup: true, parentWorkOrderId: workOrderId, userEmail: user?.email || 'unknown@example.com' })
                     });
                     if (response.ok) {
                       const result = await response.json();
                       router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${result.workOrder.id}`);
                     } else {
                       const error = await response.json();
+                      if (error.code === 'PICKUP_EXISTS' && error.existingWorkOrderId) {
+                        router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${error.existingWorkOrderId}`);
+                        return;
+                      }
                       toast.error(error.error || 'Failed to create pickup work order');
                     }
                   } catch (err) {
@@ -1184,6 +1190,11 @@ const WorkOrderDetail = ({
             {isViewMode && pickupWO && (
               <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${pickupWO.id}`)}>
                 <RotateCcw className="h-3.5 w-3.5" /> View Pickup WO {pickupWO.wo_number ? `(${pickupWO.wo_number})` : ""}
+              </Button>
+            )}
+            {isViewMode && workOrder?.is_pickup && parentWO && (
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => router.push(`/l/jobs/${workOrder?.job_id}/work-orders/view/${parentWO.id}`)}>
+                <RotateCcw className="h-3.5 w-3.5" /> View Parent WO {parentWO.wo_number ? `(${parentWO.wo_number})` : ""}
               </Button>
             )}
           </>
@@ -1223,6 +1234,24 @@ const WorkOrderDetail = ({
               onClick={() => router.push(`/l/${workOrder.job_id}/takeoffs/view/${workOrder.takeoff_id}`)}
             >
               <ExternalLink className="h-3.5 w-3.5" /> View Takeoff
+            </Button>
+          </div>
+        )}
+
+        {workOrder?.is_pickup && parentWO && (
+          <div className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <RotateCcw className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground shrink-0">Parent work order</span>
+              <span className="text-xs font-mono truncate">{parentWO.wo_number ? String(parentWO.wo_number).padStart(3, '0') : parentWO.id}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1.5 shrink-0"
+              onClick={() => router.push(`/l/jobs/${workOrder.job_id}/work-orders/view/${parentWO.id}`)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> View Parent WO
             </Button>
           </div>
         )}

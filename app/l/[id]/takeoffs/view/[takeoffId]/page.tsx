@@ -161,6 +161,24 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
       }
       rightContent={
         <>
+          {takeoff?.is_pickup && takeoff?.parent_takeoff?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoff.parent_takeoff.id}`)}
+            >
+              View Parent Takeoff
+            </Button>
+          )}
+          {!takeoff?.is_pickup && takeoff?.pickup_takeoff?.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoff.pickup_takeoff.id}`)}
+            >
+              View Pickup Takeoff
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Edit className="h-3.5 w-3.5 mr-1.5" />
             Edit
@@ -174,12 +192,12 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               <ClipboardList className="h-3.5 w-3.5" />
               View Work Order
             </Button>
-          ) : (
+          ) : !takeoff?.is_pickup ? (
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
               <ClipboardList className="h-3.5 w-3.5" />
               {loading ? "Creating…" : "Generate Work Order"}
             </Button>
-          )}
+          ) : null}
         </>
       }
     />
