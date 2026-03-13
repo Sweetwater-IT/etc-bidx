@@ -2,13 +2,16 @@ import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-// import WorkOrderDetail from "../[workOrderId]/WorkOrderDetail";
+import WorkOrderNewContent from "./WorkOrderNewContent";
 
 export default async function WorkOrderNewPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ jobId: string }>;
   searchParams: Promise<{ takeoffId?: string }>;
 }) {
+  const { jobId } = await params;
   const { takeoffId } = await searchParams;
 
   return (
@@ -24,8 +27,7 @@ export default async function WorkOrderNewPage({
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          {/* <WorkOrderDetail workOrderId="new" takeoffId={takeoffId} mode="edit" /> */}
-          <div>Work Order Detail component not implemented yet</div>
+          <WorkOrderNewContent jobId={jobId} takeoffId={takeoffId} />
         </Suspense>
       </SidebarInset>
     </SidebarProvider>

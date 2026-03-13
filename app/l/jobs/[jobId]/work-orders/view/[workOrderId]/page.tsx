@@ -2,16 +2,16 @@ import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
+import WorkOrderViewContent from "./WorkOrderViewContent";
 
 export default async function WorkOrderViewPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ workOrderId: string }>;
+  params: Promise<{ workOrderId: string; jobId: string }>;
   searchParams: Promise<{ takeoffId?: string }>;
 }) {
-  const { workOrderId } = await params;
+  const { workOrderId, jobId } = await params;
   const { takeoffId } = await searchParams;
 
   return (
@@ -27,10 +27,9 @@ export default async function WorkOrderViewPage({
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          <WorkOrderDetail workOrderId={workOrderId} takeoffId={takeoffId} mode="view" />
+          <WorkOrderViewContent workOrderId={workOrderId} jobId={jobId} takeoffId={takeoffId} />
         </Suspense>
       </SidebarInset>
     </SidebarProvider>
   );
-
 }
