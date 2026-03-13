@@ -48,6 +48,8 @@ interface Props {
   draftTakeoff?: any;
   backLabel?: string;
   mode?: "create" | "edit";
+  pageTitle?: string;
+  pageDescription?: string;
 }
 
 const WORK_TYPES = [
@@ -179,6 +181,8 @@ export const CreateTakeoffForm = ({
   draftTakeoff,
   backLabel = "Back",
   mode = "create",
+  pageTitle,
+  pageDescription,
 }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -806,6 +810,9 @@ export const CreateTakeoffForm = ({
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      {pageTitle ? (
+        <PageTitleBlock title={pageTitle} description={pageDescription} />
+      ) : null}
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">

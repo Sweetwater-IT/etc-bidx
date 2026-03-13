@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, Edit, FileText, ArrowRight } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2 } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 
@@ -37,6 +37,11 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   const [takeoff, setTakeoff] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pickupItems, setPickupItems] = useState<any[]>([]);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [pickupSaving, setPickupSaving] = useState(false);
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const formattedWorkOrderNumber = (() => {
     const raw = takeoff?.work_order_number;
@@ -76,6 +81,110 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       loadTakeoff();
     }
   }, [takeoffId]);
+
+  useEffect(() => {
+    const loadPickupReport = async () => {
+      if (!takeoff?.is_pickup || !takeoff?.work_order_id) return;
+
+      setPickupLoading(true);
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/pickup-report`);
+        if (!response.ok) {
+          throw new Error('Failed to load pickup report');
+        }
+
+        const data = await response.json();
+        setPickupItems(
+          (data || []).map((item: any) => ({
+            ...item,
+            pickup_condition: item.pickup_condition || 'good',
+            pickup_images: Array.isArray(item.pickup_images) ? item.pickup_images : [],
+            pickup_image_urls: Array.isArray(item.pickup_image_urls) ? item.pickup_image_urls : [],
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading pickup report:', error);
+        toast.error('Failed to load return inventory');
+      } finally {
+        setPickupLoading(false);
+      }
+    };
+
+    loadPickupReport();
+  }, [jobId, takeoff?.is_pickup, takeoff?.work_order_id]);
+
+  const savePickupReport = async () => {
+    if (!takeoff?.work_order_id) return;
+
+    setPickupSaving(true);
+    try {
+      const response = await fetch(`/api/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/pickup-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: pickupItems.map((item) => ({
+            item_id: item.id,
+            condition: item.pickup_condition || 'good',
+            images: Array.isArray(item.pickup_images) ? item.pickup_images : [],
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save return inventory');
+      }
+
+      toast.success('Return inventory saved');
+    } catch (error) {
+      console.error('Error saving pickup report:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save return inventory');
+    } finally {
+      setPickupSaving(false);
+    }
+  };
+
+  const uploadPickupImages = async (itemId: string, files: FileList | null) => {
+    if (!files || files.length === 0 || !takeoff?.work_order_id) return;
+
+    setUploadingItemId(itemId);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => formData.append('files', file));
+
+      const response = await fetch(`/api/l/jobs/${jobId}/work-orders/${takeoff.work_order_id}/pickup-report/images`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload images');
+      }
+
+      const data = await response.json();
+      const uploadedFiles = Array.isArray(data.files) ? data.files : [];
+
+      setPickupItems((prev) => prev.map((item) => {
+        if (item.id !== itemId) return item;
+        return {
+          ...item,
+          pickup_images: [...(item.pickup_images || []), ...uploadedFiles.map((file: any) => file.path)],
+          pickup_image_urls: [...(item.pickup_image_urls || []), ...uploadedFiles.map((file: any) => file.signedUrl)],
+        };
+      }));
+
+      toast.success(`${uploadedFiles.length} image(s) uploaded`);
+    } catch (error) {
+      console.error('Error uploading pickup images:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload images');
+    } finally {
+      setUploadingItemId(null);
+      if (fileInputRefs.current[itemId]) {
+        fileInputRefs.current[itemId]!.value = '';
+      }
+    }
+  };
 
   const handleEdit = () => {
     const resolvedJobId = takeoff?.job_id ?? jobId;
@@ -412,6 +521,122 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {takeoff.is_pickup && takeoff.work_order_id && (
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Return Inventory</h2>
+            <Button size="sm" onClick={savePickupReport} disabled={pickupSaving || pickupLoading}>
+              {pickupSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {pickupSaving ? 'Saving…' : 'Save Return Inventory'}
+            </Button>
+          </div>
+          <div className="p-5 space-y-4">
+            {pickupLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : pickupItems.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No return inventory items found for this pickup work order.</div>
+            ) : (
+              pickupItems.map((item) => (
+                <div key={item.id} className="rounded-md border p-4 space-y-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-medium">{item.item_number || '—'} {item.description ? `— ${item.description}` : ''}</p>
+                      <p className="text-xs text-muted-foreground">WO Qty: {item.work_order_quantity ?? 0} {item.uom || 'EA'}</p>
+                    </div>
+                    <div className="w-full md:w-52">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Condition</Label>
+                      <Select
+                        value={item.pickup_condition || 'good'}
+                        onValueChange={(value) => {
+                          setPickupItems((prev) => prev.map((row) => row.id === item.id ? { ...row, pickup_condition: value } : row));
+                        }}
+                      >
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="good">Good</SelectItem>
+                          <SelectItem value="serviceable">Serviceable</SelectItem>
+                          <SelectItem value="damaged">Damaged</SelectItem>
+                          <SelectItem value="missing">Missing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Photos</Label>
+                      <div>
+                        <input
+                          ref={(el) => {
+                            fileInputRefs.current[item.id] = el;
+                          }}
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => uploadPickupImages(item.id, e.target.files)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => fileInputRefs.current[item.id]?.click()}
+                          disabled={uploadingItemId === item.id}
+                        >
+                          {uploadingItemId === item.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
+                          Upload Photos
+                        </Button>
+                      </div>
+                    </div>
+
+                    {Array.isArray(item.pickup_image_urls) && item.pickup_image_urls.length > 0 ? (
+                      <div className="flex flex-wrap gap-3">
+                        {item.pickup_image_urls.map((imageUrl: string, index: number) => (
+                          <div key={`${item.id}-${index}`} className="relative">
+                            <a href={imageUrl} target="_blank" rel="noreferrer">
+                              <img
+                                src={imageUrl}
+                                alt={`Pickup item ${item.item_number || ''} ${index + 1}`}
+                                className="h-24 w-24 rounded-md border object-cover bg-muted"
+                              />
+                            </a>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6"
+                              onClick={() => {
+                                setPickupItems((prev) => prev.map((row) => {
+                                  if (row.id !== item.id) return row;
+                                  return {
+                                    ...row,
+                                    pickup_images: (row.pickup_images || []).filter((_: string, i: number) => i !== index),
+                                    pickup_image_urls: (row.pickup_image_urls || []).filter((_: string, i: number) => i !== index),
+                                  };
+                                }));
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">No photos uploaded.</div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

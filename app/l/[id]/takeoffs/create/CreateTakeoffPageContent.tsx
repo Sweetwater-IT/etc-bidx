@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
-import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 
 export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
@@ -18,13 +17,11 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
     <div className="min-h-screen bg-background">
       {/* Content Area */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <PageTitleBlock
-          title="Create Takeoff"
-          description={`Create a new takeoff for ${jobName}. Configure work types, materials, and scheduling details.`}
-        />
         <CreateTakeoffForm
           jobId={jobId}
           onBack={handleBack}
+          pageTitle="Create Takeoff"
+          pageDescription={`Create a new takeoff for ${jobName}. Configure work types, materials, and scheduling details.`}
           backLabel="Job"
         />
       </div>

@@ -43,7 +43,37 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  const withSignedUrls = await Promise.all(
+    (data || []).map(async (item: any) => {
+      const rawImages: string[] = Array.isArray(item.pickup_images) ? item.pickup_images : [];
+      const pickup_image_urls = await Promise.all(
+        rawImages.map(async (imagePath) => {
+          if (!imagePath || imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+            return imagePath;
+          }
+
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from('files')
+            .createSignedUrl(imagePath, 300);
+
+          if (signedError) {
+            console.error('Failed to create signed URL for pickup image:', signedError);
+            return null;
+          }
+
+          return signedData.signedUrl;
+        })
+      );
+
+      return {
+        ...item,
+        pickup_images: rawImages,
+        pickup_image_urls: pickup_image_urls.filter(Boolean),
+      };
+    })
+  );
+
+  return NextResponse.json(withSignedUrls);
 }
 
 export async function POST(
