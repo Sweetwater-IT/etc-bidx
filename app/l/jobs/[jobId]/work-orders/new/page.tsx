@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import WorkOrderDetail from "../[workOrderId]/WorkOrderDetail";
+// import WorkOrderDetail from "../[workOrderId]/WorkOrderDetail";
 
 export default async function WorkOrderNewPage({
   searchParams,
@@ -24,7 +24,8 @@ export default async function WorkOrderNewPage({
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          <WorkOrderDetail workOrderId="new" takeoffId={takeoffId} mode="edit" />
+          {/* <WorkOrderDetail workOrderId="new" takeoffId={takeoffId} mode="edit" /> */}
+          <div>Work Order Detail component not implemented yet</div>
         </Suspense>
       </SidebarInset>
     </SidebarProvider>

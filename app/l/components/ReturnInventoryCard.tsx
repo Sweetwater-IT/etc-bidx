@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,13 +19,7 @@ import {
 } from "@/components/ui/table";
 import { RotateCcw, Loader2, CheckCircle2, Camera, X, Send, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
-import { generateReturnTakeoffPdf } from "@/utils/generateReturnTakeoffPdf";
-
-// Create browser client for photo uploads
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { generateReturnTakeoffPdf } from "@/app/l/utils/generateReturnTakeoffPdf";
 
 const CONDITIONS = [
   { value: "ok", label: "OK", color: "bg-emerald-500/15 text-emerald-700" },
@@ -222,36 +216,31 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
-      try {
-        const response = await globalThis.fetch(`/api/l/takeoffs/${takeoffId}/return-inventory`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch return inventory');
-        }
-        const { items: rows } = await response.json();
-        setItems(rows);
+      const { data } = await supabase
+        .from("takeoff_items")
+        .select("id, product_name, category, quantity, return_condition, return_details, damage_photos, notes")
+        .eq("takeoff_id", takeoffId)
+        .order("created_at", { ascending: true });
+      const rows = (data || []) as ReturnItem[];
+      setItems(rows);
 
-        const init: Record<string, Record<string, string>> = {};
-        const initPhotos: Record<string, Record<string, string>> = {};
-        rows.forEach((item: ReturnItem) => {
-          const saved = (item.return_details as Record<string, string>) || {};
-          if (item.return_condition && Object.keys(saved).length === 0) {
-            const comps = getComponents(item);
-            const m: Record<string, string> = {};
-            comps.forEach((c) => { m[c] = item.return_condition!; });
-            init[item.id] = m;
-          } else {
-            init[item.id] = { ...saved };
-          }
-          initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
-        });
-        setDetails(init);
-        setPhotos(initPhotos);
-      } catch (error) {
-        console.error('Error fetching return inventory:', error);
-        toast.error('Failed to load return inventory');
-      } finally {
-        setLoading(false);
-      }
+      const init: Record<string, Record<string, string>> = {};
+      const initPhotos: Record<string, Record<string, string>> = {};
+      rows.forEach((item) => {
+        const saved = (item.return_details as Record<string, string>) || {};
+        if (item.return_condition && Object.keys(saved).length === 0) {
+          const comps = getComponents(item);
+          const m: Record<string, string> = {};
+          comps.forEach((c) => { m[c] = item.return_condition!; });
+          init[item.id] = m;
+        } else {
+          init[item.id] = { ...saved };
+        }
+        initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
+      });
+      setDetails(init);
+      setPhotos(initPhotos);
+      setLoading(false);
     };
     fetch();
   }, [takeoffId]);
@@ -301,6 +290,37 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     setSavingBulk(false);
   }, [items]);
 
+  const handleSave = useCallback(async () => {
+    if (hasMissingDamagePhotos) {
+      toast.error("All damaged items require a photo before saving.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const updates = items.map((item) => {
+        const itemDets = details[item.id] || {};
+        const itemPhotos = photos[item.id] || {};
+        return supabase
+          .from("takeoff_items")
+          .update({
+            return_details: itemDets,
+            return_condition: Object.values(itemDets)[0] || null,
+            damage_photos: itemPhotos,
+          })
+          .eq("id", item.id)
+          .then();
+      });
+      await Promise.all(updates);
+      setDirty(false);
+      setLastSavedAt(new Date());
+      toast.success("Return inventory saved.");
+    } catch {
+      toast.error("Failed to save return inventory.");
+    } finally {
+      setSaving(false);
+    }
+  }, [items, details, photos]);
+
   // Check if all items have all components filled
   const allComplete = items.length > 0 && items.every((item) => {
     const comps = getComponents(item);
@@ -316,47 +336,6 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     return comps.some((c) => d[c] === "damaged" && !p[c]);
   });
 
-  const handleSave = useCallback(async () => {
-    if (hasMissingDamagePhotos) {
-      toast.error("All damaged items require a photo before saving.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const updates = items.map((item) => {
-        const itemDets = details[item.id] || {};
-        const itemPhotos = photos[item.id] || {};
-        return {
-          id: item.id,
-          return_details: itemDets,
-          return_condition: Object.values(itemDets)[0] || null,
-          damage_photos: itemPhotos,
-        };
-      });
-
-      const response = await globalThis.fetch(`/api/l/takeoffs/${takeoffId}/return-inventory`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ updates }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save return inventory');
-      }
-
-      setDirty(false);
-      setLastSavedAt(new Date());
-      toast.success("Return inventory saved.");
-    } catch (error) {
-      console.error('Error saving return inventory:', error);
-      toast.error("Failed to save return inventory.");
-    } finally {
-      setSaving(false);
-    }
-  }, [items, details, photos, takeoffId, hasMissingDamagePhotos]);
-
   const handleSubmit = useCallback(async () => {
     if (!allComplete) {
       toast.error("All items must have a condition selected before submitting.");
@@ -369,29 +348,70 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
 
     setSubmitting(true);
 
+    // Save all data first
     try {
-      const response = await globalThis.fetch(`/api/l/takeoffs/${takeoffId}/return-inventory/submit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobInfo }),
+      const saveUpdates = items.map((item) => {
+        const itemDets = details[item.id] || {};
+        const itemPhotos = photos[item.id] || {};
+        return supabase
+          .from("takeoff_items")
+          .update({
+            return_details: itemDets,
+            return_condition: Object.values(itemDets)[0] || null,
+            damage_photos: itemPhotos,
+          })
+          .eq("id", item.id)
+          .then();
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit return inventory');
-      }
-
-      setSubmitted(true);
-      setDirty(false);
-      toast.success("Return inventory submitted — PDF downloaded.");
-    } catch (error) {
-      console.error('Error submitting return inventory:', error);
-      toast.error("Failed to submit return inventory.");
-    } finally {
+      await Promise.all(saveUpdates);
+    } catch {
+      toast.error("Failed to save before submitting.");
       setSubmitting(false);
+      return;
     }
-  }, [allComplete, hasMissingDamagePhotos, takeoffId, jobInfo]);
+
+    // Build PDF data
+    const pdfItems = items.map((item) => {
+      const comps = getComponents(item);
+      const d = details[item.id] || {};
+      const p = photos[item.id] || {};
+      return {
+        product_name: item.product_name,
+        category: item.category,
+        quantity: item.quantity,
+        components: comps.map((c) => ({
+          key: c,
+          label: COMP_LABELS[c],
+          condition: d[c] || "ok",
+          photoUrl: p[c] || undefined,
+        })),
+      };
+    });
+
+    await generateReturnTakeoffPdf({
+      title: jobInfo?.title || "Pickup Return",
+      workType: jobInfo?.workType || "",
+      projectName: jobInfo?.projectName,
+      etcJobNumber: jobInfo?.etcJobNumber,
+      etcBranch: jobInfo?.etcBranch,
+      etcProjectManager: jobInfo?.etcProjectManager,
+      customerName: jobInfo?.customerName,
+      customerJobNumber: jobInfo?.customerJobNumber,
+      projectOwner: jobInfo?.projectOwner,
+      county: jobInfo?.county,
+      installDate: jobInfo?.installDate,
+      pickupDate: jobInfo?.pickupDate,
+      customerPM: jobInfo?.customerPM,
+      assignedTo: jobInfo?.assignedTo,
+      contractedOrAdditional: jobInfo?.contractedOrAdditional,
+      items: pdfItems,
+    });
+
+    setSubmitted(true);
+    setDirty(false);
+    setSubmitting(false);
+    toast.success("Return inventory submitted — PDF downloaded.");
+  }, [allComplete, items, details, photos, jobInfo]);
 
   // Stats
   const completedCount = items.filter((item) => {

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { SOVTable } from "@/components/SOVTable";
+import { EquipmentSummary } from "@/app/l/components/EquipmentSummary";
 
 import {
   Sheet,
@@ -69,6 +70,7 @@ import {
 type Job360Tab =
   | "bid-items"
   | "takeoffs"
+  | "equipment"
   | "customer-admin"
   | "labor"
   | "manufacturing"
@@ -614,6 +616,7 @@ const ProjectDetail = () => {
             <TabsList className="bg-transparent h-9 gap-0 min-w-max">
               <TabBtn value="bid-items" icon={Layers} label="Bid Items / SOV" />
               <TabBtn value="takeoffs" icon={ClipboardList} label="Takeoffs" />
+              <TabBtn value="equipment" icon={Package} label="Equipment" />
               <TabBtn value="customer-admin" icon={Users} label="Customer Admin" />
               <TabBtn value="labor" icon={Timer} label="Labor & Time" />
               <TabBtn value="manufacturing" icon={Factory} label="Manufacturing" />
@@ -635,6 +638,10 @@ const ProjectDetail = () => {
 
             <TabsContent value="takeoffs" className="m-0 p-4">
               <TakeoffsList jobId={id || ""} userEmail={user?.email} />
+            </TabsContent>
+
+            <TabsContent value="equipment" className="m-0 p-4">
+              <EquipmentSummary jobId={id || ""} />
             </TabsContent>
 
             <TabsContent value="customer-admin" className="m-0 p-4">
