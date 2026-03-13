@@ -288,7 +288,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         const newId = result.id;
         setContractId(newId);
         setContractRow(result);
-        router.replace(`/l/contracts/edit/${newId}`);
+        // Update URL without full page reload for better UX
+        window.history.replaceState(null, '', `/l/contracts/edit/${newId}`);
         return newId;
       } catch {
         return undefined;
@@ -299,7 +300,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
     creatingRef.current = promise;
     return promise;
-  }, [contractId, contractRow, router]);
+  }, [contractId, contractRow]);
 
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {

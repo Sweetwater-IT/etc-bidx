@@ -352,7 +352,8 @@ export const CreateTakeoffForm = ({
       setSavedTakeoffId(newTakeoffId);
       setHasUnsavedChanges(false);
       if (!savedTakeoffId && newTakeoffId) {
-        router.replace(`/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
+        // Update URL without full page reload for better UX
+        window.history.replaceState(null, '', `/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
       }
     } catch (error) {
       console.error("Error auto-saving takeoff:", error);

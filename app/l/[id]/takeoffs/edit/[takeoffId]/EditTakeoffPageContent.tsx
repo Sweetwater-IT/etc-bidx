@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
-import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { FileText } from "lucide-react";
 
 interface EditTakeoffPageContentProps {
   jobId: string;
@@ -54,19 +54,34 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <PageTitleBlock
-          title="Edit Takeoff"
-          description={`Edit takeoff details for ${jobName}. Update work types, materials, and scheduling information.`}
-        />
-        <CreateTakeoffForm
-          jobId={jobId}
-          onBack={handleBack}
-          draftTakeoff={takeoff}
-          backLabel="Takeoff"
-          mode="edit"
-        />
+      <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
+        {/* ─── Page Title Bar ─── */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground leading-tight">
+                Edit Takeoff
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {jobName} · Edit takeoff details, work types, materials, and scheduling information.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <CreateTakeoffForm
+            jobId={jobId}
+            onBack={handleBack}
+            draftTakeoff={takeoff}
+            backLabel="Takeoff"
+            mode="edit"
+          />
+        </div>
       </div>
     </div>
   );
