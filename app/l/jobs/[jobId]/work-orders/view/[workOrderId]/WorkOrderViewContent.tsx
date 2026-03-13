@@ -1,3 +1,5 @@
+"use client";
+
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
