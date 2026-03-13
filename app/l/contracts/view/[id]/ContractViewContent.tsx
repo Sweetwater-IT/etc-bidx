@@ -3,18 +3,27 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Pencil, Download, FileText } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
+import { SOVTable } from "@/components/SOVTable";
+import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
+import type { JobProjectInfo } from "@/types/job";
+
+type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
 interface ContractDocument {
   id: string;
   name: string;
   size: number;
   type: string;
-  category: string;
+  category: DocumentCategory;
+  associatedItemId?: string;
+  associatedItemLabel?: string;
   uploadedAt: string;
+  filePath: string;
 }
 
 export default function ContractViewContent() {
@@ -24,7 +33,7 @@ export default function ContractViewContent() {
 
   const [contract, setContract] = useState<any>(null);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
-  const [sovItems, setSovItems] = useState<any[]>([]);
+  const [projectInfo, setProjectInfo] = useState<JobProjectInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,6 +47,46 @@ export default function ContractViewContent() {
         const contractData = await response.json();
         setContract(contractData);
 
+        // Transform contract data to projectInfo format for ProjectInfoFields
+        const transformedProjectInfo: JobProjectInfo = {
+          projectName: contractData.project_name || "",
+          contractNumber: contractData.contract_number || "",
+          customerName: contractData.customer_name || "",
+          customerJobNumber: contractData.customer_job_number || "",
+          projectOwner: contractData.project_owner || "",
+          etcJobNumber: contractData.etc_job_number || null,
+          etcBranch: contractData.etc_branch || "",
+          county: contractData.county || "",
+          customerPM: contractData.customer_pm || "",
+          customerPMEmail: contractData.customer_pm_email || "",
+          customerPMPhone: contractData.customer_pm_phone || "",
+          certifiedPayrollContact: contractData.certified_payroll_contact || "",
+          certifiedPayrollEmail: contractData.certified_payroll_email || "",
+          certifiedPayrollPhone: contractData.certified_payroll_phone || "",
+          customerBillingContact: contractData.customer_billing_contact || "",
+          customerBillingEmail: contractData.customer_billing_email || "",
+          customerBillingPhone: contractData.customer_billing_phone || "",
+          etcProjectManager: contractData.etc_project_manager || "",
+          etcBillingManager: contractData.etc_billing_manager || "",
+          etcProjectManagerEmail: contractData.etc_project_manager_email || "",
+          etcBillingManagerEmail: contractData.etc_billing_manager_email || "",
+          projectStartDate: contractData.project_start_date || "",
+          projectEndDate: contractData.project_end_date || "",
+          otherNotes: contractData.additional_notes || "",
+          isCertifiedPayroll: contractData.certified_payroll_type === "state" ? "state" : contractData.certified_payroll_type === "federal" ? "federal" : "none",
+          shopRate: contractData.shop_rate || "",
+          stateMptBaseRate: contractData.state_base_rate || "",
+          stateMptFringeRate: contractData.state_fringe_rate || "",
+          stateFlaggingBaseRate: contractData.state_flagging_base_rate || "",
+          stateFlaggingFringeRate: contractData.state_flagging_fringe_rate || "",
+          federalMptBaseRate: contractData.federal_base_rate || "",
+          federalMptFringeRate: contractData.federal_fringe_rate || "",
+          federalFlaggingBaseRate: contractData.federal_flagging_base_rate || "",
+          federalFlaggingFringeRate: contractData.federal_flagging_fringe_rate || "",
+          extensionDate: contractData.extension_date || "",
+        };
+        setProjectInfo(transformedProjectInfo);
+
         // Load documents
         const docsResponse = await fetch(`/api/l/contracts/${contractId}/documents`);
         if (docsResponse.ok) {
@@ -48,17 +97,12 @@ export default function ContractViewContent() {
               name: d.file_name,
               size: d.file_size || 0,
               type: d.file_type || "other",
-              category: d.file_type || "other",
+              category: (d.file_type || "other") as DocumentCategory,
+              associatedItemId: d.checklist_item_id || undefined,
               uploadedAt: d.uploaded_at,
+              filePath: d.file_path,
             })));
           }
-        }
-
-        // Load SOV items
-        const sovResponse = await fetch(`/api/l/contracts/${contractId}/sov-items`);
-        if (sovResponse.ok) {
-          const sov = await sovResponse.json();
-          setSovItems(sov || []);
         }
       } catch (error) {
         console.error('Error loading contract:', error);
@@ -77,11 +121,6 @@ export default function ContractViewContent() {
     router.push(`/l/contracts/edit/${contractId}`);
   };
 
-  const handleDownloadPdf = async () => {
-    // TODO: Implement PDF generation for contracts
-    toast.info('PDF generation for contracts coming soon');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -95,7 +134,7 @@ export default function ContractViewContent() {
     );
   }
 
-  if (!contract) {
+  if (!contract || !projectInfo) {
     return (
       <div className="min-h-screen bg-background">
         <div className="py-16 flex items-center justify-center">
@@ -121,186 +160,42 @@ export default function ContractViewContent() {
         backLabel="Contracts"
         onBack={() => router.push("/l/contracts")}
         rightContent={
-          <>
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Edit
-            </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf}>
-              <Download className="h-3.5 w-3.5" />
-              Download PDF
-            </Button>
-          </>
+          <Button variant="outline" size="sm" onClick={handleEdit}>
+            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+            Edit
+          </Button>
         }
       />
 
-      {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <PageTitleBlock
           title={`Contract for ${jobName}`}
           description="Review contract details, schedule of values, and supporting documents."
         />
 
-        {/* Project Information */}
-        <div className="rounded-lg border bg-card shadow-sm mb-6">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Information</h2>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Name</span>
-                <span className="text-sm font-medium">{contract.project_name || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contract Number</span>
-                <span className="text-sm font-medium">{contract.contract_number || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Name</span>
-                <span className="text-sm font-medium">{contract.customer_name || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job Number</span>
-                <span className="text-sm font-medium">{contract.customer_job_number || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Owner</span>
-                <span className="text-sm font-medium">{contract.project_owner || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job Number</span>
-                <span className="text-sm font-medium font-mono">{contract.etc_job_number || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Branch</span>
-                <span className="text-sm font-medium">{contract.etc_branch || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
-                <span className="text-sm font-medium">{contract.county || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM</span>
-                <span className="text-sm font-medium">{contract.customer_pm || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM Email</span>
-                <span className="text-sm font-medium">{contract.customer_pm_email || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM Phone</span>
-                <span className="text-sm font-medium">{contract.customer_pm_phone || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
-                <span className="text-sm font-medium">{contract.etc_project_manager || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Billing Manager</span>
-                <span className="text-sm font-medium">{contract.etc_billing_manager || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Start Date</span>
-                <span className="text-sm font-medium">{contract.project_start_date || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project End Date</span>
-                <span className="text-sm font-medium">{contract.project_end_date || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Extension Date</span>
-                <span className="text-sm font-medium">{contract.extension_date || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll</span>
-                <span className="text-sm font-medium capitalize">{contract.certified_payroll_type || "none"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Shop Rate</span>
-                <span className="text-sm font-medium">{contract.shop_rate || "—"}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Project Information - includes Project Details, Customer Admin Info, Certified Payroll, and Additional Notes */}
+        <ProjectInfoFields
+          projectInfo={projectInfo}
+          onChange={() => {}} // No-op for view mode
+          readOnly={true}
+          contractRow={contract}
+        />
 
         {/* Schedule of Values */}
-        {sovItems.length > 0 && (
-          <div className="rounded-lg border bg-card shadow-sm mb-6">
-            <div className="px-5 py-3 border-b bg-muted/30">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Schedule of Values</h2>
-            </div>
-            <div className="p-5 overflow-x-auto">
-              <table className="w-full min-w-[800px] text-sm">
-                <thead className="bg-muted/20">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Quantity</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Unit</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Unit Price</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {sovItems.map((item: any) => (
-                    <tr key={item.id} className="hover:bg-muted/10">
-                      <td className="px-3 py-2 font-medium">{item.item_number}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{item.description}</td>
-                      <td className="px-3 py-2">{item.quantity}</td>
-                      <td className="px-3 py-2">{item.unit}</td>
-                      <td className="px-3 py-2">${item.unit_price?.toLocaleString() || "—"}</td>
-                      <td className="px-3 py-2">${item.total?.toLocaleString() || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        <div>
+          <SOVTable contractId={contractId} readOnly={true} />
+        </div>
 
-        {/* Documents */}
-        {documents.length > 0 && (
-          <div className="rounded-lg border bg-card shadow-sm">
-            <div className="px-5 py-3 border-b bg-muted/30">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Documents</h2>
-            </div>
-            <div className="p-5 overflow-x-auto">
-              <table className="w-full min-w-[600px] text-sm">
-                <thead className="bg-muted/20">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Document Name</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Size</th>
-                    <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Uploaded</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {documents.map((doc: ContractDocument) => (
-                    <tr key={doc.id} className="hover:bg-muted/10">
-                      <td className="px-3 py-2 font-medium">{doc.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground capitalize">{doc.category}</td>
-                      <td className="px-3 py-2">{(doc.size / 1024).toFixed(1)} KB</td>
-                      <td className="px-3 py-2">{new Date(doc.uploadedAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Notes */}
-        {contract.additional_notes && (
-          <div className="rounded-lg border bg-card shadow-sm">
-            <div className="px-5 py-3 border-b bg-muted/30">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Notes</h2>
-            </div>
-            <div className="p-5">
-              <div className="text-sm whitespace-pre-wrap">{contract.additional_notes}</div>
-            </div>
-          </div>
-        )}
+        {/* Documents & Forms */}
+        <ContractSaveDocument
+          documents={documents}
+          projectInfo={projectInfo}
+          jobId={contractId}
+          onAddDocuments={() => {}} // No-op for view mode
+          onRemoveDocument={() => {}} // No-op for view mode
+          onUpdateCategory={() => {}} // No-op for view mode
+          readOnly={true}
+        />
       </div>
     </div>
   );
