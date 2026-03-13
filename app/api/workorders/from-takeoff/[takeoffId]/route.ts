@@ -7,7 +7,25 @@ type SOVLookupItem = {
   item_number: string;
   description: string;
   work_type?: string | null;
+  uom?: string | null;
+  quantity?: number | null;
 };
+
+const WORK_TYPE_GROUPS: Record<string, string[]> = {
+  MPT: ['MPT', 'LANE_CLOSURE'],
+  LANE_CLOSURE: ['MPT', 'LANE_CLOSURE'],
+  FLAGGING: ['FLAGGING'],
+  PERMANENT_SIGNS: ['PERMANENT_SIGNS'],
+  SERVICE: ['SERVICE'],
+  DELIVERY: ['DELIVERY'],
+  RENTAL: ['RENTAL'],
+  CUSTOM: ['CUSTOM'],
+};
+
+function getRelevantWorkTypes(workType: unknown): string[] {
+  const normalized = normalizeUpper(workType);
+  return WORK_TYPE_GROUPS[normalized] || (normalized ? [normalized] : []);
+}
 
 const normalize = (value: unknown): string => String(value || '').trim();
 const normalizeUpper = (value: unknown): string => normalize(value).toUpperCase();
@@ -204,10 +222,10 @@ export async function POST(request: NextRequest) {
       workingTakeoffId = pickupTakeoff.id;
     }
 
-    // Fetch takeoff data with all sections to create work order items
+    // Fetch takeoff data to determine which SOV work types should appear on the work order
     const { data: takeoffData, error: takeoffDataError } = await supabase
       .from('takeoffs_l')
-      .select('sign_rows, vehicle_items, additional_items, rolling_stock_items, work_type')
+      .select('work_type')
       .eq('id', workingTakeoffId)
       .single();
 
@@ -216,23 +234,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch takeoff data' }, { status: 500 });
     }
 
-    // Fetch SOV items for lookup/carry-over mapping
+    const relevantWorkTypes = getRelevantWorkTypes(takeoffData.work_type);
+
+    // Fetch SOV items for this job and derive work order items directly from matching SOV entries.
     const { data: sovEntries } = await supabase
       .from('sov_entries')
-      .select('sov_items!inner(id, item_number, description, work_type)')
-      .eq('job_id', sourceTakeoff.job_id);
+      .select('quantity, sort_order, sov_items!inner(id, item_number, description, work_type, uom)')
+      .eq('job_id', sourceTakeoff.job_id)
+      .order('sort_order', { ascending: true });
 
     const sovItems: SOVLookupItem[] = (sovEntries || [])
-      .map((entry: any) => entry?.sov_items)
-      .filter(Boolean)
-      .map((s: any) => ({
-        id: Number(s.id),
-        item_number: String(s.item_number || ''),
-        description: String(s.description || ''),
-        work_type: s.work_type ?? null,
-      }));
+      .map((entry: any) => ({
+        id: Number(entry?.sov_items?.id),
+        item_number: String(entry?.sov_items?.item_number || ''),
+        description: String(entry?.sov_items?.description || ''),
+        work_type: entry?.sov_items?.work_type ?? null,
+        uom: entry?.sov_items?.uom ?? null,
+        quantity: entry?.quantity ?? null,
+        sort_order: entry?.sort_order ?? null,
+      }))
+      .filter((s: any) => Boolean(s.id));
 
-    // Create work order items from takeoff sign designations
+    const matchedSovItems = sovItems.filter((item) => {
+      const itemWorkType = normalizeUpper(item.work_type);
+      return relevantWorkTypes.length === 0 || relevantWorkTypes.includes(itemWorkType);
+    });
+
+    // Create work order items from SOV entries only.
     const workOrderItems: Array<{
       work_order_id: string | null;
       item_number: string;
@@ -244,120 +272,19 @@ export async function POST(request: NextRequest) {
       sov_item_id: number | null;
     }> = [];
 
-    const signRowsData = takeoffData.sign_rows || {};
-    let sortOrder = 0;
-
-    // Process each section (trailblazers, type_iii, sign_stands)
-    for (const [sectionKey, sectionRows] of Object.entries(signRowsData)) {
-      if (Array.isArray(sectionRows)) {
-        for (const row of sectionRows) {
-          // Create description from sign details
-          const descriptionParts = [
-            row.signDesignation || 'Custom Sign',
-            row.signDescription || '',
-            row.dimensionLabel ? `(${row.dimensionLabel})` : '',
-            row.signLegend ? `- ${row.signLegend}` : ''
-          ].filter(Boolean);
-
-          const description = descriptionParts.join(' ').trim();
-          const quantity = row.quantity || 1;
-          const uom = row.sqft > 0 ? 'SF' : 'SF'; // All signs use SF
-          const resolved = resolveSov(
-            [
-              row.itemNumber,
-              row.item_number,
-              row.sovItemNumber,
-              row.sov_item_number,
-              row.signDesignation,
-              description,
-            ],
-            sovItems
-          );
-
-          workOrderItems.push({
-            work_order_id: null, // will be set after work order creation
-            item_number: resolved.item_number,
-            description,
-            contract_quantity: quantity,
-            work_order_quantity: quantity, // Start with takeoff quantity
-            uom,
-            sort_order: sortOrder++,
-            sov_item_id: resolved.sov_item_id,
-          });
-        }
-      }
-    }
-
-    // Vehicles -> work order items
-    const vehicleItems = Array.isArray(takeoffData.vehicle_items) ? takeoffData.vehicle_items : [];
-    for (const vehicle of vehicleItems) {
-      const vehicleType = normalize(vehicle?.vehicleType);
-      const vehicleLabel = VEHICLE_LABEL_BY_ID[vehicleType] || vehicleType || 'Vehicle';
-      const quantity = Number(vehicle?.quantity || 1) || 1;
-      const description = `Vehicle: ${vehicleLabel}`;
-      const resolved = resolveSov(
-        [vehicle?.itemNumber, vehicle?.item_number, vehicleType, vehicleLabel, description],
-        sovItems
-      );
-
+    matchedSovItems.forEach((item, index) => {
+      const quantity = Number(item.quantity || 0);
       workOrderItems.push({
         work_order_id: null,
-        item_number: resolved.item_number,
-        description,
+        item_number: item.item_number,
+        description: item.description,
         contract_quantity: quantity,
         work_order_quantity: quantity,
-        uom: 'EA',
-        sort_order: sortOrder++,
-        sov_item_id: resolved.sov_item_id,
+        uom: item.uom || 'EA',
+        sort_order: index,
+        sov_item_id: item.id,
       });
-    }
-
-    // Additional items -> work order items
-    const additionalItems = Array.isArray(takeoffData.additional_items) ? takeoffData.additional_items : [];
-    for (const item of additionalItems) {
-      const name = normalize(item?.name);
-      const customName = name === '__custom' ? normalize(item?.description) : '';
-      const displayName = customName || name || 'Additional Item';
-      const descriptionNote = normalize(item?.description);
-      const description = descriptionNote && descriptionNote !== customName
-        ? `${displayName} — ${descriptionNote}`
-        : displayName;
-      const quantity = Number(item?.quantity || 1) || 1;
-      const resolved = resolveSov(
-        [item?.itemNumber, item?.item_number, name, customName, description],
-        sovItems
-      );
-
-      workOrderItems.push({
-        work_order_id: null,
-        item_number: resolved.item_number,
-        description,
-        contract_quantity: quantity,
-        work_order_quantity: quantity,
-        uom: 'EA',
-        sort_order: sortOrder++,
-        sov_item_id: resolved.sov_item_id,
-      });
-    }
-
-    // Rolling stock is intentionally read-only/disabled right now, but preserve legacy rows if present
-    const rollingStockItems = Array.isArray(takeoffData.rolling_stock_items) ? takeoffData.rolling_stock_items : [];
-    for (const rs of rollingStockItems) {
-      const label = normalize(rs?.equipmentLabel) || normalize(rs?.equipmentId) || 'Rolling Stock';
-      const description = `Rolling Stock: ${label}`;
-      const resolved = resolveSov([rs?.itemNumber, rs?.item_number, label, description], sovItems);
-
-      workOrderItems.push({
-        work_order_id: null,
-        item_number: resolved.item_number,
-        description,
-        contract_quantity: 1,
-        work_order_quantity: 1,
-        uom: 'EA',
-        sort_order: sortOrder++,
-        sov_item_id: resolved.sov_item_id,
-      });
-    }
+    });
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,
