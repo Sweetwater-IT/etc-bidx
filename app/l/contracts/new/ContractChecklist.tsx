@@ -430,13 +430,16 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setLastSavedAt(new Date());
       setFirstSave(true);
       toast.success('Contract saved successfully');
+
+      // Route to view page after successful save
+      router.push(`/l/contracts/view/${contractId}`);
     } catch (error) {
       console.error('Manual save failed:', error);
       toast.error('Failed to save contract');
     } finally {
       setIsSaving(false);
     }
-  }, [contractId, projectInfo, ensureContractExists, contractRow]);
+  }, [contractId, projectInfo, ensureContractExists, contractRow, router]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {

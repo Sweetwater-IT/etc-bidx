@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import ContractChecklist from "../../new/ContractChecklist";
+import ContractViewContent from "./ContractViewContent";
 
 export default function ContractViewPage() {
   return (
@@ -16,7 +16,7 @@ export default function ContractViewPage() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <ContractChecklist forceReadOnly={true} />
+        <ContractViewContent />
       </SidebarInset>
     </SidebarProvider>
   );

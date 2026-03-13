@@ -99,6 +99,7 @@ const ProjectDetail = () => {
   const [editExtensionDate, setEditExtensionDate] = useState("");
   const [editJobSaving, setEditJobSaving] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [takeoffsCount, setTakeoffsCount] = useState(0);
 
   const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
     if (workOrderNumber === null || workOrderNumber === undefined) return "—";
@@ -169,6 +170,26 @@ const ProjectDetail = () => {
     };
 
     fetchWorkOrders();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchTakeoffsCount = async () => {
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/takeoffs`);
+        if (response.ok) {
+          const takeoffsData = await response.json();
+          setTakeoffsCount(takeoffsData.length);
+        } else {
+          console.error('Failed to fetch takeoffs count');
+        }
+      } catch (error) {
+        console.error('Error fetching takeoffs count:', error);
+      }
+    };
+
+    fetchTakeoffsCount();
   }, [id]);
 
   if (jobLoading) {
@@ -615,7 +636,7 @@ const ProjectDetail = () => {
           <div className="border-b bg-card rounded-t-lg overflow-x-auto">
             <TabsList className="bg-transparent h-9 gap-0 min-w-max">
               <TabBtn value="bid-items" icon={Layers} label="Bid Items / SOV" />
-              <TabBtn value="takeoffs" icon={ClipboardList} label="Takeoffs" />
+              <TabBtn value="takeoffs" icon={ClipboardList} label="Takeoffs" count={takeoffsCount} />
               <TabBtn value="equipment" icon={Package} label="Equipment" />
               <TabBtn value="customer-admin" icon={Users} label="Customer Admin" />
               <TabBtn value="labor" icon={Timer} label="Labor & Time" />
@@ -822,10 +843,12 @@ const TabBtn = ({
   value,
   icon: Icon,
   label,
+  count,
 }: {
   value: string;
   icon: React.ElementType;
   label: string;
+  count?: number;
 }) => (
   <TabsTrigger
     value={value}
@@ -833,6 +856,11 @@ const TabBtn = ({
   >
     <Icon className="h-3.5 w-3.5" />
     {label}
+    {count !== undefined && count > 0 && (
+      <Badge variant="secondary" className="text-[9px] ml-1 h-4 px-1">
+        {count}
+      </Badge>
+    )}
   </TabsTrigger>
 );
 
