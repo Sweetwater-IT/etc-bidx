@@ -140,11 +140,10 @@ export const PermanentSignConfiguration = ({
             const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
             if (response.ok) {
               const data = await response.json();
-              const sovItemNumbers = new Set(
-                (data.data || [])
-                  .map((item: any) => String(item.item_number || ''))
-                  .filter((itemNumber: string) => itemNumber && itemNumber.trim())
-              );
+              const itemNumbers: string[] = (data.data || [])
+                .map((item: any) => String(item.item_number || ''))
+                .filter((itemNumber: string) => itemNumber && itemNumber.trim());
+              const sovItemNumbers = new Set(itemNumbers);
               setSovItemNumbers(sovItemNumbers);
             } else {
               console.warn('Failed to fetch SOV items, showing all permanent sign items');
