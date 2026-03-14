@@ -409,17 +409,19 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   }, [projectInfo, contractId, isViewMode]);
 
   const manualSave = useCallback(async () => {
-    if (!contractId) {
+    let currentContractId = contractId;
+
+    if (!currentContractId) {
       const hasProjectName = Boolean(projectInfo.projectName?.trim());
       if (!hasProjectName) return;
-      await ensureContractExists(projectInfo);
-      return;
+      currentContractId = await ensureContractExists(projectInfo);
+      if (!currentContractId) return;
     }
 
     try {
       setIsSaving(true);
       const contractData = {
-        contractId,
+        contractId: currentContractId,
         data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
       };
       console.log('Manual save: sending contract data:', contractData);
@@ -431,7 +433,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       toast.success('Contract saved successfully');
 
       // Route to view page after successful save
-      router.push(`/l/contracts/view/${contractId}`);
+      router.push(`/l/contracts/view/${currentContractId}`);
     } catch (error) {
       console.error('Manual save failed:', error);
       toast.error('Failed to save contract');
