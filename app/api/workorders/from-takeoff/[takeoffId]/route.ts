@@ -242,13 +242,13 @@ export async function POST(request: NextRequest) {
 
       // Copy takeoff items from parent takeoff to pickup takeoff
       console.log('🔍 [PICKUP] Starting item copy process...');
-      console.log('🔍 [PICKUP] Parent takeoff ID:', parentTakeoffId);
+      console.log('🔍 [PICKUP] Original takeoff ID:', takeoffId);
       console.log('🔍 [PICKUP] Pickup takeoff ID:', pickupTakeoff.id);
 
       const { data: parentItems, error: parentItemsError } = await supabase
         .from('takeoff_items_l')
         .select('*')
-        .eq('takeoff_id', parentTakeoffId)
+        .eq('takeoff_id', takeoffId)
         .is('deleted_at', null);
 
       console.log('🔍 [PICKUP] Parent items query result:', {
@@ -294,6 +294,9 @@ export async function POST(request: NextRequest) {
           // Reset pickup-specific fields
           pickup_condition: null,
           pickup_images: [],
+          sign_condition: null,
+          structure_condition: null,
+          light_condition: null,
           return_details: {},
           return_condition: null,
           damage_photos: {},
