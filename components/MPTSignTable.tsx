@@ -700,7 +700,7 @@ export const MPTSignTable = ({
               className="h-8 text-xs flex-1 rounded-r-none border-r-0"
               value={row.sqft}
               onChange={(e) => updateRow(row.id, { sqft: Math.round((parseFloat(e.target.value) || 0) * 100) / 100 })}
-              disabled={disabled}
+              disabled={true}
             />
             <span className="h-8 px-2 bg-muted border border-l-0 rounded-r flex items-center text-xs text-muted-foreground">
               sq ft

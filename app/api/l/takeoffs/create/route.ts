@@ -31,7 +31,7 @@ function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
       items.push({
         takeoff_id: takeoffId,
         product_name: row?.signDesignation || row?.signDescription || 'MPT Sign',
-        category: `MPT:${sectionKey}`,
+        category: 'sign',
         unit: 'SF',
         quantity,
         requisition_type: 'none',
@@ -82,7 +82,7 @@ function buildPermanentItems(
       items.push({
         takeoff_id: takeoffId,
         product_name: row?.signDesignation || row?.signDescription || itemNumber || 'Permanent Sign',
-        category: `PERMANENT_SIGNS:${itemNumber}`,
+        category: 'sign',
         unit: 'SF',
         quantity,
         requisition_type: 'none',
@@ -112,7 +112,7 @@ function buildPermanentItems(
       items.push({
         takeoff_id: takeoffId,
         product_name: itemNumber || 'Permanent Sign Item',
-        category: `PERMANENT_SIGNS:${itemNumber}`,
+        category: 'sign',
         unit: 'EA',
         quantity: Number(row?.quantity || 0),
         requisition_type: 'none',
@@ -145,7 +145,7 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
     items.push({
       takeoff_id: takeoffId,
       product_name: item?.vehicleType || 'Vehicle',
-      category: `${workType}:VEHICLE`,
+      category: 'vehicle',
       unit: 'EA',
       quantity: Number(item?.quantity || 0),
       requisition_type: 'none',
@@ -171,7 +171,7 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
     items.push({
       takeoff_id: takeoffId,
       product_name: item?.equipmentLabel || item?.equipmentId || 'Rolling Stock',
-      category: `${workType}:ROLLING_STOCK`,
+      category: 'additional',
       unit: 'EA',
       quantity: 1,
       requisition_type: 'none',
@@ -198,7 +198,7 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
     items.push({
       takeoff_id: takeoffId,
       product_name: productName,
-      category: `${workType}:ADDITIONAL`,
+      category: 'additional',
       unit: 'EA',
       quantity: Number(item?.quantity || 0),
       requisition_type: 'none',
