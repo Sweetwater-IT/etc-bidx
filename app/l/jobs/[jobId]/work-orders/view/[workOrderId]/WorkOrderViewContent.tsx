@@ -53,15 +53,23 @@ export default function WorkOrderViewContent({
   };
 
   const handleGeneratePickupWorkOrder = async () => {
-    if (!workOrderData?.takeoffs?.[0]?.id) {
+    if (!workOrderData?.takeoffs?.[0]) {
       toast.error('Unable to find takeoff for this work order');
       return;
     }
 
     setGeneratingPickup(true);
     try {
-      const takeoffId = workOrderData.takeoffs[0].id;
-      const response = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+      // Determine the correct install takeoff ID to generate pickup from
+      const takeoff = workOrderData.takeoffs[0];
+      const installTakeoffId = takeoff.is_pickup ? takeoff.parent_takeoff_id : takeoff.id;
+
+      if (!installTakeoffId) {
+        toast.error('Unable to determine install takeoff for pickup generation');
+        return;
+      }
+
+      const response = await fetch(`/api/workorders/from-takeoff/${installTakeoffId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +115,7 @@ export default function WorkOrderViewContent({
         onBack={handleBack}
         rightContent={
           <>
-            {pickupWO ? (
+            {!workOrderData?.isPickup && (pickupWO ? (
               <Button variant="outline" size="sm" onClick={handleViewPickupWorkOrder}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 View Pickup Work Order
@@ -117,7 +125,7 @@ export default function WorkOrderViewContent({
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 {generatingPickup ? "Creating…" : "Generate Pickup Work Order"}
               </Button>
-            )}
+            ))}
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Edit className="h-3.5 w-3.5 mr-1.5" />
               Edit
