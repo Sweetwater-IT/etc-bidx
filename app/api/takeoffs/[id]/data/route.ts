@@ -97,7 +97,7 @@ export async function GET(
         items: pickupItems?.slice(0, 3).map(item => ({
           id: item.id,
           parent_item_id: item.parent_item_id,
-          product_name: item.takeoff_items_l?.product_name,
+          product_name: (item.takeoff_items_l as any)?.product_name,
           hasParentData: !!item.takeoff_items_l
         })) || []
       });
