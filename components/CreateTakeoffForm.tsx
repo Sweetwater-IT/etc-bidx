@@ -79,7 +79,7 @@ const normalizeSovWorkTypeToTakeoffValue = (workType?: string | null): string | 
     OTHER: "CUSTOM",
   };
 
-  return mapping[normalized] || null;
+  return mapping[normalized] || normalized;
 };
 
 const MPT_SECTIONS = [

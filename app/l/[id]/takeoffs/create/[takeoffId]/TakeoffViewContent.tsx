@@ -204,8 +204,11 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   const signItems = Array.isArray(takeoff.takeoff_items)
     ? takeoff.takeoff_items.filter((item: any) => item.category === 'sign' || !item.category)
     : [];
+  const vehicleItems = Array.isArray(takeoff.takeoff_items)
+    ? takeoff.takeoff_items.filter((item: any) => item.category === 'vehicle')
+    : [];
   const additionalItems = Array.isArray(takeoff.takeoff_items)
-    ? takeoff.takeoff_items.filter((item: any) => item.category !== 'sign' && item.category)
+    ? takeoff.takeoff_items.filter((item: any) => item.category !== 'sign' && item.category !== 'vehicle')
     : [];
 
   return (
@@ -323,6 +326,44 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
 
 
+      {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
+      {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              Vehicles
+            </h2>
+            <Badge variant="secondary" className="text-[10px]">{vehicleItems.length} vehicles</Badge>
+          </div>
+
+          {vehicleItems.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[400px] text-sm" style={{ tableLayout: 'fixed' }}>
+                <thead className="bg-muted/20">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-64">Type</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {vehicleItems.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-2 py-1 border-r w-64 text-xs font-medium">{item.vehicleType || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No vehicles assigned. Vehicles will appear here when the takeoff is created.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
       <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
         <div className="flex items-center justify-between mb-3">
@@ -425,7 +466,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             <Plus className="h-4 w-4 text-muted-foreground" />
             Additional Items
           </h2>
-          <Badge variant="secondary" className="text-[10px]">{additionalItems.length} custom items</Badge>
+          <Badge variant="secondary" className="text-[10px]">{additionalItems.length} items</Badge>
         </div>
 
         {additionalItems.length > 0 ? (
@@ -433,20 +474,16 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
               <thead className="bg-muted/20">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-48">Product Name</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Category</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Unit</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Description</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-48">Item</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Quantity</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {additionalItems.map((item: any) => (
                   <tr key={item.id} className="hover:bg-muted/10">
                     <td className="px-2 py-1 border-r w-48 text-xs font-medium">{item.product_name || '—'}</td>
-                    <td className="px-2 py-1 border-r w-24 text-xs">{item.category || '—'}</td>
                     <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                    <td className="px-2 py-1 border-r w-24 text-xs">{item.unit || '—'}</td>
                     <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
                   </tr>
                 ))}
