@@ -137,7 +137,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       if (woResponse.ok) {
         const result = await woResponse.json();
         toast.success('Work order generated successfully!');
-        router.push(`/l/jobs/${jobId}/work-orders/view/${result.workOrder.id}`);
+        router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
         toast.error(err.error || 'Failed to generate work order');
@@ -327,38 +327,73 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
         {Array.isArray(takeoff.takeoff_items) && takeoff.takeoff_items.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="bg-muted/20">
-                <tr>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dimensions</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sq Ft</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Sq Ft</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Material</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sheeting</th>
-                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {takeoff.takeoff_items.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-3 py-2 font-medium">{item.product_name}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{item.category}</td>
-                    <td className="px-3 py-2">{item.quantity}</td>
-                    <td className="px-3 py-2">
-                      {item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—'}
-                    </td>
-                    <td className="px-3 py-2">{item.sqft ?? '—'}</td>
-                    <td className="px-3 py-2">{item.total_sqft ?? '—'}</td>
-                    <td className="px-3 py-2">{item.material || '—'}</td>
-                    <td className="px-3 py-2">{item.sheeting || '—'}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{item.notes || '—'}</td>
+            {takeoff.work_type === "PERMANENT_SIGNS" ? (
+              // Permanent Signs Table
+              <table className="w-full min-w-[1000px] text-sm" style={{ tableLayout: 'fixed' }}>
+                <thead className="bg-muted/20">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Post Size</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Plan Sheet</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y">
+                  {takeoff.takeoff_items.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-2 py-1 border-r w-32 text-xs font-medium">{item.sign_designation || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 border-r w-96 text-xs">{item.sign_legend || item.description || '—'}</td>
+                      <td className="px-2 py-1 border-r w-28 text-xs">{item.dimension_label || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                      <td className="px-2 py-1 border-r w-24 text-xs">{item.sheeting || '—'}</td>
+                      <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 border-r w-24 text-xs">{item.post_size || '—'}</td>
+                      <td className="px-2 py-1 border-r w-32 text-xs">
+                        {item.plan_sheet_num && item.plan_sheet_total ? `${item.plan_sheet_num}/${item.plan_sheet_total}` : '—'}
+                      </td>
+                      <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              // MPT Signs Table
+              <table className="w-full min-w-[1100px] text-sm" style={{ tableLayout: 'fixed' }}>
+                <thead className="bg-muted/20">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-40">Structure</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">B-Lights</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Sq Ft</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Material</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-16">Cover</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {takeoff.takeoff_items.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-2 py-1 border-r w-32 text-xs font-medium">{item.sign_designation || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 border-r w-96 text-xs">{item.sign_legend || item.description || '—'}</td>
+                      <td className="px-2 py-1 border-r w-28 text-xs">{item.dimension_label || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                      <td className="px-2 py-1 border-r w-24 text-xs">{item.sheeting || '—'}</td>
+                      <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 border-r w-40 text-xs">{item.structure_type || '—'}</td>
+                      <td className="px-2 py-1 border-r w-24 text-xs">{item.b_lights || 'none'}</td>
+                      <td className="px-2 py-1 border-r w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
+                      <td className="px-2 py-1 border-r w-24 text-xs">{item.material || '—'}</td>
+                      <td className="px-2 py-1 w-16 text-xs text-center">{item.cover ? '✓' : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground text-sm">

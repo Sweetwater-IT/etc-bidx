@@ -401,19 +401,60 @@ export async function POST(request: NextRequest) {
       sov_item_id: number | null;
     }> = [];
 
-    matchedSovItems.forEach((item, index) => {
-      const quantity = Number(item.quantity || 0);
-      workOrderItems.push({
-        work_order_id: null,
-        item_number: item.item_number,
-        description: item.description,
-        contract_quantity: quantity,
-        work_order_quantity: quantity,
-        uom: item.uom || 'EA',
-        sort_order: index,
-        sov_item_id: item.id,
+    // For permanent signs, calculate total square footage from takeoff items
+    if (takeoffData.work_type === 'PERMANENT_SIGNS') {
+      // Fetch takeoff items to calculate total square footage per item number
+      const { data: takeoffItems, error: takeoffItemsError } = await supabase
+        .from('takeoff_items_l')
+        .select('product_name, total_sqft, quantity')
+        .eq('takeoff_id', workingTakeoffId)
+        .is('deleted_at', null);
+
+      if (takeoffItemsError) {
+        console.error('Error fetching takeoff items for permanent signs:', takeoffItemsError);
+        return NextResponse.json({ error: 'Failed to fetch takeoff items' }, { status: 500 });
+      }
+
+      // Group takeoff items by item number and calculate total square footage
+      const itemTotals = new Map<string, number>();
+      (takeoffItems || []).forEach((item: any) => {
+        const itemNumber = item.product_name || '';
+        const totalSqft = Number(item.total_sqft || 0);
+        itemTotals.set(itemNumber, (itemTotals.get(itemNumber) || 0) + totalSqft);
       });
-    });
+
+      // Create work order items using calculated square footage
+      matchedSovItems.forEach((item, index) => {
+        const contractQuantity = Number(item.quantity || 0);
+        const calculatedQuantity = itemTotals.get(item.item_number) || contractQuantity;
+
+        workOrderItems.push({
+          work_order_id: null,
+          item_number: item.item_number,
+          description: item.description,
+          contract_quantity: contractQuantity,
+          work_order_quantity: calculatedQuantity,
+          uom: item.uom || 'SF', // Use SF (square feet) for permanent signs
+          sort_order: index,
+          sov_item_id: item.id,
+        });
+      });
+    } else {
+      // For other work types, use contract quantities as before
+      matchedSovItems.forEach((item, index) => {
+        const quantity = Number(item.quantity || 0);
+        workOrderItems.push({
+          work_order_id: null,
+          item_number: item.item_number,
+          description: item.description,
+          contract_quantity: quantity,
+          work_order_quantity: quantity,
+          uom: item.uom || 'EA',
+          sort_order: index,
+          sov_item_id: item.id,
+        });
+      });
+    }
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,

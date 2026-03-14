@@ -782,27 +782,7 @@ export const CreateTakeoffForm = ({
         isSaving={saving}
         lastSavedAt={lastSaved}
         hasUnsavedChanges={hasUnsavedChanges}
-        additionalButtons={
-          !isEditMode && savedTakeoffId ? (
-            <>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
-                <Download className="h-3.5 w-3.5" />
-                {generatingPdf ? "Generating…" : "Download PDF"}
-              </Button>
-              {workOrderExists ? (
-                <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  View Work Order
-                </Button>
-              ) : (
-                <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  {saving ? "Creating…" : "Generate Work Order"}
-                </Button>
-              )}
-            </>
-          ) : undefined
-        }
+        additionalButtons={undefined}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
