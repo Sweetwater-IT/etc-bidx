@@ -331,6 +331,24 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('🔍 [PICKUP] No parent items found to link');
       }
+
+      // Create the pickup work order entry
+      console.log('🔍 [PICKUP] Creating pickup work order entry...');
+      const { data: pickupWorkOrder, error: pickupWorkOrderError } = await supabase
+        .from('pickup_work_orders_l')
+        .insert({
+          pickup_takeoff_id: pickupTakeoffEntry.id,
+          job_id: takeoff.job_id,
+        })
+        .select()
+        .single();
+
+      if (pickupWorkOrderError || !pickupWorkOrder) {
+        console.error('🔍 [PICKUP] Error creating pickup work order:', pickupWorkOrderError);
+        return NextResponse.json({ error: 'Failed to create pickup work order', details: pickupWorkOrderError }, { status: 500 });
+      }
+
+      console.log('🔍 [PICKUP] Created pickup work order:', pickupWorkOrder.id);
     }
 
     // Fetch takeoff data to determine which SOV work types should appear on the work order

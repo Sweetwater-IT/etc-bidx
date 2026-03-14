@@ -30,12 +30,12 @@ export async function GET(
       // This is a pickup takeoff - query pickup tables and join with parent items
       console.log('🔍 [DATA API] Fetching pickup takeoff items for:', takeoffId);
 
-      // First get the pickup takeoff entry ID
+      // First get the pickup takeoff entry ID using the parent_takeoff_id from the pickup takeoff
       const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
         .from("pickup_takeoffs_l")
         .select("id")
-        .eq("parent_takeoff_id", takeoffId)
-        .single();
+        .eq("parent_takeoff_id", takeoff.parent_takeoff_id)
+        .maybeSingle();
 
       console.log('🔍 [DATA API] Pickup takeoff entry lookup:', {
         parent_takeoff_id: takeoffId,
