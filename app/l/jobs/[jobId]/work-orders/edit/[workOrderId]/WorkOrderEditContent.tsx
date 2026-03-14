@@ -2,8 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { Button } from "@/components/ui/button";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { ArrowRight } from "lucide-react";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 
 export default function WorkOrderEditContent({
@@ -29,9 +31,10 @@ export default function WorkOrderEditContent({
         backLabel="Job"
         onBack={handleBack}
         rightContent={
-          <div className="text-xs text-muted-foreground">
-            Edit Work Order
-          </div>
+          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
+            <ArrowRight className="h-3 w-3" />
+            Done
+          </Button>
         }
       />
 
