@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,24 +134,32 @@ const DamagePhotoUpload = ({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${itemId}/${comp}/${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("damage-photos")
-      .upload(path, file, { upsert: true });
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('itemId', itemId);
+      formData.append('comp', comp);
 
-    if (uploadError) {
+      const response = await fetch('/api/takeoffs/upload-damage-photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload photo');
+      }
+
+      const data = await response.json();
+      onPhotoUpdated(data.url);
+      toast.success("Damage photo attached");
+    } catch (error) {
+      console.error('Error uploading photo:', error);
       toast.error("Failed to upload photo");
+    } finally {
       setUploading(false);
-      return;
+      if (inputRef.current) inputRef.current.value = "";
     }
-
-    const { data: urlData } = supabase.storage.from("damage-photos").getPublicUrl(path);
-    onPhotoUpdated(urlData.publicUrl);
-    toast.success("Damage photo attached");
-    setUploading(false);
-    if (inputRef.current) inputRef.current.value = "";
   };
 
   const handleRemove = () => {
@@ -214,35 +221,41 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("takeoff_items")
-        .select("id, product_name, category, quantity, return_condition, return_details, damage_photos, notes")
-        .eq("takeoff_id", takeoffId)
-        .order("created_at", { ascending: true });
-      const rows = (data || []) as ReturnItem[];
-      setItems(rows);
-
-      const init: Record<string, Record<string, string>> = {};
-      const initPhotos: Record<string, Record<string, string>> = {};
-      rows.forEach((item) => {
-        const saved = (item.return_details as Record<string, string>) || {};
-        if (item.return_condition && Object.keys(saved).length === 0) {
-          const comps = getComponents(item);
-          const m: Record<string, string> = {};
-          comps.forEach((c) => { m[c] = item.return_condition!; });
-          init[item.id] = m;
-        } else {
-          init[item.id] = { ...saved };
+      try {
+        const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch takeoff data');
         }
-        initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
-      });
-      setDetails(init);
-      setPhotos(initPhotos);
-      setLoading(false);
+        const data = await response.json();
+        const rows = (data.takeoffItems || []) as ReturnItem[];
+        setItems(rows);
+
+        const init: Record<string, Record<string, string>> = {};
+        const initPhotos: Record<string, Record<string, string>> = {};
+        rows.forEach((item) => {
+          const saved = (item.return_details as Record<string, string>) || {};
+          if (item.return_condition && Object.keys(saved).length === 0) {
+            const comps = getComponents(item);
+            const m: Record<string, string> = {};
+            comps.forEach((c) => { m[c] = item.return_condition!; });
+            init[item.id] = m;
+          } else {
+            init[item.id] = { ...saved };
+          }
+          initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
+        });
+        setDetails(init);
+        setPhotos(initPhotos);
+      } catch (error) {
+        console.error('Error fetching takeoff data:', error);
+        toast.error('Failed to load return inventory data');
+      } finally {
+        setLoading(false);
+      }
     };
-    fetch();
+    fetchData();
   }, [takeoffId]);
 
   const setCondition = useCallback((itemId: string, comp: string, value: string) => {
@@ -291,35 +304,55 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
   }, [items]);
 
   const handleSave = useCallback(async () => {
-    if (hasMissingDamagePhotos) {
+    // Check if any damaged items are missing photos
+    const missingPhotos = items.some((item) => {
+      const comps = getComponents(item);
+      const d = details[item.id] || {};
+      const p = photos[item.id] || {};
+      return comps.some((c) => d[c] === "damaged" && !p[c]);
+    });
+
+    if (missingPhotos) {
       toast.error("All damaged items require a photo before saving.");
       return;
     }
     setSaving(true);
     try {
-      const updates = items.map((item) => {
+      const updatePromises = items.map(async (item) => {
         const itemDets = details[item.id] || {};
         const itemPhotos = photos[item.id] || {};
-        return supabase
-          .from("takeoff_items")
-          .update({
+
+        const response = await fetch(`/api/takeoffs/${takeoffId}/items`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            itemId: item.id,
             return_details: itemDets,
             return_condition: Object.values(itemDets)[0] || null,
             damage_photos: itemPhotos,
-          })
-          .eq("id", item.id)
-          .then();
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update item ${item.id}`);
+        }
+
+        return response.json();
       });
-      await Promise.all(updates);
+
+      await Promise.all(updatePromises);
       setDirty(false);
       setLastSavedAt(new Date());
       toast.success("Return inventory saved.");
-    } catch {
+    } catch (error) {
+      console.error('Error saving return inventory:', error);
       toast.error("Failed to save return inventory.");
     } finally {
       setSaving(false);
     }
-  }, [items, details, photos]);
+  }, [items, details, photos, takeoffId]);
 
   // Check if all items have all components filled
   const allComplete = items.length > 0 && items.every((item) => {
@@ -350,21 +383,33 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
 
     // Save all data first
     try {
-      const saveUpdates = items.map((item) => {
+      const savePromises = items.map(async (item) => {
         const itemDets = details[item.id] || {};
         const itemPhotos = photos[item.id] || {};
-        return supabase
-          .from("takeoff_items")
-          .update({
+
+        const response = await fetch(`/api/takeoffs/${takeoffId}/items`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            itemId: item.id,
             return_details: itemDets,
             return_condition: Object.values(itemDets)[0] || null,
             damage_photos: itemPhotos,
-          })
-          .eq("id", item.id)
-          .then();
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update item ${item.id}`);
+        }
+
+        return response.json();
       });
-      await Promise.all(saveUpdates);
-    } catch {
+
+      await Promise.all(savePromises);
+    } catch (error) {
+      console.error('Error saving before submitting:', error);
       toast.error("Failed to save before submitting.");
       setSubmitting(false);
       return;
