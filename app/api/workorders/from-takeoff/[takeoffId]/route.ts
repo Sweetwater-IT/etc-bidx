@@ -82,7 +82,19 @@ function resolveSov(
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🔍 [API] Starting work order creation from takeoff...');
+
+  // Log environment variables availability
+  console.log('🔍 [API] Environment variables check:', {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Present' : '❌ Missing',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Present' : '❌ Missing',
+    NODE_ENV: process.env.NODE_ENV
+  });
+
   try {
+    const requestBody = await request.json();
+    console.log('🔍 [API] Request body:', requestBody);
+
     const {
       userEmail,
       is_pickup,
@@ -99,13 +111,20 @@ export async function POST(request: NextRequest) {
       crewNotes,
       buildShopNotes,
       pmNotes,
-    } = await request.json();
+    } = requestBody;
 
     if (!userEmail) {
+      console.log('🔍 [API] Missing userEmail, returning 400');
       return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
     }
 
     const isPickup = Boolean(is_pickup);
+    console.log('🔍 [API] Parsed parameters:', {
+      userEmail,
+      isPickup,
+      parentWorkOrderId,
+      title
+    });
 
     // Extract takeoffId from the URL path (bypasses params Promise entirely)
     const url = new URL(request.url);

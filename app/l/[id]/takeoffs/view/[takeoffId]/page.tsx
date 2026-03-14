@@ -150,35 +150,61 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   };
 
   const handleCreatePickupWorkOrder = async () => {
+    console.log('🔍 [FRONTEND] Starting pickup work order creation...');
+    console.log('🔍 [FRONTEND] Takeoff data:', {
+      takeoffId,
+      work_order_id: takeoff?.work_order_id,
+      title: takeoff?.title,
+      work_type: takeoff?.work_type
+    });
+
     setLoading(true);
     try {
+      const requestPayload = {
+        userEmail: 'unknown@example.com',
+        is_pickup: true,
+        parentWorkOrderId: takeoff?.work_order_id
+      };
+
+      console.log('🔍 [FRONTEND] Sending request to API:', {
+        url: `/api/workorders/from-takeoff/${takeoffId}`,
+        method: 'POST',
+        payload: requestPayload
+      });
+
       const response = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userEmail: 'unknown@example.com',
-          is_pickup: true,
-          parentWorkOrderId: takeoff?.work_order_id
-        })
+        body: JSON.stringify(requestPayload)
+      });
+
+      console.log('🔍 [FRONTEND] API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('🔍 [FRONTEND] API Error Response:', errorData);
         throw new Error(errorData.error || 'Failed to generate pickup work order');
       }
 
       const data = await response.json();
+      console.log('🔍 [FRONTEND] API Success Response:', data);
 
       if (data.success && data.workOrder) {
+        console.log('🔍 [FRONTEND] Success! Navigating to work order:', data.workOrder.id);
         toast.success('Pickup work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/view/${data.workOrder.id}`);
       } else {
+        console.error('🔍 [FRONTEND] Unexpected response format:', data);
         toast.error('Failed to generate pickup work order');
       }
     } catch (error) {
-      console.error("Error generating pickup work order:", error);
+      console.error("🔍 [FRONTEND] Error generating pickup work order:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate pickup work order");
     } finally {
       setLoading(false);
