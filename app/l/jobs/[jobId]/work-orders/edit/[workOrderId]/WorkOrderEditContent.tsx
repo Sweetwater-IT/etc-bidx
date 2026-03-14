@@ -2,10 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
-import { Button } from "@/components/ui/button";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { useUpdateWorkOrder } from "@/hooks/useWorkOrders";
+import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
-import { ArrowRight } from "lucide-react";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 
 export default function WorkOrderEditContent({
@@ -19,23 +18,28 @@ export default function WorkOrderEditContent({
 }) {
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
+  const { mutateAsync: updateWorkOrder } = useUpdateWorkOrder();
   const jobName = dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);
   };
 
+  const handleDone = async () => {
+    try {
+      // For now, just route to view page since the WorkOrderDetail component handles its own saving
+      router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`);
+    } catch (error) {
+      console.error('Error saving work order:', error);
+    }
+  };
+
   return (
     <div>
-      <StickyPageHeader
+      <NewRecordStickyPageHeader
         backLabel="Job"
         onBack={handleBack}
-        rightContent={
-          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs">
-            <ArrowRight className="h-3 w-3" />
-            Done
-          </Button>
-        }
+        onDone={handleDone}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">

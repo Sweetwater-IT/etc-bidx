@@ -456,10 +456,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Add additional items from the takeoff that aren't in SOV
+    const additionalItems = sourceTakeoff.additional_items || [];
+    if (additionalItems.length > 0) {
+      const existingItemNumbers = new Set(workOrderItems.map(item => item.item_number.toLowerCase()));
+
+      additionalItems.forEach((additionalItem: any, index: number) => {
+        const itemNumber = String(additionalItem.item_number || additionalItem.itemNumber || '').trim();
+        if (itemNumber && !existingItemNumbers.has(itemNumber.toLowerCase())) {
+          workOrderItems.push({
+            work_order_id: null,
+            item_number: itemNumber,
+            description: String(additionalItem.description || additionalItem.itemDescription || ''),
+            contract_quantity: Number(additionalItem.quantity || additionalItem.contractQuantity || 0),
+            work_order_quantity: Number(additionalItem.quantity || additionalItem.contractQuantity || 0),
+            uom: String(additionalItem.uom || 'EA'),
+            sort_order: workOrderItems.length,
+            sov_item_id: null, // Additional items don't have SOV references
+          });
+        }
+      });
+    }
+
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,
       description: i.description.substring(0,50)+'...',
-      qty: i.work_order_quantity
+      qty: i.work_order_quantity,
+      from_sov: i.sov_item_id !== null
     })));
 
     // Generate sequential work order number per takeoff
