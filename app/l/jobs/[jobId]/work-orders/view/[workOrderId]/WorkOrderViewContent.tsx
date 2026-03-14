@@ -5,10 +5,20 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { Button } from "@/components/ui/button";
-import { Edit, ClipboardList } from "lucide-react";
+import { Edit, ClipboardList, Download, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
+
+const WORK_TYPES = [
+  { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
+  { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
+  { value: "FLAGGING", label: "Flagging" },
+  { value: "LANE_CLOSURE", label: "Lane Closure" },
+  { value: "SERVICE", label: "Service" },
+  { value: "DELIVERY", label: "Delivery" },
+  { value: "RENTAL", label: "Rental" },
+];
 
 export default function WorkOrderViewContent({
   workOrderId,
@@ -26,6 +36,7 @@ export default function WorkOrderViewContent({
   const [pickupWO, setPickupWO] = useState<{ id: string; wo_number: string | null; status: string } | null>(null);
   const [generatingPickup, setGeneratingPickup] = useState(false);
   const [workOrderData, setWorkOrderData] = useState<any>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPickupWorkOrder = async () => {
@@ -108,6 +119,138 @@ export default function WorkOrderViewContent({
     }
   };
 
+  const handleDownloadWorkOrderPdf = async () => {
+    setDownloadingPdf('workorder');
+    try {
+      const response = await fetch(`/api/l/jobs/${jobId}/work-orders/${workOrderId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate work order PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `work-order-${workOrderData?.wo_number || workOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Work order PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating work order PDF:", error);
+      toast.error("Failed to generate work order PDF");
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const handleDownloadTakeoffPdf = async () => {
+    if (!workOrderData?.takeoffs?.[0]) {
+      toast.error('No takeoff found for this work order');
+      return;
+    }
+
+    setDownloadingPdf('takeoff');
+    try {
+      const takeoffId = workOrderData.takeoffs[0].id;
+      const response = await fetch(`/api/takeoffs/${takeoffId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate takeoff PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `takeoff-${workOrderData.takeoffs[0].title || takeoffId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Takeoff PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating takeoff PDF:", error);
+      toast.error("Failed to generate takeoff PDF");
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const handleDownloadCombinedPdf = async () => {
+    setDownloadingPdf('combined');
+    try {
+      // For combined PDF, we'll use the work order PDF endpoint which might combine both
+      // If not, we could create a new endpoint or download both separately
+      const response = await fetch(`/api/l/jobs/${jobId}/work-orders/${workOrderId}/pdf?include_takeoff=true`);
+      if (!response.ok) {
+        throw new Error('Failed to generate combined PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `work-order-takeoff-${workOrderData?.wo_number || workOrderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Combined PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating combined PDF:", error);
+      toast.error("Failed to generate combined PDF");
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const handleMarkAsReady = async () => {
+    try {
+      const response = await fetch(`/api/workorders/${workOrderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'ready'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark work order as ready');
+      }
+
+      toast.success("Work order marked as ready");
+      // Refresh the work order data
+      const detailResponse = await fetch(`/api/workorders/${workOrderId}/detail`);
+      if (detailResponse.ok) {
+        const data = await detailResponse.json();
+        setWorkOrderData(data);
+      }
+    } catch (error) {
+      console.error("Error marking work order as ready:", error);
+      toast.error("Failed to mark work order as ready");
+    }
+  };
+
+  const getTitle = () => {
+    if (!workOrderData) return "Work Order Details";
+
+    if (workOrderData.isPickup) {
+      return `Pickup workorder for ${jobName}`;
+    }
+
+    // Get work type from the associated takeoff
+    const takeoff = workOrderData.takeoffs?.[0];
+    if (takeoff) {
+      const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
+      return workTypeLabel ? `${workTypeLabel} work order for ${jobName}` : `Work order for ${jobName}`;
+    }
+
+    return `Work order for ${jobName}`;
+  };
+
   return (
     <div>
       <StickyPageHeader
@@ -115,6 +258,42 @@ export default function WorkOrderViewContent({
         onBack={handleBack}
         rightContent={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadWorkOrderPdf}
+              disabled={downloadingPdf === 'workorder'}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              {downloadingPdf === 'workorder' ? "Downloading…" : "Work Order PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadTakeoffPdf}
+              disabled={downloadingPdf === 'takeoff'}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              {downloadingPdf === 'takeoff' ? "Downloading…" : "Takeoff PDF"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadCombinedPdf}
+              disabled={downloadingPdf === 'combined'}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              {downloadingPdf === 'combined' ? "Downloading…" : "WO + Takeoff PDF"}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleMarkAsReady}
+              disabled={workOrderData?.status === 'ready'}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+              {workOrderData?.status === 'ready' ? 'Ready' : 'Mark as Ready'}
+            </Button>
             {!workOrderData?.isPickup && (pickupWO ? (
               <Button variant="outline" size="sm" onClick={handleViewPickupWorkOrder}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
@@ -136,7 +315,7 @@ export default function WorkOrderViewContent({
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         <PageTitleBlock
-          title="Work Order Details"
+          title={getTitle()}
           description={`View work order details for ${jobName}.`}
         />
 

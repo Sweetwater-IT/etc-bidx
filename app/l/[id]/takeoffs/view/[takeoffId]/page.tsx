@@ -46,16 +46,53 @@ export default function TakeoffViewPage({ params }: any) {
             <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8">
-              <PageTitleBlock
-                title={`Takeoff for ${jobName}`}
-                description="Review takeoff details, materials, and linked work order actions."
-              />
+              <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
               <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
             </div>
           </div>
         </Suspense>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; takeoffId: string; jobName: string }) {
+  const [takeoff, setTakeoff] = useState<any>(null);
+
+  useEffect(() => {
+    const loadTakeoff = async () => {
+      try {
+        const response = await fetch(`/api/takeoffs/${takeoffId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load takeoff: ${response.status}`);
+        }
+        const data = await response.json();
+        setTakeoff(data);
+      } catch (error) {
+        console.error('Error loading takeoff:', error);
+      }
+    };
+    if (takeoffId) {
+      loadTakeoff();
+    }
+  }, [takeoffId]);
+
+  const getTitle = () => {
+    if (!takeoff) return `Takeoff for ${jobName}`;
+
+    if (takeoff.is_pickup) {
+      return `Pick up takeoff for ${jobName}`;
+    }
+
+    const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
+    return workTypeLabel ? `${workTypeLabel} takeoff for ${jobName}` : `Takeoff for ${jobName}`;
+  };
+
+  return (
+    <PageTitleBlock
+      title={getTitle()}
+      description="Review takeoff details, materials, and linked work order actions."
+    />
   );
 }
 
