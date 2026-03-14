@@ -152,15 +152,26 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   const handleCreatePickupWorkOrder = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-pickup-work-order", {
-        body: { parentWorkOrderId: takeoff?.work_order_id }
+      const response = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: 'unknown@example.com',
+          is_pickup: true,
+          parentWorkOrderId: takeoff?.work_order_id
+        })
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate pickup work order');
       }
 
-      if (data?.workOrder) {
+      const data = await response.json();
+
+      if (data.success && data.workOrder) {
         toast.success('Pickup work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/view/${data.workOrder.id}`);
       } else {
@@ -168,7 +179,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
       }
     } catch (error) {
       console.error("Error generating pickup work order:", error);
-      toast.error("Failed to generate pickup work order");
+      toast.error(error instanceof Error ? error.message : "Failed to generate pickup work order");
     } finally {
       setLoading(false);
     }
