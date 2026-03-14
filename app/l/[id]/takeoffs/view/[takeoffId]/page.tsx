@@ -12,6 +12,7 @@ import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { supabase } from "@/lib/supabase";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
@@ -148,6 +149,31 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
   };
 
+  const handleCreatePickupWorkOrder = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-pickup-work-order", {
+        body: { parentWorkOrderId: takeoff?.work_order_id }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.workOrder) {
+        toast.success('Pickup work order generated successfully!');
+        router.push(`/l/jobs/${jobId}/work-orders/view/${data.workOrder.id}`);
+      } else {
+        toast.error('Failed to generate pickup work order');
+      }
+    } catch (error) {
+      console.error("Error generating pickup work order:", error);
+      toast.error("Failed to generate pickup work order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <StickyPageHeader
       backLabel="Job"
@@ -189,10 +215,18 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
             {generatingPdf ? "Generating…" : "Download PDF"}
           </Button>
           {takeoff?.work_order_id ? (
-            <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/view/${takeoff.work_order_id}`)}>
-              <ClipboardList className="h-3.5 w-3.5" />
-              View Work Order
-            </Button>
+            <>
+              <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => router.push(`/l/jobs/${jobId}/work-orders/view/${takeoff.work_order_id}`)}>
+                <ClipboardList className="h-3.5 w-3.5" />
+                View Work Order
+              </Button>
+              {!takeoff?.is_pickup && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreatePickupWorkOrder} disabled={loading}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  {loading ? "Creating…" : "Generate Pickup Work Order"}
+                </Button>
+              )}
+            </>
           ) : !takeoff?.is_pickup ? (
             <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={loading}>
               <ClipboardList className="h-3.5 w-3.5" />
