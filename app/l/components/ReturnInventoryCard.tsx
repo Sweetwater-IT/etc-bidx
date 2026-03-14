@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RotateCcw, Loader2, CheckCircle2, Camera, X, Send, FileText, Save } from "lucide-react";
+import { RotateCcw, Loader2, CheckCircle2, Camera, X, Send, FileText, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { generateReturnTakeoffPdf } from "@/app/l/utils/generateReturnTakeoffPdf";
 
@@ -219,6 +219,7 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -302,6 +303,58 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     setDirty(true);
     setSavingBulk(false);
   }, [items]);
+
+  const handleFetchData = useCallback(async () => {
+    console.log('🔍 [FRONTEND] Manual fetch triggered for takeoff:', takeoffId);
+    setFetching(true);
+    try {
+      const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
+      console.log('🔍 [FRONTEND] Fetch response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('🔍 [FRONTEND] Raw API response:', data);
+      console.log('🔍 [FRONTEND] Takeoff items found:', data.takeoffItems?.length || 0);
+
+      if (data.takeoffItems) {
+        console.log('🔍 [FRONTEND] First few items:', data.takeoffItems.slice(0, 3).map((item: any) => ({
+          id: item.id,
+          product_name: item.product_name,
+          quantity: item.quantity
+        })));
+      }
+
+      const rows = (data.takeoffItems || []) as ReturnItem[];
+      setItems(rows);
+
+      const init: Record<string, Record<string, string>> = {};
+      const initPhotos: Record<string, Record<string, string>> = {};
+      rows.forEach((item) => {
+        const saved = (item.return_details as Record<string, string>) || {};
+        if (item.return_condition && Object.keys(saved).length === 0) {
+          const comps = getComponents(item);
+          const m: Record<string, string> = {};
+          comps.forEach((c) => { m[c] = item.return_condition!; });
+          init[item.id] = m;
+        } else {
+          init[item.id] = { ...saved };
+        }
+        initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
+      });
+      setDetails(init);
+      setPhotos(initPhotos);
+
+      toast.success(`Fetched ${rows.length} items`);
+    } catch (error) {
+      console.error('🔍 [FRONTEND] Error fetching takeoff data:', error);
+      toast.error('Failed to fetch return inventory data');
+    } finally {
+      setFetching(false);
+    }
+  }, [takeoffId]);
 
   const handleSave = useCallback(async () => {
     // Check if any damaged items are missing photos
@@ -513,6 +566,20 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs h-7"
+            onClick={handleFetchData}
+            disabled={fetching}
+          >
+            {fetching ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {fetching ? "Fetching…" : "Fetch Data"}
+          </Button>
           {!isReadOnly && items.length > 0 && (
             <Button
               size="sm"

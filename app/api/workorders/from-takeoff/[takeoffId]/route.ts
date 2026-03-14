@@ -241,18 +241,34 @@ export async function POST(request: NextRequest) {
       workingTakeoffId = pickupTakeoff.id;
 
       // Copy takeoff items from parent takeoff to pickup takeoff
+      console.log('🔍 [PICKUP] Starting item copy process...');
+      console.log('🔍 [PICKUP] Parent takeoff ID:', parentTakeoffId);
+      console.log('🔍 [PICKUP] Pickup takeoff ID:', pickupTakeoff.id);
+
       const { data: parentItems, error: parentItemsError } = await supabase
         .from('takeoff_items_l')
         .select('*')
         .eq('takeoff_id', parentTakeoffId)
         .is('deleted_at', null);
 
+      console.log('🔍 [PICKUP] Parent items query result:', {
+        error: parentItemsError,
+        itemCount: parentItems?.length || 0,
+        items: parentItems?.map(item => ({
+          id: item.id,
+          product_name: item.product_name,
+          quantity: item.quantity
+        })) || []
+      });
+
       if (parentItemsError) {
-        console.error('Error fetching parent takeoff items:', parentItemsError);
+        console.error('🔍 [PICKUP] Error fetching parent takeoff items:', parentItemsError);
         return NextResponse.json({ error: 'Failed to fetch parent takeoff items', details: parentItemsError }, { status: 500 });
       }
 
       if (parentItems && parentItems.length > 0) {
+        console.log('🔍 [PICKUP] Processing parent items for pickup takeoff...');
+
         const pickupItems = parentItems.map(item => ({
           takeoff_id: pickupTakeoff.id,
           product_name: item.product_name,
@@ -283,16 +299,35 @@ export async function POST(request: NextRequest) {
           damage_photos: {},
         }));
 
-        const { error: insertItemsError } = await supabase
+        console.log('🔍 [PICKUP] Prepared pickup items:', pickupItems.map(item => ({
+          takeoff_id: item.takeoff_id,
+          product_name: item.product_name,
+          quantity: item.quantity
+        })));
+
+        const { data: insertedItems, error: insertItemsError } = await supabase
           .from('takeoff_items_l')
-          .insert(pickupItems);
+          .insert(pickupItems)
+          .select();
+
+        console.log('🔍 [PICKUP] Insert result:', {
+          error: insertItemsError,
+          insertedCount: insertedItems?.length || 0,
+          insertedItems: insertedItems?.map(item => ({
+            id: item.id,
+            takeoff_id: item.takeoff_id,
+            product_name: item.product_name
+          })) || []
+        });
 
         if (insertItemsError) {
-          console.error('Error copying takeoff items to pickup:', insertItemsError);
+          console.error('🔍 [PICKUP] Error copying takeoff items to pickup:', insertItemsError);
           return NextResponse.json({ error: 'Failed to copy takeoff items to pickup', details: insertItemsError }, { status: 500 });
         }
 
-        console.log(`Copied ${pickupItems.length} items from parent takeoff to pickup takeoff`);
+        console.log(`🔍 [PICKUP] Successfully copied ${pickupItems.length} items from parent takeoff to pickup takeoff`);
+      } else {
+        console.log('🔍 [PICKUP] No parent items found to copy');
       }
     }
 
