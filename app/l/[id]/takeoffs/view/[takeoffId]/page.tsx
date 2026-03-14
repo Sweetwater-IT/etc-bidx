@@ -14,8 +14,8 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 
 const WORK_TYPES = [
-  { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
+  { value: "MPT", label: "MPT" },
+  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
   { value: "FLAGGING", label: "Flagging" },
   { value: "LANE_CLOSURE", label: "Lane Closure" },
   { value: "SERVICE", label: "Service" },
