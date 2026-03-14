@@ -7,7 +7,6 @@ import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
-import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import type { JobProjectInfo } from "@/types/job";
@@ -173,13 +172,214 @@ export default function ContractViewContent() {
           description="Review contract details, schedule of values, and supporting documents."
         />
 
-        {/* Project Information - includes Project Details, Customer Admin Info, Certified Payroll, and Additional Notes */}
-        <ProjectInfoFields
-          projectInfo={projectInfo}
-          onChange={() => {}} // No-op for view mode
-          readOnly={true}
-          contractRow={contract}
-        />
+        {/* Project Information */}
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Details</h2>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Owner</span>
+                <span className="text-sm font-medium">{projectInfo.projectOwner || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Job Name</span>
+                <span className="text-sm font-medium">{projectInfo.projectName || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Owner Contract #</span>
+                <span className="text-sm font-medium">{projectInfo.contractNumber || "—"}</span>
+                {contract?.internal_id && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Internal ID: {contract.internal_id}
+                  </p>
+                )}
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
+                <span className="text-sm font-medium">{projectInfo.county || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Branch</span>
+                <span className="text-sm font-medium">{projectInfo.etcBranch || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
+                <span className="text-sm font-medium font-mono">{projectInfo.etcJobNumber || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
+                <span className="text-sm font-medium">{projectInfo.etcProjectManager || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Start Date</span>
+                <span className="text-sm font-medium">{projectInfo.projectStartDate || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project End Date</span>
+                <span className="text-sm font-medium">{projectInfo.projectEndDate || "—"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Information */}
+        <div className="rounded-lg border bg-card shadow-sm">
+          <div className="px-5 py-3 border-b bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Customer Admin Information</h2>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5 text-xs">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Name</span>
+                <span className="text-sm font-medium">{projectInfo.customerName || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job Number</span>
+                <span className="text-sm font-medium">{projectInfo.customerJobNumber || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Project Manager</span>
+                <span className="text-sm font-medium">{projectInfo.customerPM || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Email</span>
+                <span className="text-sm font-medium">{projectInfo.customerPMEmail || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Phone</span>
+                <span className="text-sm font-medium">{projectInfo.customerPMPhone || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll Contact</span>
+                <span className="text-sm font-medium">{projectInfo.certifiedPayrollContact || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Email</span>
+                <span className="text-sm font-medium">{projectInfo.certifiedPayrollEmail || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Phone</span>
+                <span className="text-sm font-medium">{projectInfo.certifiedPayrollPhone || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Contact Name</span>
+                <span className="text-sm font-medium">{projectInfo.customerBillingContact || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Email</span>
+                <span className="text-sm font-medium">{projectInfo.customerBillingEmail || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Phone</span>
+                <span className="text-sm font-medium">{projectInfo.customerBillingPhone || "—"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Certified Payroll Information */}
+        {projectInfo.isCertifiedPayroll !== "none" && (
+          <div className="rounded-lg border bg-card shadow-sm">
+            <div className="px-5 py-3 border-b bg-muted/30">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Certified Payroll Information</h2>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-1 gap-4 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll Type</span>
+                  <span className="text-sm font-medium">
+                    {projectInfo.isCertifiedPayroll === "state" ? "Yes — State (PA Prevailing Wage)" :
+                     projectInfo.isCertifiedPayroll === "federal" ? "Yes — Federal (Davis-Bacon)" : "No"}
+                  </span>
+                </div>
+
+                {projectInfo.isCertifiedPayroll === "state" && (
+                  <>
+                    <div>
+                      <span className="text-[11px] font-semibold text-foreground mb-2 block">PA Prevailing Wage Rates</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Base Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.stateMptBaseRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Fringe Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.stateMptFringeRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Total</span>
+                        <span className="text-sm font-medium">${((parseFloat(projectInfo.stateMptBaseRate || "0") || 0) + (parseFloat(projectInfo.stateMptFringeRate || "0") || 0)).toFixed(2)}/hr</span>
+                      </div>
+                      <div></div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Base Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.stateFlaggingBaseRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Fringe Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.stateFlaggingFringeRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Total</span>
+                        <span className="text-sm font-medium">${((parseFloat(projectInfo.stateFlaggingBaseRate || "0") || 0) + (parseFloat(projectInfo.stateFlaggingFringeRate || "0") || 0)).toFixed(2)}/hr</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {projectInfo.isCertifiedPayroll === "federal" && (
+                  <>
+                    <div>
+                      <span className="text-[11px] font-semibold text-foreground mb-2 block">Federal Davis-Bacon Rates</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Base Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.federalMptBaseRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Fringe Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.federalMptFringeRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">MPT Total</span>
+                        <span className="text-sm font-medium">${((parseFloat(projectInfo.federalMptBaseRate || "0") || 0) + (parseFloat(projectInfo.federalMptFringeRate || "0") || 0)).toFixed(2)}/hr</span>
+                      </div>
+                      <div></div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Base Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.federalFlaggingBaseRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Fringe Rate</span>
+                        <span className="text-sm font-medium">${projectInfo.federalFlaggingFringeRate || "0.00"}/hr</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Flagging Total</span>
+                        <span className="text-sm font-medium">${((parseFloat(projectInfo.federalFlaggingBaseRate || "0") || 0) + (parseFloat(projectInfo.federalFlaggingFringeRate || "0") || 0)).toFixed(2)}/hr</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Additional Notes */}
+        {projectInfo.otherNotes && (
+          <div className="rounded-lg border bg-card shadow-sm">
+            <div className="px-5 py-3 border-b bg-muted/30">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Notes</h2>
+            </div>
+            <div className="p-5">
+              <div className="text-sm">{projectInfo.otherNotes}</div>
+            </div>
+          </div>
+        )}
 
         {/* Schedule of Values */}
         <div>
