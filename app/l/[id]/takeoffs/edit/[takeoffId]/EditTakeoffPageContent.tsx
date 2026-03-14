@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
-import { FileText } from "lucide-react";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { Button } from "@/components/ui/button";
+import { Edit, ArrowLeft, FileText } from "lucide-react";
 
 interface EditTakeoffPageContentProps {
   jobId: string;
@@ -52,36 +55,44 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
-        {/* ─── Page Title Bar ─── */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground leading-tight">
-                Edit Takeoff
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {jobName} · Edit takeoff details, work types, materials, and scheduling information.
-              </p>
-            </div>
-          </div>
-        </div>
+  const getTitle = () => {
+    if (!takeoff) return "Edit Takeoff";
 
-        {/* Content Area */}
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <CreateTakeoffForm
-            jobId={jobId}
-            onBack={handleBack}
-            draftTakeoff={takeoff}
-            backLabel="Takeoff"
-            mode="edit"
-          />
-        </div>
+    if (takeoff.is_pickup) {
+      return `Edit Pickup Takeoff for ${jobName}`;
+    }
+
+    // Get work type from the takeoff
+    const workTypeLabel = takeoff.work_type || "";
+    return workTypeLabel ? `Edit ${workTypeLabel} Takeoff for ${jobName}` : `Edit Takeoff for ${jobName}`;
+  };
+
+  return (
+    <div>
+      <StickyPageHeader
+        backLabel="Takeoff"
+        onBack={handleBack}
+        rightContent={
+          <Button variant="outline" size="sm" onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoffId}`)}>
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+            View Takeoff
+          </Button>
+        }
+      />
+
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <PageTitleBlock
+          title={getTitle()}
+          description={`Edit takeoff details, work types, materials, and scheduling information for ${jobName}.`}
+        />
+
+        <CreateTakeoffForm
+          jobId={jobId}
+          onBack={handleBack}
+          draftTakeoff={takeoff}
+          backLabel="Takeoff"
+          mode="edit"
+        />
       </div>
     </div>
   );

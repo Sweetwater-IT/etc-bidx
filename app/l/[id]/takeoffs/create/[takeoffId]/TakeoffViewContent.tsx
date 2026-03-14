@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2 } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
@@ -314,69 +315,72 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
 
 
-      {Array.isArray(takeoff.takeoff_items) && takeoff.takeoff_items.length > 0 && (
-        (() => {
-          // Group items by structure type
-          const groupedItems = takeoff.takeoff_items.reduce((acc: Record<string, any[]>, item: any) => {
-            const structureType = item.structure_type || 'Additional Items';
-            if (!acc[structureType]) {
-              acc[structureType] = [];
-            }
-            acc[structureType].push(item);
-            return acc;
-          }, {} as Record<string, any[]>);
+      {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
+      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            Takeoff Items
+          </h2>
+          <Badge variant="secondary" className="text-[10px]">{Array.isArray(takeoff.takeoff_items) ? takeoff.takeoff_items.length : 0} sign items</Badge>
+        </div>
 
-          return (Object.entries(groupedItems) as [string, any[]][]).map(([structureType, items]) => (
-            <div key={structureType} className="rounded-lg border bg-card shadow-sm">
-              <div className="px-5 py-3 border-b bg-muted/30">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {structureType} {structureType !== 'Additional Items' ? 'Signs' : 'Items'}
-                </h2>
-              </div>
-              <div className="p-5 overflow-x-auto">
-                <table className="w-full min-w-[900px] text-sm">
-                  <thead className="bg-muted/20">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dimensions</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sq Ft</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Sq Ft</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Material</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sheeting</th>
-                      {structureType === 'Type 3' && (
-                        <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Load Order</th>
-                      )}
-                      <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {items.map((item: any) => (
-                      <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-3 py-2 font-medium">{item.product_name}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{item.category}</td>
-                        <td className="px-3 py-2">{item.quantity}</td>
-                        <td className="px-3 py-2">
-                          {item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—'}
-                        </td>
-                        <td className="px-3 py-2">{item.sqft ?? '—'}</td>
-                        <td className="px-3 py-2">{item.total_sqft ?? '—'}</td>
-                        <td className="px-3 py-2">{item.material || '—'}</td>
-                        <td className="px-3 py-2">{item.sheeting || '—'}</td>
-                        {structureType === 'Type 3' && (
-                          <td className="px-3 py-2">{item.load_order || '—'}</td>
-                        )}
-                        <td className="px-3 py-2 text-muted-foreground">{item.notes || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ));
-        })()
-      )}
+        {Array.isArray(takeoff.takeoff_items) && takeoff.takeoff_items.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead className="bg-muted/20">
+                <tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Item</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Category</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Qty</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dimensions</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sq Ft</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total Sq Ft</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Material</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sheeting</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {takeoff.takeoff_items.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-muted/10">
+                    <td className="px-3 py-2 font-medium">{item.product_name}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{item.category}</td>
+                    <td className="px-3 py-2">{item.quantity}</td>
+                    <td className="px-3 py-2">
+                      {item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—'}
+                    </td>
+                    <td className="px-3 py-2">{item.sqft ?? '—'}</td>
+                    <td className="px-3 py-2">{item.total_sqft ?? '—'}</td>
+                    <td className="px-3 py-2">{item.material || '—'}</td>
+                    <td className="px-3 py-2">{item.sheeting || '—'}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{item.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No takeoff items found. Sign designations will appear here when the takeoff is created.
+          </div>
+        )}
+      </div>
+
+      {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
+      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <Plus className="h-4 w-4 text-muted-foreground" />
+            Additional Items
+          </h2>
+          <Badge variant="secondary" className="text-[10px]">0 custom items</Badge>
+        </div>
+
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          No additional items. Custom items added manually will appear here.
+        </div>
+      </div>
 
       {takeoff.is_pickup && takeoff.work_order_id && (
         <ReturnInventoryCard

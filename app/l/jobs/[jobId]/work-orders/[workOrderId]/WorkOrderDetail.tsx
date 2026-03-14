@@ -117,6 +117,7 @@ interface WOItem {
   work_order_quantity: number;
   uom: string | null;
   sort_order: number;
+  sov_item_id?: string | null;
 }
 
 interface JobInfo {
@@ -1232,22 +1233,23 @@ const WorkOrderDetail = ({
           </div>
         </div>
 
-        {/* ─── Work Order Items Card — matches SOV table style ─── */}
+        {/* ─── Work Order Items Card — SOV items automatically populated ─── */}
         <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               Work Order Items
             </h2>
+            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => item.sov_item_id).length} SOV items</Badge>
           </div>
 
           {loadingRelated ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : woItems.length === 0 ? (
+          ) : woItems.filter(item => item.sov_item_id).length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              No line items yet. Click Fetch Work Order Items to begin.
+              No SOV items found. Work order items will be automatically populated from the Schedule of Values when a takeoff is linked.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1263,7 +1265,277 @@ const WorkOrderDetail = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {woItems.map((item) => (
+                  {woItems.filter(item => item.sov_item_id).map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="p-1.5">
+                        {canEdit ? (
+                          <Popover
+                            open={openItemPickerRow === item.id}
+                            onOpenChange={(open) => {
+                              setOpenItemPickerRow(open ? item.id : null);
+                              if (!open) setItemPickerSearch("");
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between h-7 text-xs font-normal"
+                              >
+                                {item.item_number || "Select item…"}
+                                <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[360px] p-0 z-50 bg-popover" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search by # or description…" value={itemPickerSearch} onValueChange={setItemPickerSearch} />
+                                <CommandList className="max-h-[200px]">
+                                  <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">No matching items found.</CommandEmpty>
+                                  <CommandGroup heading="Contract Items">
+                                    {filteredSOVItems.slice(0, 50).map((sov) => {
+                                      const alreadyUsed = selectedItemNumbers.has(sov.item_number) && item.item_number !== sov.item_number;
+                                      return (
+                                        <CommandItem
+                                          key={sov.id}
+                                          value={`${sov.item_number} ${sov.description}`}
+                                          onSelect={async () => {
+                                            if (alreadyUsed) {
+                                              toast.warning(`Item ${sov.item_number} is already on this work order.`);
+                                              return;
+                                            }
+                                            const updated = {
+                                              item_number: sov.item_number,
+                                              description: sov.description,
+                                              contract_quantity: sov.quantity,
+                                              uom: sov.uom,
+                                              sov_item_id: sov.id,
+                                            };
+                                            setWoItems((prev) => prev.map((i) => i.id === item.id ? { ...i, ...updated } : i));
+                                            const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({
+                                                action: 'update',
+                                                itemData: { itemId: item.id, updates: updated },
+                                              }),
+                                            });
+                                            if (!response.ok) {
+                                              const error = await response.json();
+                                              toast.error(error.error || 'Failed to update item');
+                                              // Revert the change
+                                              setWoItems((prev) => prev.map((i) => i.id === item.id ? item : i));
+                                            }
+                                            setOpenItemPickerRow(null);
+                                            setItemPickerSearch("");
+                                          }}
+                                          className={cn("text-xs", alreadyUsed && "opacity-50")}
+                                        >
+                                          <Check className={cn("mr-1.5 h-3 w-3", item.item_number === sov.item_number ? "opacity-100" : "opacity-0")} />
+                                          <span className="font-mono mr-2 text-muted-foreground">{sov.item_number}</span>
+                                          <span className="truncate">{sov.description}</span>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                  {!(workOrder as any).is_pickup && (
+                                  <CommandGroup heading="Additional">
+                                    {[
+                                      { key: "DELIVERY", label: "Delivery", desc: "Job Site Delivery" },
+                                      { key: "SERVICE", label: "Service", desc: "Job Site Service" },
+                                    ].filter(opt =>
+                                      opt.label.toLowerCase().includes(itemPickerSearch.toLowerCase()) ||
+                                      opt.desc.toLowerCase().includes(itemPickerSearch.toLowerCase()) ||
+                                      opt.key.toLowerCase().includes(itemPickerSearch.toLowerCase())
+                                    ).map((opt) => {
+                                      const alreadyUsed = selectedItemNumbers.has(opt.key) && item.item_number !== opt.key;
+                                      return (
+                                        <CommandItem
+                                          key={opt.key}
+                                          value={`${opt.key} ${opt.label} ${opt.desc}`}
+                                          onSelect={async () => {
+                                            if (alreadyUsed) {
+                                              toast.warning(`${opt.label} is already on this work order.`);
+                                              return;
+                                            }
+                                            const updated = {
+                                              item_number: opt.key,
+                                              description: opt.desc,
+                                              contract_quantity: item.contract_quantity, // Keep existing quantity
+                                              uom: "EA",
+                                              sov_item_id: null,
+                                            };
+                                            setWoItems((prev) => prev.map((i) => i.id === item.id ? { ...i, ...updated } : i));
+                                            const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({
+                                                action: 'update',
+                                                itemData: { itemId: item.id, updates: updated },
+                                              }),
+                                            });
+                                            if (!response.ok) {
+                                              const error = await response.json();
+                                              toast.error(error.error || 'Failed to update item');
+                                              // Revert the change
+                                              setWoItems((prev) => prev.map((i) => i.id === item.id ? item : i));
+                                            }
+                                            setOpenItemPickerRow(null);
+                                            setItemPickerSearch("");
+                                          }}
+                                          className={cn("text-xs", alreadyUsed && "opacity-50")}
+                                        >
+                                          <Check className={cn("mr-1.5 h-3 w-3", item.item_number === opt.key ? "opacity-100" : "opacity-0")} />
+                                          <span className="font-mono mr-2 text-muted-foreground">{opt.key}</span>
+                                          <span className="truncate">{opt.desc}</span>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </CommandGroup>
+                                  )}
+                                  <CommandGroup heading="Custom">
+                                    <CommandItem
+                                      value="__custom_item__"
+                                      onSelect={() => {
+                                        setCustomItemRowId(item.id);
+                                        setCustomItemNumber("");
+                                        setCustomItemDescription("");
+                                        setCustomItemUom("EA");
+                                        setCustomItemQty(1);
+                                        setShowCustomItemDialog(true);
+                                        setOpenItemPickerRow(null);
+                                        setItemPickerSearch("");
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      <Plus className="mr-1.5 h-3 w-3" />
+                                      <span>Enter custom item…</span>
+                                    </CommandItem>
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span className="text-xs font-mono truncate block px-1">{item.item_number}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="p-1.5">
+                        <span className="text-xs px-1 truncate block">{item.description || "—"}</span>
+                      </TableCell>
+                      <TableCell className="p-1.5">
+                        <span className="text-xs px-1">{item.uom || "EA"}</span>
+                      </TableCell>
+                      <TableCell className="p-1.5">
+                        <span className="text-xs text-right block">{item.contract_quantity}</span>
+                      </TableCell>
+                      <TableCell className="p-1.5">
+                        {canEdit ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                const newQty = Math.max(0, (item.work_order_quantity || 0) - 1);
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
+                              }}
+                              disabled={(item.work_order_quantity || 0) <= 0}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={item.work_order_quantity || ""}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                const cleaned = raw.replace(/\D/g, '');
+                                const num = cleaned === '' ? 0 : Math.max(0, parseInt(cleaned, 10));
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: num } : i));
+                              }}
+                              onBlur={async () => {
+                                const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    action: 'update',
+                                    itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
+                                  }),
+                                });
+                                if (!response.ok) {
+                                  const error = await response.json();
+                                  toast.error(error.error || 'Failed to update quantity');
+                                  // Revert the change
+                                  setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: item.work_order_quantity } : i));
+                                }
+                              }}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                const newQty = (item.work_order_quantity || 0) + 1;
+                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-right block">{item.work_order_quantity}</span>
+                        )}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteItemConfirm(item.id)}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Additional Items Card — Custom items added manually ─── */}
+        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              Additional Items
+            </h2>
+            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => !item.sov_item_id).length} custom items</Badge>
+          </div>
+
+          {loadingRelated ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : woItems.filter(item => !item.sov_item_id).length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No additional items. Custom items added manually will appear here.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[120px] text-xs">Item Number</TableHead>
+                    <TableHead className="text-xs">Description</TableHead>
+                    <TableHead className="w-[80px] text-xs">UOM</TableHead>
+                    <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
+                    <TableHead className="w-[100px] text-xs text-right">WO Qty</TableHead>
+                    {canEdit && <TableHead className="w-[40px]" />}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {woItems.filter(item => !item.sov_item_id).map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="p-1.5">
                         {canEdit ? (
