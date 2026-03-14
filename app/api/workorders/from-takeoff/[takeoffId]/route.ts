@@ -239,6 +239,61 @@ export async function POST(request: NextRequest) {
 
       sourceTakeoff = pickupTakeoff;
       workingTakeoffId = pickupTakeoff.id;
+
+      // Copy takeoff items from parent takeoff to pickup takeoff
+      const { data: parentItems, error: parentItemsError } = await supabase
+        .from('takeoff_items_l')
+        .select('*')
+        .eq('takeoff_id', parentTakeoffId)
+        .is('deleted_at', null);
+
+      if (parentItemsError) {
+        console.error('Error fetching parent takeoff items:', parentItemsError);
+        return NextResponse.json({ error: 'Failed to fetch parent takeoff items', details: parentItemsError }, { status: 500 });
+      }
+
+      if (parentItems && parentItems.length > 0) {
+        const pickupItems = parentItems.map(item => ({
+          takeoff_id: pickupTakeoff.id,
+          product_name: item.product_name,
+          category: item.category,
+          unit: item.unit,
+          quantity: item.quantity,
+          requisition_type: item.requisition_type,
+          notes: item.notes,
+          in_stock_qty: item.in_stock_qty,
+          to_order_qty: item.to_order_qty,
+          inventory_status: item.inventory_status,
+          material: item.material,
+          sign_details: item.sign_details,
+          sign_description: item.sign_description,
+          sheeting: item.sheeting,
+          width_inches: item.width_inches,
+          height_inches: item.height_inches,
+          sqft: item.sqft,
+          total_sqft: item.total_sqft,
+          load_order: item.load_order,
+          cover: item.cover,
+          secondary_signs: item.secondary_signs,
+          // Reset pickup-specific fields
+          pickup_condition: null,
+          pickup_images: [],
+          return_details: {},
+          return_condition: null,
+          damage_photos: {},
+        }));
+
+        const { error: insertItemsError } = await supabase
+          .from('takeoff_items_l')
+          .insert(pickupItems);
+
+        if (insertItemsError) {
+          console.error('Error copying takeoff items to pickup:', insertItemsError);
+          return NextResponse.json({ error: 'Failed to copy takeoff items to pickup', details: insertItemsError }, { status: 500 });
+        }
+
+        console.log(`Copied ${pickupItems.length} items from parent takeoff to pickup takeoff`);
+      }
     }
 
     // Fetch takeoff data to determine which SOV work types should appear on the work order
