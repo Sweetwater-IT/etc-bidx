@@ -9,11 +9,20 @@ export async function PUT(
     const { id: takeoffId } = await params;
     const body = await request.json();
 
+    console.log('🔍 [ITEMS API] Starting item update for takeoff:', takeoffId);
+    console.log('🔍 [ITEMS API] Request body:', body);
+
     if (!takeoffId) {
       return NextResponse.json({ error: 'Takeoff ID is required' }, { status: 400 });
     }
 
     const { itemId, return_details, return_condition, damage_photos } = body;
+
+    console.log('🔍 [ITEMS API] Extracted itemId:', itemId, 'fields:', {
+      hasReturnDetails: !!return_details,
+      hasReturnCondition: !!return_condition,
+      hasDamagePhotos: !!damage_photos
+    });
 
     if (!itemId) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 });
@@ -48,12 +57,27 @@ export async function PUT(
         if (return_details.lights !== undefined) updateData.light_condition = return_details.lights;
       }
 
+      console.log('🔍 [ITEM UPDATE] Prepared update data for pickup item:', {
+        updateDataKeys: Object.keys(updateData),
+        hasReturnDetails: !!updateData.return_details,
+        hasPickupImages: !!updateData.pickup_images,
+        signCondition: updateData.sign_condition,
+        structureCondition: updateData.structure_condition,
+        lightCondition: updateData.light_condition
+      });
+
       updateResult = await supabase
         .from('pickup_takeoff_items_l')
         .update(updateData)
         .eq('id', itemId)
         .select()
         .single();
+
+      console.log('🔍 [ITEM UPDATE] Pickup item update result:', {
+        success: !updateResult.error,
+        error: updateResult.error?.message,
+        updatedId: updateResult.data?.id
+      });
     } else {
       // Update regular takeoff item
       console.log('🔍 [ITEM UPDATE] Updating regular takeoff item:', itemId);

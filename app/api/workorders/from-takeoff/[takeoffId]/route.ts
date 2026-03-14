@@ -245,38 +245,15 @@ export async function POST(request: NextRequest) {
       console.log('🔍 [PICKUP] Parent takeoff ID:', takeoffId);
       console.log('🔍 [PICKUP] Regular takeoff ID:', pickupTakeoff.id);
 
-      // First, create the pickup takeoff entry
+      // First, create the pickup takeoff entry (only the fields that exist in pickup_takeoffs_l)
+      console.log('🔍 [PICKUP] Creating pickup takeoff entry with minimal fields...');
       const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
         .from('pickup_takeoffs_l')
         .insert({
           parent_takeoff_id: takeoffId,
           job_id: takeoff.job_id,
-          // Copy relevant fields from the regular takeoff
-          title: pickupTakeoff.title,
-          work_type: pickupTakeoff.work_type,
-          status: pickupTakeoff.status,
-          notes: pickupTakeoff.notes,
-          install_date: pickupTakeoff.install_date,
-          pickup_date: pickupTakeoff.pickup_date,
-          contracted_or_additional: pickupTakeoff.contracted_or_additional,
-          needed_by_date: pickupTakeoff.needed_by_date,
-          destination: pickupTakeoff.destination,
-          default_sign_material: pickupTakeoff.default_sign_material,
-          priority: pickupTakeoff.priority,
-          crew_notes: pickupTakeoff.crew_notes,
-          build_shop_notes: pickupTakeoff.build_shop_notes,
-          active_sections: pickupTakeoff.active_sections,
-          sign_rows: pickupTakeoff.sign_rows,
-          pm_notes: pickupTakeoff.pm_notes,
-          is_multi_day_job: pickupTakeoff.is_multi_day_job,
-          end_date: pickupTakeoff.end_date,
-          active_permanent_items: pickupTakeoff.active_permanent_items,
-          permanent_sign_rows: pickupTakeoff.permanent_sign_rows,
-          permanent_entry_rows: pickupTakeoff.permanent_entry_rows,
-          default_permanent_sign_material: pickupTakeoff.default_permanent_sign_material,
-          vehicle_items: pickupTakeoff.vehicle_items,
-          rolling_stock_items: pickupTakeoff.rolling_stock_items,
-          additional_items: pickupTakeoff.additional_items,
+          // Note: pickup_takeoffs_l only has these 3 fields + id + timestamps
+          // All detailed fields are stored in the regular takeoffs_l record with is_pickup = true
         })
         .select()
         .single();

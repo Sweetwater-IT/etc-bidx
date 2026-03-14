@@ -37,10 +37,18 @@ export async function GET(
         .eq("parent_takeoff_id", takeoffId)
         .single();
 
+      console.log('🔍 [DATA API] Pickup takeoff entry lookup:', {
+        parent_takeoff_id: takeoffId,
+        found: !!pickupTakeoffEntry,
+        error: pickupTakeoffEntryError?.message
+      });
+
       if (pickupTakeoffEntryError || !pickupTakeoffEntry) {
-        console.error("Error finding pickup takeoff entry:", pickupTakeoffEntryError);
+        console.error("🔍 [DATA API] Error finding pickup takeoff entry:", pickupTakeoffEntryError);
         return NextResponse.json({ error: "Pickup takeoff entry not found" }, { status: 404 });
       }
+
+      console.log('🔍 [DATA API] Found pickup takeoff entry ID:', pickupTakeoffEntry.id);
 
       const { data: pickupItems, error: pickupItemsError } = await supabase
         .from("pickup_takeoff_items_l")
@@ -83,46 +91,70 @@ export async function GET(
         .eq("pickup_takeoff_id", pickupTakeoffEntry.id)
         .order("created_at");
 
+      console.log('🔍 [DATA API] Pickup items query result:', {
+        error: pickupItemsError?.message,
+        itemCount: pickupItems?.length || 0,
+        items: pickupItems?.slice(0, 3).map(item => ({
+          id: item.id,
+          parent_item_id: item.parent_item_id,
+          product_name: item.takeoff_items_l?.product_name,
+          hasParentData: !!item.takeoff_items_l
+        })) || []
+      });
+
       if (pickupItemsError) {
-        console.error("Error fetching pickup takeoff items:", pickupItemsError);
+        console.error("🔍 [DATA API] Error fetching pickup takeoff items:", pickupItemsError);
         return NextResponse.json({ error: "Failed to fetch pickup takeoff items" }, { status: 500 });
       }
 
       // Transform the data to match the expected format
-      takeoffItems = (pickupItems || []).map((item: any) => ({
-        id: item.id,
-        product_name: item.takeoff_items_l.product_name,
-        category: item.takeoff_items_l.category,
-        unit: item.takeoff_items_l.unit,
-        quantity: item.takeoff_items_l.quantity,
-        requisition_type: item.takeoff_items_l.requisition_type,
-        notes: item.takeoff_items_l.notes,
-        in_stock_qty: item.takeoff_items_l.in_stock_qty,
-        to_order_qty: item.takeoff_items_l.to_order_qty,
-        inventory_status: item.takeoff_items_l.inventory_status,
-        material: item.takeoff_items_l.material,
-        sign_details: item.takeoff_items_l.sign_details,
-        sign_description: item.takeoff_items_l.sign_description,
-        sheeting: item.takeoff_items_l.sheeting,
-        width_inches: item.takeoff_items_l.width_inches,
-        height_inches: item.takeoff_items_l.height_inches,
-        sqft: item.takeoff_items_l.sqft,
-        total_sqft: item.takeoff_items_l.total_sqft,
-        load_order: item.takeoff_items_l.load_order,
-        cover: item.takeoff_items_l.cover,
-        secondary_signs: item.takeoff_items_l.secondary_signs,
-        // Pickup-specific fields
-        return_details: item.return_details || {},
-        return_condition: null, // Legacy field, not used
-        damage_photos: item.pickup_images || {},
-        pickup_condition: null, // Legacy field, not used
-        pickup_images: item.pickup_images || [],
-        sign_condition: item.sign_condition,
-        structure_condition: item.structure_condition,
-        light_condition: item.light_condition,
-      }));
+      takeoffItems = (pickupItems || []).map((item: any) => {
+        const parentItem = item.takeoff_items_l as any; // The joined parent item data
 
-      console.log('🔍 [DATA API] Found pickup items:', takeoffItems.length);
+        const transformed = {
+          id: item.id,
+          product_name: parentItem.product_name,
+          category: parentItem.category,
+          unit: parentItem.unit,
+          quantity: parentItem.quantity,
+          requisition_type: parentItem.requisition_type,
+          notes: parentItem.notes,
+          in_stock_qty: parentItem.in_stock_qty,
+          to_order_qty: parentItem.to_order_qty,
+          inventory_status: parentItem.inventory_status,
+          material: parentItem.material,
+          sign_details: parentItem.sign_details,
+          sign_description: parentItem.sign_description,
+          sheeting: parentItem.sheeting,
+          width_inches: parentItem.width_inches,
+          height_inches: parentItem.height_inches,
+          sqft: parentItem.sqft,
+          total_sqft: parentItem.total_sqft,
+          load_order: parentItem.load_order,
+          cover: parentItem.cover,
+          secondary_signs: parentItem.secondary_signs,
+          // Pickup-specific fields
+          return_details: item.return_details || {},
+          return_condition: null, // Legacy field, not used
+          damage_photos: item.pickup_images || {},
+          pickup_condition: null, // Legacy field, not used
+          pickup_images: item.pickup_images || [],
+          sign_condition: item.sign_condition,
+          structure_condition: item.structure_condition,
+          light_condition: item.light_condition,
+        };
+
+        console.log('🔍 [DATA API] Transformed item:', {
+          id: transformed.id,
+          product_name: transformed.product_name,
+          category: transformed.category,
+          hasReturnDetails: Object.keys(transformed.return_details).length > 0
+        });
+
+        return transformed;
+      });
+
+      console.log('🔍 [DATA API] Final transformed pickup items:', takeoffItems.length);
     } else {
       // Regular takeoff - query regular items table
       console.log('🔍 [DATA API] Fetching regular takeoff items for:', takeoffId);
