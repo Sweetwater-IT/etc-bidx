@@ -2230,65 +2230,61 @@ const WorkOrderDetail = ({
                               }];
                             });
 
-                            // After successfully linking the takeoff, populate work order items
+                            // After successfully linking the takeoff, update SOV work order quantities based on sign counts
                             const takeoffDataResponse = await fetch(`/api/l/takeoffs/${takeoff.id}/data`);
                             if (takeoffDataResponse.ok) {
                               const takeoffData = await takeoffDataResponse.json();
                               if (takeoffData.takeoff?.sign_rows) {
                                 const signRowsData = takeoffData.takeoff.sign_rows || {};
-                                const workOrderItems: WOItem[] = [];
 
-                                // Flatten all sign rows from all sections
-                                let itemNumber = 1;
+                                // Count total signs by work type category
+                                const signCounts: Record<string, number> = {};
                                 for (const sectionName of Object.keys(signRowsData)) {
                                   const sectionRows = signRowsData[sectionName] || [];
                                   for (const row of sectionRows) {
-                                    const description = [
-                                      row.signDesignation || 'Custom Sign',
-                                      row.signDescription || '',
-                                      row.dimensionLabel ? `(${row.dimensionLabel})` : '',
-                                      row.signLegend ? `- ${row.signLegend}` : ''
-                                    ].filter(Boolean).join(' ').trim();
-
                                     const quantity = row.quantity || 1;
-                                    const uom = row.sqft > 0 ? 'sqft' : 'each';
-
-                                    workOrderItems.push({
-                                      id: `temp-${Date.now()}-${itemNumber}`,
-                                      item_number: itemNumber.toString(),
-                                      description,
-                                      contract_quantity: quantity,
-                                      work_order_quantity: quantity,
-                                      uom,
-                                      sort_order: itemNumber - 1,
-                                    });
-                                    itemNumber++;
+                                    // Extract work type category from takeoff work_type (e.g., "MPT" from "MPT:trailblazers")
+                                    const workTypeCategory = takeoff.work_type?.split(':')[0] || 'UNKNOWN';
+                                    signCounts[workTypeCategory] = (signCounts[workTypeCategory] || 0) + quantity;
                                   }
                                 }
 
-                                // Populate work order items from takeoff sign rows
-                                if (workOrderItems.length > 0) {
-                                  // Create the work order items via API
-                                  for (const item of workOrderItems) {
-                                    await fetch(`/api/workorders/${workOrderId}/items`, {
+                                // Update SOV work order items with sign counts
+                                for (const [workType, signCount] of Object.entries(signCounts)) {
+                                  // Find matching SOV work order item
+                                  const matchingSovItem = woItems.find(item =>
+                                    item.sov_item_id && // Must be a SOV item
+                                    sovItemsFull.some(sov =>
+                                      sov.id === item.sov_item_id &&
+                                      // Match work type (handle both "permanent_sign" and "PERMANENT_SIGNS")
+                                      (sov.itemNumber?.startsWith(workType === 'PERMANENT_SIGNS' ? '0937' : workType === 'MPT' ? '0901' : workType) ||
+                                       sov.description?.toLowerCase().includes(workType.toLowerCase().replace('_', ' ')))
+                                    )
+                                  );
+
+                                  if (matchingSovItem) {
+                                    // Update the work_order_quantity for this SOV item
+                                    const response = await fetch(`/api/workorders/${workOrderId}/items`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
-                                        action: 'create',
+                                        action: 'update',
                                         itemData: {
-                                          item_number: item.item_number,
-                                          description: item.description,
-                                          contract_quantity: item.contract_quantity,
-                                          work_order_quantity: item.work_order_quantity,
-                                          uom: item.uom,
-                                          sort_order: item.sort_order,
+                                          itemId: matchingSovItem.id,
+                                          updates: { work_order_quantity: signCount }
                                         },
                                       }),
                                     });
-                                  }
 
-                                  // Update local state
-                                  setWoItems(workOrderItems);
+                                    if (response.ok) {
+                                      // Update local state
+                                      setWoItems(prev => prev.map(item =>
+                                        item.id === matchingSovItem.id
+                                          ? { ...item, work_order_quantity: signCount }
+                                          : item
+                                      ));
+                                    }
+                                  }
                                 }
                               }
                             }
