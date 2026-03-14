@@ -18,10 +18,9 @@ import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
-import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { saveContract } from "@/lib/api-client";
 import isEqual from "lodash/isEqual";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -405,7 +404,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setIsSaving(false);
           }
         }
-      }, 5000); // Autosave every 5 seconds like sign-orders
+      }, 2500); // Autosave every 2.5 seconds like quotes/create
     }
   }, [projectInfo, contractId, isViewMode]);
 
@@ -526,7 +525,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   return (
     <div className="min-h-screen bg-background">
-      <StickyPageHeader
+      <NewRecordStickyPageHeader
         backLabel="Contracts"
         onBack={async () => {
           // Cancel any pending contract creation timeout
@@ -537,20 +536,17 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           if (!isViewMode) await manualSave();
           router.push("/l/contracts");
         }}
-        rightContent={
+        onDone={manualSave}
+        isSaving={isSaving}
+        lastSavedAt={lastSavedAt}
+        hasUnsavedChanges={!lastSavedAt && firstSave}
+        additionalButtons={
           isViewMode ? (
             <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
               <Pencil className="h-4 w-4" />
               Edit Contract
             </Button>
-          ) : (
-            <SaveStatusIndicator
-              status={isSaving ? "saving" : lastSavedAt ? "saved" : "idle"}
-              lastSavedAt={lastSavedAt}
-              onManualSave={manualSave}
-              isSaving={isSaving}
-            />
-          )
+          ) : undefined
         }
       />
 

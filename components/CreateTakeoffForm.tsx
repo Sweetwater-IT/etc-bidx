@@ -36,9 +36,8 @@ import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
 import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
 import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
-import { SaveStatusIndicator } from "@/app/l/components/SaveStatusIndicator";
 import { QuantityInput } from "@/components/ui/quantity-input";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { cn } from "@/lib/utils";
 
@@ -376,7 +375,7 @@ export const CreateTakeoffForm = ({
         workTypeSelectedAt?.getTime() ?? 0
       );
       const shouldDelay = !savedTakeoffId && latestTrigger > 0 && now - latestTrigger < 2000;
-      const delay = shouldDelay ? 2000 - (now - latestTrigger) : 2000;
+      const delay = shouldDelay ? 2500 - (now - latestTrigger) : 2500;
 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -776,37 +775,33 @@ export const CreateTakeoffForm = ({
 
   return (
     <div>
-      <StickyPageHeader
+      <NewRecordStickyPageHeader
         backLabel={backLabel}
         onBack={onBack}
-        rightContent={
-          <>
-            <SaveStatusIndicator
-              status={saveStatus}
-              lastSavedAt={lastSaved}
-              onManualSave={handleSave}
-              isSaving={saving}
-            />
-            {!isEditMode && savedTakeoffId && (
-              <>
-                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
-                  <Download className="h-3.5 w-3.5" />
-                  {generatingPdf ? "Generating…" : "Download PDF"}
+        onDone={handleSave}
+        isSaving={saving}
+        lastSavedAt={lastSaved}
+        hasUnsavedChanges={hasUnsavedChanges}
+        additionalButtons={
+          !isEditMode && savedTakeoffId ? (
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+                <Download className="h-3.5 w-3.5" />
+                {generatingPdf ? "Generating…" : "Download PDF"}
+              </Button>
+              {workOrderExists ? (
+                <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  View Work Order
                 </Button>
-                {workOrderExists ? (
-                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}>
-                    <ClipboardList className="h-3.5 w-3.5" />
-                    View Work Order
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
-                    <ClipboardList className="h-3.5 w-3.5" />
-                    {saving ? "Creating…" : "Generate Work Order"}
-                  </Button>
-                )}
-              </>
-            )}
-          </>
+              ) : (
+                <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleCreateWorkOrder} disabled={saving}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  {saving ? "Creating…" : "Generate Work Order"}
+                </Button>
+              )}
+            </>
+          ) : undefined
         }
       />
 
