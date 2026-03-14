@@ -12,7 +12,6 @@ import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
-import { supabase } from "@/lib/supabase";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },

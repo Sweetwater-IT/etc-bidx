@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Edit, ClipboardList } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 
 export default function WorkOrderViewContent({
@@ -26,6 +25,7 @@ export default function WorkOrderViewContent({
 
   const [pickupWO, setPickupWO] = useState<{ id: string; wo_number: string | null; status: string } | null>(null);
   const [generatingPickup, setGeneratingPickup] = useState(false);
+  const [workOrderData, setWorkOrderData] = useState<any>(null);
 
   useEffect(() => {
     const fetchPickupWorkOrder = async () => {
@@ -34,6 +34,7 @@ export default function WorkOrderViewContent({
         if (response.ok) {
           const data = await response.json();
           setPickupWO(data.pickupWO || null);
+          setWorkOrderData(data);
         }
       } catch (error) {
         console.error('Error fetching pickup work order:', error);
@@ -52,17 +53,33 @@ export default function WorkOrderViewContent({
   };
 
   const handleGeneratePickupWorkOrder = async () => {
+    if (!workOrderData?.takeoffs?.[0]?.id) {
+      toast.error('Unable to find takeoff for this work order');
+      return;
+    }
+
     setGeneratingPickup(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-pickup-work-order", {
-        body: { parentWorkOrderId: workOrderId }
+      const takeoffId = workOrderData.takeoffs[0].id;
+      const response = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: 'unknown@example.com',
+          is_pickup: true,
+          parentWorkOrderId: workOrderId
+        })
       });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate pickup work order');
       }
 
-      if (data?.workOrder) {
+      const data = await response.json();
+      if (data.success && data.workOrder) {
         toast.success('Pickup work order generated successfully!');
         setPickupWO(data.workOrder);
         router.push(`/l/jobs/${jobId}/work-orders/view/${data.workOrder.id}`);
@@ -71,7 +88,7 @@ export default function WorkOrderViewContent({
       }
     } catch (error) {
       console.error("Error generating pickup work order:", error);
-      toast.error("Failed to generate pickup work order");
+      toast.error(error instanceof Error ? error.message : "Failed to generate pickup work order");
     } finally {
       setGeneratingPickup(false);
     }
