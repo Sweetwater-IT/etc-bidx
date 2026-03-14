@@ -206,10 +206,12 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               View Pickup Takeoff
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleEdit}>
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            Edit
-          </Button>
+          {!takeoff?.is_pickup && (
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
             <Download className="h-3.5 w-3.5" />
             {generatingPdf ? "Generating…" : "Download PDF"}

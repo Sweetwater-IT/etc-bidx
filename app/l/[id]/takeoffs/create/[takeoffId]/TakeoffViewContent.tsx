@@ -288,6 +288,23 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      {/* Pickup Takeoff Banner */}
+      {takeoff.is_pickup && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100">
+              <span className="text-xs font-bold text-amber-800">!</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-amber-800">Pickup Takeoff</h3>
+              <p className="text-xs text-amber-700">
+                This takeoff was auto-generated from the parent work order and cannot be modified. Use the Return Inventory section below to log item conditions.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">
         <div className="px-5 py-3 border-b bg-muted/30">
@@ -454,7 +471,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Return Inventory</h2>
             <Button size="sm" onClick={savePickupReport} disabled={pickupSaving || pickupLoading}>
               {pickupSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              {pickupSaving ? 'Saving…' : 'Save Return Inventory'}
+              {pickupSaving ? 'Submitting…' : 'Submit'}
             </Button>
           </div>
           <div className="p-5 space-y-4">
