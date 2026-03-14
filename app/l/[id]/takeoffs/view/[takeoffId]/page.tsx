@@ -12,6 +12,7 @@ import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT" },
@@ -89,10 +90,28 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   };
 
   return (
-    <PageTitleBlock
-      title={getTitle()}
-      description="Review takeoff details, materials, and linked work order actions."
-    />
+    <>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{jobName}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <PageTitleBlock
+        title={getTitle()}
+        description="Review takeoff details, materials, and linked work order actions."
+      />
+    </>
   );
 }
 

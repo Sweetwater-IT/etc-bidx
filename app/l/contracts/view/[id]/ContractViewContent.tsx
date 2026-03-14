@@ -9,6 +9,7 @@ import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import type { JobProjectInfo } from "@/types/job";
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -167,6 +168,18 @@ export default function ContractViewContent() {
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/l/contracts">Contracts</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{jobName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <PageTitleBlock
           title={`Contract for ${jobName}`}
           description="Review contract details, schedule of values, and supporting documents."

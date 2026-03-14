@@ -1167,6 +1167,7 @@ export const CreateTakeoffForm = ({
             setPermanentSignRows(newSignRows);
             toast.success(`All permanent signs set to ${defaultPermanentSignMaterial}`);
           }}
+          jobId={jobId}
         />
       )}
 

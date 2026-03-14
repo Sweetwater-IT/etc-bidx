@@ -9,6 +9,7 @@ import { Edit, ClipboardList, Download, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT" },
@@ -314,6 +315,26 @@ export default function WorkOrderViewContent({
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href={`/l/${jobId}/takeoffs/view/${workOrderData?.takeoffs?.[0]?.id || takeoffId}`}>Takeoff</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{jobName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <PageTitleBlock
           title={getTitle()}
           description={`View work order details for ${jobName}.`}

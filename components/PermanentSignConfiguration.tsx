@@ -80,6 +80,7 @@ interface PermanentSignConfigurationProps {
   onDefaultMaterialChange: (material: SignMaterial) => void;
   onApplyMaterialToAll: () => void;
   disabled?: boolean;
+  jobId?: string; // Optional jobId to filter items by SOV
 }
 
 const SHEETING_OPTIONS = [
@@ -106,8 +107,10 @@ export const PermanentSignConfiguration = ({
   onDefaultMaterialChange,
   onApplyMaterialToAll,
   disabled = false,
+  jobId,
 }: PermanentSignConfigurationProps) => {
   const [permanentSignItems, setPermanentSignItems] = useState<PermanentSignItem[]>([]);
+  const [sovItemNumbers, setSovItemNumbers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   // DesignationSearcher state
@@ -118,17 +121,43 @@ export const PermanentSignConfiguration = ({
   // Search state
   const [itemSearch, setItemSearch] = useState("");
 
-  // Fetch permanent sign items
+  // Fetch permanent sign items and SOV items
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch permanent sign items
+        const { data: signItems, error: signError } = await supabase
           .from('permanent_sign_items')
           .select('*')
           .order('item_number');
 
-        if (error) throw error;
-        setPermanentSignItems(data || []);
+        if (signError) throw signError;
+        setPermanentSignItems(signItems || []);
+
+        // If jobId is provided, fetch SOV items to filter permanent sign items
+        if (jobId) {
+          try {
+            const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
+            if (response.ok) {
+              const data = await response.json();
+              const sovItemNumbers = new Set(
+                (data.data || [])
+                  .map((item: any) => item.item_number as string)
+                  .filter((itemNumber: string) => itemNumber && itemNumber.trim())
+              );
+              setSovItemNumbers(sovItemNumbers);
+            } else {
+              console.warn('Failed to fetch SOV items, showing all permanent sign items');
+              setSovItemNumbers(new Set()); // Show no items if SOV fetch fails
+            }
+          } catch (error) {
+            console.error('Error fetching SOV items:', error);
+            setSovItemNumbers(new Set()); // Show no items if SOV fetch fails
+          }
+        } else {
+          // If no jobId, show all items (backward compatibility)
+          setSovItemNumbers(new Set(signItems?.map(item => item.item_number) || []));
+        }
       } catch (error) {
         console.error('Error fetching permanent sign items:', error);
       } finally {
@@ -137,7 +166,7 @@ export const PermanentSignConfiguration = ({
     };
 
     fetchItems();
-  }, []);
+  }, [jobId]);
 
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
     if (!localSign) return;
@@ -225,12 +254,17 @@ export const PermanentSignConfiguration = ({
           </div>
           <div className="space-y-3">
             {permanentSignItems
-              .filter((item) =>
-                itemSearch === "" ||
-                item.item_number.toLowerCase().includes(itemSearch.toLowerCase()) ||
-                item.display_name.toLowerCase().includes(itemSearch.toLowerCase()) ||
-                item.description.toLowerCase().includes(itemSearch.toLowerCase())
-              )
+              .filter((item) => {
+                // If jobId is provided, only show items that are in the SOV
+                if (jobId && sovItemNumbers.size > 0 && !sovItemNumbers.has(item.item_number)) {
+                  return false;
+                }
+                // Apply search filter
+                return itemSearch === "" ||
+                  item.item_number.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                  item.display_name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                  item.description.toLowerCase().includes(itemSearch.toLowerCase());
+              })
               .map((item) => {
               const active = activeItems.includes(item.item_number);
               return (
