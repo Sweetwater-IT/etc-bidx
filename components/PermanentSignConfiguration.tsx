@@ -142,7 +142,7 @@ export const PermanentSignConfiguration = ({
               const data = await response.json();
               const sovItemNumbers = new Set(
                 (data.data || [])
-                  .map((item: any) => item.item_number as string)
+                  .map((item: any) => String(item.item_number || ''))
                   .filter((itemNumber: string) => itemNumber && itemNumber.trim())
               );
               setSovItemNumbers(sovItemNumbers);
