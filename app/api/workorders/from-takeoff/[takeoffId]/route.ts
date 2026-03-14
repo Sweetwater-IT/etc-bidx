@@ -240,11 +240,55 @@ export async function POST(request: NextRequest) {
       sourceTakeoff = pickupTakeoff;
       workingTakeoffId = pickupTakeoff.id;
 
-      // Copy takeoff items from parent takeoff to pickup takeoff
-      console.log('🔍 [PICKUP] Starting item copy process...');
-      console.log('🔍 [PICKUP] Original takeoff ID:', takeoffId);
-      console.log('🔍 [PICKUP] Pickup takeoff ID:', pickupTakeoff.id);
+      // Create pickup takeoff entry and link items from parent takeoff
+      console.log('🔍 [PICKUP] Creating pickup takeoff entry...');
+      console.log('🔍 [PICKUP] Parent takeoff ID:', takeoffId);
+      console.log('🔍 [PICKUP] Regular takeoff ID:', pickupTakeoff.id);
 
+      // First, create the pickup takeoff entry
+      const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
+        .from('pickup_takeoffs_l')
+        .insert({
+          parent_takeoff_id: takeoffId,
+          job_id: takeoff.job_id,
+          // Copy relevant fields from the regular takeoff
+          title: pickupTakeoff.title,
+          work_type: pickupTakeoff.work_type,
+          status: pickupTakeoff.status,
+          notes: pickupTakeoff.notes,
+          install_date: pickupTakeoff.install_date,
+          pickup_date: pickupTakeoff.pickup_date,
+          contracted_or_additional: pickupTakeoff.contracted_or_additional,
+          needed_by_date: pickupTakeoff.needed_by_date,
+          destination: pickupTakeoff.destination,
+          default_sign_material: pickupTakeoff.default_sign_material,
+          priority: pickupTakeoff.priority,
+          crew_notes: pickupTakeoff.crew_notes,
+          build_shop_notes: pickupTakeoff.build_shop_notes,
+          active_sections: pickupTakeoff.active_sections,
+          sign_rows: pickupTakeoff.sign_rows,
+          pm_notes: pickupTakeoff.pm_notes,
+          is_multi_day_job: pickupTakeoff.is_multi_day_job,
+          end_date: pickupTakeoff.end_date,
+          active_permanent_items: pickupTakeoff.active_permanent_items,
+          permanent_sign_rows: pickupTakeoff.permanent_sign_rows,
+          permanent_entry_rows: pickupTakeoff.permanent_entry_rows,
+          default_permanent_sign_material: pickupTakeoff.default_permanent_sign_material,
+          vehicle_items: pickupTakeoff.vehicle_items,
+          rolling_stock_items: pickupTakeoff.rolling_stock_items,
+          additional_items: pickupTakeoff.additional_items,
+        })
+        .select()
+        .single();
+
+      if (pickupTakeoffEntryError || !pickupTakeoffEntry) {
+        console.error('🔍 [PICKUP] Error creating pickup takeoff entry:', pickupTakeoffEntryError);
+        return NextResponse.json({ error: 'Failed to create pickup takeoff entry', details: pickupTakeoffEntryError }, { status: 500 });
+      }
+
+      console.log('🔍 [PICKUP] Created pickup takeoff entry:', pickupTakeoffEntry.id);
+
+      // Now link parent takeoff items to the pickup takeoff
       const { data: parentItems, error: parentItemsError } = await supabase
         .from('takeoff_items_l')
         .select('*')
@@ -267,49 +311,27 @@ export async function POST(request: NextRequest) {
       }
 
       if (parentItems && parentItems.length > 0) {
-        console.log('🔍 [PICKUP] Processing parent items for pickup takeoff...');
+        console.log('🔍 [PICKUP] Creating pickup takeoff items...');
 
         const pickupItems = parentItems.map(item => ({
-          takeoff_id: pickupTakeoff.id,
-          product_name: item.product_name,
-          category: item.category,
-          unit: item.unit,
-          quantity: item.quantity,
-          requisition_type: item.requisition_type,
-          notes: item.notes,
-          in_stock_qty: item.in_stock_qty,
-          to_order_qty: item.to_order_qty,
-          inventory_status: item.inventory_status,
-          material: item.material,
-          sign_details: item.sign_details,
-          sign_description: item.sign_description,
-          sheeting: item.sheeting,
-          width_inches: item.width_inches,
-          height_inches: item.height_inches,
-          sqft: item.sqft,
-          total_sqft: item.total_sqft,
-          load_order: item.load_order,
-          cover: item.cover,
-          secondary_signs: item.secondary_signs,
-          // Reset pickup-specific fields
-          pickup_condition: null,
-          pickup_images: [],
+          pickup_takeoff_id: pickupTakeoffEntry.id,
+          parent_item_id: item.id,
+          // Initialize pickup-specific fields
           sign_condition: null,
           structure_condition: null,
           light_condition: null,
+          pickup_images: [],
           return_details: {},
-          return_condition: null,
-          damage_photos: {},
+          notes: null,
         }));
 
         console.log('🔍 [PICKUP] Prepared pickup items:', pickupItems.map(item => ({
-          takeoff_id: item.takeoff_id,
-          product_name: item.product_name,
-          quantity: item.quantity
+          pickup_takeoff_id: item.pickup_takeoff_id,
+          parent_item_id: item.parent_item_id
         })));
 
         const { data: insertedItems, error: insertItemsError } = await supabase
-          .from('takeoff_items_l')
+          .from('pickup_takeoff_items_l')
           .insert(pickupItems)
           .select();
 
@@ -318,19 +340,19 @@ export async function POST(request: NextRequest) {
           insertedCount: insertedItems?.length || 0,
           insertedItems: insertedItems?.map(item => ({
             id: item.id,
-            takeoff_id: item.takeoff_id,
-            product_name: item.product_name
+            pickup_takeoff_id: item.pickup_takeoff_id,
+            parent_item_id: item.parent_item_id
           })) || []
         });
 
         if (insertItemsError) {
-          console.error('🔍 [PICKUP] Error copying takeoff items to pickup:', insertItemsError);
-          return NextResponse.json({ error: 'Failed to copy takeoff items to pickup', details: insertItemsError }, { status: 500 });
+          console.error('🔍 [PICKUP] Error creating pickup takeoff items:', insertItemsError);
+          return NextResponse.json({ error: 'Failed to create pickup takeoff items', details: insertItemsError }, { status: 500 });
         }
 
-        console.log(`🔍 [PICKUP] Successfully copied ${pickupItems.length} items from parent takeoff to pickup takeoff`);
+        console.log(`🔍 [PICKUP] Successfully created ${pickupItems.length} pickup takeoff items`);
       } else {
-        console.log('🔍 [PICKUP] No parent items found to copy');
+        console.log('🔍 [PICKUP] No parent items found to link');
       }
     }
 
