@@ -82,7 +82,6 @@ export function useProductivityData() {
 
   const importCsv = async (entries: ProductivityEntry[]) => {
     const { error } = await supabaseSignAnalytics.from("sign_production").insert(entries)
-
     if (error) {
       console.error("Error importing CSV:", error)
       throw error
