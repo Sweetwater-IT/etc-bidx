@@ -1,11 +1,20 @@
 import { useRef, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Import } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ImportSignsModal } from "./ImportSignsModal";
 
 interface Estimate {
   contract_number: string;
@@ -18,6 +27,24 @@ interface Job {
   branch: string;
   contractNumber?: string;
   contractorName?: string;
+}
+
+interface SignItem {
+  designation: string
+  description: string
+  quantity: number
+  width: number
+  height: number
+  sheeting: string
+  substrate: string
+  stiffener: string
+  bLights: string | number
+  cover: boolean
+  inStock: number
+  order: number
+  displayStructure: string
+  primarySignId?: string
+  id?: string
 }
 
 interface SignOrderJobSelectorProps {
@@ -45,7 +72,8 @@ interface SignOrderJobSelectorProps {
     role: string
     email: string
     phone: string
-  }
+  };
+  onImport?: (signs: SignItem[]) => void;
 }
 
 export function SignOrderJobSelector({
@@ -66,9 +94,11 @@ export function SignOrderJobSelector({
   endDate,
   orderType,
   showInitialAdminState,
-  contact
+  contact,
+  onImport
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const inputRef = useRef(null);
 
   const handleBlur = (e) => {
@@ -79,6 +109,8 @@ export function SignOrderJobSelector({
     (j) => !searchValue || j.job_number.toLowerCase().includes(searchValue.toLowerCase()) ||
       (j.contractNumber && j.contractNumber.toLowerCase().includes(searchValue.toLowerCase()))
   );
+
+  const jobId = selectedContractJob && 'job_number' in selectedContractJob ? selectedContractJob.job_number : undefined;
 
   return (
     <div className="w-full">
@@ -292,6 +324,18 @@ export function SignOrderJobSelector({
           )}
         </div>
       )}
+
+      {(selectedContractJob || showInitialAdminState) && (
+        <div className="flex justify-end mb-4">
+          <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+            <Import className="w-4 h-4 mr-2" />Import Signs
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <ImportSignsModal open={importModalOpen} onOpenChange={setImportModalOpen} jobId={jobId} onImport={onImport || (() => {})} />
+      </AlertDialog>
     </div>
   );
 }
