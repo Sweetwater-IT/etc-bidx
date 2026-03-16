@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ data: data || [] });
+    // Transform the data to include a uom field using the first non-null uom from uom_1 to uom_6
+    const transformedData = (data || []).map(item => ({
+      ...item,
+      uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6
+    }));
+
+    return NextResponse.json({ data: transformedData });
   } catch (error) {
     console.error('Error in SOV items GET:', error);
     return NextResponse.json(

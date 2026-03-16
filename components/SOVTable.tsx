@@ -51,7 +51,12 @@ interface SovMasterItem {
   description: string;
   display_name: string;
   work_type: string;
-  uom: string;
+  uom_1: string | null;
+  uom_2: string | null;
+  uom_3: string | null;
+  uom_4: string | null;
+  uom_5: string | null;
+  uom_6: string | null;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -80,6 +85,10 @@ function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', 
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getFirstNonNullUom(master: SovMasterItem): string {
+  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6;
 }
 
 export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
@@ -235,7 +244,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 ...item,
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: master.uom || 'EA',
+                uom: getFirstNonNullUom(master),
                 quantity: item.quantity || 1,
                 unitPrice: item.unitPrice || 0,
                 extendedPrice: item.extendedPrice || 0,
@@ -257,7 +266,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
         sov_item_id: master.id,
         item_number: master.item_number,
         description: master.display_name,
-        uom: master.uom || 'EA',
+        uom: getFirstNonNullUom(master),
         quantity: 1, // Default quantity
         unit_price: 0, // Default unit price
         retainage_type: 'dollar' as const,
@@ -304,7 +313,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: createdItem.uom || master.uom || 'EA',
+                uom: createdItem.uom || getFirstNonNullUom(master),
                 quantity: createdItem.quantity || payload.quantity,
                 unitPrice: createdItem.unit_price || payload.unit_price,
                 extendedPrice: createdItem.extended_price || (createdItem.quantity * createdItem.unit_price),

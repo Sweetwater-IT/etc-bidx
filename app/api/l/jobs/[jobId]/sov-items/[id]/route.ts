@@ -76,7 +76,13 @@ export async function PUT(
           display_item_number,
           description,
           display_name,
-          work_type
+          work_type,
+          uom_1,
+          uom_2,
+          uom_3,
+          uom_4,
+          uom_5,
+          uom_6
         )
       `)
       .single();
@@ -103,6 +109,7 @@ export async function PUT(
       description: (data as any).sov_items?.description,
       display_name: (data as any).sov_items?.display_name,
       work_type: (data as any).sov_items?.work_type,
+      uom: (data as any).sov_items?.uom_1 || (data as any).sov_items?.uom_2 || (data as any).sov_items?.uom_3 || (data as any).sov_items?.uom_4 || (data as any).sov_items?.uom_5 || (data as any).sov_items?.uom_6,
       quantity: data.quantity,
       unit_price: data.unit_price,
       extended_price: data.extended_price,

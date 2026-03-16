@@ -49,6 +49,7 @@ interface SovItem {
   description: string;
   display_name: string;
   work_type: string;
+  uom: string;
 }
 
 interface ScheduleOfValuesProps {
@@ -146,7 +147,7 @@ export const ScheduleOfValues = ({
       retainageAmount,
       retainageType,
       retainageValue,
-      uom: "EA", // Default UOM, could be made configurable
+      uom: selectedSovItem.uom || "EA", // Use the actual UOM from the selected item
       notes,
       sov_item_id: selectedSovItem.id,
       work_type: selectedSovItem.work_type,

@@ -31,7 +31,12 @@ export async function GET(
           description,
           display_name,
           work_type,
-          uom
+          uom_1,
+          uom_2,
+          uom_3,
+          uom_4,
+          uom_5,
+          uom_6
         )
       `)
       .eq('job_id', jobId)
@@ -58,7 +63,7 @@ export async function GET(
       description: (entry as any).sov_items?.description,
       display_name: (entry as any).sov_items?.display_name,
       work_type: (entry as any).sov_items?.work_type,
-      uom: (entry as any).sov_items?.uom,
+      uom: (entry as any).sov_items?.uom_1 || (entry as any).sov_items?.uom_2 || (entry as any).sov_items?.uom_3 || (entry as any).sov_items?.uom_4 || (entry as any).sov_items?.uom_5 || (entry as any).sov_items?.uom_6,
       quantity: entry.quantity,
       unit_price: entry.unit_price,
       extended_price: entry.extended_price,
