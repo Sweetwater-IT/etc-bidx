@@ -524,7 +524,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[80px] text-xs">UOM</TableHead>
+                <TableHead className="w-[150px] text-xs">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
                 <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>

@@ -213,6 +213,14 @@ const JobList = () => {
     }
   };
 
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "dd-MMM-yyyy");
+    } catch {
+      return dateStr;
+    }
+  };
+
   const StatusBadge = ({ status }: { status: string }) => (
     <span
       className={`text-xs font-medium px-2 py-0.5 rounded ${
@@ -316,9 +324,24 @@ const JobList = () => {
                           onCheckedChange={toggleAll}
                         />
                       </TableHead>
-                      <SortableHead label="Job Number" field="etcJobNumber" />
-                      <SortableHead label="Contract #" field="contractNumber" />
-                      <SortableHead label="Project" field="projectName" />
+                      <TableHead className="w-[200px] font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap" onClick={() => toggleSort("etcJobNumber")}>
+                        <span className="inline-flex items-center gap-1">
+                          ETC job number
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        </span>
+                      </TableHead>
+                      <TableHead className="w-[300px] font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap" onClick={() => toggleSort("contractNumber")}>
+                        <span className="inline-flex items-center gap-1">
+                          Contract #
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        </span>
+                      </TableHead>
+                      <TableHead className="w-[200px] font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap" onClick={() => toggleSort("projectName")}>
+                        <span className="inline-flex items-center gap-1">
+                          project name
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        </span>
+                      </TableHead>
                       <SortableHead label="Owner" field="projectOwner" />
                       <SortableHead label="Contractor" field="customerName" />
                       <SortableHead label="County / Branch" field="county" />
@@ -373,7 +396,7 @@ const JobList = () => {
                           )}
                         </TableCell>
                         <TableCell className="py-3 text-xs">
-                          {job.etcProjectManager || "—"}
+                          {job.customerPM || "—"}
                         </TableCell>
                         <TableCell className="py-3">
                           <StatusBadge status={job.projectStatus} />
@@ -382,10 +405,10 @@ const JobList = () => {
                           <StatusBadge status={job.billingStatus} />
                         </TableCell>
                         <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
-                          {job.projectStartDate || "—"}
+                          {job.projectStartDate ? formatDate(job.projectStartDate) : "—"}
                         </TableCell>
                         <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
-                          {job.projectEndDate || "—"}
+                          {job.projectEndDate ? formatDate(job.projectEndDate) : "—"}
                         </TableCell>
                         <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs text-muted-foreground">
                           {formatCreatedAt(job.createdAt)}
