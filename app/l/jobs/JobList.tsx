@@ -215,7 +215,7 @@ const JobList = () => {
 
   const formatDate = (dateStr: string) => {
     try {
-      return format(new Date(dateStr), "dd-MMM-yyyy");
+      return format(new Date(dateStr), "dd-MM-yyyy");
     } catch {
       return dateStr;
     }
@@ -330,7 +330,7 @@ const JobList = () => {
                           <ArrowUpDown className="h-3 w-3 opacity-40" />
                         </span>
                       </TableHead>
-                      <TableHead className="w-[300px] font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap" onClick={() => toggleSort("contractNumber")}>
+                      <TableHead className="w-[400px] font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap" onClick={() => toggleSort("contractNumber")}>
                         <span className="inline-flex items-center gap-1">
                           Contract #
                           <ArrowUpDown className="h-3 w-3 opacity-40" />

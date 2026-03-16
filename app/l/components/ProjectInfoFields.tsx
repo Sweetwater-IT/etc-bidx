@@ -526,16 +526,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             <Label htmlFor="etcJobNumber" className="text-xs">ETC Job Number</Label>
             <Input
               id="etcJobNumber"
-              className="h-8 text-sm bg-muted/50"
-              placeholder={contractSigned ? "Auto-generated" : "Assigned when contract is signed"}
+              className="h-8 text-sm"
+              placeholder="e.g. PHL-2024-0123"
               value={projectInfo.etcJobNumber || ""}
-              readOnly
+              onChange={(e) => update("etcJobNumber", e.target.value)}
             />
-            {!contractSigned && !projectInfo.etcJobNumber && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Job number will be assigned once the contract is signed
-              </p>
-            )}
           </div>
 
           {/* Row 3: ETC PM, Project Start Date, Project End Date */}
