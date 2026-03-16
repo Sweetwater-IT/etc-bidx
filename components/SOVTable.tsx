@@ -88,7 +88,7 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 function getFirstNonNullUom(master: SovMasterItem): string {
-  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6;
+  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
 }
 
 export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
