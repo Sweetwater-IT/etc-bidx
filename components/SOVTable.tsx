@@ -736,8 +736,9 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                             value={item.retainageType}
                             onValueChange={(newType) => {
                               const currentValue = item.retainageValue;
-                              const newValue = newType === 'percent' ? currentValue / 100 : currentValue * 100;
-                              updateRetainage(item.id, newType, newValue);
+                              const mappedType = newType === 'fixed' ? 'dollar' : newType as 'percent' | 'dollar';
+                              const newValue = mappedType === 'percent' ? currentValue / 100 : currentValue * 100;
+                              updateRetainage(item.id, mappedType, newValue);
                             }}
                           >
                             <SelectTrigger className="h-full w-12 shrink-0 rounded-none border-r px-2 text-xs focus:ring-0 data-[placeholder]:text-muted-foreground">
