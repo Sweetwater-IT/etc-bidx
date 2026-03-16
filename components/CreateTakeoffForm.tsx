@@ -1409,6 +1409,7 @@ export const CreateTakeoffForm = ({
                       </PopoverTrigger>
                       <PopoverContent className="w-[520px] p-0" align="start">
                         <Command>
+                        <CommandList>
                         <CommandEmpty>
                           No equipment found matching your dates.
                         </CommandEmpty>
