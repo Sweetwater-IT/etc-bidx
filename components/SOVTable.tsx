@@ -11,9 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import {
   Popover,
   PopoverContent,
@@ -540,7 +538,7 @@ export const SOVTable = ({
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[150px] text-xs">UOM</TableHead>
+                <TableHead className="w-[200px] text-xs">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
                 <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
@@ -562,126 +560,134 @@ export const SOVTable = ({
                     {readOnly ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
-                      <Dialog open={selectorOpen === item.id} onOpenChange={(open) => {
-                        setSelectorOpen(open ? item.id : null);
-                        if (!open) setSelectorSearch('');
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between h-7 text-xs font-normal"
-                          >
-                            {item.itemNumber || 'Select item…'}
-                            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 data-[state=open]:slide-in-from-top-[48%] data-[state=open]:slide-in-from-left-[50%] data-[state=closed]:slide-out-to-top-[48%] data-[state=closed]:slide-out-to-left-[50%]">
-                          <DialogHeader className="p-6 pb-4 shrink-0">
-                            <DialogTitle>Select Schedule of Values Item Number</DialogTitle>
-                          </DialogHeader>
-                          <Separator className="w-full shrink-0" />
-                          <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
-                            <div className="mb-3 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-                              <p className="text-xs font-medium text-foreground">
-                                Select an SOV item number from the list, or use quick actions to add a custom item number.
-                              </p>
-                            </div>
-                            {/* Quick-add buttons above search */}
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'custom'); setSelectorOpen(null); }}
+                      <Select
+                        value={item.itemNumber || undefined}
+                        onValueChange={(value) => {
+                          if (value === "custom") {
+                            openCustomDialog(item.id);
+                            return;
+                          }
+                          if (value === "delivery") {
+                            handleQuickAdd(item.id, 'delivery');
+                            return;
+                          }
+                          if (value === "service") {
+                            handleQuickAdd(item.id, 'service');
+                            return;
+                          }
+                          const selected = sovProducts.find(p => p.item_number === value);
+                          if (selected) selectMasterItem(item.id, selected);
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-7 text-xs font-normal bg-transparent">
+                          <SelectValue placeholder="Select item…">
+                            {item.itemNumber
+                              ? `${item.itemNumber} - ${item.description}`
+                              : "Select item…"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80 w-[550px] p-2">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search by # or name…"
+                              value={selectorSearch}
+                              onValueChange={setSelectorSearch}
+                              autoFocus
+                            />
+                            <CommandList>
+                              <CommandItem
+                                key="custom"
+                                value="custom"
+                                onSelect={() => {
+                                  openCustomDialog(item.id);
+                                }}
                               >
-                                <Plus className="h-3.5 w-3.5" /> Custom Item Number
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'delivery'); setSelectorOpen(null); }}
+                                <div className="flex items-center w-full">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  <span className="font-medium italic">Custom Item Number</span>
+                                </div>
+                              </CommandItem>
+                              <CommandItem
+                                key="delivery"
+                                value="delivery"
+                                onSelect={() => handleQuickAdd(item.id, 'delivery')}
                               >
-                                <Plus className="h-3.5 w-3.5" /> Delivery
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'service'); setSelectorOpen(null); }}
+                                <div className="flex items-center w-full">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  <span className="font-medium italic">Delivery</span>
+                                </div>
+                              </CommandItem>
+                              <CommandItem
+                                key="service"
+                                value="service"
+                                onSelect={() => handleQuickAdd(item.id, 'service')}
                               >
-                                <Plus className="h-3.5 w-3.5" /> Service
-                              </Button>
-                            </div>
-                            <Command className="border rounded-lg h-full flex flex-col overflow-hidden">
-                              <CommandInput
-                                placeholder="Search by # or name…"
-                                value={selectorSearch}
-                                onValueChange={setSelectorSearch}
-                                className="border-b"
-                              />
-                              <CommandList className="max-h-none flex-1 overflow-y-auto">
-                                <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
+                                <div className="flex items-center w-full">
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  <span className="font-medium italic">Service</span>
+                                </div>
+                              </CommandItem>
+
+                              {/* Items grouped by work type */}
+                              {(() => {
+                                const preferredOrder = ['MPT', 'PERMANENT SIGN', 'LANE CLOSURE', 'FLAGGING', 'SERVICE', 'DELIVERY', 'CUSTOM', 'OTHER'];
+                                const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
+                                  const key = (curr.work_type || 'OTHER').trim().toUpperCase();
+                                  if (!acc[key]) acc[key] = [];
+                                  acc[key].push(curr);
+                                  return acc;
+                                }, {});
+
+                                const orderedWorkTypes = [
+                                  ...preferredOrder.filter((type) => grouped[type]?.length),
+                                  ...Object.keys(grouped)
+                                    .filter((type) => !preferredOrder.includes(type))
+                                    .sort(),
+                                ];
+
+                                return orderedWorkTypes.map((workType) => {
+                                  const groupItems = grouped[workType] || [];
+                                  if (groupItems.length === 0) return null;
+
+                                  return (
+                                    <CommandGroup key={workType} heading={workType}>
+                                      {groupItems.map((p) => (
+                                        <CommandItem
+                                          key={p.id}
+                                          value={p.item_number}
+                                          onSelect={() => selectMasterItem(item.id, p)}
+                                          className="text-xs cursor-pointer"
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                          <span className="truncate">{p.display_name}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  );
+                                });
+                              })()}
+
+                              {filteredItems.length === 0 && !sovMasterLoading && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
                                   No matching items found.
-                                </CommandEmpty>
-                                {/* Items grouped by work type */}
-                                {(() => {
-                                  const preferredOrder = ['MPT', 'PERMANENT SIGN', 'LANE CLOSURE', 'FLAGGING', 'SERVICE', 'DELIVERY', 'CUSTOM', 'OTHER'];
-                                  const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                    const key = (curr.work_type || 'OTHER').trim().toUpperCase();
-                                    if (!acc[key]) acc[key] = [];
-                                    acc[key].push(curr);
-                                    return acc;
-                                  }, {});
+                                </div>
+                              )}
 
-                                  const orderedWorkTypes = [
-                                    ...preferredOrder.filter((type) => grouped[type]?.length),
-                                    ...Object.keys(grouped)
-                                      .filter((type) => !preferredOrder.includes(type))
-                                      .sort(),
-                                  ];
-
-                                  return orderedWorkTypes.map((workType) => {
-                                    const groupItems = grouped[workType] || [];
-                                    if (groupItems.length === 0) return null;
-
-                                    return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        {groupItems.map((p) => (
-                                          <CommandItem
-                                            key={p.id}
-                                            value={`${p.item_number} ${p.display_name}`}
-                                            onSelect={() => {
-                                              selectMasterItem(item.id, p);
-                                              setSelectorOpen(null);
-                                            }}
-                                            className="text-xs cursor-pointer"
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                            <span className="truncate">{p.display_name}</span>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    );
-                                  });
-                                })()}
-                              </CommandList>
-                            </Command>
-                          </div>
-                          <Separator className="w-full shrink-0" />
-                          <div className="flex justify-end items-center p-4 px-6 shrink-0">
-                            <Button variant="outline" onClick={() => setSelectorOpen(null)}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                              {sovMasterLoading && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
+                                  Loading...
+                                </div>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </SelectContent>
+                      </Select>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -783,7 +789,7 @@ export const SOVTable = ({
                               const scaled = item.retainageType === 'percent' ? num / 100 : num;
                               updateRetainage(item.id, item.retainageType, scaled);
                             }}
-                            className="h-full flex-1 border-0 bg-transparent px-3 text-right text-xs focus-visible:ring-0 focus-visible:ring-offset-0 w-[100px]"
+                            className="h-full flex-1 border-0 bg-transparent px-3 text-right text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
                             aria-label={`Retainage value in ${item.retainageType === 'percent' ? 'percent' : 'dollars'}`}
                           />
                         </div>
