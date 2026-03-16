@@ -65,6 +65,9 @@ interface SOVTableProps {
   jobId?: string;
   contractId?: string;
   readOnly?: boolean;
+  onEditAttempt?: () => void;
+  isSignedContract?: boolean;
+  changeOrderApproved?: boolean;
 }
 
 interface CustomItemDraft {
@@ -91,7 +94,14 @@ function getFirstNonNullUom(master: SovMasterItem): string {
   return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
 }
 
-export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
+export const SOVTable = ({
+  jobId,
+  contractId,
+  readOnly = false,
+  onEditAttempt,
+  isSignedContract = false,
+  changeOrderApproved = false
+}: SOVTableProps) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
@@ -160,6 +170,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   }, [sovProducts, selectorSearch]);
 
   const addRow = () => {
+    // Check if change order is required for signed contracts
+    if (isSignedContract && !changeOrderApproved && onEditAttempt) {
+      onEditAttempt();
+      return;
+    }
+
     const newItem: ScheduleOfValuesItem = {
       id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
       itemNumber: '',
