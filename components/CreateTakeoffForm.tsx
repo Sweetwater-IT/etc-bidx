@@ -1146,7 +1146,7 @@ export const CreateTakeoffForm = ({
         />
       )}
 
-      {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
+      {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
         <>
           {/* Sign Configuration Section */}
           <div className="rounded-lg border bg-card shadow-sm max-w-[calc(100vw-272px-64px)]">
@@ -1324,163 +1324,159 @@ export const CreateTakeoffForm = ({
             </div>
           </div>
           )}
+        </>
+      )}
 
-          {/* Rolling Stock Section */}
-          {workType === "DELIVERY" && (
-          <div className="rounded-lg border bg-card shadow-sm">
-            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-7 text-xs"
-                disabled
-                onClick={() =>
-                  setRollingStockItems((prev) => [
-                    ...prev,
-                    { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
-                  ])
-                }
-              >
-                <Plus className="h-3 w-3" /> Add Equipment
-              </Button>
+      {/* Rolling Stock Section */}
+      {workType === "DELIVERY" && (
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-7 text-xs"
+            disabled
+            onClick={() =>
+              setRollingStockItems((prev) => [
+                ...prev,
+                { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
+              ])
+            }
+          >
+            <Plus className="h-3 w-3" /> Add Equipment
+          </Button>
+        </div>
+        <div className="p-5">
+          <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Rolling stock is temporarily disabled and read-only.
+          </div>
+          {rollingStockItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
+              <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
             </div>
-            <div className="p-5">
-              <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Rolling stock is temporarily disabled and read-only.
-              </div>
-              {rollingStockItems.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center">
-                  <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
-                  <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {rollingStockItems.map((item) => {
-                    console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
-                      equipmentId: item.equipmentId,
-                      equipmentLabel: item.equipmentLabel
-                    });
+          ) : (
+            <div className="space-y-2">
+              {rollingStockItems.map((item) => {
+                console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
+                  equipmentId: item.equipmentId,
+                  equipmentLabel: item.equipmentLabel
+                });
 
-                    // Filter out already-selected equipment (except the current row's selection)
-                    const selectedIds = rollingStockItems
-                      .filter((rs) => rs.id !== item.id && rs.equipmentId)
-                      .map((rs) => rs.equipmentId);
+                // Filter out already-selected equipment (except the current row's selection)
+                const selectedIds = rollingStockItems
+                  .filter((rs) => rs.id !== item.id && rs.equipmentId)
+                  .map((rs) => rs.equipmentId);
 
-                    console.log(`🚫 Selected IDs to exclude:`, selectedIds);
+                console.log(`🚫 Selected IDs to exclude:`, selectedIds);
 
-                    const filteredEquipment = availableEquipment
-                      .filter((eq) => !selectedIds.includes(eq.id))
-                      .filter((eq) => eq.availability !== "unavailable");
+                const filteredEquipment = availableEquipment
+                  .filter((eq) => !selectedIds.includes(eq.id))
+                  .filter((eq) => eq.availability !== "unavailable");
 
-                    console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
-                    console.log(`📋 Filtered equipment sample:`, filteredEquipment.slice(0, 3));
+                console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
+                console.log(`📋 Filtered equipment sample:`, filteredEquipment.slice(0, 3));
 
-                    // Group by category
-                    const groupedEquipment = filteredEquipment.reduce<Record<string, typeof filteredEquipment>>((acc, eq) => {
-                      if (!acc[eq.category]) acc[eq.category] = [];
-                      acc[eq.category].push(eq);
-                      return acc;
-                    }, {});
+                // Group by category
+                const groupedEquipment = filteredEquipment.reduce<Record<string, typeof filteredEquipment>>((acc, eq) => {
+                  if (!acc[eq.category]) acc[eq.category] = [];
+                  acc[eq.category].push(eq);
+                  return acc;
+                }, {});
 
-                    console.log(`📂 Grouped equipment by category:`, Object.keys(groupedEquipment));
-                    console.log(`📂 Grouped equipment details:`, Object.entries(groupedEquipment).map(([cat, items]) => `${cat}: ${items.length} items`));
+                console.log(`📂 Grouped equipment by category:`, Object.keys(groupedEquipment));
+                console.log(`📂 Grouped equipment details:`, Object.entries(groupedEquipment).map(([cat, items]) => `${cat}: ${items.length} items`));
 
-                    return (
-                      <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              disabled
-                              className="h-8 text-xs flex-1 min-w-[300px] justify-between font-normal"
-                            >
-                              {item.equipmentId ? (
-                                <span className="truncate">{item.equipmentLabel}</span>
-                              ) : (
-                                <span className="text-muted-foreground">Search equipment…</span>
-                              )}
-                              <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[520px] p-0" align="start">
-                            <Command>
-                              <CommandInput placeholder="Search by number, type, make…" className="h-9 text-xs" />
-                              <CommandList>
-                                <CommandEmpty>
-                                  {(() => { console.log('🚨 CommandEmpty rendered - no equipment found'); return null; })()}
-                                  No equipment found matching your dates.
-                                </CommandEmpty>
-                                {Object.entries(groupedEquipment).map(([category, items]) => {
-                                  (() => console.log(`🏷️ Rendering category "${category}" with ${items.length} items:`, items.map(eq => eq.equipment_number)))();
+                return (
+                  <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          disabled
+                          className="h-8 text-xs flex-1 min-w-[300px] justify-between font-normal"
+                        >
+                          {item.equipmentId ? (
+                            <span className="truncate">{item.equipmentLabel}</span>
+                          ) : (
+                            <span className="text-muted-foreground">Search equipment…</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[520px] p-0" align="start">
+                        <Command>
+                        <CommandEmpty>
+                          No equipment found matching your dates.
+                        </CommandEmpty>
+                          {Object.entries(groupedEquipment).map(([category, items]) => {
+                            (() => console.log(`🏷️ Rendering category "${category}" with ${items.length} items:`, items.map(eq => eq.equipment_number)))();
+                            return (
+                              <CommandGroup key={category} heading={category}>
+                                {items.map((eq) => {
+                                  (() => console.log(`🔧 Rendering equipment ${eq.equipment_number} in category ${category}`))();
+                                  const colorClass = eq.availability === "available"
+                                    ? "bg-emerald-500/10 hover:bg-emerald-500/20"
+                                    : "bg-amber-500/10 hover:bg-amber-500/20";
+                                  const dotColor = eq.availability === "available"
+                                    ? "bg-emerald-500"
+                                    : "bg-amber-500";
                                   return (
-                                    <CommandGroup key={category} heading={category}>
-                                      {items.map((eq) => {
-                                        (() => console.log(`🔧 Rendering equipment ${eq.equipment_number} in category ${category}`))();
-                                        const colorClass = eq.availability === "available"
-                                          ? "bg-emerald-500/10 hover:bg-emerald-500/20"
-                                          : "bg-amber-500/10 hover:bg-amber-500/20";
-                                        const dotColor = eq.availability === "available"
-                                          ? "bg-emerald-500"
-                                          : "bg-amber-500";
-                                        return (
-                                          <CommandItem
-                                            key={eq.id}
-                                            value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
-                                            onSelect={() => {
-                                              const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
-                                              setRollingStockItems((prev) =>
-                                                prev.map((rs) =>
-                                                  rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
-                                                )
-                                              );
-                                            }}
-                                            className={`text-xs ${colorClass}`}
-                                          >
-                                            <Check
-                                              className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
-                                            />
-                                            <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
-                                            <span className="font-mono">{eq.equipment_number}</span>
-                                            <span className="text-muted-foreground ml-2">
-                                              {eq.equipment_type} · {eq.make} {eq.model}
-                                            </span>
-                                            {eq.rental_rate ? (
-                                              <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
-                                            ) : null}
-                                            <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
-                                              {eq.availability_note}
-                                            </span>
-                                          </CommandItem>
+                                    <CommandItem
+                                      key={eq.id}
+                                      value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
+                                      onSelect={() => {
+                                        const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
+                                        setRollingStockItems((prev) =>
+                                          prev.map((rs) =>
+                                            rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
+                                          )
                                         );
-                                      })}
-                                    </CommandGroup>
+                                      }}
+                                      className={`text-xs ${colorClass}`}
+                                    >
+                                      <Check
+                                        className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
+                                      />
+                                      <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
+                                      <span className="font-mono">{eq.equipment_number}</span>
+                                      <span className="text-muted-foreground ml-2">
+                                        {eq.equipment_type} · {eq.make} {eq.model}
+                                      </span>
+                                      {eq.rental_rate ? (
+                                        <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
+                                      ) : null}
+                                      <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
+                                        {eq.availability_note}
+                                      </span>
+                                    </CommandItem>
                                   );
                                 })}
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled
-                          className="h-8 w-8"
-                          onClick={() => setRollingStockItems((prev) => prev.filter((rs) => rs.id !== item.id))}
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    );
-                  })}
+                              </CommandGroup>
+                            );
+                          })}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled
+                    className="h-8 w-8"
+                    onClick={() => setRollingStockItems((prev) => prev.filter((rs) => rs.id !== item.id))}
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
-          )}
-        </>
+        )}
+      </div>
       )}
 
       {workType === "RENTAL" && (

@@ -462,7 +462,7 @@ export async function POST(request: NextRequest) {
       const existingItemNumbers = new Set(workOrderItems.map(item => item.item_number.toLowerCase()));
 
       additionalItems.forEach((additionalItem: any, index: number) => {
-        const itemNumber = String(additionalItem.item_number || additionalItem.itemNumber || '').trim();
+        const itemNumber = String(additionalItem.name || additionalItem.item_number || additionalItem.itemNumber || '').trim();
         if (itemNumber && !existingItemNumbers.has(itemNumber.toLowerCase())) {
           workOrderItems.push({
             work_order_id: null,
