@@ -19,6 +19,7 @@ import {
   RotateCcw, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft,
   Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
@@ -632,7 +633,7 @@ const KanbanView = ({
     dragSourceStage !== null && !canMoveTo(dragSourceStage, stageId) && dragSourceStage !== stageId;
 
   return (
-    <div className="grid grid-cols-4 gap-2.5 items-start" style={{ height: "calc(100vh - 220px)" }}>
+    <div className="grid grid-cols-3 gap-2.5 items-start" style={{ height: "calc(100vh - 220px)" }}>
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
@@ -1004,15 +1005,27 @@ const ListView = ({
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue={stages[0]?.id} className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        {stages.map((stage) => (
+          <TabsTrigger key={stage.id} value={stage.id} className="flex items-center gap-2">
+            <stage.icon className="h-4 w-4" />
+            <span className="hidden sm:inline">{stage.shortLabel}</span>
+            <Badge variant="secondary" className="ml-1 text-xs">
+              {(jobsByStage[stage.id] || []).length}
+            </Badge>
+          </TabsTrigger>
+        ))}
+      </TabsList>
       {stages.map((stage) => (
-        <ContractTable
-          key={stage.id}
-          stage={stage}
-          jobs={jobsByStage[stage.id] || []}
-        />
+        <TabsContent key={stage.id} value={stage.id} className="mt-6">
+          <ContractTable
+            stage={stage}
+            jobs={jobsByStage[stage.id] || []}
+          />
+        </TabsContent>
       ))}
-    </div>
+    </Tabs>
   );
 };
 

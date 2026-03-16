@@ -731,25 +731,34 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                       </span>
                     ) : (
                       <div className="flex items-center justify-end">
-                        <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
+                        <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
                           <Select
                             value={item.retainageType}
-                            onValueChange={(type) => updateRetainage(item.id, type as 'percent' | 'dollar', item.retainageValue)}
+                            onValueChange={(newType) => {
+                              const currentValue = item.retainageValue;
+                              const newValue = newType === 'percent' ? currentValue / 100 : currentValue * 100;
+                              updateRetainage(item.id, newType, newValue);
+                            }}
                           >
-                            <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
+                            <SelectTrigger className="h-full w-12 shrink-0 rounded-none border-r px-2 text-xs focus:ring-0 data-[placeholder]:text-muted-foreground">
                               <SelectValue>{item.retainageType === 'percent' ? '%' : '$'}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="percent">%</SelectItem>
-                              <SelectItem value="dollar">$</SelectItem>
+                              <SelectItem value="fixed">$</SelectItem>
                             </SelectContent>
                           </Select>
                           <CurrencyInput
-                            value={Math.round(item.retainageValue * 100).toString()}
-                            onChange={(digits) =>
-                              updateRetainage(item.id, item.retainageType, (parseInt(digits || '0', 10) || 0) / 100)
+                            value={
+                              Math.round(item.retainageValue * (item.retainageType === 'percent' ? 100 : 1)).toString()
                             }
-                            className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
+                            onChange={(digits) => {
+                              const num = parseInt(digits || '0', 10) || 0;
+                              const scaled = item.retainageType === 'percent' ? num / 100 : num;
+                              updateRetainage(item.id, item.retainageType, scaled);
+                            }}
+                            className="h-full flex-1 border-0 bg-transparent px-3 text-right text-xs focus-visible:ring-0 focus-visible:ring-offset-0 w-[100px]"
+                            aria-label={`Retainage value in ${item.retainageType === 'percent' ? 'percent' : 'dollars'}`}
                           />
                         </div>
                       </div>
