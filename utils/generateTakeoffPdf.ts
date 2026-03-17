@@ -707,30 +707,28 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           y = checkPageBreak(doc, y, rowH);
 
           if (isTypeIII) {
-            const cols = MPT_COLS_ORDERED;
-            doc.text(String(idx + 1), cols[0].x, y);
-            doc.text(desigText, cols[1].x, y);
-            doc.text(legendLines, cols[2].x, y);
-            doc.text(meta?.dimensionLabel || "—", cols[3].x, y);
-            doc.text(meta?.sheeting || "—", cols[4].x, y);
-            doc.text(String(item.quantity), cols[5].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", cols[6].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), cols[7].x, y);
-            doc.text((item.material || "").substring(0, 8), cols[8].x + cols[8].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", cols[9].x + cols[9].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", cols[10].x + cols[10].w, y, { align: "right" });
+            doc.text(String(idx + 1), columnsUsed[0].x, y);
+            doc.text(desigText, columnsUsed[1].x, y);
+            doc.text(legendLines, columnsUsed[2].x, y);
+            doc.text(meta?.dimensionLabel || "—", columnsUsed[3].x, y);
+            doc.text(meta?.sheeting || "—", columnsUsed[4].x, y);
+            doc.text(String(item.quantity), columnsUsed[5].x, y);
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[6].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[7].x, y);
+            doc.text((item.material || "").substring(0, 8), columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", columnsUsed[10].x + columnsUsed[10].w, y, { align: "right" });
           } else {
-            const cols = MPT_COLS;
-            doc.text(desigText, cols[0].x, y);
-            doc.text(legendLines, cols[1].x, y);
-            doc.text(meta?.dimensionLabel || "—", cols[2].x, y);
-            doc.text(meta?.sheeting || "—", cols[3].x, y);
-            doc.text(String(item.quantity), cols[4].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", cols[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), cols[6].x, y);
-            doc.text((item.material || "").substring(0, 8), cols[7].x + cols[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", cols[8].x + cols[8].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", cols[9].x + cols[9].w, y, { align: "right" });
+            doc.text(desigText, columnsUsed[0].x, y);
+            doc.text(legendLines, columnsUsed[1].x, y);
+            doc.text(meta?.dimensionLabel || "—", columnsUsed[2].x, y);
+            doc.text(meta?.sheeting || "—", columnsUsed[3].x, y);
+            doc.text(String(item.quantity), columnsUsed[4].x, y);
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[5].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[6].x, y);
+            doc.text((item.material || "").substring(0, 8), columnsUsed[7].x + columnsUsed[7].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
           }
 
           y += rowH;
