@@ -203,11 +203,6 @@ export default function ContractViewContent() {
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Project Owner Contract #</span>
                 <span className="text-sm font-medium">{projectInfo.contractNumber || "—"}</span>
-                {contract?.internal_id && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Internal ID: {contract.internal_id}
-                  </p>
-                )}
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
