@@ -581,7 +581,7 @@ export const SOVTable = ({
                               : "Select item…"}
                           </SelectValue>
                         </SelectTrigger>
-                        <SelectContent className="max-h-80 w-[550px] p-2">
+                        <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
                           <Command>
                             <CommandInput
                               placeholder="Search by # or name…"
@@ -635,59 +635,53 @@ export const SOVTable = ({
                                 return allWorkTypes.map((workType) => {
                                   const groupItems = grouped[workType] || [];
 
-                                  // For synthetic sections (Delivery, Service, Custom), show special items
+                                  // For synthetic sections (Delivery, Service, Custom), show items without category headers
                                   if (workType === 'DELIVERY' && groupItems.length === 0) {
                                     return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        <CommandItem
-                                          key="delivery-item"
-                                          value="delivery"
-                                          onSelect={() => handleQuickAdd(item.id, 'delivery')}
-                                          className="text-xs cursor-pointer"
-                                        >
-                                          <Check className="mr-2 h-4 w-4 opacity-0" />
-                                          <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
-                                          <span className="truncate">Delivery</span>
-                                        </CommandItem>
-                                      </CommandGroup>
+                                      <CommandItem
+                                        key="delivery-item"
+                                        value="delivery"
+                                        onSelect={() => handleQuickAdd(item.id, 'delivery')}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
+                                        <span className="truncate">Delivery</span>
+                                      </CommandItem>
                                     );
                                   }
 
                                   if (workType === 'SERVICE' && groupItems.length === 0) {
                                     return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        <CommandItem
-                                          key="service-item"
-                                          value="service"
-                                          onSelect={() => handleQuickAdd(item.id, 'service')}
-                                          className="text-xs cursor-pointer"
-                                        >
-                                          <Check className="mr-2 h-4 w-4 opacity-0" />
-                                          <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
-                                          <span className="truncate">Service</span>
-                                        </CommandItem>
-                                      </CommandGroup>
+                                      <CommandItem
+                                        key="service-item"
+                                        value="service"
+                                        onSelect={() => handleQuickAdd(item.id, 'service')}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
+                                        <span className="truncate">Service</span>
+                                      </CommandItem>
                                     );
                                   }
 
                                   if (workType === 'CUSTOM' && groupItems.length === 0) {
                                     return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        <CommandItem
-                                          key="custom-item"
-                                          value="custom"
-                                          onSelect={() => openCustomDialog(item.id)}
-                                          className="text-xs cursor-pointer"
-                                        >
-                                          <Check className="mr-2 h-4 w-4 opacity-0" />
-                                          <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
-                                          <span className="truncate">Custom Item Number</span>
-                                        </CommandItem>
-                                      </CommandGroup>
+                                      <CommandItem
+                                        key="custom-item"
+                                        value="custom"
+                                        onSelect={() => openCustomDialog(item.id)}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
+                                        <span className="truncate">Custom Item Number</span>
+                                      </CommandItem>
                                     );
                                   }
 
-                                  // For work type groups with items, show them
+                                  // For work type groups with items, show them with category headers
                                   if (groupItems.length > 0) {
                                     return (
                                       <CommandGroup key={workType} heading={workType}>
@@ -742,9 +736,10 @@ export const SOVTable = ({
                     ) : (
                       (() => {
                         const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
-                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [item.uom].filter(Boolean);
+                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [];
 
-                        return availableUoms.length > 1 ? (
+                        // Always show select if we have UOM options, otherwise show as text
+                        return availableUoms.length > 0 ? (
                           <Select
                             value={item.uom}
                             onValueChange={(value) => updateRow(item.id, 'uom', value)}
