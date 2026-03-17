@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface NewRecordStickyPageHeaderProps {
   backLabel: string;
@@ -15,6 +14,7 @@ interface NewRecordStickyPageHeaderProps {
   isSaving?: boolean;
   lastSavedAt?: Date | null;
   hasUnsavedChanges?: boolean;
+  firstSave?: boolean;
 }
 
 export function NewRecordStickyPageHeader({
@@ -26,36 +26,36 @@ export function NewRecordStickyPageHeader({
   isSaving = false,
   lastSavedAt = null,
   hasUnsavedChanges = false,
+  firstSave = false,
 }: NewRecordStickyPageHeaderProps) {
   const [secondCounter, setSecondCounter] = useState(0);
-  const secondCounterRef = useRef(0);
 
-  // Autosave counter logic (from quotes/create)
+  // Counter logic - exactly like sign order page
   useEffect(() => {
     const intervalId = setInterval(() => {
-      secondCounterRef.current += 1;
-      setSecondCounter(secondCounterRef.current);
+      setSecondCounter(prev => prev + 1);
     }, 1000);
+
     return () => clearInterval(intervalId);
   }, []);
 
   const getSaveStatusMessage = useCallback(() => {
-    if (isSaving) return 'Saving...';
-    if (!lastSavedAt) return hasUnsavedChanges ? 'Not saved' : '';
-    const secondsAgo = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
-    if (secondsAgo < 60) {
-      return `Saved ${secondsAgo} second${secondsAgo !== 1 ? 's' : ''} ago`;
-    } else if (secondsAgo < 3600) {
-      const minutesAgo = Math.floor(secondsAgo / 60);
-      return `Saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+    if (isSaving && !firstSave) return 'Saving...';
+    if (!firstSave) return '';
+
+    if (secondCounter < 60) {
+      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+    } else if (secondCounter < 3600) {
+      const minutesAgo = Math.floor(secondCounter / 60);
+      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
     } else {
-      const hoursAgo = Math.floor(secondsAgo / 3600);
-      return `Saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
+      const hoursAgo = Math.floor(secondCounter / 3600);
+      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
     }
-  }, [isSaving, lastSavedAt, hasUnsavedChanges]);
+  }, [isSaving, firstSave, secondCounter]);
 
   const saveStatusMessage = getSaveStatusMessage();
-  const showStatusBadge = saveStatusMessage !== '';
+  const showStatusText = saveStatusMessage !== '';
 
   return (
     <header className="border-b bg-card sticky top-0 z-10">
@@ -72,13 +72,10 @@ export function NewRecordStickyPageHeader({
           {leftContent ? <div className="min-w-0 flex-1">{leftContent}</div> : null}
         </div>
         <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
-          {showStatusBadge && (
-            <Badge
-              variant={hasUnsavedChanges && !isSaving ? "destructive" : "secondary"}
-              className="text-xs"
-            >
+          {showStatusText && (
+            <div className="text-sm text-muted-foreground">
               {saveStatusMessage}
-            </Badge>
+            </div>
           )}
           {additionalButtons}
           <Button

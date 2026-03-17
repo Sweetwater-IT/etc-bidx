@@ -402,6 +402,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setContractRow(result);
             setLastSavedAt(new Date());
             setFirstSave(true);
+            setSecondCounter(1); // Reset counter to 1 like sign order page
           } catch (error) {
             console.error('Autosave failed:', error);
             toast.error('Failed to save contract');
@@ -409,7 +410,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setIsSaving(false);
           }
         }
-      }, 2500); // Autosave every 2.5 seconds like quotes/create
+      }, 5000); // Autosave every 5 seconds like sign orders
     }
   }, [projectInfo, contractId, isViewMode]);
 

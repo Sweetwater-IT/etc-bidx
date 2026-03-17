@@ -259,6 +259,7 @@ export const CreateTakeoffForm = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [titleEnteredAt, setTitleEnteredAt] = useState<Date | null>(null);
   const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [firstSave, setFirstSave] = useState<boolean>(false);
 
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
@@ -350,6 +351,10 @@ export const CreateTakeoffForm = ({
       const newTakeoffId = data.takeoff.id as string;
       setSavedTakeoffId(newTakeoffId);
       setHasUnsavedChanges(false);
+      setFirstSave(true);
+      // Reset counter to 1 like sign order page
+      // Note: We can't directly reset the counter here since it's in the header component
+      // The header component will handle showing the message based on firstSave
       if (!savedTakeoffId && newTakeoffId) {
         // Update URL without full page reload for better UX
         window.history.replaceState(null, '', `/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
@@ -375,7 +380,7 @@ export const CreateTakeoffForm = ({
         workTypeSelectedAt?.getTime() ?? 0
       );
       const shouldDelay = !savedTakeoffId && latestTrigger > 0 && now - latestTrigger < 2000;
-      const delay = shouldDelay ? 2500 - (now - latestTrigger) : 2500;
+      const delay = shouldDelay ? 5000 - (now - latestTrigger) : 5000;
 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -782,6 +787,7 @@ export const CreateTakeoffForm = ({
         isSaving={saving}
         lastSavedAt={lastSaved}
         hasUnsavedChanges={hasUnsavedChanges}
+        firstSave={firstSave}
         additionalButtons={undefined}
       />
 
