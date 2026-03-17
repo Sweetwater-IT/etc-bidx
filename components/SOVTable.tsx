@@ -590,42 +590,10 @@ export const SOVTable = ({
                               autoFocus
                             />
                             <CommandList>
-                              <CommandItem
-                                key="custom"
-                                value="custom"
-                                onSelect={() => {
-                                  openCustomDialog(item.id);
-                                }}
-                              >
-                                <div className="flex items-center w-full">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  <span className="font-medium italic">Custom Item Number</span>
-                                </div>
-                              </CommandItem>
-                              <CommandItem
-                                key="delivery"
-                                value="delivery"
-                                onSelect={() => handleQuickAdd(item.id, 'delivery')}
-                              >
-                                <div className="flex items-center w-full">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  <span className="font-medium italic">Delivery</span>
-                                </div>
-                              </CommandItem>
-                              <CommandItem
-                                key="service"
-                                value="service"
-                                onSelect={() => handleQuickAdd(item.id, 'service')}
-                              >
-                                <div className="flex items-center w-full">
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  <span className="font-medium italic">Service</span>
-                                </div>
-                              </CommandItem>
 
                               {/* Items grouped by work type */}
                               {(() => {
-                                const preferredOrder = ['MPT', 'PERMANENT SIGN', 'LANE CLOSURE', 'FLAGGING', 'SERVICE', 'DELIVERY', 'CUSTOM', 'OTHER'];
+                                const searchTerm = selectorSearch.toLowerCase().trim();
                                 const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
                                   const key = (curr.work_type || 'OTHER').trim().toUpperCase();
                                   if (!acc[key]) acc[key] = [];
@@ -633,38 +601,118 @@ export const SOVTable = ({
                                   return acc;
                                 }, {});
 
-                                const orderedWorkTypes = [
-                                  ...preferredOrder.filter((type) => grouped[type]?.length),
-                                  ...Object.keys(grouped)
-                                    .filter((type) => !preferredOrder.includes(type))
-                                    .sort(),
-                                ];
+                                // Always show these three categories at the top when no search
+                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
 
-                                return orderedWorkTypes.map((workType) => {
+                                // Add synthetic groups for Delivery, Service, and Custom
+                                if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
+                                if (!grouped['SERVICE']) grouped['SERVICE'] = [];
+                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
+
+                                let allWorkTypes: string[];
+
+                                if (!searchTerm) {
+                                  // No search: show always-show categories first, then others with items
+                                  allWorkTypes = [
+                                    ...alwaysShowCategories,
+                                    ...Object.keys(grouped)
+                                      .filter(type => !alwaysShowCategories.includes(type) && grouped[type].length > 0)
+                                      .sort()
+                                  ];
+                                } else {
+                                  // With search: show categories that have items or match search
+                                  allWorkTypes = Object.keys(grouped)
+                                    .filter(type => {
+                                      if (alwaysShowCategories.includes(type)) {
+                                        // Always show these when searched
+                                        return true;
+                                      }
+                                      return grouped[type].length > 0;
+                                    })
+                                    .sort();
+                                }
+
+                                return allWorkTypes.map((workType) => {
                                   const groupItems = grouped[workType] || [];
-                                  if (groupItems.length === 0) return null;
 
-                                  return (
-                                    <CommandGroup key={workType} heading={workType}>
-                                      {groupItems.map((p) => (
+                                  // For synthetic sections (Delivery, Service, Custom), show special items
+                                  if (workType === 'DELIVERY' && groupItems.length === 0) {
+                                    return (
+                                      <CommandGroup key={workType} heading={workType}>
                                         <CommandItem
-                                          key={p.id}
-                                          value={p.item_number}
-                                          onSelect={() => selectMasterItem(item.id, p)}
+                                          key="delivery-item"
+                                          value="delivery"
+                                          onSelect={() => handleQuickAdd(item.id, 'delivery')}
                                           className="text-xs cursor-pointer"
                                         >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                          <span className="truncate">{p.display_name}</span>
+                                          <Check className="mr-2 h-4 w-4 opacity-0" />
+                                          <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
+                                          <span className="truncate">Delivery</span>
                                         </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  );
+                                      </CommandGroup>
+                                    );
+                                  }
+
+                                  if (workType === 'SERVICE' && groupItems.length === 0) {
+                                    return (
+                                      <CommandGroup key={workType} heading={workType}>
+                                        <CommandItem
+                                          key="service-item"
+                                          value="service"
+                                          onSelect={() => handleQuickAdd(item.id, 'service')}
+                                          className="text-xs cursor-pointer"
+                                        >
+                                          <Check className="mr-2 h-4 w-4 opacity-0" />
+                                          <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
+                                          <span className="truncate">Service</span>
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    );
+                                  }
+
+                                  if (workType === 'CUSTOM' && groupItems.length === 0) {
+                                    return (
+                                      <CommandGroup key={workType} heading={workType}>
+                                        <CommandItem
+                                          key="custom-item"
+                                          value="custom"
+                                          onSelect={() => openCustomDialog(item.id)}
+                                          className="text-xs cursor-pointer"
+                                        >
+                                          <Check className="mr-2 h-4 w-4 opacity-0" />
+                                          <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
+                                          <span className="truncate">Custom Item Number</span>
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    );
+                                  }
+
+                                  // For work type groups with items, show them
+                                  if (groupItems.length > 0) {
+                                    return (
+                                      <CommandGroup key={workType} heading={workType}>
+                                        {groupItems.map((p) => (
+                                          <CommandItem
+                                            key={p.id}
+                                            value={p.item_number}
+                                            onSelect={() => selectMasterItem(item.id, p)}
+                                            className="text-xs cursor-pointer"
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
+                                            <span className="truncate">{p.display_name}</span>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    );
+                                  }
+
+                                  return null;
                                 });
                               })()}
 
