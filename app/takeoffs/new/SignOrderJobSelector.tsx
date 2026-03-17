@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ImportSignsModal } from "./ImportSignsModal";
+import { ImportFromTakeoffModal } from "./ImportFromTakeoffModal";
 
 interface Estimate {
   contract_number: string;
@@ -99,6 +100,7 @@ export function SignOrderJobSelector({
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFromTakeoffModalOpen, setImportFromTakeoffModalOpen] = useState(false);
   const inputRef = useRef(null);
 
   const handleBlur = (e) => {
@@ -326,7 +328,10 @@ export function SignOrderJobSelector({
       )}
 
       {(selectedContractJob || showInitialAdminState) && (
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end gap-2 mb-4">
+          <Button variant="outline" onClick={() => setImportFromTakeoffModalOpen(true)}>
+            <Import className="w-4 h-4 mr-2" />Import from Takeoff
+          </Button>
           <Button variant="outline" onClick={() => setImportModalOpen(true)}>
             <Import className="w-4 h-4 mr-2" />Import Signs
           </Button>
@@ -335,6 +340,10 @@ export function SignOrderJobSelector({
 
       <AlertDialog open={importModalOpen} onOpenChange={setImportModalOpen}>
         <ImportSignsModal open={importModalOpen} onOpenChange={setImportModalOpen} jobId={jobId} onImport={onImport || (() => {})} />
+      </AlertDialog>
+
+      <AlertDialog open={importFromTakeoffModalOpen} onOpenChange={setImportFromTakeoffModalOpen}>
+        <ImportFromTakeoffModal open={importFromTakeoffModalOpen} onOpenChange={setImportFromTakeoffModalOpen} jobId={jobId} onImport={onImport || (() => {})} />
       </AlertDialog>
     </div>
   );

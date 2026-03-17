@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/table';
 import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
 interface SovMasterItem {
   id: number;
   item_number: string;
@@ -90,6 +91,11 @@ function clampNumber(value: number, min: number, max: number) {
 
 function getFirstNonNullUom(master: SovMasterItem): string {
   return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+}
+
+function getAvailableUoms(master: SovMasterItem): string[] {
+  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
+  return uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '');
 }
 
 export const SOVTable = ({
@@ -503,24 +509,13 @@ export const SOVTable = ({
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
-              <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
-                <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
-                  <SelectValue>{bulkType === 'percent' ? '%' : '$'}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percent">%</SelectItem>
-                  <SelectItem value="dollar">$</SelectItem>
-                </SelectContent>
-              </Select>
-              <CurrencyInput
-                value={bulkValueDigits}
-                onChange={setBulkValueDigits}
-                className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
-              />
-            </div>
-          </div>
+          <DollarPercentCurrencyInputField
+            type={bulkType}
+            value={bulkValueDigits ? parseInt(bulkValueDigits, 10) / 100 : 0}
+            onTypeChange={setBulkType}
+            onValueChange={(value) => setBulkValueDigits(Math.round(value * 100).toString())}
+            size="sm"
+          />
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
           </Button>
@@ -694,7 +689,34 @@ export const SOVTable = ({
                     <span className="text-xs px-1 truncate block">{item.description}</span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <span className="text-xs px-1">{item.uom}</span>
+                    {readOnly ? (
+                      <span className="text-xs px-1">{item.uom}</span>
+                    ) : (
+                      (() => {
+                        const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
+                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [item.uom].filter(Boolean);
+
+                        return availableUoms.length > 1 ? (
+                          <Select
+                            value={item.uom}
+                            onValueChange={(value) => updateRow(item.id, 'uom', value)}
+                          >
+                            <SelectTrigger className="w-full h-7 text-xs bg-transparent">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableUoms.map((uom) => (
+                                <SelectItem key={uom} value={uom} className="text-xs">
+                                  {uom}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs px-1">{item.uom}</span>
+                        );
+                      })()
+                    )}
                   </TableCell>
                   <TableCell className="p-1.5">
                     {readOnly ? (
@@ -761,38 +783,18 @@ export const SOVTable = ({
                           : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                       </span>
                     ) : (
-                      <div className="flex items-center justify-end">
-                        <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                          <Select
-                            value={item.retainageType}
-                            onValueChange={(newType) => {
-                              const currentValue = item.retainageValue;
-                              const mappedType = newType === 'fixed' ? 'dollar' : newType as 'percent' | 'dollar';
-                              const newValue = mappedType === 'percent' ? currentValue / 100 : currentValue * 100;
-                              updateRetainage(item.id, mappedType, newValue);
-                            }}
-                          >
-                            <SelectTrigger className="h-full w-12 shrink-0 rounded-none border-r px-2 text-xs focus:ring-0 data-[placeholder]:text-muted-foreground">
-                              <SelectValue>{item.retainageType === 'percent' ? '%' : '$'}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="percent">%</SelectItem>
-                              <SelectItem value="fixed">$</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <CurrencyInput
-                            value={
-                              Math.round(item.retainageValue * (item.retainageType === 'percent' ? 100 : 1)).toString()
-                            }
-                            onChange={(digits) => {
-                              const num = parseInt(digits || '0', 10) || 0;
-                              const scaled = item.retainageType === 'percent' ? num / 100 : num;
-                              updateRetainage(item.id, item.retainageType, scaled);
-                            }}
-                            className="h-full flex-1 border-0 bg-transparent px-3 text-right text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-                            aria-label={`Retainage value in ${item.retainageType === 'percent' ? 'percent' : 'dollars'}`}
-                          />
-                        </div>
+                      <div className="flex justify-end">
+                        <DollarPercentCurrencyInputField
+                          type={item.retainageType}
+                          value={item.retainageValue}
+                          onTypeChange={(type) => {
+                            const currentValue = item.retainageValue;
+                            const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
+                            updateRetainage(item.id, type, newValue);
+                          }}
+                          onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
+                          size="sm"
+                        />
                       </div>
                     )}
                   </TableCell>
