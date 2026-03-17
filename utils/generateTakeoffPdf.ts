@@ -574,741 +574,88 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       doc.text(category.toUpperCase(), 16, y + 1);
       y += 9;
 
-      const lowerWorkType = (data.workType || "").toLowerCase().trim();
-      const lowerCategory = category.toLowerCase().trim();
+      const lowerWorkType  = (data.workType || "").toLowerCase().trim();
+      const lowerCategory  = category.toLowerCase().trim();
 
-      console.log(`[PDF] Category "${category}" (${items.length} items) | Work type: "${data.workType || '(none)'}"`);
+      console.log(
+        `[PDF] Category "${category}" (${items.length} items) | Work type: "${data.workType || '(none)'}"`
+      );
 
-      let isPermanentJob = lowerWorkType.includes("perm") ||
-                           lowerWorkType.includes("permanent") ||
-                           lowerWorkType === "permanent signs";
+      // ── Job type detection ────────────────────────────────────────────────
+      const isPermanentJob =
+        lowerWorkType.includes("perm") ||
+        lowerWorkType.includes("permanent") ||
+        lowerWorkType === "permanent signs";
 
-      let forceMPT = lowerWorkType.includes("mpt") ||
-                     lowerWorkType.includes("flagg") ||
-                     lowerWorkType.includes("lane") ||
-                     lowerWorkType.includes("closure") ||
-                     lowerWorkType.includes("traffic control");
+      const shouldUseMPT =
+        lowerWorkType.includes("mpt") ||
+        lowerWorkType.includes("flagg") ||
+        lowerWorkType.includes("lane") ||
+        lowerWorkType.includes("closure") ||
+        lowerWorkType.includes("traffic control") ||
+        lowerCategory.includes("sign") ||
+        lowerCategory.startsWith("mpt:");
 
-      // Decide columns
-      let useMPTColumns = false;
-      let usePermColumns = false;
-
-      if (isPermanentJob) {
-        usePermColumns = true;
-      } else if (forceMPT || lowerCategory.includes("sign") || lowerCategory.startsWith("mpt:")) {
-        // MPT is the default for traffic/temporary sign work
-        useMPTColumns = true;
-      } else {
-        // Only non-sign things (vehicles, lights without sign metadata, etc.) get simple
-        // But signs should almost never reach here anymore
-        console.warn(`[PDF] Using SIMPLE columns for "${category}" — check if this is intended`);
-      }
-
-      if (usePermColumns) {
-        console.log("[PDF] → PERMANENT SIGN COLUMNS");
-        console.log("     ", PERM_COLS.map(c => c.label).join(" | "));
-
-        _activeCols = PERM_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, PERM_COLS, y, pageW);
-        // ── your existing permanent sign item rendering loop here ──
-        // (with plan sheet, post size, substrate, etc.)
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        for (const item of items) {
-          y = checkPageBreak(doc, y);
-          const meta = tryParseNotes(item.notes);
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          const permLegendText = meta?.signLegend || "";
-          const permLegendColW = PERM_COLS[1].w;
-          const permLegendLines = doc.splitTextToSize(permLegendText, permLegendColW);
-          const permRowH = Math.max(6, permLegendLines.length * 3.5);
-          y = checkPageBreak(doc, y, permRowH);
-          doc.text((item.product_name || "").substring(0, 26), PERM_COLS[0].x, y);
-          doc.text(permLegendLines, PERM_COLS[1].x, y);
-          doc.text(meta?.dimensionLabel || "—", PERM_COLS[2].x, y);
-          doc.text(meta?.sheeting || "—", PERM_COLS[3].x, y);
-          doc.text(String(item.quantity), PERM_COLS[4].x, y);
-          doc.text(meta?.postSize || "—", PERM_COLS[5].x, y);
-          const planSheet = meta?.planSheetNum ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}` : "—";
-          doc.text(planSheet, PERM_COLS[6].x, y);
-          doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
-          doc.text(meta?.structure || "—", PERM_COLS[8].x, y);
-          doc.text(meta?.substrate || "—", PERM_COLS[9].x, y);
-          doc.text((item.material || "").substring(0, 8), PERM_COLS[10].x, y);
-          y += permRowH;
-          // Light grey separator line
-          doc.setDrawColor(220);
-          doc.setLineWidth(0.15);
-          doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-
-          // Secondary signs
-          if (meta?.secondarySigns?.length) {
-            for (const sec of meta.secondarySigns) {
-              y = checkPageBreak(doc, y);
-              doc.setFillColor(248, 248, 250);
-              doc.rect(14, y - 3.5, pageW - 28, 6, "F");
-              doc.setDrawColor(220);
-              doc.line(14, y - 3.5, 14, y + 2.5);
-              doc.setDrawColor(200);
-              doc.setFont("helvetica", "italic");
-              doc.setFontSize(7);
-              doc.text("•", PERM_COLS[0].x + 2, y);
-              doc.text((sec.signDesignation || "").substring(0, 24), PERM_COLS[0].x + 8, y);
-              doc.text((sec.signLegend || "").substring(0, 44), PERM_COLS[1].x, y);
-              doc.text(sec.dimensionLabel || "—", PERM_COLS[2].x, y);
-              doc.text(sec.sheeting || "—", PERM_COLS[3].x, y);
-              doc.text("", PERM_COLS[4].x, y);
-              doc.text("", PERM_COLS[5].x, y);
-              doc.text("", PERM_COLS[6].x, y);
-              doc.text(sec.sqft ? String(sec.sqft) : "—", PERM_COLS[7].x, y);
-              doc.text("", PERM_COLS[8].x, y);
-              doc.setFontSize(8);
-              doc.setFont("helvetica", "normal");
-              y += 6;
-            }
-          }
-        }
-
-        // Section summary for perm signs
-        y = renderPermSectionSummary(doc, items, y, pageW);
-      } else if (useMPTColumns) {
-        const isTypeIII = isTypeIIICategory(category);
-        const cols = isTypeIII ? MPT_COLS_ORDERED : MPT_COLS;
-
-        console.log(`[PDF] → MPT COLUMNS ${isTypeIII ? "(with LOAD #)" : ""}`);
-        console.log("     ", cols.map(c => c.label).join(" | "));
-
-        _activeCols = cols;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, cols, y, pageW);
-        // ── your existing MPT rendering code here ──
-        // (with cover, lights, secondary signs, structure abbreviation, etc.)
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        // Sort Type III items by loadOrder if available
-        const sortedItems = isTypeIII
-          ? [...items].sort((a, b) => {
-              const metaA = tryParseNotes(a.notes);
-              const metaB = tryParseNotes(b.notes);
-              return (metaA?.loadOrder ?? 999) - (metaB?.loadOrder ?? 999);
-            })
-          : items;
-
-        for (let idx = 0; idx < sortedItems.length; idx++) {
-          const item = sortedItems[idx];
-          y = checkPageBreak(doc, y);
-          const meta = tryParseNotes(item.notes);
-
-          if (isTypeIII) {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS_ORDERED[2].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(String(idx + 1), MPT_COLS_ORDERED[0].x, y);
-            doc.text(desigText, MPT_COLS_ORDERED[1].x, y);
-            doc.text(legendLines, MPT_COLS_ORDERED[2].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-            doc.text(String(item.quantity), MPT_COLS_ORDERED[5].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS_ORDERED[6].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[7].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[10].x + MPT_COLS_ORDERED[10].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS_ORDERED[2].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS_ORDERED[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS_ORDERED[1].x, y);
-                doc.text(secLegendLines, MPT_COLS_ORDERED[2].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-                doc.text("", MPT_COLS_ORDERED[5].x, y);
-                doc.text("", MPT_COLS_ORDERED[6].x, y);
-                doc.text("", MPT_COLS_ORDERED[7].x, y);
-                doc.text("", MPT_COLS_ORDERED[8].x, y);
-                doc.text("", MPT_COLS_ORDERED[9].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          } else {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS[1].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(desigText, MPT_COLS[0].x, y);
-            doc.text(legendLines, MPT_COLS[1].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS[2].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS[3].x, y);
-            doc.text(String(item.quantity), MPT_COLS[4].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[6].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS[9].x + MPT_COLS[9].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS[1].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS[0].x, y);
-                doc.text(secLegendLines, MPT_COLS[1].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS[2].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS[3].x, y);
-                doc.text("", MPT_COLS[4].x, y);
-                doc.text("", MPT_COLS[5].x, y);
-                doc.text("", MPT_COLS[6].x, y);
-                doc.text("", MPT_COLS[7].x, y);
-                doc.text("", MPT_COLS[8].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          }
-
-        }
-
-        // Section summary
-        y = renderMPTSectionSummary(doc, sortedItems, y, pageW);
-      } else {
-        // fallback — should be rare for sign categories
-        console.log("[PDF] → SIMPLE COLUMNS (fallback)");
-        console.log("     ", SIMPLE_COLS.map(c => c.label).join(" | "));
-
-        _activeCols = SIMPLE_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, SIMPLE_COLS, y, pageW);
-        // simple rendering...
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        for (const item of items) {
-          // Wrap text for simple items if needed
-          const itemColW = SIMPLE_COLS[0].w;
-          const notesColW = SIMPLE_COLS[3].w;
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          const itemLines = doc.splitTextToSize(item.product_name || "", itemColW);
-          const meta = tryParseNotes(item.notes);
-          const notesText = meta ? "" : (item.notes || "");
-          const notesLines = notesText ? doc.splitTextToSize(notesText, notesColW) : [""];
-          const lineCount = Math.max(itemLines.length, notesLines.length);
-          const rowH = Math.max(6, lineCount * 4);
-          y = checkPageBreak(doc, y, rowH);
-          doc.text(itemLines, SIMPLE_COLS[0].x, y);
-          doc.text(String(item.quantity), SIMPLE_COLS[1].x, y);
-          doc.text(item.unit || "EA", SIMPLE_COLS[2].x, y);
-          doc.text(notesLines, SIMPLE_COLS[3].x, y);
-          y += rowH;
-        }
-      }
-
-      _activeCols = null; // clear after category
-      y += 4; // spacing between categories
-      // Category header row
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setFillColor(230, 235, 245);
-      doc.rect(14, y - 3.5, pageW - 28, 8, "F");
-      doc.text(category.toUpperCase(), 16, y + 1);
-      y += 9;
-
-      const lowerWorkType = (data.workType || "").toLowerCase().trim();
-      const lowerCategory = category.toLowerCase().trim();
-
-      console.log(`[PDF] Category "${category}" (${items.length} items) | Work type: "${data.workType || '(none)'}"`);
-
-      let isPermanentJob = lowerWorkType.includes("perm") ||
-                           lowerWorkType.includes("permanent") ||
-                           lowerWorkType === "permanent signs";
-
-      let forceMPT = lowerWorkType.includes("mpt") ||
-                     lowerWorkType.includes("flagg") ||
-                     lowerWorkType.includes("lane") ||
-                     lowerWorkType.includes("closure") ||
-                     lowerWorkType.includes("traffic control");
-
-      // Decide columns
-      let useMPTColumns = false;
-      let usePermColumns = false;
+      let columnsUsed: { label: string; x: number; w: number }[] = SIMPLE_COLS;
+      let isMPT = false;
+      let isPerm = false;
+      let isTypeIII = false;
 
       if (isPermanentJob) {
-        usePermColumns = true;
-      } else if (forceMPT || lowerCategory.includes("sign") || lowerCategory.startsWith("mpt:")) {
-        // MPT is the default for traffic/temporary sign work
-        useMPTColumns = true;
-      } else {
-        // Only non-sign things (vehicles, lights without sign metadata, etc.) get simple
-        // But signs should almost never reach here anymore
-        console.warn(`[PDF] Using SIMPLE columns for "${category}" — check if this is intended`);
-      }
-
-      if (usePermColumns) {
+        isPerm = true;
+        columnsUsed = PERM_COLS;
         console.log("[PDF] → PERMANENT SIGN COLUMNS");
         console.log("     ", PERM_COLS.map(c => c.label).join(" | "));
-
-        _activeCols = PERM_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, PERM_COLS, y, pageW);
-        // ── your existing permanent sign item rendering loop here ──
-        // (with plan sheet, post size, substrate, etc.)
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        for (const item of items) {
-          y = checkPageBreak(doc, y);
-          const meta = tryParseNotes(item.notes);
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          const permLegendText = meta?.signLegend || "";
-          const permLegendColW = PERM_COLS[1].w;
-          const permLegendLines = doc.splitTextToSize(permLegendText, permLegendColW);
-          const permRowH = Math.max(6, permLegendLines.length * 3.5);
-          y = checkPageBreak(doc, y, permRowH);
-          doc.text((item.product_name || "").substring(0, 26), PERM_COLS[0].x, y);
-          doc.text(permLegendLines, PERM_COLS[1].x, y);
-          doc.text(meta?.dimensionLabel || "—", PERM_COLS[2].x, y);
-          doc.text(meta?.sheeting || "—", PERM_COLS[3].x, y);
-          doc.text(String(item.quantity), PERM_COLS[4].x, y);
-          doc.text(meta?.postSize || "—", PERM_COLS[5].x, y);
-          const planSheet = meta?.planSheetNum ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}` : "—";
-          doc.text(planSheet, PERM_COLS[6].x, y);
-          doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
-          doc.text(meta?.structure || "—", PERM_COLS[8].x, y);
-          doc.text(meta?.substrate || "—", PERM_COLS[9].x, y);
-          doc.text((item.material || "").substring(0, 8), PERM_COLS[10].x, y);
-          y += permRowH;
-          // Light grey separator line
-          doc.setDrawColor(220);
-          doc.setLineWidth(0.15);
-          doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-
-          // Secondary signs
-          if (meta?.secondarySigns?.length) {
-            for (const sec of meta.secondarySigns) {
-              y = checkPageBreak(doc, y);
-              doc.setFillColor(248, 248, 250);
-              doc.rect(14, y - 3.5, pageW - 28, 6, "F");
-              doc.setDrawColor(220);
-              doc.line(14, y - 3.5, 14, y + 2.5);
-              doc.setDrawColor(200);
-              doc.setFont("helvetica", "italic");
-              doc.setFontSize(7);
-              doc.text("•", PERM_COLS[0].x + 2, y);
-              doc.text((sec.signDesignation || "").substring(0, 24), PERM_COLS[0].x + 8, y);
-              doc.text((sec.signLegend || "").substring(0, 44), PERM_COLS[1].x, y);
-              doc.text(sec.dimensionLabel || "—", PERM_COLS[2].x, y);
-              doc.text(sec.sheeting || "—", PERM_COLS[3].x, y);
-              doc.text("", PERM_COLS[4].x, y);
-              doc.text("", PERM_COLS[5].x, y);
-              doc.text("", PERM_COLS[6].x, y);
-              doc.text(sec.sqft ? String(sec.sqft) : "—", PERM_COLS[7].x, y);
-              doc.text("", PERM_COLS[8].x, y);
-              doc.setFontSize(8);
-              doc.setFont("helvetica", "normal");
-              y += 6;
-            }
-          }
-        }
-
-        // Section summary for perm signs
-        y = renderPermSectionSummary(doc, items, y, pageW);
-      } else if (useMPTColumns) {
-        const isTypeIII = isTypeIIICategory(category);
-        const cols = isTypeIII ? MPT_COLS_ORDERED : MPT_COLS;
-
+      } else if (shouldUseMPT) {
+        isMPT = true;
+        isTypeIII = isTypeIIICategory(category);
+        columnsUsed = isTypeIII ? MPT_COLS_ORDERED : MPT_COLS;
         console.log(`[PDF] → MPT COLUMNS ${isTypeIII ? "(with LOAD #)" : ""}`);
-        console.log("     ", cols.map(c => c.label).join(" | "));
-
-        _activeCols = cols;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, cols, y, pageW);
-        // ── your existing MPT rendering code here ──
-        // (with cover, lights, secondary signs, structure abbreviation, etc.)
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        // Sort Type III items by loadOrder if available
-        const sortedItems = isTypeIII
-          ? [...items].sort((a, b) => {
-              const metaA = tryParseNotes(a.notes);
-              const metaB = tryParseNotes(b.notes);
-              return (metaA?.loadOrder ?? 999) - (metaB?.loadOrder ?? 999);
-            })
-          : items;
-
-        for (let idx = 0; idx < sortedItems.length; idx++) {
-          const item = sortedItems[idx];
-          y = checkPageBreak(doc, y);
-          const meta = tryParseNotes(item.notes);
-
-          if (isTypeIII) {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS_ORDERED[2].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(String(idx + 1), MPT_COLS_ORDERED[0].x, y);
-            doc.text(desigText, MPT_COLS_ORDERED[1].x, y);
-            doc.text(legendLines, MPT_COLS_ORDERED[2].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-            doc.text(String(item.quantity), MPT_COLS_ORDERED[5].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS_ORDERED[6].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[7].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[10].x + MPT_COLS_ORDERED[10].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS_ORDERED[2].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS_ORDERED[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS_ORDERED[1].x, y);
-                doc.text(secLegendLines, MPT_COLS_ORDERED[2].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-                doc.text("", MPT_COLS_ORDERED[5].x, y);
-                doc.text("", MPT_COLS_ORDERED[6].x, y);
-                doc.text("", MPT_COLS_ORDERED[7].x, y);
-                doc.text("", MPT_COLS_ORDERED[8].x, y);
-                doc.text("", MPT_COLS_ORDERED[9].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          } else {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS[1].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(desigText, MPT_COLS[0].x, y);
-            doc.text(legendLines, MPT_COLS[1].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS[2].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS[3].x, y);
-            doc.text(String(item.quantity), MPT_COLS[4].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[6].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS[9].x + MPT_COLS[9].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS[1].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS[0].x, y);
-                doc.text(secLegendLines, MPT_COLS[1].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS[2].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS[3].x, y);
-                doc.text("", MPT_COLS[4].x, y);
-                doc.text("", MPT_COLS[5].x, y);
-                doc.text("", MPT_COLS[6].x, y);
-                doc.text("", MPT_COLS[7].x, y);
-                doc.text("", MPT_COLS[8].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          }
-
-        }
-
-        // Section summary
-        y = renderMPTSectionSummary(doc, sortedItems, y, pageW);
+        console.log("     ", columnsUsed.map(c => c.label).join(" | "));
       } else {
-        // fallback — should be rare for sign categories
-        console.log("[PDF] → SIMPLE COLUMNS (fallback)");
+        console.log("[PDF] → SIMPLE COLUMNS (fallback – should be rare for signs)");
         console.log("     ", SIMPLE_COLS.map(c => c.label).join(" | "));
-
-        _activeCols = SIMPLE_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, SIMPLE_COLS, y, pageW);
-        // simple rendering...
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        for (const item of items) {
-          // Wrap text for simple items if needed
-          const itemColW = SIMPLE_COLS[0].w;
-          const notesColW = SIMPLE_COLS[3].w;
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          const itemLines = doc.splitTextToSize(item.product_name || "", itemColW);
-          const meta = tryParseNotes(item.notes);
-          const notesText = meta ? "" : (item.notes || "");
-          const notesLines = notesText ? doc.splitTextToSize(notesText, notesColW) : [""];
-          const lineCount = Math.max(itemLines.length, notesLines.length);
-          const rowH = Math.max(6, lineCount * 4);
-          y = checkPageBreak(doc, y, rowH);
-          doc.text(itemLines, SIMPLE_COLS[0].x, y);
-          doc.text(String(item.quantity), SIMPLE_COLS[1].x, y);
-          doc.text(item.unit || "EA", SIMPLE_COLS[2].x, y);
-          doc.text(notesLines, SIMPLE_COLS[3].x, y);
-          y += rowH;
-        }
       }
 
-      _activeCols = null; // clear after category
-      y += 4; // spacing between categories
-        const cols = isTypeIII ? MPT_COLS_ORDERED : MPT_COLS;
-        _activeCols = cols;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, cols, y, pageW);
+      _activeCols = columnsUsed;
+      _activePageW = pageW;
+      y = drawTableHeader(doc, columnsUsed, y, pageW);
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
 
-        // Sort Type III items by loadOrder if available
-        const sortedItems = isTypeIII
-          ? [...items].sort((a, b) => {
-              const metaA = tryParseNotes(a.notes);
-              const metaB = tryParseNotes(b.notes);
-              return (metaA?.loadOrder ?? 999) - (metaB?.loadOrder ?? 999);
-            })
-          : items;
-
-        for (let idx = 0; idx < sortedItems.length; idx++) {
-          const item = sortedItems[idx];
-          y = checkPageBreak(doc, y);
-          const meta = tryParseNotes(item.notes);
-
-          if (isTypeIII) {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS_ORDERED[2].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(String(idx + 1), MPT_COLS_ORDERED[0].x, y);
-            doc.text(desigText, MPT_COLS_ORDERED[1].x, y);
-            doc.text(legendLines, MPT_COLS_ORDERED[2].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-            doc.text(String(item.quantity), MPT_COLS_ORDERED[5].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS_ORDERED[6].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[7].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[10].x + MPT_COLS_ORDERED[10].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS_ORDERED[2].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS_ORDERED[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS_ORDERED[1].x, y);
-                doc.text(secLegendLines, MPT_COLS_ORDERED[2].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
-                doc.text("", MPT_COLS_ORDERED[5].x, y);
-                doc.text("", MPT_COLS_ORDERED[6].x, y);
-                doc.text("", MPT_COLS_ORDERED[7].x, y);
-                doc.text("", MPT_COLS_ORDERED[8].x, y);
-                doc.text("", MPT_COLS_ORDERED[9].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          } else {
-            doc.setFont("helvetica", "normal");
-            const desigText = cleanProductName(item.product_name || "", item.category).substring(0, 22);
-            const legendText = meta?.signLegend || "";
-            const legendLines = doc.splitTextToSize(legendText, MPT_COLS[1].w);
-            const rowH = Math.max(6, legendLines.length * 3.5);
-            y = checkPageBreak(doc, y, rowH);
-            doc.text(desigText, MPT_COLS[0].x, y);
-            doc.text(legendLines, MPT_COLS[1].x, y);
-            doc.text(meta?.dimensionLabel || "—", MPT_COLS[2].x, y);
-            doc.text(meta?.sheeting || "—", MPT_COLS[3].x, y);
-            doc.text(String(item.quantity), MPT_COLS[4].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[6].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS[9].x + MPT_COLS[9].w, y, { align: "right" });
-            y += rowH;
-            // Light grey separator line
-            doc.setDrawColor(220);
-            doc.setLineWidth(0.15);
-            doc.line(14, y - 2.5, pageW - 14, y - 2.5);
-            // Secondary signs
-            if (meta?.secondarySigns?.length) {
-              for (const sec of meta.secondarySigns) {
-                const secDesigText = (sec.signDesignation || "").substring(0, 20);
-                const secLegendText = sec.signLegend || "";
-                const secLegendLines = doc.splitTextToSize(secLegendText, MPT_COLS[1].w);
-                const secRowH = Math.max(6, secLegendLines.length * 3.5);
-                y = checkPageBreak(doc, y, secRowH);
-                doc.setFillColor(248, 248, 250);
-                doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
-                doc.setDrawColor(220);
-                doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
-                doc.setDrawColor(200);
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(7);
-                doc.text("•", MPT_COLS[0].x + 2, y);
-                doc.text(secDesigText, MPT_COLS[0].x, y);
-                doc.text(secLegendLines, MPT_COLS[1].x, y);
-                doc.text(sec.dimensionLabel || "—", MPT_COLS[2].x, y);
-                doc.text(sec.sheeting || "—", MPT_COLS[3].x, y);
-                doc.text("", MPT_COLS[4].x, y);
-                doc.text("", MPT_COLS[5].x, y);
-                doc.text("", MPT_COLS[6].x, y);
-                doc.text("", MPT_COLS[7].x, y);
-                doc.text("", MPT_COLS[8].x, y);
-                doc.setFontSize(8);
-                doc.setFont("helvetica", "normal");
-                y += secRowH;
-              }
-            }
-          }
-
-        }
-
-        // Section summary
-        y = renderMPTSectionSummary(doc, sortedItems, y, pageW);
-      } else if (isPerm) {
-        _activeCols = PERM_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, PERM_COLS, y, pageW);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
+      if (isPerm) {
+        // ── Permanent signs rendering ──────────────────────────────────────
         for (const item of items) {
           y = checkPageBreak(doc, y);
           const meta = tryParseNotes(item.notes);
 
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
           const permLegendText = meta?.signLegend || "";
-          const permLegendColW = PERM_COLS[1].w;
-          const permLegendLines = doc.splitTextToSize(permLegendText, permLegendColW);
+          const permLegendLines = doc.splitTextToSize(permLegendText, PERM_COLS[1].w);
           const permRowH = Math.max(6, permLegendLines.length * 3.5);
           y = checkPageBreak(doc, y, permRowH);
+
           doc.text((item.product_name || "").substring(0, 26), PERM_COLS[0].x, y);
           doc.text(permLegendLines, PERM_COLS[1].x, y);
           doc.text(meta?.dimensionLabel || "—", PERM_COLS[2].x, y);
           doc.text(meta?.sheeting || "—", PERM_COLS[3].x, y);
           doc.text(String(item.quantity), PERM_COLS[4].x, y);
           doc.text(meta?.postSize || "—", PERM_COLS[5].x, y);
-          const planSheet = meta?.planSheetNum ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}` : "—";
+          const planSheet = meta?.planSheetNum
+            ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}`
+            : "—";
           doc.text(planSheet, PERM_COLS[6].x, y);
           doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
           doc.text(meta?.structure || "—", PERM_COLS[8].x, y);
           doc.text(meta?.substrate || "—", PERM_COLS[9].x, y);
           doc.text((item.material || "").substring(0, 8), PERM_COLS[10].x, y);
+
           y += permRowH;
-          // Light grey separator line
           doc.setDrawColor(220);
           doc.setLineWidth(0.15);
           doc.line(14, y - 2.5, pageW - 14, y - 2.5);
 
-          // Secondary signs
+          // Secondary signs (perm)
           if (meta?.secondarySigns?.length) {
             for (const sec of meta.secondarySigns) {
               y = checkPageBreak(doc, y);
@@ -1336,29 +683,100 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           }
         }
 
-        // Section summary for perm signs
         y = renderPermSectionSummary(doc, items, y, pageW);
-      } else {
-        _activeCols = SIMPLE_COLS;
-        _activePageW = pageW;
-        y = drawTableHeader(doc, SIMPLE_COLS, y, pageW);
+      } else if (isMPT) {
+        // ── MPT rendering ───────────────────────────────────────────────────
+        const sortedItems = isTypeIII
+          ? [...items].sort((a, b) => {
+              const ma = tryParseNotes(a.notes);
+              const mb = tryParseNotes(b.notes);
+              return (ma?.loadOrder ?? 999) - (mb?.loadOrder ?? 999);
+            })
+          : items;
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-
-        for (const item of items) {
-          // Wrap text for simple items if needed
-          const itemColW = SIMPLE_COLS[0].w;
-          const notesColW = SIMPLE_COLS[3].w;
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          const itemLines = doc.splitTextToSize(item.product_name || "", itemColW);
+        for (let idx = 0; idx < sortedItems.length; idx++) {
+          const item = sortedItems[idx];
+          y = checkPageBreak(doc, y);
           const meta = tryParseNotes(item.notes);
-          const notesText = meta ? "" : (item.notes || "");
-          const notesLines = notesText ? doc.splitTextToSize(notesText, notesColW) : [""];
+
+          const desigText = cleanProductName(item.product_name || "", category).substring(0, 22);
+          const legendText = meta?.signLegend || "";
+          const legendCol = isTypeIII ? MPT_COLS_ORDERED[2] : MPT_COLS[1];
+          const legendLines = doc.splitTextToSize(legendText, legendCol.w);
+          const rowH = Math.max(6, legendLines.length * 3.5);
+          y = checkPageBreak(doc, y, rowH);
+
+          if (isTypeIII) {
+            const cols = MPT_COLS_ORDERED;
+            doc.text(String(idx + 1), cols[0].x, y);
+            doc.text(desigText, cols[1].x, y);
+            doc.text(legendLines, cols[2].x, y);
+            doc.text(meta?.dimensionLabel || "—", cols[3].x, y);
+            doc.text(meta?.sheeting || "—", cols[4].x, y);
+            doc.text(String(item.quantity), cols[5].x, y);
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", cols[6].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), cols[7].x, y);
+            doc.text((item.material || "").substring(0, 8), cols[8].x + cols[8].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", cols[9].x + cols[9].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", cols[10].x + cols[10].w, y, { align: "right" });
+          } else {
+            const cols = MPT_COLS;
+            doc.text(desigText, cols[0].x, y);
+            doc.text(legendLines, cols[1].x, y);
+            doc.text(meta?.dimensionLabel || "—", cols[2].x, y);
+            doc.text(meta?.sheeting || "—", cols[3].x, y);
+            doc.text(String(item.quantity), cols[4].x, y);
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", cols[5].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), cols[6].x, y);
+            doc.text((item.material || "").substring(0, 8), cols[7].x + cols[7].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", cols[8].x + cols[8].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", cols[9].x + cols[9].w, y, { align: "right" });
+          }
+
+          y += rowH;
+          doc.setDrawColor(220);
+          doc.setLineWidth(0.15);
+          doc.line(14, y - 2.5, pageW - 14, y - 2.5);
+
+          // Secondary signs (MPT)
+          if (meta?.secondarySigns?.length) {
+            for (const sec of meta.secondarySigns) {
+              const secLegendLines = doc.splitTextToSize(sec.signLegend || "", legendCol.w);
+              const secRowH = Math.max(6, secLegendLines.length * 3.5);
+              y = checkPageBreak(doc, y, secRowH);
+
+              doc.setFillColor(248, 248, 250);
+              doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
+              doc.setDrawColor(220);
+              doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
+              doc.setDrawColor(200);
+              doc.setFont("helvetica", "italic");
+              doc.setFontSize(7);
+
+              const secDesig = (sec.signDesignation || "").substring(0, 20);
+              doc.text("•", columnsUsed[0].x + 2, y);
+              doc.text(secDesig, columnsUsed[0].x + (isTypeIII ? 8 : 0), y); // slight offset for type III
+              doc.text(secLegendLines, legendCol.x, y);
+              doc.text(sec.dimensionLabel || "—", columnsUsed[3].x, y);
+              doc.text(sec.sheeting || "—", columnsUsed[4].x, y);
+
+              // empty cells for qty, sqft, structure, matl, lights, cover
+              y += secRowH;
+            }
+          }
+        }
+
+        y = renderMPTSectionSummary(doc, sortedItems, y, pageW);
+      } else {
+        // Simple fallback (vehicles, lights, additional items, etc.)
+        for (const item of items) {
+          const itemLines = doc.splitTextToSize(item.product_name || "", SIMPLE_COLS[0].w);
+          const notesText = tryParseNotes(item.notes) ? "" : (item.notes || "");
+          const notesLines = notesText ? doc.splitTextToSize(notesText, SIMPLE_COLS[3].w) : [""];
           const lineCount = Math.max(itemLines.length, notesLines.length);
           const rowH = Math.max(6, lineCount * 4);
           y = checkPageBreak(doc, y, rowH);
+
           doc.text(itemLines, SIMPLE_COLS[0].x, y);
           doc.text(String(item.quantity), SIMPLE_COLS[1].x, y);
           doc.text(item.unit || "EA", SIMPLE_COLS[2].x, y);
@@ -1367,8 +785,8 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
         }
       }
 
-      _activeCols = null; // clear after category
-      y += 4; // spacing between categories
+      _activeCols = null;
+      y += 8; // slightly more breathing room between categories
     }
   }
 
