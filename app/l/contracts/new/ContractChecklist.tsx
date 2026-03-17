@@ -150,7 +150,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
-  const jobIdentifier = projectInfo.etcJobNumber ? `Job #${projectInfo.etcJobNumber}` : (projectInfo.projectName?.trim() || "Untitled Project");
+  const jobIdentifier = projectInfo.etcJobNumber?.toString() || (projectInfo.projectName?.trim() || "Untitled Project");
   const checklistTitle = isViewMode
     ? `Contract for ${jobIdentifier}`
     : isNew

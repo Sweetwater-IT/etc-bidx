@@ -18,7 +18,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
   const router = useRouter();
   const { data: takeoff, isLoading, error } = useTakeoffFromDB(takeoffId);
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.projectName || "Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}/takeoffs/view/${takeoffId}`);

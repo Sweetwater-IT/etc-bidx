@@ -152,7 +152,7 @@ export default function ContractViewContent() {
     );
   }
 
-  const jobName = contract.project_name || "Untitled Project";
+  const jobName = projectInfo?.etcJobNumber?.toString() || contract.project_name || "Untitled Project";
 
   return (
     <div className="min-h-screen bg-background">
