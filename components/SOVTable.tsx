@@ -593,9 +593,9 @@ export const SOVTable = ({
                               {(() => {
                                 const searchTerm = selectorSearch.toLowerCase().trim();
                                 const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                  const key = (curr.work_type || 'OTHER').trim().toUpperCase();
-                                  if (!acc[key]) acc[key] = [];
-                                  acc[key].push(curr);
+                                  const key = curr.work_type?.trim().toUpperCase();
+                                  if (key && !acc[key]) acc[key] = [];
+                                  if (key) acc[key].push(curr);
                                   return acc;
                                 }, {});
 
