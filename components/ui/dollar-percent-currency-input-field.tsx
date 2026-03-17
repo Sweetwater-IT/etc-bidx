@@ -64,10 +64,10 @@ export function DollarPercentCurrencyInputField({
         </SelectContent>
       </Select>
       <CurrencyInput
-        value={Math.round(value * (type === 'percent' ? 100 : 1)).toString()}
+        value={Math.round(value * 100).toString()}
         onChange={(digits) => {
           const num = parseInt(digits || '0', 10) || 0;
-          const scaled = type === 'percent' ? num / 100 : num;
+          const scaled = type === 'percent' ? num / 100 : num / 100;
           onValueChange(scaled);
         }}
         className={cn(
