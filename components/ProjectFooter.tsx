@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
