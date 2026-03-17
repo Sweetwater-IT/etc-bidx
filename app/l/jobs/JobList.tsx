@@ -371,11 +371,7 @@ const JobList = () => {
                           />
                         </TableCell>
                         <TableCell className="font-mono font-semibold text-primary py-3">
-                          {job.etcJobNumber
-                            ? `${job.etcBranch || ""}-${job.etcJobNumber}`
-                            : (job.etcBranch
-                              ? `Branch ${job.etcBranch}`
-                              : "—")}
+                          {job.etcJobNumber || "—"}
                         </TableCell>
                         <TableCell className="py-3 text-xs font-mono">
                           {job.contractNumber || "—"}
