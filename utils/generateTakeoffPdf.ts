@@ -202,7 +202,7 @@ function isMPTSignCategory(cat: string, workType?: string): boolean {
 
   // For flagging/lane closure work types, treat "sign" category as MPT
   if (lowerCat === "sign" &&
-      (lowerWorkType.includes("flagging") || lowerWorkType.includes("lane closure"))) {
+      (lowerWorkType === "flagging" || lowerWorkType === "lane_closure")) {
     return true;
   }
 
