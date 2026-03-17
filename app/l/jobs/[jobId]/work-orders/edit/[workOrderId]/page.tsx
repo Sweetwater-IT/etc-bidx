@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import WorkOrderEditContent from "./WorkOrderEditContent";
+import { ProjectFooter } from "@/components/ProjectFooter";
 
 export default async function WorkOrderEditPage({
   params,
@@ -27,7 +28,10 @@ export default async function WorkOrderEditPage({
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          <WorkOrderEditContent workOrderId={workOrderId} jobId={jobId} takeoffId={takeoffId} />
+          <div className="pb-16">
+            <WorkOrderEditContent workOrderId={workOrderId} jobId={jobId} takeoffId={takeoffId} />
+            <ProjectFooter />
+          </div>
         </Suspense>
       </SidebarInset>
     </SidebarProvider>

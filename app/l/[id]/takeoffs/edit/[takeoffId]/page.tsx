@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import EditTakeoffPageContent from "./EditTakeoffPageContent";
+import { ProjectFooter } from "@/components/ProjectFooter";
 
 export default function EditTakeoffPage({ params }: any) {
   const jobId = params.id;
@@ -23,8 +24,9 @@ export default function EditTakeoffPage({ params }: any) {
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background">
+          <div className="min-h-screen bg-background pb-16">
             <EditTakeoffPageContent jobId={jobId} takeoffId={takeoffId} />
+            <ProjectFooter />
           </div>
         </Suspense>
       </SidebarInset>

@@ -13,6 +13,7 @@ import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { ProjectFooter } from "@/components/ProjectFooter";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT" },
@@ -43,13 +44,14 @@ export default function TakeoffViewPage({ params }: any) {
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background">
+          <div className="min-h-screen bg-background pb-16">
             <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 py-8">
               <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
               <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
             </div>
+            <ProjectFooter />
           </div>
         </Suspense>
       </SidebarInset>
