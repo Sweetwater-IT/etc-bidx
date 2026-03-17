@@ -574,11 +574,9 @@ export const SOVTable = ({
                           if (selected) selectMasterItem(item.id, selected);
                         }}
                       >
-                        <SelectTrigger className="w-full h-7 text-xs font-normal bg-transparent">
+                        <SelectTrigger className="w-full h-7 text-xs font-mono font-normal bg-transparent">
                           <SelectValue placeholder="Select item…">
-                            {item.itemNumber
-                              ? `${item.itemNumber} - ${item.description}`
-                              : "Select item…"}
+                            {item.itemNumber || "Select item…"}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
