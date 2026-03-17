@@ -169,7 +169,9 @@ const PERM_COLS = [
   { label: "POST SIZE", x: 158, w: 22 },
   { label: "PLAN SHEET", x: 180, w: 24 },
   { label: "SQ FT", x: 204, w: 18 },
-  { label: "MATL", x: 222, w: 16 },
+  { label: "STRUCTURE", x: 222, w: 24 },
+  { label: "SUBSTRATE", x: 246, w: 20 },
+  { label: "MATL", x: 266, w: 16 },
 ];
 
 // Simple columns for Additional Items, Vehicles, Rolling Stock — landscape
@@ -720,7 +722,9 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           const planSheet = meta?.planSheetNum ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}` : "—";
           doc.text(planSheet, PERM_COLS[6].x, y);
           doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
-          doc.text((item.material || "").substring(0, 8), PERM_COLS[8].x, y);
+          doc.text(meta?.structure || "—", PERM_COLS[8].x, y);
+          doc.text(meta?.substrate || "—", PERM_COLS[9].x, y);
+          doc.text((item.material || "").substring(0, 8), PERM_COLS[10].x, y);
           y += permRowH;
           // Light grey separator line
           doc.setDrawColor(220);

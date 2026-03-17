@@ -290,6 +290,7 @@ export const CreateTakeoffForm = ({
   const installDateValue = parseDateString(installDate);
   const pickupDateValue = parseDateString(pickupDate);
   const neededByDateValue = parseDateString(neededByDate);
+  const endDateValue = parseDateString(endDate);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -937,12 +938,23 @@ export const CreateTakeoffForm = ({
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Job Start Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={installDate}
-                  onChange={(e) => setInstallDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select job start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                  </PopoverContent>
+                </Popover>
               </div>
             ) : isPermanentSigns ? (
               <div>
@@ -968,12 +980,23 @@ export const CreateTakeoffForm = ({
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={installDate}
-                  onChange={(e) => setInstallDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select install date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
@@ -994,12 +1017,23 @@ export const CreateTakeoffForm = ({
                 {isMultiDayJob && (
                   <div className="mt-2">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">End Date</Label>
-                    <Input
-                      type="date"
-                      className="text-sm"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal text-sm",
+                            !endDateValue && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDateValue ? format(endDateValue, "PPP") : "Select end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={endDateValue} onSelect={(date) => setEndDate(toDateString(date))} initialFocus />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
               </div>
@@ -1033,48 +1067,49 @@ export const CreateTakeoffForm = ({
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                />
-              </div>
-            )}
-            <div>
-              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
-              {isPermanentSigns ? (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal text-sm",
-                        !neededByDateValue && "text-muted-foreground"
+                        !pickupDateValue && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                      {pickupDateValue ? format(pickupDateValue, "PPP") : "Select pickup date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={neededByDateValue}
-                      onSelect={handlePermanentNeededByDateChange}
-                      disabled={(date) => Boolean(installDateValue && date >= installDateValue)}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={pickupDateValue} onSelect={(date) => setPickupDate(toDateString(date))} initialFocus />
                   </PopoverContent>
                 </Popover>
-              ) : (
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={neededByDate}
-                  onChange={(e) => setNeededByDate(e.target.value)}
-                />
-              )}
+              </div>
+            )}
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal text-sm",
+                      !neededByDateValue && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={neededByDateValue}
+                    onSelect={(date) => setNeededByDate(toDateString(date))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <span className="text-[9px] text-muted-foreground mt-1 block">Internal suspense date for build/sign shop prioritization</span>
             </div>
             {workType === "PERMANENT_SIGNS" ? (

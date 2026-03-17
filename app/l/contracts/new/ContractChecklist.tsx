@@ -153,9 +153,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const jobIdentifier = projectInfo.etcJobNumber?.toString() || (projectInfo.projectName?.trim() || "Untitled Project");
   const checklistTitle = isViewMode
     ? `Contract for ${jobIdentifier}`
-    : isNew
-      ? "New Contract"
-      : `Edit Contract for ${jobIdentifier}`;
+    : "Contract";
   const checklistDescription = isViewMode
     ? "Review contract requirements, schedule of values, and supporting documents."
     : isNew

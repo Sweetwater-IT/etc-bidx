@@ -340,16 +340,16 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           {vehicleItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[400px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-64">Type</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-64">Type</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {vehicleItems.map((item: any) => (
                     <tr key={item.id} className="hover:bg-muted/10">
-                      <td className="px-2 py-1 border-r w-64 text-xs font-medium">{item.vehicleType || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-64 text-xs font-medium">{item.vehicleType || item.product_name || '—'}</td>
                       <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
                     </tr>
                   ))}
@@ -379,15 +379,15 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             {takeoff.work_type === "PERMANENT_SIGNS" ? (
               // Permanent Signs Table
               <table className="w-full min-w-[1000px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Post Size</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Plan Sheet</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Post Size</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Plan Sheet</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
                   </tr>
                 </thead>
@@ -397,13 +397,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     const signDetails = item.sign_details || {};
                     return (
                       <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 border-r w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 border-r w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.postSize || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs">
+                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
+                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
+                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.postSize || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs">
                           {signDetails.planSheetNum && signDetails.planSheetTotal ? `${signDetails.planSheetNum}/${signDetails.planSheetTotal}` : '—'}
                         </td>
                         <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
@@ -415,17 +415,17 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             ) : (
               // MPT Signs Table
               <table className="w-full min-w-[1100px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-40">Structure</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">B-Lights</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Sq Ft</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Material</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-40">Structure</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Material</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-16">Cover</th>
                   </tr>
                 </thead>
@@ -435,15 +435,15 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     const signDetails = item.sign_details || {};
                     return (
                       <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 border-r w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 border-r w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 border-r w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.material || item.material || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
+                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
+                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                        <td className="px-2 py-1 w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
+                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.material || item.material || '—'}</td>
                         <td className="px-2 py-1 w-16 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
                       </tr>
                     );
@@ -472,18 +472,18 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         {additionalItems.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
-              <thead className="bg-muted/20">
+              <thead className="bg-muted/70">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-48">Item</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Quantity</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
                   <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {additionalItems.map((item: any) => (
                   <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-2 py-1 border-r w-48 text-xs font-medium">{item.product_name || '—'}</td>
-                    <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                    <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
+                    <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
                     <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
                   </tr>
                 ))}
