@@ -132,7 +132,7 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
   return y;
 }
 
-// MPT columns: [#], Designation, Legend, Dimensions, Sheeting, Qty, Structure, Lights, Cover
+// MPT columns: [#], Designation, Legend, Dimensions, Sheeting, Qty, Sq Ft, Structure, Lights, Cover
 // Type III has # column hanging left; all other columns align with non-Type-III
 // Landscape page width ~297mm; usable area 14..283 = 269mm
 const MPT_COLS_ORDERED = [
@@ -142,10 +142,11 @@ const MPT_COLS_ORDERED = [
   { label: "DIM", x: 140, w: 18 },
   { label: "SHEET", x: 158, w: 14 },
   { label: "QTY", x: 172, w: 8 },
-  { label: "STRUCTURE", x: 180, w: 38 },
-  { label: "MATL", x: 218, w: 10 },
-  { label: "LIGHTS", x: 228, w: 8 },
-  { label: "COVER", x: 236, w: 12 },
+  { label: "SQ FT", x: 180, w: 18 },
+  { label: "STRUCTURE", x: 198, w: 38 },
+  { label: "MATL", x: 236, w: 10 },
+  { label: "LIGHTS", x: 246, w: 8 },
+  { label: "COVER", x: 254, w: 12 },
 ];
 
 const MPT_COLS = [
@@ -154,10 +155,11 @@ const MPT_COLS = [
   { label: "DIM", x: 144, w: 18 },
   { label: "SHEET", x: 162, w: 16 },
   { label: "QTY", x: 178, w: 12 },
-  { label: "STRUCTURE", x: 190, w: 45 },
-  { label: "MATL", x: 235, w: 16 },
-  { label: "LIGHTS", x: 251, w: 12 },
-  { label: "COVER", x: 263, w: 16 },
+  { label: "SQ FT", x: 190, w: 18 },
+  { label: "STRUCTURE", x: 208, w: 45 },
+  { label: "MATL", x: 253, w: 16 },
+  { label: "LIGHTS", x: 269, w: 12 },
+  { label: "COVER", x: 281, w: 16 },
 ];
 
 const PERM_COLS = [
@@ -186,11 +188,25 @@ function isTypeIIICategory(cat: string): boolean {
   return cat.toLowerCase().includes("type iii");
 }
 
-function isMPTSignCategory(cat: string): boolean {
-  return cat.toLowerCase().includes("trailblazer") ||
-    cat.toLowerCase().includes("h-stand") ||
-    cat.toLowerCase().includes("sign stand") ||
-    cat.toLowerCase().includes("type iii");
+function isMPTSignCategory(cat: string, workType?: string): boolean {
+  const lowerCat = cat.toLowerCase();
+  const lowerWorkType = workType?.toLowerCase() || "";
+
+  // Standard MPT categories
+  if (lowerCat.includes("trailblazer") ||
+      lowerCat.includes("h-stand") ||
+      lowerCat.includes("sign stand") ||
+      lowerCat.includes("type iii")) {
+    return true;
+  }
+
+  // For flagging/lane closure work types, treat "sign" category as MPT
+  if (lowerCat === "sign" &&
+      (lowerWorkType.includes("flagging") || lowerWorkType.includes("lane closure"))) {
+    return true;
+  }
+
+  return false;
 }
 
 function isPermSignCategory(cat: string): boolean {
@@ -559,7 +575,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       y += 9;
 
       const isTypeIII = isTypeIIICategory(category);
-      const isMPT = isMPTSignCategory(category);
+      const isMPT = isMPTSignCategory(category, data.workType);
       const isPerm = isPermSignCategory(category);
 
       if (isMPT) {
@@ -598,10 +614,11 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.text(meta?.dimensionLabel || "—", MPT_COLS_ORDERED[3].x, y);
             doc.text(meta?.sheeting || "—", MPT_COLS_ORDERED[4].x, y);
             doc.text(String(item.quantity), MPT_COLS_ORDERED[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[6].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[7].x + MPT_COLS_ORDERED[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS_ORDERED[6].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS_ORDERED[7].x, y);
+            doc.text((item.material || "").substring(0, 8), MPT_COLS_ORDERED[8].x + MPT_COLS_ORDERED[8].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS_ORDERED[9].x + MPT_COLS_ORDERED[9].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", MPT_COLS_ORDERED[10].x + MPT_COLS_ORDERED[10].w, y, { align: "right" });
             y += rowH;
             // Light grey separator line
             doc.setDrawColor(220);
@@ -649,10 +666,11 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.text(meta?.dimensionLabel || "—", MPT_COLS[2].x, y);
             doc.text(meta?.sheeting || "—", MPT_COLS[3].x, y);
             doc.text(String(item.quantity), MPT_COLS[4].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[5].x, y);
-            doc.text((item.material || "").substring(0, 8), MPT_COLS[6].x + MPT_COLS[6].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
-            doc.text(meta?.cover ? "Y" : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
+            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", MPT_COLS[5].x, y);
+            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), MPT_COLS[6].x, y);
+            doc.text((item.material || "").substring(0, 8), MPT_COLS[7].x + MPT_COLS[7].w, y, { align: "right" });
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", MPT_COLS[8].x + MPT_COLS[8].w, y, { align: "right" });
+            doc.text(meta?.cover ? "Y" : "", MPT_COLS[9].x + MPT_COLS[9].w, y, { align: "right" });
             y += rowH;
             // Light grey separator line
             doc.setDrawColor(220);
