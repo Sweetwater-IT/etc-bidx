@@ -28,7 +28,7 @@ export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
   const takeoffId = params.takeoffId;
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Untitled Project";
 
   return (
     <SidebarProvider
