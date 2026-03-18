@@ -174,6 +174,8 @@ const toDateString = (value?: Date) => {
   return format(value, "yyyy-MM-dd");
 };
 
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+
 export const CreateTakeoffForm = ({
   jobId,
   onBack,
@@ -1144,7 +1146,7 @@ export const CreateTakeoffForm = ({
 
       {/* Work Type Specific Content */}
       {workType === "MPT" && (
-        <div className="overflow-x-auto">
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
           <MPTSignConfiguration
             activeSections={activeSections}
             signRows={signRows}
@@ -1305,7 +1307,7 @@ export const CreateTakeoffForm = ({
       {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
         <>
           {/* Sign Configuration Section */}
-          <div className="rounded-lg border bg-card shadow-sm overflow-x-auto">
+          <div className={`rounded-lg border bg-card shadow-sm overflow-x-auto ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Sign Configuration
@@ -1402,7 +1404,7 @@ export const CreateTakeoffForm = ({
 
           {/* Vehicles Section */}
           {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
-          <div className="rounded-lg border bg-card shadow-sm">
+          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
               <Button
@@ -1483,7 +1485,7 @@ export const CreateTakeoffForm = ({
 
           {/* Rolling Stock Section */}
           {workType === "DELIVERY" && (
-          <div className="rounded-lg border bg-card shadow-sm">
+          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
               <Button
@@ -1640,7 +1642,7 @@ export const CreateTakeoffForm = ({
       )}
 
       {workType === "RENTAL" && (
-        <div className="rounded-lg border bg-card shadow-sm">
+        <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
           <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
             <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" disabled>
@@ -1658,7 +1660,7 @@ export const CreateTakeoffForm = ({
 
 
       {/* Additional Items */}
-      <div className="rounded-lg border bg-card shadow-sm">
+      <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
         <div className="px-5 py-3 border-b bg-muted/30">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
         </div>

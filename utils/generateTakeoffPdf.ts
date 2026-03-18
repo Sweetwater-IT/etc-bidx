@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { abbreviateMaterial } from "@/utils/signMaterial";
 
 interface TakeoffPdfData {
   title: string;
@@ -56,7 +57,10 @@ interface SecondarySignMeta {
 }
 
 interface ParsedMeta {
+  itemType?: string;
+  material?: string;
   signDescription?: string;
+  description?: string;
   sheeting?: string;
   width?: number;
   height?: number;
@@ -74,6 +78,9 @@ interface ParsedMeta {
   planSheetTotal?: string;
   loadOrder?: number;
   cover?: boolean;
+  vehicleType?: string;
+  equipmentId?: string;
+  equipmentLabel?: string;
   secondarySigns?: SecondarySignMeta[];
 }
 
@@ -164,32 +171,34 @@ const MPT_COLS = [
 
 const PERM_COLS = [
   { label: "DESIGNATION", x: 14, w: 30 },
-  { label: "LEGEND", x: 44, w: 60 },
-  { label: "DIMENSIONS", x: 104, w: 24 },
-  { label: "SHEETING", x: 128, w: 18 },
-  { label: "QTY", x: 146, w: 12 },
-  { label: "POST SIZE", x: 158, w: 22 },
-  { label: "PLAN SHEET", x: 180, w: 24 },
-  { label: "SQ FT", x: 204, w: 18 },
-  { label: "STRUCTURE", x: 222, w: 24 },
-  { label: "SUBSTRATE", x: 246, w: 20 },
-  { label: "MATL", x: 266, w: 16 },
+  { label: "LEGEND", x: 44, w: 92 },
+  { label: "DIMENSIONS", x: 136, w: 24 },
+  { label: "SHEETING", x: 160, w: 18 },
+  { label: "QTY", x: 178, w: 12 },
+  { label: "POST SIZE", x: 190, w: 22 },
+  { label: "PLAN SHEET", x: 212, w: 28 },
+  { label: "SQ FT", x: 240, w: 18 },
 ];
 
-// Simple columns for Additional Items, Vehicles, Rolling Stock — landscape
-// Narrower columns for Vehicles and Additional Items
 const VEHICLE_COLS = [
-  { label: "TYPE", x: 14, w: 80 },
-  { label: "QTY", x: 94, w: 20 },
-  { label: "UNIT", x: 114, w: 20 },
-  { label: "NOTES", x: 134, w: 149 },
+  { label: "TYPE", x: 14, w: 220 },
+  { label: "QTY", x: 234, w: 20 },
 ];
 
 const ADDITIONAL_COLS = [
-  { label: "ITEM", x: 14, w: 80 },
-  { label: "QTY", x: 94, w: 20 },
-  { label: "UNIT", x: 114, w: 20 },
-  { label: "NOTES", x: 134, w: 149 },
+  { label: "ITEM", x: 14, w: 120 },
+  { label: "QTY", x: 134, w: 20 },
+  { label: "NOTES", x: 154, w: 129 },
+];
+
+const ROLLING_STOCK_COLS = [
+  { label: "EQUIPMENT", x: 14, w: 220 },
+  { label: "QTY", x: 234, w: 20 },
+];
+
+const PERM_ENTRY_COLS = [
+  { label: "QTY", x: 14, w: 20 },
+  { label: "DESCRIPTION / NOTES", x: 38, w: 245 },
 ];
 
 const SIMPLE_COLS = [
@@ -230,6 +239,10 @@ function isPermSignCategory(cat: string): boolean {
 
 function isSimpleCategory(cat: string): boolean {
   return !isMPTSignCategory(cat) && !isPermSignCategory(cat);
+}
+
+function isPermanentEntryItems(items: TakeoffPdfData["items"]): boolean {
+  return items.length > 0 && items.every((item) => tryParseNotes(item.notes)?.itemType === "permanent_entry");
 }
 
 function abbreviateStructure(s: string): string {
@@ -591,6 +604,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
 
       const lowerWorkType  = (data.workType || "").toLowerCase().trim();
       const lowerCategory  = category.toLowerCase().trim();
+      const parsedItems = items.map((item) => tryParseNotes(item.notes));
 
       console.log(
         `[PDF] Category "${category}" (${items.length} items) | Work type: "${data.workType || '(none)'}"`
@@ -617,18 +631,30 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       let isTypeIII = false;
       let isVehicle = false;
       let isAdditional = false;
+      let isRollingStock = false;
+      let isPermanentEntry = false;
 
       // Check for vehicle category
-      if (lowerCategory.includes("vehicle")) {
+      if (lowerCategory.includes("vehicle") || parsedItems.some((meta) => meta?.itemType === "vehicle")) {
         isVehicle = true;
         columnsUsed = VEHICLE_COLS;
         console.log("[PDF] → VEHICLE COLUMNS");
         console.log("     ", VEHICLE_COLS.map(c => c.label).join(" | "));
-      } else if (lowerCategory.includes("additional")) {
+      } else if (lowerCategory.includes("rolling stock") || parsedItems.some((meta) => meta?.itemType === "rolling_stock")) {
+        isRollingStock = true;
+        columnsUsed = ROLLING_STOCK_COLS;
+        console.log("[PDF] → ROLLING STOCK COLUMNS");
+        console.log("     ", ROLLING_STOCK_COLS.map(c => c.label).join(" | "));
+      } else if (lowerCategory.includes("additional") || parsedItems.some((meta) => meta?.itemType === "additional")) {
         isAdditional = true;
         columnsUsed = ADDITIONAL_COLS;
         console.log("[PDF] → ADDITIONAL COLUMNS");
         console.log("     ", ADDITIONAL_COLS.map(c => c.label).join(" | "));
+      } else if (isPermanentJob && isPermanentEntryItems(items)) {
+        isPermanentEntry = true;
+        columnsUsed = PERM_ENTRY_COLS;
+        console.log("[PDF] → PERMANENT ENTRY COLUMNS");
+        console.log("     ", PERM_ENTRY_COLS.map(c => c.label).join(" | "));
       } else if (isPermanentJob) {
         isPerm = true;
         columnsUsed = PERM_COLS;
@@ -674,9 +700,6 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             : "—";
           doc.text(planSheet, PERM_COLS[6].x, y);
           doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
-          doc.text(meta?.structure || "—", PERM_COLS[8].x, y);
-          doc.text(meta?.substrate || "—", PERM_COLS[9].x, y);
-          doc.text((item.material || "").substring(0, 8), PERM_COLS[10].x, y);
 
           y += permRowH;
           doc.setDrawColor(220);
@@ -703,7 +726,6 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
               doc.text("", PERM_COLS[5].x, y);
               doc.text("", PERM_COLS[6].x, y);
               doc.text(sec.sqft ? String(sec.sqft) : "—", PERM_COLS[7].x, y);
-              doc.text("", PERM_COLS[8].x, y);
               doc.setFontSize(8);
               doc.setFont("helvetica", "normal");
               y += 6;
@@ -712,6 +734,21 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
         }
 
         y = renderPermSectionSummary(doc, items, y, pageW);
+      } else if (isPermanentEntry) {
+        for (const item of items) {
+          const meta = tryParseNotes(item.notes);
+          const noteLines = doc.splitTextToSize(meta?.description || "", PERM_ENTRY_COLS[1].w);
+          const rowH = Math.max(6, noteLines.length * 4);
+          y = checkPageBreak(doc, y, rowH);
+
+          doc.text(String(item.quantity), PERM_ENTRY_COLS[0].x, y);
+          doc.text(noteLines, PERM_ENTRY_COLS[1].x, y);
+          y += rowH;
+
+          doc.setDrawColor(220);
+          doc.setLineWidth(0.15);
+          doc.line(14, y - 2.5, pageW - 14, y - 2.5);
+        }
       } else if (isMPT) {
         // ── MPT rendering ───────────────────────────────────────────────────
         const sortedItems = isTypeIII
@@ -743,7 +780,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.text(String(item.quantity), columnsUsed[5].x, y);
             doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[6].x, y);
             doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[7].x, y);
-            doc.text((item.material || "").substring(0, 8), columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
+            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
             doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
             doc.text(meta?.cover ? "Y" : "", columnsUsed[10].x + columnsUsed[10].w, y, { align: "right" });
           } else {
@@ -754,7 +791,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
             doc.text(String(item.quantity), columnsUsed[4].x, y);
             doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[5].x, y);
             doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[6].x, y);
-            doc.text((item.material || "").substring(0, 8), columnsUsed[7].x + columnsUsed[7].w, y, { align: "right" });
+            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[7].x + columnsUsed[7].w, y, { align: "right" });
             doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
             doc.text(meta?.cover ? "Y" : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
           }
@@ -796,20 +833,39 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       } else {
         // Simple fallback (vehicles, lights, additional items, etc.)
         // Use the appropriate column set based on category
-        const cols = isVehicle ? VEHICLE_COLS : (isAdditional ? ADDITIONAL_COLS : SIMPLE_COLS);
+        const cols = isVehicle
+          ? VEHICLE_COLS
+          : isRollingStock
+            ? ROLLING_STOCK_COLS
+            : isAdditional
+              ? ADDITIONAL_COLS
+              : SIMPLE_COLS;
         for (const item of items) {
+          const meta = tryParseNotes(item.notes);
           const itemLines = doc.splitTextToSize(item.product_name || "", cols[0].w);
-          const notesText = tryParseNotes(item.notes) ? "" : (item.notes || "");
-          const notesLines = notesText ? doc.splitTextToSize(notesText, cols[3].w) : [""];
-          const lineCount = Math.max(itemLines.length, notesLines.length);
+          const notesValue = meta?.description || "";
+          const notesColumnIndex = cols === SIMPLE_COLS ? 3 : 2;
+          const hasNotesColumn = cols.length > notesColumnIndex;
+          const notesLines = hasNotesColumn
+            ? (notesValue ? doc.splitTextToSize(notesValue, cols[notesColumnIndex].w) : [""])
+            : [""];
+          const lineCount = hasNotesColumn ? Math.max(itemLines.length, notesLines.length) : itemLines.length;
           const rowH = Math.max(6, lineCount * 4);
           y = checkPageBreak(doc, y, rowH);
 
           doc.text(itemLines, cols[0].x, y);
           doc.text(String(item.quantity), cols[1].x, y);
-          doc.text(item.unit || "EA", cols[2].x, y);
-          doc.text(notesLines, cols[3].x, y);
+          if (cols === SIMPLE_COLS) {
+            doc.text(item.unit || "EA", cols[2].x, y);
+          }
+          if (hasNotesColumn) {
+            doc.text(notesLines, cols[notesColumnIndex].x, y);
+          }
           y += rowH;
+
+          doc.setDrawColor(220);
+          doc.setLineWidth(0.15);
+          doc.line(14, y - 2.5, pageW - 14, y - 2.5);
         }
       }
 

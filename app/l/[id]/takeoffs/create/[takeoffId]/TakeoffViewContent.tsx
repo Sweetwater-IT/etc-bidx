@@ -43,6 +43,8 @@ const formatVehicleType = (vehicleType: string) => {
 const formatSqft = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -436,7 +438,8 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
       {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
       {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
-        <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
           {vehicleItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[400px] text-sm" style={{ tableLayout: 'fixed' }}>
@@ -461,11 +464,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               No vehicles assigned. Vehicles will appear here when the takeoff is created.
             </div>
           )}
-        </TakeoffViewCard>
+          </TakeoffViewCard>
+        </div>
       )}
 
       {mptSquareFootageSummary && (
-        <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {mptSquareFootageSummary.items.map((item) => (
               <div key={item.label} className="rounded-md border bg-muted/20 p-3">
@@ -486,11 +491,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               <span className="text-xs text-muted-foreground">({mptSquareFootageSummary.totalSigns} sign{mptSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
             </div>
           </div>
-        </TakeoffViewCard>
+          </TakeoffViewCard>
+        </div>
       )}
 
       {permanentSquareFootageSummary && (
-        <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {permanentSquareFootageSummary.items.map((item) => (
               <div key={item.label} className="rounded-md border bg-muted/20 p-3">
@@ -513,11 +520,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               <span className="text-xs text-muted-foreground">({permanentSquareFootageSummary.totalSigns} sign{permanentSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
             </div>
           </div>
-        </TakeoffViewCard>
+          </TakeoffViewCard>
+        </div>
       )}
 
       {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
-      <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
+      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+        <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
         {signItems.length > 0 ? (
           <div className="overflow-x-auto">
             {takeoff.work_type === "PERMANENT_SIGNS" ? (
@@ -601,10 +610,12 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No takeoff items found. Sign designations will appear here when the takeoff is created.
           </div>
         )}
-      </TakeoffViewCard>
+        </TakeoffViewCard>
+      </div>
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
-      <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
+      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+        <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
         {additionalItems.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
@@ -631,7 +642,8 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No additional items. Custom items added manually will appear here.
           </div>
         )}
-      </TakeoffViewCard>
+        </TakeoffViewCard>
+      </div>
 
       {takeoff.is_pickup && takeoff.work_order_id && (
         <ReturnInventoryCard
