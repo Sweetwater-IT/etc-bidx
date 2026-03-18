@@ -1,9 +1,6 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { SiteHeader } from "@/components/site-header";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
@@ -16,7 +13,7 @@ import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
-import { formatDate } from "@/lib/formatUTCDate"; 
+import { formatDate } from "@/lib/formatUTCDate";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
@@ -568,99 +565,72 @@ export default function SignOrderPage() {
   }, [fetchQuotes, fetchCounts, startLoading, stopLoading]);
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader>
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Order List</h1>
-            <div className="flex gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => router.push('/takeoffs/sign-order')}
-                  size="sm"
-                >
-                  <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
-                  Create sign order
-                </Button>
-              </div>
-            </div>
-          </div>
-        </SiteHeader>
-        
-        <ConfirmArchiveDialog
-          isOpen={showArchiveDialog}
-          onClose={() => setShowArchiveDialog(false)}
-          onConfirm={handleArchive}
-          itemCount={allRowsSelected ? totalCount : selectedRows.length}
-          itemType="sign order"
-        />
-        
-        <ConfirmDeleteDialog
-          isOpen={showDeleteDialog}
-          onClose={() => setShowDeleteDialog(false)}
-          onConfirm={handleDelete}
-          itemCount={allRowsSelected ? totalCount : selectedRows.length}
-          itemType="sign order"
-        />        
-        
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
-              <DataTable<SignOrderView>
-                data={quotes}
-                columns={SIGN_ORDER_COLUMNS}
-                segments={SEGMENTS}
-                segmentValue={activeSegment}
-                segmentCounts={branchCounts}
-                onSegmentChange={handleSegmentChange}
-                onRowClick={handleRowClick}
-                stickyLastColumn
-                onEdit={handleEdit}
-                onViewDetails={handleViewDetails}
-                onArchive={(row) => initiateArchiveOrders([row])}
-                // Selection props
-                onArchiveSelected={initiateArchiveOrders}
-                onDeleteSelected={initiateDeleteOrders}
-                tableRef={tableRef}
-                setSelectedRows={setSelectedRows}
-                allRowsSelected={allRowsSelected}
-                onAllRowsSelectedChange={setAllRowsSelected}
-                // Pagination props
-                pageCount={pageCount}
-                pageIndex={pageIndex}
-                pageSize={pageSize}
-                onPageChange={setPageIndex}
-                onPageSizeChange={setPageSize}
-                // Sorting props
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSortChange={(column, order) => {
-                  setSortBy(column);
-                  setSortOrder(order);
-                }}
-                // Filter props
-                filterOptions={filterOptions}
-                onFilterChange={handleFilterChange}
-                activeFilters={activeFilters}
-                totalCount={totalCount}
-                // Additional filter props for sign orders
-                hideDropdown={true}
-                showFilters={showFilters}
-                setShowFilters={setShowFilters}
-                onUnarchive={handleUnarchiveSignOrder}
-              />
-            </div>
+    <>
+      <ConfirmArchiveDialog
+        isOpen={showArchiveDialog}
+        onClose={() => setShowArchiveDialog(false)}
+        onConfirm={handleArchive}
+        itemCount={allRowsSelected ? totalCount : selectedRows.length}
+        itemType="sign order"
+      />
+
+      <ConfirmDeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        itemCount={allRowsSelected ? totalCount : selectedRows.length}
+        itemType="sign order"
+      />
+
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
+            <DataTable<SignOrderView>
+              data={quotes}
+              columns={SIGN_ORDER_COLUMNS}
+              segments={SEGMENTS}
+              segmentValue={activeSegment}
+              segmentCounts={branchCounts}
+              onSegmentChange={handleSegmentChange}
+              onRowClick={handleRowClick}
+              stickyLastColumn
+              onEdit={handleEdit}
+              onViewDetails={handleViewDetails}
+              onArchive={(row) => initiateArchiveOrders([row])}
+              // Selection props
+              onArchiveSelected={initiateArchiveOrders}
+              onDeleteSelected={initiateDeleteOrders}
+              tableRef={tableRef}
+              setSelectedRows={setSelectedRows}
+              allRowsSelected={allRowsSelected}
+              onAllRowsSelectedChange={setAllRowsSelected}
+              // Pagination props
+              pageCount={pageCount}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              onPageChange={setPageIndex}
+              onPageSizeChange={setPageSize}
+              // Sorting props
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSortChange={(column, order) => {
+                setSortBy(column);
+                setSortOrder(order);
+              }}
+              // Filter props
+              filterOptions={filterOptions}
+              onFilterChange={handleFilterChange}
+              activeFilters={activeFilters}
+              totalCount={totalCount}
+              // Additional filter props for sign orders
+              hideDropdown={true}
+              showFilters={showFilters}
+              setShowFilters={setShowFilters}
+              onUnarchive={handleUnarchiveSignOrder}
+            />
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </>
   );
 }
