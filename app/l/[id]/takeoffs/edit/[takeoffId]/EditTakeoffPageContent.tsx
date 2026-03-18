@@ -5,9 +5,8 @@ import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { Button } from "@/components/ui/button";
-import { Edit, ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 interface EditTakeoffPageContentProps {
   jobId: string;
@@ -68,32 +67,19 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
   };
 
   return (
-    <div>
-      <StickyPageHeader
-        backLabel="Takeoff"
-        onBack={handleBack}
-        rightContent={
-          <Button variant="outline" size="sm" onClick={() => router.push(`/l/${jobId}/takeoffs/view/${takeoffId}`)}>
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            View Takeoff
-          </Button>
-        }
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <PageTitleBlock
+        title={getTitle()}
+        description={`Edit takeoff details, work types, materials, and scheduling information for ${jobName}.`}
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <PageTitleBlock
-          title={getTitle()}
-          description={`Edit takeoff details, work types, materials, and scheduling information for ${jobName}.`}
-        />
-
-        <CreateTakeoffForm
-          jobId={jobId}
-          onBack={handleBack}
-          draftTakeoff={takeoff}
-          backLabel="Takeoff"
-          mode="edit"
-        />
-      </div>
+      <CreateTakeoffForm
+        jobId={jobId}
+        onBack={handleBack}
+        draftTakeoff={takeoff}
+        backLabel="Takeoff"
+        mode="edit"
+      />
     </div>
   );
 }

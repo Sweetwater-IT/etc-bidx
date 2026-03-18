@@ -1144,15 +1144,17 @@ export const CreateTakeoffForm = ({
 
       {/* Work Type Specific Content */}
       {workType === "MPT" && (
-        <MPTSignConfiguration
-          activeSections={activeSections}
-          signRows={signRows}
-          defaultSignMaterial={defaultSignMaterial}
-          onToggleSection={handleToggleSection}
-          onSignRowsChange={handleSignRowsChange}
-          onDefaultMaterialChange={setDefaultSignMaterial}
-          onApplyMaterialToAll={handleApplyMaterialToAll}
-        />
+        <div className="overflow-x-auto">
+          <MPTSignConfiguration
+            activeSections={activeSections}
+            signRows={signRows}
+            defaultSignMaterial={defaultSignMaterial}
+            onToggleSection={handleToggleSection}
+            onSignRowsChange={handleSignRowsChange}
+            onDefaultMaterialChange={setDefaultSignMaterial}
+            onApplyMaterialToAll={handleApplyMaterialToAll}
+          />
+        </div>
       )}
 
       {workType === "PERMANENT_SIGNS" && (
@@ -1190,8 +1192,8 @@ export const CreateTakeoffForm = ({
       {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
         <>
           {/* Sign Configuration Section */}
-          <div className="rounded-lg border bg-card shadow-sm max-w-[calc(100vw-272px-64px)]">
-            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <div className="rounded-lg border bg-card shadow-sm overflow-x-auto">
+            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Sign Configuration
               </h2>
@@ -1544,7 +1546,7 @@ export const CreateTakeoffForm = ({
 
       {/* Additional Items */}
       <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-        <div className="bg-muted/30 px-5 py-3 flex items-center justify-between border-b">
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
           <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
             ...prev,
