@@ -31,9 +31,16 @@ interface SiteHeaderProps {
   children?: React.ReactNode;
   marginBottom?: number;
   paddingTop?: number;
+  showTitleBlock?: boolean;
 }
 
-export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTop= 16 }: SiteHeaderProps) {
+export function SiteHeader({
+  customTitle,
+  children,
+  marginBottom = 12,
+  paddingTop = 16,
+  showTitleBlock = true,
+}: SiteHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { signOut } = useAuth();
@@ -136,11 +143,11 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
       </header>
       {children ? (
         children
-      ) : (
+      ) : showTitleBlock ? (
         <div className="px-4 py-4 bg-slate-50">
           <h1 className="text-3xl font-bold">{getCurrentTitle()}</h1>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

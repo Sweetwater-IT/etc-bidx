@@ -26,7 +26,7 @@ export default async function WorkOrderEditPage({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader showTitleBlock={false} />
         <Suspense fallback={<div>Loading work order...</div>}>
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">

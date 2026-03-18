@@ -19,7 +19,7 @@ export default async function CreateTakeoffPage({ params }: any) {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader showTitleBlock={false} />
         <Suspense fallback={null}>
           <CreateTakeoffPageContent jobId={id} />
         </Suspense>
