@@ -177,6 +177,21 @@ const PERM_COLS = [
 ];
 
 // Simple columns for Additional Items, Vehicles, Rolling Stock — landscape
+// Narrower columns for Vehicles and Additional Items
+const VEHICLE_COLS = [
+  { label: "TYPE", x: 14, w: 80 },
+  { label: "QTY", x: 94, w: 20 },
+  { label: "UNIT", x: 114, w: 20 },
+  { label: "NOTES", x: 134, w: 149 },
+];
+
+const ADDITIONAL_COLS = [
+  { label: "ITEM", x: 14, w: 80 },
+  { label: "QTY", x: 94, w: 20 },
+  { label: "UNIT", x: 114, w: 20 },
+  { label: "NOTES", x: 134, w: 149 },
+];
+
 const SIMPLE_COLS = [
   { label: "ITEM", x: 14, w: 110 },
   { label: "QTY", x: 124, w: 20 },
@@ -600,8 +615,21 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       let isMPT = false;
       let isPerm = false;
       let isTypeIII = false;
+      let isVehicle = false;
+      let isAdditional = false;
 
-      if (isPermanentJob) {
+      // Check for vehicle category
+      if (lowerCategory.includes("vehicle")) {
+        isVehicle = true;
+        columnsUsed = VEHICLE_COLS;
+        console.log("[PDF] → VEHICLE COLUMNS");
+        console.log("     ", VEHICLE_COLS.map(c => c.label).join(" | "));
+      } else if (lowerCategory.includes("additional")) {
+        isAdditional = true;
+        columnsUsed = ADDITIONAL_COLS;
+        console.log("[PDF] → ADDITIONAL COLUMNS");
+        console.log("     ", ADDITIONAL_COLS.map(c => c.label).join(" | "));
+      } else if (isPermanentJob) {
         isPerm = true;
         columnsUsed = PERM_COLS;
         console.log("[PDF] → PERMANENT SIGN COLUMNS");
@@ -767,18 +795,20 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
         y = renderMPTSectionSummary(doc, sortedItems, y, pageW);
       } else {
         // Simple fallback (vehicles, lights, additional items, etc.)
+        // Use the appropriate column set based on category
+        const cols = isVehicle ? VEHICLE_COLS : (isAdditional ? ADDITIONAL_COLS : SIMPLE_COLS);
         for (const item of items) {
-          const itemLines = doc.splitTextToSize(item.product_name || "", SIMPLE_COLS[0].w);
+          const itemLines = doc.splitTextToSize(item.product_name || "", cols[0].w);
           const notesText = tryParseNotes(item.notes) ? "" : (item.notes || "");
-          const notesLines = notesText ? doc.splitTextToSize(notesText, SIMPLE_COLS[3].w) : [""];
+          const notesLines = notesText ? doc.splitTextToSize(notesText, cols[3].w) : [""];
           const lineCount = Math.max(itemLines.length, notesLines.length);
           const rowH = Math.max(6, lineCount * 4);
           y = checkPageBreak(doc, y, rowH);
 
-          doc.text(itemLines, SIMPLE_COLS[0].x, y);
-          doc.text(String(item.quantity), SIMPLE_COLS[1].x, y);
-          doc.text(item.unit || "EA", SIMPLE_COLS[2].x, y);
-          doc.text(notesLines, SIMPLE_COLS[3].x, y);
+          doc.text(itemLines, cols[0].x, y);
+          doc.text(String(item.quantity), cols[1].x, y);
+          doc.text(item.unit || "EA", cols[2].x, y);
+          doc.text(notesLines, cols[3].x, y);
           y += rowH;
         }
       }
