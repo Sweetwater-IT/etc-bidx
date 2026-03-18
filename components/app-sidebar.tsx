@@ -321,7 +321,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
               <Link href="/">
-                <img src="/ETC-2.jpg" alt="ETC Logo" className="h-8 w-auto" />
+                <img src="/logo.jpg" alt="ETC Logo" className="h-8 w-auto" />
                 {/* <ModeToggle /> */}
               </Link>
             </SidebarMenuButton>
