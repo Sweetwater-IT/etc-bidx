@@ -1,9 +1,11 @@
+"use client";
+
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import SignOrderContentSimple from "./SignOrderContentSimple";
 
-export default async function CreateSignOrderPage() {    
+export default function CreateSignOrderPage() {    
     return (
         <SidebarProvider
             style={
