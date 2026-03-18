@@ -14,6 +14,7 @@ import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upl
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
+import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
 
 interface Props {
   jobId: string;
@@ -231,112 +232,94 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       )}
 
       {/* Project Info */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Information</h2>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
-              <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
-              <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
-              <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
-              <span className="text-sm font-medium">{info?.county || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
-              <span className="text-sm font-medium">{info?.customerName || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
-              <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
-              <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
-              <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
-              <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
-            </div>
+      <TakeoffViewCard title="Project Information">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
+            <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
+            <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
+            <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
+            <span className="text-sm font-medium">{info?.county || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
+            <span className="text-sm font-medium">{info?.customerName || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
+            <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
+            <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
+            <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
+            <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
           </div>
         </div>
-      </div>
+      </TakeoffViewCard>
 
       {/* Takeoff Details */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Details</h2>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</span>
-              <span className="text-sm font-medium">{takeoff.title || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</span>
-              <span className="text-sm font-medium">{WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
-              {formattedWorkOrderNumber ? (
-                <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Not assigned</span>
-              )}
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</span>
-              <span className="text-sm font-medium">{takeoff.contracted_or_additional === "contracted" ? "Contracted Work" : "Additional Work"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</span>
-              <span className="text-sm font-medium">{takeoff.install_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</span>
-              <span className="text-sm font-medium">{takeoff.pickup_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</span>
-              <span className="text-sm font-medium">{takeoff.needed_by_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</span>
-              <span className="text-sm font-medium capitalize">{takeoff.priority || "standard"}</span>
-            </div>
+      <TakeoffViewCard title="Takeoff Details">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</span>
+            <span className="text-sm font-medium">{takeoff.title || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</span>
+            <span className="text-sm font-medium">{WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
+            {formattedWorkOrderNumber ? (
+              <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">Not assigned</span>
+            )}
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</span>
+            <span className="text-sm font-medium">{takeoff.contracted_or_additional === "contracted" ? "Contracted Work" : "Additional Work"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</span>
+            <span className="text-sm font-medium">{takeoff.install_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</span>
+            <span className="text-sm font-medium">{takeoff.pickup_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</span>
+            <span className="text-sm font-medium">{takeoff.needed_by_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</span>
+            <span className="text-sm font-medium capitalize">{takeoff.priority || "standard"}</span>
           </div>
         </div>
-      </div>
+      </TakeoffViewCard>
 
 
 
       {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
       {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
-        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              Vehicles
-            </h2>
-            <Badge variant="secondary" className="text-[10px]">{vehicleItems.length} vehicles</Badge>
-          </div>
-
+        <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
           {vehicleItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[400px] text-sm" style={{ tableLayout: 'fixed' }}>
@@ -361,19 +344,11 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               No vehicles assigned. Vehicles will appear here when the takeoff is created.
             </div>
           )}
-        </div>
+        </TakeoffViewCard>
       )}
 
       {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
-      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            Takeoff Items
-          </h2>
-          <Badge variant="secondary" className="text-[10px]">{signItems.length} sign items</Badge>
-        </div>
-
+      <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
         {signItems.length > 0 ? (
           <div className="overflow-x-auto">
             {takeoff.work_type === "PERMANENT_SIGNS" ? (
@@ -457,18 +432,10 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No takeoff items found. Sign designations will appear here when the takeoff is created.
           </div>
         )}
-      </div>
+      </TakeoffViewCard>
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
-      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            Additional Items
-          </h2>
-          <Badge variant="secondary" className="text-[10px]">{additionalItems.length} items</Badge>
-        </div>
-
+      <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
         {additionalItems.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
@@ -495,7 +462,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No additional items. Custom items added manually will appear here.
           </div>
         )}
-      </div>
+      </TakeoffViewCard>
 
       {takeoff.is_pickup && takeoff.work_order_id && (
         <ReturnInventoryCard
@@ -506,11 +473,8 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
       {/* Notes */}
       {(takeoff.notes || takeoff.crew_notes || takeoff.build_shop_notes || takeoff.pm_notes) && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</h2>
-          </div>
-          <div className="p-5 space-y-4">
+        <TakeoffViewCard title="Notes">
+          <div className="space-y-4">
             {takeoff.crew_notes && (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Crew Notes</Label>
@@ -539,7 +503,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               </div>
             )}
           </div>
-        </div>
+        </TakeoffViewCard>
       )}
     </div>
   );
