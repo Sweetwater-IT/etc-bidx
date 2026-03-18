@@ -40,6 +40,9 @@ const formatVehicleType = (vehicleType: string) => {
   return vehicleTypeMap[vehicleType] || vehicleType;
 };
 
+const formatSqft = (value: number) =>
+  value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -220,6 +223,112 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     ? takeoff.takeoff_items.filter((item: any) => item.category !== 'sign' && item.category !== 'vehicle')
     : [];
 
+  const mptSquareFootageSummary = (() => {
+    if (takeoff.work_type !== "MPT" || !Array.isArray(takeoff.active_sections) || !takeoff.sign_rows) {
+      return null;
+    }
+
+    const sectionLabelMap: Record<string, string> = {
+      trailblazers: "Trailblazers / H-Stands",
+      type_iii: "Type IIIs",
+      sign_stands: "Sign Stands",
+    };
+
+    const sectionTotals: { label: string; signs: number; sqft: number }[] = [];
+    let grandSigns = 0;
+    let grandSqft = 0;
+
+    for (const sectionKey of takeoff.active_sections) {
+      let sectionSigns = 0;
+      let sectionSqft = 0;
+
+      for (const row of takeoff.sign_rows[sectionKey] || []) {
+        if (!row?.signDesignation) continue;
+
+        const quantity = Number(row.quantity || 0);
+        sectionSigns += quantity;
+        sectionSqft += Number(row.totalSqft || 0);
+
+        for (const sec of row.secondarySigns || []) {
+          if (!sec?.signDesignation) continue;
+          sectionSigns += quantity;
+          sectionSqft += Math.round(Number(sec.sqft || 0) * quantity * 100) / 100;
+        }
+      }
+
+      if (sectionSigns > 0) {
+        const roundedSqft = Math.round(sectionSqft * 100) / 100;
+        sectionTotals.push({
+          label: sectionLabelMap[sectionKey] || sectionKey,
+          signs: sectionSigns,
+          sqft: roundedSqft,
+        });
+        grandSigns += sectionSigns;
+        grandSqft += roundedSqft;
+      }
+    }
+
+    if (grandSigns === 0) return null;
+
+    return {
+      items: sectionTotals,
+      totalSigns: grandSigns,
+      totalSqft: Math.round(grandSqft * 100) / 100,
+    };
+  })();
+
+  const permanentSquareFootageSummary = (() => {
+    if (
+      takeoff.work_type !== "PERMANENT_SIGNS" ||
+      !Array.isArray(takeoff.active_permanent_items) ||
+      !takeoff.permanent_sign_rows
+    ) {
+      return null;
+    }
+
+    const itemTotals: { label: string; signs: number; sqft: number }[] = [];
+    let grandSigns = 0;
+    let grandSqft = 0;
+
+    for (const itemNumber of takeoff.active_permanent_items) {
+      let itemSigns = 0;
+      let itemSqft = 0;
+
+      for (const row of takeoff.permanent_sign_rows[itemNumber] || []) {
+        if (!row?.signDesignation) continue;
+
+        const quantity = Number(row.quantity || 0);
+        itemSigns += quantity;
+        itemSqft += Number(row.totalSqft || 0);
+
+        for (const sec of row.secondarySigns || []) {
+          if (!sec?.signDesignation) continue;
+          itemSigns += quantity;
+          itemSqft += Math.round(Number(sec.sqft || 0) * quantity * 100) / 100;
+        }
+      }
+
+      if (itemSigns > 0) {
+        const roundedSqft = Math.round(itemSqft * 100) / 100;
+        itemTotals.push({
+          label: itemNumber,
+          signs: itemSigns,
+          sqft: roundedSqft,
+        });
+        grandSigns += itemSigns;
+        grandSqft += roundedSqft;
+      }
+    }
+
+    if (grandSigns === 0) return null;
+
+    return {
+      items: itemTotals,
+      totalSigns: grandSigns,
+      totalSqft: Math.round(grandSqft * 100) / 100,
+    };
+  })();
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Pickup Takeoff Banner */}
@@ -352,6 +461,58 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               No vehicles assigned. Vehicles will appear here when the takeoff is created.
             </div>
           )}
+        </TakeoffViewCard>
+      )}
+
+      {mptSquareFootageSummary && (
+        <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {mptSquareFootageSummary.items.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
+                  <span className="text-[10px] text-muted-foreground">sq ft</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(mptSquareFootageSummary.totalSqft)}</span>
+              <span className="text-xs text-muted-foreground">sq ft</span>
+              <span className="text-xs text-muted-foreground">({mptSquareFootageSummary.totalSigns} sign{mptSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
+            </div>
+          </div>
+        </TakeoffViewCard>
+      )}
+
+      {permanentSquareFootageSummary && (
+        <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {permanentSquareFootageSummary.items.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
+                <p className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground" title={item.label}>
+                  {item.label}
+                </p>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
+                  <span className="text-[10px] text-muted-foreground">sq ft</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(permanentSquareFootageSummary.totalSqft)}</span>
+              <span className="text-xs text-muted-foreground">sq ft</span>
+              <span className="text-xs text-muted-foreground">({permanentSquareFootageSummary.totalSigns} sign{permanentSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
+            </div>
+          </div>
         </TakeoffViewCard>
       )}
 
