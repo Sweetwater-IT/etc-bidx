@@ -344,7 +344,7 @@ const ContractManager = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
         <header className="border-b bg-card">
           <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
             <div className="h-8 w-56 rounded bg-muted animate-pulse" />
@@ -384,9 +384,9 @@ const ContractManager = () => {
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="shrink-0 border-b bg-card">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => router.push("/l/jobs")} className="h-8 w-8">
@@ -422,7 +422,7 @@ const ContractManager = () => {
       </header>
 
       {/* Pipeline progress bar */}
-      <div className="border-b bg-card/50">
+      <div className="shrink-0 border-b bg-card/50">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
           <div className="flex items-center gap-1">
             {PIPELINE_STAGES.map((stage, i) => {
@@ -448,7 +448,11 @@ const ContractManager = () => {
         </div>
       </div>
 
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
+      <main
+        className={`mx-auto flex w-full max-w-[1600px] flex-1 min-h-0 flex-col px-6 py-6 ${
+          viewMode === "kanban" ? "overflow-hidden" : "overflow-y-auto"
+        }`}
+      >
         {viewMode === "kanban" ? (
           <KanbanView
             stages={PIPELINE_STAGES}
@@ -633,7 +637,7 @@ const KanbanView = ({
     dragSourceStage !== null && !canMoveTo(dragSourceStage, stageId) && dragSourceStage !== stageId;
 
   return (
-    <div className="grid grid-cols-3 gap-2.5 items-start" style={{ height: "calc(100vh - 220px)" }}>
+    <div className="grid h-full min-h-0 grid-cols-3 items-start gap-2.5">
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
