@@ -358,6 +358,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
+    const [isTableLoading, setIsTableLoading] = useState(false);
     const { startLoading, stopLoading } = useLoading();
 
     const handleSegmentChange = (value: string) => {
@@ -388,7 +389,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
         try {
             console.log("Loading available jobs with activeSegment:", activeSegment);
-            startLoading();
+            setIsTableLoading(true);
 
             // Special handling for archived segment
             const options: any = {
@@ -514,9 +515,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading jobs:", error);
             toast.error("Failed to load jobs. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, sortBy, sortOrder, activeFilters]);
 
     // Load active bids data
     const handleJobNavigation = (direction: 'up' | 'down') => {
@@ -540,7 +541,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const loadActiveBids = useCallback(async () => {        
         try {
-            startLoading();
+            setIsTableLoading(true);
             const ops: any = {
                 limit: activeBidsTotalCount || 10000,
                 page: 1,
@@ -671,13 +672,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading active bids:", error);
             toast.error("Failed to load active bids. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, customers, activeFilters, sortBy, sortOrder]);
 
     const loadActiveJobs = useCallback(async () => {        
         try {
-            startLoading();
+            setIsTableLoading(true);
 
             const options: any = {
                 limit: activeJobsPageSize,
@@ -764,9 +765,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, activeFilters, sortBy, sortOrder]);
 
 
     const fetchNextJobNumber = useCallback(async () => {
@@ -2121,6 +2122,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             {isAvailableJobs ? (
                                 <DataTable<AvailableJob>
                                     data={data as AvailableJob[]}
+                                    isLoading={isTableLoading}
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
@@ -2191,6 +2193,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : isActiveBids ? (
                                 <DataTable<ActiveBid>
                                     data={data as ActiveBid[]}
+                                    isLoading={isTableLoading}
                                     columns={columns}
                                     enableSearch={true}
                                     searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
@@ -2256,6 +2259,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             ) : (
                                 <DataTable<ActiveJob>
                                     data={data as ActiveJob[]}
+                                    isLoading={isTableLoading}
                                     columns={columns}
                                     segments={segments}
                                     segmentValue={activeSegment}
