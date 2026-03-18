@@ -28,9 +28,13 @@ export default async function WorkOrderNewPage({
       <SidebarInset>
         <SiteHeader />
         <Suspense fallback={<div>Loading work order...</div>}>
-          <div className="pb-16">
-            <WorkOrderNewContent jobId={jobId} takeoffId={takeoffId} />
-            <ProjectFooter />
+          <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <WorkOrderNewContent jobId={jobId} takeoffId={takeoffId} />
+                <ProjectFooter />
+              </div>
+            </div>
           </div>
         </Suspense>
       </SidebarInset>
