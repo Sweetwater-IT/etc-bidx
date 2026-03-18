@@ -7,7 +7,7 @@ interface ContractManagerEmptyStateProps {
 
 export default function ContractManagerEmptyState({ onCreateNew }: ContractManagerEmptyStateProps) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="flex h-full min-h-0 items-center justify-center bg-background">
       <div className="max-w-md mx-auto text-center">
         <div className="p-6 rounded-full bg-primary/5 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
           <FileText className="h-12 w-12 text-primary" />
