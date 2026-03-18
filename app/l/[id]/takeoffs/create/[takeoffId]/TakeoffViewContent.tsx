@@ -32,6 +32,14 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
+const formatVehicleType = (vehicleType: string) => {
+  const vehicleTypeMap: Record<string, string> = {
+    message_board: "Message Board",
+    tma: "TMA",
+  };
+  return vehicleTypeMap[vehicleType] || vehicleType;
+};
+
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -332,7 +340,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                 <tbody className="divide-y">
                   {vehicleItems.map((item: any) => (
                     <tr key={item.id} className="hover:bg-muted/10">
-                      <td className="px-2 py-1 w-64 text-xs font-medium">{item.vehicleType || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-64 text-xs font-medium">{formatVehicleType(item.vehicleType) || item.product_name || '—'}</td>
                       <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
                     </tr>
                   ))}
