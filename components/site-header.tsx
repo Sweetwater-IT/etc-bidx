@@ -137,7 +137,7 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
       {children ? (
         children
       ) : (
-        <div className="px-4 py-4 border-b">
+        <div className="px-4 py-4 bg-slate-50">
           <h1 className="text-3xl font-bold">{getCurrentTitle()}</h1>
         </div>
       )}
