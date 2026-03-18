@@ -7,7 +7,7 @@ export default async function JobPage({ params }: any) {
 
   return (
     <Suspense fallback={null}>
-      <JobPageContent job={job} />
+      <JobPageContent job={job} includeLayout={false} />
     </Suspense>
   )
 }
