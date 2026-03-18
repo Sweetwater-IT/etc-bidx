@@ -637,7 +637,7 @@ const KanbanView = ({
     dragSourceStage !== null && !canMoveTo(dragSourceStage, stageId) && dragSourceStage !== stageId;
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-3 items-start gap-2.5">
+    <div className="grid h-full min-h-0 grid-cols-3 items-stretch gap-2.5">
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
