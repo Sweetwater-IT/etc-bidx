@@ -36,6 +36,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 interface NavItem {
@@ -320,13 +321,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
               <Link href="/">
-                <span className="text-base font-semibold">BidX</span>
+                <img src="/ETC-2.jpg" alt="ETC Logo" className="h-8 w-auto" />
                 {/* <ModeToggle /> */}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <SidebarSeparator />
       <SidebarContent>
         <NavMain items={data.navMain} label={'Project Estimating'} />
         <NavMain items={data.navAdmin} label={'Project Admin'} />
