@@ -27,7 +27,7 @@ export default function GoogleAuthPage() {
       {/* Top Left Brand */}
       <div className="absolute top-6 left-8 z-20 flex items-center gap-2">
         <Image
-          src="/logo.jpg"
+          src="/ETC-2.jpg"
           alt="ETC Logo"
           width={90}
           height={32}
