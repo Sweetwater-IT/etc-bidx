@@ -605,6 +605,12 @@ const KanbanView = ({
 }) => {
   const [dragOverStage, setDragOverStage] = useState<ContractPipelineStatus | null>(null);
   const [dragSourceStage, setDragSourceStage] = useState<ContractPipelineStatus | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const laneBodyRefs = useRef<Record<ContractPipelineStatus, HTMLDivElement | null>>({
+    CONTRACT_RECEIPT: null,
+    RETURNED_TO_CUSTOMER: null,
+    CONTRACT_SIGNED: null,
+  });
 
   const handleDragOver = (e: React.DragEvent, stageId: ContractPipelineStatus) => {
     if (dragSourceStage && !canMoveTo(dragSourceStage, stageId)) {
@@ -636,8 +642,46 @@ const KanbanView = ({
   const isInvalidTarget = (stageId: ContractPipelineStatus) =>
     dragSourceStage !== null && !canMoveTo(dragSourceStage, stageId) && dragSourceStage !== stageId;
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+
+    const logKanbanMetrics = () => {
+      const board = boardRef.current;
+      if (!board) return;
+
+      console.groupCollapsed("[ContractKanban] layout metrics");
+      console.log("board", {
+        clientHeight: board.clientHeight,
+        scrollHeight: board.scrollHeight,
+        overflowY: window.getComputedStyle(board).overflowY,
+      });
+
+      stages.forEach((stage) => {
+        const laneBody = laneBodyRefs.current[stage.id];
+        if (!laneBody) return;
+
+        console.log(stage.id, {
+          clientHeight: laneBody.clientHeight,
+          scrollHeight: laneBody.scrollHeight,
+          canScroll: laneBody.scrollHeight > laneBody.clientHeight,
+          overflowY: window.getComputedStyle(laneBody).overflowY,
+          cards: (jobsByStage[stage.id] || []).length,
+        });
+      });
+      console.groupEnd();
+    };
+
+    logKanbanMetrics();
+    window.addEventListener("resize", logKanbanMetrics);
+    return () => window.removeEventListener("resize", logKanbanMetrics);
+  }, [jobsByStage, stages]);
+
   return (
-    <div className="grid h-full min-h-0 grid-cols-3 items-stretch gap-2.5">
+    <div
+      ref={boardRef}
+      data-contract-kanban-board
+      className="flex h-full min-h-0 overflow-hidden gap-2.5"
+    >
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
@@ -646,7 +690,8 @@ const KanbanView = ({
         return (
           <div
             key={stage.id}
-            className={`rounded-lg border flex flex-col h-full transition-all duration-200 ${
+            data-contract-kanban-lane={stage.id}
+            className={`flex min-h-0 flex-1 flex-col rounded-lg border transition-all duration-200 ${
               valid && isOver ? "border-primary ring-2 ring-primary/20 bg-primary/5"
               : valid ? "border-primary/40 bg-primary/[0.02]"
               : invalid ? "border-border/30 opacity-40"
@@ -684,7 +729,13 @@ const KanbanView = ({
               )}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div
+              ref={(node) => {
+                laneBodyRefs.current[stage.id] = node;
+              }}
+              data-contract-kanban-scroll={stage.id}
+              className="min-h-0 flex-1 overflow-y-auto"
+            >
               <div className="p-2 space-y-2">
                 {(jobsByStage[stage.id] || []).length === 0 ? (
                   <div className={`py-10 text-center rounded-md border border-dashed transition-colors ${valid && isOver ? "border-primary/40 bg-primary/5" : "border-border/30"}`}>
