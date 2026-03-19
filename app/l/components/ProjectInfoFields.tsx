@@ -204,15 +204,36 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         // Fetch branches
         const branchesResponse = await fetch("/api/branches");
         const branchesResult = await branchesResponse.json();
+        const branchRows = branchesResult.data || [];
         if (branchesResult.data) {
-          setBranches(branchesResult.data);
+          setBranches(branchRows);
         }
 
         // Fetch counties with branch metadata so county selection can set the branch
         const countiesResponse = await fetch("/api/counties?limit=1000");
         const countiesResult = await countiesResponse.json();
         if (countiesResult.success && countiesResult.data) {
-          setCounties(countiesResult.data);
+          const normalizedCounties = countiesResult.data
+            .map((county: { name: string; branch: string | number | null }) => {
+              const matchedBranch =
+                county.branch == null
+                  ? null
+                  : branchRows.find(
+                      (branch: { id: number; name: string }) =>
+                        String(branch.id) === String(county.branch) ||
+                        branch.name.toLowerCase() === String(county.branch).toLowerCase()
+                    )?.name || String(county.branch);
+
+              return {
+                name: county.name,
+                branch: matchedBranch,
+              };
+            })
+            .sort((a: { name: string }, b: { name: string }) =>
+              a.name.localeCompare(b.name)
+            );
+
+          setCounties(normalizedCounties);
         }
 
         const pmResponse = await fetch('/api/l/project-managers');
