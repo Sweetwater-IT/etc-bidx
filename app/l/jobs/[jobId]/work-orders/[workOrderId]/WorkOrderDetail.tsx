@@ -621,7 +621,7 @@ const WorkOrderDetail = ({
         // When saving from the edit page, send the user back to the read-only view
         if (redirectOnSuccess && mode === "edit" && workOrder?.job_id) {
           const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
-          router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/view${qs}`);
+          router.push(`/l/jobs/${workOrder.job_id}/work-orders/view/${workOrderId}${qs}`);
         }
       }
     } catch (err: any) {
