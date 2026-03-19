@@ -163,6 +163,7 @@ export const SOVTable = ({
     return sovProducts.filter((p) => {
       const searchableText = [
         p.item_number,
+        p.display_item_number,
         p.work_type,
         p.display_name,
         p.description
@@ -580,9 +581,9 @@ export const SOVTable = ({
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
-                          <Command>
+                          <Command shouldFilter={false}>
                             <CommandInput
-                              placeholder="Search by # or name…"
+                              placeholder="Search by item #, name, or work type…"
                               value={selectorSearch}
                               onValueChange={setSelectorSearch}
                               autoFocus
@@ -686,7 +687,13 @@ export const SOVTable = ({
                                         {groupItems.map((p) => (
                                           <CommandItem
                                             key={p.id}
-                                            value={p.item_number}
+                                            value={[
+                                              p.item_number,
+                                              p.display_item_number,
+                                              p.display_name,
+                                              p.description,
+                                              p.work_type,
+                                            ].filter(Boolean).join(' ')}
                                             onSelect={() => selectMasterItem(item.id, p)}
                                             className="text-xs cursor-pointer"
                                           >
