@@ -466,7 +466,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                       {filteredCounties.map((county) => (
                         <CommandItem
                           key={county.name}
-                          value={`${county.name} ${county.branch || ""}`}
+                          value={county.name}
                           onSelect={() => {
                             const nextBranch = county.branch || "";
                             const currentPm = projectInfo.etcProjectManager;
@@ -491,12 +491,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                           }}
                         >
                           <Check className={cn("mr-2 h-3 w-3", projectInfo.county === county.name ? "opacity-100" : "opacity-0")} />
-                          <div className="flex min-w-0 flex-col">
-                            <span>{county.name}</span>
-                            {county.branch ? (
-                              <span className="text-[10px] text-muted-foreground">{county.branch}</span>
-                            ) : null}
-                          </div>
+                          {county.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
