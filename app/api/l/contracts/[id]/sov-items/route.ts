@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { SovUpsertError, upsertSovEntry } from '@/lib/server/sov/upsertSovEntry';
 
+const selectEntryFields = `
+  id,
+  job_id,
+  sov_item_id,
+  quantity,
+  unit_price,
+  extended_price,
+  retainage_type,
+  retainage_value,
+  retainage_amount,
+  notes,
+  sort_order,
+  created_at,
+  updated_at
+`;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,35 +27,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('sov_entries')
-      .select(`
-        id,
-        job_id,
-        sov_item_id,
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order,
-        created_at,
-        updated_at,
-        sov_items (
-          id,
-          item_number,
-          display_item_number,
-          description,
-          display_name,
-          work_type,
-          uom_1,
-          uom_2,
-          uom_3,
-          uom_4,
-          uom_5,
-          uom_6
-        )
-      `)
+      .select(selectEntryFields)
       .eq('job_id', jobId)
       .order('sort_order', { ascending: true });
 
@@ -48,27 +36,46 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch SOV entries' }, { status: 500 });
     }
 
-    const transformedData = (data || []).map((entry: any) => ({
-      id: entry.id,
-      job_id: entry.job_id,
-      sov_item_id: entry.sov_item_id,
-      item_number: (entry as any).sov_items?.item_number,
-      display_item_number: (entry as any).sov_items?.display_item_number,
-      description: (entry as any).sov_items?.description,
-      display_name: (entry as any).sov_items?.display_name,
-      work_type: (entry as any).sov_items?.work_type,
-      uom: (entry as any).sov_items?.uom_1 || (entry as any).sov_items?.uom_2 || (entry as any).sov_items?.uom_3 || (entry as any).sov_items?.uom_4 || (entry as any).sov_items?.uom_5 || (entry as any).sov_items?.uom_6,
-      quantity: entry.quantity,
-      unit_price: entry.unit_price,
-      extended_price: entry.extended_price,
-      retainage_type: entry.retainage_type,
-      retainage_value: entry.retainage_value,
-      retainage_amount: entry.retainage_amount,
-      notes: entry.notes,
-      sort_order: entry.sort_order,
-      created_at: entry.created_at,
-      updated_at: entry.updated_at,
-    }));
+    const sovItemIds = Array.from(
+      new Set((data || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
+    );
+
+    const { data: masterItems, error: masterError } = await supabase
+      .from('sov_items')
+      .select('id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
+      .in('id', sovItemIds);
+
+    if (masterError) {
+      console.error('[SOV contract GET] Failed to hydrate SOV master items', { jobId, masterError });
+      return NextResponse.json({ error: 'Failed to fetch SOV master items' }, { status: 500 });
+    }
+
+    const masterById = new Map((masterItems || []).map((item: any) => [item.id, item]));
+
+    const transformedData = (data || []).map((entry: any) => {
+      const master = masterById.get(entry.sov_item_id);
+      return {
+        id: entry.id,
+        job_id: entry.job_id,
+        sov_item_id: entry.sov_item_id,
+        item_number: master?.item_number,
+        display_item_number: master?.display_item_number,
+        description: master?.description,
+        display_name: master?.display_name,
+        work_type: master?.work_type,
+        uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6,
+        quantity: entry.quantity,
+        unit_price: entry.unit_price,
+        extended_price: entry.extended_price,
+        retainage_type: entry.retainage_type,
+        retainage_value: entry.retainage_value,
+        retainage_amount: entry.retainage_amount,
+        notes: entry.notes,
+        sort_order: entry.sort_order,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+      };
+    });
 
     return NextResponse.json({ data: transformedData });
   } catch (error) {

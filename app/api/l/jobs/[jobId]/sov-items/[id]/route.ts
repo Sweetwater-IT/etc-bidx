@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+const selectEntryFields = `
+  id,
+  job_id,
+  sov_item_id,
+  quantity,
+  unit_price,
+  extended_price,
+  retainage_type,
+  retainage_value,
+  retainage_amount,
+  notes,
+  sort_order,
+  created_at,
+  updated_at
+`;
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string; id: string }> }
@@ -92,35 +108,7 @@ export async function PUT(
       .update(updateData)
       .eq('id', id)
       .eq('job_id', jobId) // Extra security check
-      .select(`
-        id,
-        job_id,
-        sov_item_id,
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order,
-        created_at,
-        updated_at,
-        sov_items (
-          id,
-          item_number,
-          display_item_number,
-          description,
-          display_name,
-          work_type,
-          uom_1,
-          uom_2,
-          uom_3,
-          uom_4,
-          uom_5,
-          uom_6
-        )
-      `)
+      .select(selectEntryFields)
       .single();
 
     console.log('[SOV API PUT] Supabase update result:', { data: !!data, error });
@@ -135,17 +123,30 @@ export async function PUT(
 
     console.log('[SOV API PUT] Raw data from update:', JSON.stringify(data, null, 2));
 
+    const { data: masterItem, error: masterError } = await supabase
+      .from('sov_items')
+      .select('id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
+      .eq('id', data.sov_item_id)
+      .single();
+
+    if (masterError || !masterItem) {
+      return NextResponse.json(
+        { error: 'Failed to fetch SOV master item', details: masterError },
+        { status: 500 }
+      );
+    }
+
     // Transform response to match expected format
     const transformedData = {
       id: data.id,
       job_id: data.job_id,
       sov_item_id: data.sov_item_id,
-      item_number: (data as any).sov_items?.item_number,
-      display_item_number: (data as any).sov_items?.display_item_number,
-      description: (data as any).sov_items?.description,
-      display_name: (data as any).sov_items?.display_name,
-      work_type: (data as any).sov_items?.work_type,
-      uom: (data as any).sov_items?.uom_1 || (data as any).sov_items?.uom_2 || (data as any).sov_items?.uom_3 || (data as any).sov_items?.uom_4 || (data as any).sov_items?.uom_5 || (data as any).sov_items?.uom_6,
+      item_number: masterItem.item_number,
+      display_item_number: masterItem.display_item_number,
+      description: masterItem.description,
+      display_name: masterItem.display_name,
+      work_type: masterItem.work_type,
+      uom: masterItem.uom_1 || masterItem.uom_2 || masterItem.uom_3 || masterItem.uom_4 || masterItem.uom_5 || masterItem.uom_6,
       quantity: data.quantity,
       unit_price: data.unit_price,
       extended_price: data.extended_price,
