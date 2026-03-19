@@ -91,12 +91,24 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
   const ml = 14;
 
   // ── ETC Logo (top-right) ──
-  // Logo loading removed - using text fallback
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 64, 120);
-  doc.text("ETC", pageW - ml, 14, { align: "right" });
-  doc.setTextColor(0);
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+      img.src = "/logo.jpg";
+    });
+    const logoH = 12;
+    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
+    doc.addImage(img, "JPEG", pageW - ml - logoW, 6, logoW, logoH);
+  } catch {
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 64, 120);
+    doc.text("ETC", pageW - ml, 14, { align: "right" });
+    doc.setTextColor(0);
+  }
 
   // ── Title ──
   doc.setFontSize(14);
