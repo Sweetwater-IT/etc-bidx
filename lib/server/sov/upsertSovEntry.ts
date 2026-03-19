@@ -17,6 +17,7 @@ export type UpsertSovEntryInput = {
   sov_item_id?: string | null;
   item_number?: string | null;
   description?: string | null;
+  work_type?: string | null;
   uom?: string | null;
   quantity?: number | null;
   unit_price?: number | null;
@@ -32,6 +33,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     sov_item_id,
     item_number,
     description,
+    work_type,
     uom,
     quantity,
     unit_price,
@@ -64,7 +66,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
           display_item_number: item_number,
           description: description ?? '',
           display_name: description || item_number,
-          work_type: 'OTHER',
+          work_type: work_type ?? 'OTHER',
           uom_1: uom ?? 'UNKNOWN',
         })
         .select('id')

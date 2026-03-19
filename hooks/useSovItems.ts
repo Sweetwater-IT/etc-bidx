@@ -32,7 +32,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           id: item.id,
           itemNumber: item.item_number || '',
           description: item.description || '',
-          uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || '',
+          uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || '',
           quantity: item.quantity || 0,
           unitPrice: item.unit_price || 0,
           extendedPrice: item.extended_price || 0,
@@ -40,6 +40,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           retainageValue: item.retainage_value || 0,
           retainageAmount: item.retainage_amount || 0,
           notes: item.notes || '',
+          work_type: item.work_type || '',
           // Store unit price in cents format for CurrencyInput compatibility
           _unitPriceCents: Math.round((item.unit_price || 0) * 100).toString(),
         }));
@@ -142,11 +143,15 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
 
           // Check if any significant fields changed
           const hasChanged = (
+            originalItem.itemNumber !== currentItem.itemNumber ||
+            originalItem.description !== currentItem.description ||
+            originalItem.uom !== currentItem.uom ||
             originalItem.quantity !== currentItem.quantity ||
             originalItem.unitPrice !== currentItem.unitPrice ||
             originalItem.retainageType !== currentItem.retainageType ||
             originalItem.retainageValue !== currentItem.retainageValue ||
-            originalItem.notes !== currentItem.notes
+            originalItem.notes !== currentItem.notes ||
+            originalItem.work_type !== currentItem.work_type
           );
 
           if (hasChanged) {
@@ -154,11 +159,15 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
               id: currentItem.id,
               itemNumber: currentItem.itemNumber,
               changes: {
+                itemNumber: originalItem.itemNumber !== currentItem.itemNumber ? `${originalItem.itemNumber} -> ${currentItem.itemNumber}` : null,
+                description: originalItem.description !== currentItem.description ? 'changed' : null,
+                uom: originalItem.uom !== currentItem.uom ? `${originalItem.uom} -> ${currentItem.uom}` : null,
                 quantity: originalItem.quantity !== currentItem.quantity ? `${originalItem.quantity} -> ${currentItem.quantity}` : null,
                 unitPrice: originalItem.unitPrice !== currentItem.unitPrice ? `${originalItem.unitPrice} -> ${currentItem.unitPrice}` : null,
                 retainageType: originalItem.retainageType !== currentItem.retainageType ? `${originalItem.retainageType} -> ${currentItem.retainageType}` : null,
                 retainageValue: originalItem.retainageValue !== currentItem.retainageValue ? `${originalItem.retainageValue} -> ${currentItem.retainageValue}` : null,
                 notes: originalItem.notes !== currentItem.notes ? 'changed' : null,
+                workType: originalItem.work_type !== currentItem.work_type ? `${originalItem.work_type} -> ${currentItem.work_type}` : null,
               }
             });
           }
@@ -205,6 +214,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           const payload = {
             item_number: item.itemNumber,
             description: item.description,
+            work_type: item.work_type,
             uom: item.uom,
             quantity: item.quantity,
             unit_price: item.unitPrice,
@@ -302,6 +312,10 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         console.log('[SOV save] Starting update operations...');
         for (const item of itemsToUpdate) {
           const payload = {
+            item_number: item.itemNumber,
+            description: item.description,
+            work_type: item.work_type,
+            uom: item.uom,
             quantity: item.quantity,
             unit_price: item.unitPrice,
             retainage_type: item.retainageType,
@@ -422,6 +436,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         itemData.retainageValue || 0
       ),
       notes: itemData.notes || '',
+      work_type: itemData.work_type || '',
     };
 
     const newItems = [...items, newItem];

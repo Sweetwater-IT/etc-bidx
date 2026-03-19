@@ -290,6 +290,8 @@ export const CreateTakeoffForm = ({
   const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string }[]>([]);
 
   const isPermanentSigns = workType === "PERMANENT_SIGNS";
+  const showsSignConfiguration = workType === "FLAGGING" || workType === "LANE_CLOSURE";
+  const showsVehicles = workType === "FLAGGING" || workType === "LANE_CLOSURE";
   const resolvedPageTitle = pageTitle || formatTakeoffPageTitle({
     workType,
     isPickup: Boolean(draftTakeoff?.is_pickup),
@@ -496,6 +498,15 @@ export const CreateTakeoffForm = ({
     console.log('Sign rows changed:', signRows);
   }, [signRows]);
 
+  useEffect(() => {
+    console.log('[CreateTakeoffForm] Additional item selector context', {
+      workType,
+      optionsCount: MPT_ADDITIONAL_ITEM_OPTIONS.length,
+      optionsPreview: MPT_ADDITIONAL_ITEM_OPTIONS.slice(0, 5),
+      additionalItems,
+    });
+  }, [workType, additionalItems]);
+
   // Fetch rental equipment - simplified to show all equipment as available
   useEffect(() => {
     if (workType === "FLAGGING" || workType === "LANE_CLOSURE" || (workType === "DELIVERY" || workType === "RENTAL") && installDate) {
@@ -651,6 +662,17 @@ export const CreateTakeoffForm = ({
 
     setSaving(true);
     try {
+      console.log('[CreateTakeoffForm] Generate work order clicked', {
+        savedTakeoffId,
+        jobId,
+        title,
+        workType,
+        additionalItemsCount: additionalItems.length,
+        vehicleItemsCount: vehicleItems.length,
+        rollingStockItemsCount: rollingStockItems.length,
+        activeSections,
+        activePermanentItems,
+      });
       // Create work order from the saved takeoff
       const woResponse = await fetch(`/api/workorders/from-takeoff/${savedTakeoffId}`, {
         method: 'POST',
@@ -662,8 +684,14 @@ export const CreateTakeoffForm = ({
         })
       });
 
+      console.log('[CreateTakeoffForm] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
+
       if (woResponse.ok) {
         const result = await woResponse.json();
+        console.log('[CreateTakeoffForm] Generate work order success', result);
         // Update the work order number field
         setWorkOrderNumber(result.workOrder.workOrderNumber);
         setWorkOrderId(result.workOrder.id);
@@ -672,10 +700,11 @@ export const CreateTakeoffForm = ({
         router.push(`/l/jobs/${jobId}/work-orders/view/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
+        console.error('[CreateTakeoffForm] Generate work order failed', err);
         toast.error(err.error || 'Failed to generate work order');
       }
     } catch (error) {
-      console.error("Error generating work order:", error);
+      console.error("[CreateTakeoffForm] Error generating work order", error);
       toast.error("Failed to generate work order");
     } finally {
       setSaving(false);
@@ -1314,7 +1343,7 @@ export const CreateTakeoffForm = ({
         );
       })()}
 
-      {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
+      {showsSignConfiguration && (
         <>
           {/* Sign Configuration Section */}
           <div className={`rounded-lg border bg-card shadow-sm overflow-x-auto ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
@@ -1413,7 +1442,7 @@ export const CreateTakeoffForm = ({
           </div>
 
           {/* Vehicles Section */}
-          {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
+          {showsVehicles && (
           <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
@@ -1493,56 +1522,59 @@ export const CreateTakeoffForm = ({
           </div>
           )}
 
-          {/* Rolling Stock Section */}
-          {workType === "DELIVERY" && (
-          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
-            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 h-7 text-xs"
-                disabled
-                onClick={() =>
-                  setRollingStockItems((prev) => [
-                    ...prev,
-                    { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
-                  ])
-                }
-              >
-                <Plus className="h-3 w-3" /> Add Equipment
-              </Button>
+        </>
+      )}
+
+      {/* Rolling Stock Section */}
+      {workType === "DELIVERY" && (
+      <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-7 text-xs"
+            disabled
+            onClick={() =>
+              setRollingStockItems((prev) => [
+                ...prev,
+                { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
+              ])
+            }
+          >
+            <Plus className="h-3 w-3" /> Add Equipment
+          </Button>
+        </div>
+        <div className="p-5">
+          <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Rolling stock is temporarily disabled and read-only.
+          </div>
+          {rollingStockItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
+              <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
             </div>
-            <div className="p-5">
-              <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Rolling stock is temporarily disabled and read-only.
-              </div>
-              {rollingStockItems.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-8 text-center">
-                  <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
-                  <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {rollingStockItems.map((item) => {
-                    console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
-                      equipmentId: item.equipmentId,
-                      equipmentLabel: item.equipmentLabel
-                    });
+          ) : (
+            <div className="space-y-2">
+              {rollingStockItems.map((item) => {
+                console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
+                  equipmentId: item.equipmentId,
+                  equipmentLabel: item.equipmentLabel
+                });
 
-                    // Filter out already-selected equipment (except the current row's selection)
-                    const selectedIds = rollingStockItems
-                      .filter((rs) => rs.id !== item.id && rs.equipmentId)
-                      .map((rs) => rs.equipmentId);
+                // Filter out already-selected equipment (except the current row's selection)
+                const selectedIds = rollingStockItems
+                  .filter((rs) => rs.id !== item.id && rs.equipmentId)
+                  .map((rs) => rs.equipmentId);
 
-                    console.log(`🚫 Selected IDs to exclude:`, selectedIds);
+                console.log(`🚫 Selected IDs to exclude:`, selectedIds);
 
-                    const filteredEquipment = availableEquipment
-                      .filter((eq) => !selectedIds.includes(eq.id))
-                      .filter((eq) => eq.availability !== "unavailable");
+                const filteredEquipment = availableEquipment
+                  .filter((eq) => !selectedIds.includes(eq.id))
+                  .filter((eq) => eq.availability !== "unavailable");
 
-                    console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
+                console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
                     console.log(`📋 Filtered equipment sample:`, filteredEquipment.slice(0, 3));
 
                     // Group by category
@@ -1648,8 +1680,6 @@ export const CreateTakeoffForm = ({
             </div>
           </div>
           )}
-        </>
-      )}
 
       {workType === "RENTAL" && (
         <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
@@ -1702,10 +1732,10 @@ export const CreateTakeoffForm = ({
                     <tr key={item.id} className="hover:bg-muted/10">
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                            <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
                             <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
                             <SelectContent>
-                              {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
+                              {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
                                 <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                               ))}
                               <SelectItem value="__custom">Custom…</SelectItem>

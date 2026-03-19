@@ -73,12 +73,23 @@ interface CustomItemDraft {
   rowId: string;
   itemNumber: string;
   description: string;
+  workType: string;
   uom: string;
   quantity: number;
   unitPrice: number;
   retainageType: 'percent' | 'dollar';
   retainageValue: number;
 }
+
+const CUSTOM_WORK_TYPE_OPTIONS = [
+  { value: 'MPT', label: 'MPT' },
+  { value: 'PERMANENT_SIGNS', label: 'Permanent Signs' },
+  { value: 'FLAGGING', label: 'Flagging' },
+  { value: 'LANE_CLOSURE', label: 'Lane Closure' },
+  { value: 'SERVICE', label: 'Service' },
+  { value: 'DELIVERY', label: 'Delivery' },
+  { value: 'RENTAL', label: 'Rental' },
+];
 
 function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', value: number): number {
   if (type === 'percent') return Math.round(extendedPrice * (value / 100) * 100) / 100;
@@ -271,6 +282,7 @@ export const SOVTable = ({
                 ...item,
                 itemNumber: master.item_number,
                 description: master.display_name,
+                work_type: master.work_type,
                 uom: getFirstNonNullUom(master),
                 quantity: item.quantity || 1,
                 unitPrice: item.unitPrice || 0,
@@ -340,6 +352,7 @@ export const SOVTable = ({
                 id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
                 description: master.display_name,
+                work_type: createdItem.work_type || master.work_type,
                 uom: createdItem.uom || getFirstNonNullUom(master),
                 quantity: createdItem.quantity || payload.quantity,
                 unitPrice: createdItem.unit_price || payload.unit_price,
@@ -398,6 +411,7 @@ export const SOVTable = ({
           rowId,
           itemNumber: existing.itemNumber,
           description: existing.description,
+          workType: existing.work_type || '',
           uom: existing.uom,
           quantity: existing.quantity,
           unitPrice: existing.unitPrice,
@@ -412,6 +426,7 @@ export const SOVTable = ({
         id: newId,
         itemNumber: '',
         description: '',
+        work_type: '',
         uom: customUomOptions[0] || 'EA',
         quantity: 0,
         unitPrice: 0,
@@ -426,6 +441,7 @@ export const SOVTable = ({
         rowId: newId,
         itemNumber: '',
         description: '',
+        workType: '',
         uom: customUomOptions[0] || 'EA',
         quantity: 0,
         unitPrice: 0,
@@ -448,6 +464,7 @@ export const SOVTable = ({
               ...item,
               itemNumber: customDraft.itemNumber.trim(),
               description: customDraft.description.trim(),
+              work_type: customDraft.workType,
               uom: customDraft.uom.trim() || 'EA',
               quantity: customDraft.quantity,
               unitPrice: customDraft.unitPrice,
@@ -1014,6 +1031,24 @@ export const SOVTable = ({
                   onChange={(e) => setCustomDraft({ ...customDraft, description: e.target.value })}
                 />
               </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">Work Type <span className="text-destructive">*</span></label>
+                <Select
+                  value={customDraft.workType}
+                  onValueChange={(value) => setCustomDraft({ ...customDraft, workType: value })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select work type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CUSTOM_WORK_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="grid gap-1.5">
                   <label className="text-xs">UOM</label>
@@ -1087,7 +1122,7 @@ export const SOVTable = ({
             }}>Cancel</Button>
             <Button
               size="sm"
-              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim()}
+              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim() || !customDraft?.workType}
               onClick={saveCustomItem}
             >
               Add to Table

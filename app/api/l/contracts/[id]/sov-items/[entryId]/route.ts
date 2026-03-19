@@ -24,7 +24,7 @@ export async function PUT(
     const jobId = await resolveJobIdFromContractId(contractId);
     const body = await request.json();
 
-    const { quantity, unit_price, retainage_type, retainage_value, notes, sort_order } = body;
+    const { item_number, description, uom, work_type, quantity, unit_price, retainage_type, retainage_value, notes, sort_order } = body;
 
     const normalizedQuantity = Number(quantity ?? 0);
     const normalizedUnitPrice = Number(unit_price ?? 0);
@@ -36,6 +36,42 @@ export async function PUT(
       normalizedRetainageType === 'percent'
         ? extended_price * (normalizedRetainageValue / 100)
         : normalizedRetainageValue;
+
+    const { data: entryData, error: entryError } = await supabase
+      .from('sov_entries')
+      .select('sov_item_id')
+      .eq('id', entryId)
+      .eq('job_id', jobId)
+      .single();
+
+    if (entryError || !entryData?.sov_item_id) {
+      return NextResponse.json(
+        { error: 'Failed to resolve SOV master item', details: entryError },
+        { status: 500 }
+      );
+    }
+
+    if (item_number || description || uom || work_type) {
+      const { error: masterUpdateError } = await supabase
+        .from('sov_items')
+        .update({
+          item_number: item_number ?? undefined,
+          display_item_number: item_number ?? undefined,
+          description: description ?? undefined,
+          display_name: description || item_number || undefined,
+          work_type: work_type ?? undefined,
+          uom_1: uom ?? undefined,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', entryData.sov_item_id);
+
+      if (masterUpdateError) {
+        return NextResponse.json(
+          { error: 'Failed to update SOV master item', details: masterUpdateError },
+          { status: 500 }
+        );
+      }
+    }
 
     const updateData = {
       quantity: normalizedQuantity,

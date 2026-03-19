@@ -105,6 +105,7 @@ export async function POST(
         sov_item_id: item.sov_item_id ?? null,
         item_number: item.item_number ?? null,
         description: item.description ?? '',
+        work_type: item.work_type ?? null,
         uom: item.uom ?? 'EA',
         quantity: Number(item.quantity ?? 0),
         unit_price: Number(item.unit_price ?? 0),

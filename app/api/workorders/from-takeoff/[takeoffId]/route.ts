@@ -480,7 +480,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,
-      description: i.description.substring(0,50)+'...',
+      description: typeof i.description === 'string' ? `${i.description.substring(0, 50)}...` : '',
       qty: i.work_order_quantity,
       from_sov: i.sov_item_id !== null
     })));

@@ -60,14 +60,21 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
+        console.log('[TakeoffViewPage] Loading title block data', { takeoffId, jobId });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
         if (!response.ok) {
           throw new Error(`Failed to load takeoff: ${response.status}`);
         }
         const data = await response.json();
+        console.log('[TakeoffViewPage] Title block takeoff loaded', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          isPickup: data?.is_pickup,
+        });
         setTakeoff(data);
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewPage] Error loading title block takeoff', error);
       }
     };
     if (takeoffId) {
@@ -118,14 +125,21 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
+        console.log('[TakeoffViewPageHeader] Loading takeoff', { takeoffId, jobId });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
         if (!response.ok) {
           throw new Error(`Failed to load takeoff: ${response.status}`);
         }
         const data = await response.json();
+        console.log('[TakeoffViewPageHeader] Loaded takeoff', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          linkedWorkOrderId: data?.work_order_id,
+        });
         setTakeoff(data);
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewPageHeader] Error loading takeoff', error);
         toast.error('Failed to load takeoff');
       }
     };
@@ -173,6 +187,12 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   const handleCreateWorkOrder = async () => {
     setLoading(true);
     try {
+      console.log('[TakeoffViewPageHeader] Generate work order clicked', {
+        takeoffId,
+        jobId,
+        workType: takeoff?.work_type,
+        title: takeoff?.title,
+      });
       const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
         method: 'POST',
         headers: {
@@ -182,16 +202,22 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
           userEmail: 'unknown@example.com'
         })
       });
+      console.log('[TakeoffViewPageHeader] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
       if (woResponse.ok) {
         const result = await woResponse.json();
+        console.log('[TakeoffViewPageHeader] Generate work order success', result);
         toast.success('Work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
+        console.error('[TakeoffViewPageHeader] Generate work order failed', err);
         toast.error(err.error || 'Failed to generate work order');
       }
     } catch (error) {
-      console.error("Error generating work order:", error);
+      console.error("[TakeoffViewPageHeader] Error generating work order", error);
       toast.error("Failed to generate work order");
     } finally {
       setLoading(false);

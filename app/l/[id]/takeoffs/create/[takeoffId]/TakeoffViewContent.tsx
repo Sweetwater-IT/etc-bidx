@@ -32,7 +32,11 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
-const formatVehicleType = (vehicleType: string) => {
+const formatVehicleType = (vehicleType?: string | null) => {
+  if (!vehicleType) {
+    return "";
+  }
+
   const vehicleTypeMap: Record<string, string> = {
     pickup_truck: "Pick Up Truck",
     message_board: "Message Board",
@@ -75,22 +79,30 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
-        console.log('Loading takeoff with ID:', takeoffId);
+        console.log('[TakeoffViewContent] Loading takeoff', { takeoffId, jobId, isViewMode });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
-        console.log('API response status:', response.status);
-        console.log('API response ok:', response.ok);
+        console.log('[TakeoffViewContent] API response', { status: response.status, ok: response.ok });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.log('API error response:', errorText);
+          console.error('[TakeoffViewContent] API error response', { errorText });
           throw new Error(`Failed to load takeoff: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
-        console.log('API response data:', data);
+        console.log('[TakeoffViewContent] Loaded takeoff payload', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          isPickup: data?.is_pickup,
+          takeoffItemsCount: Array.isArray(data?.takeoff_items) ? data.takeoff_items.length : 0,
+          activeSections: data?.active_sections,
+          vehicleItemsCount: Array.isArray(data?.vehicle_items) ? data.vehicle_items.length : 0,
+          additionalItemsCount: Array.isArray(data?.additional_items) ? data.additional_items.length : 0,
+        });
         setTakeoff(data);
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewContent] Error loading takeoff', error);
         toast.error('Failed to load takeoff');
       } finally {
         setLoading(false);
@@ -146,6 +158,14 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   const handleCreateWorkOrder = async () => {
     setLoading(true);
     try {
+      console.log('[TakeoffViewContent] Generate work order clicked', {
+        takeoffId,
+        jobId,
+        workType: takeoff?.work_type,
+        title: takeoff?.title,
+        takeoffItemCount: Array.isArray(takeoff?.takeoff_items) ? takeoff.takeoff_items.length : 0,
+        additionalItemsCount: Array.isArray(takeoff?.additional_items) ? takeoff.additional_items.length : 0,
+      });
 
       const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
         method: 'POST',
@@ -157,16 +177,23 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         })
       });
 
+      console.log('[TakeoffViewContent] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
+
       if (woResponse.ok) {
         const result = await woResponse.json();
+        console.log('[TakeoffViewContent] Generate work order success', result);
         toast.success('Work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
+        console.error('[TakeoffViewContent] Generate work order failed', err);
         toast.error(err.error || 'Failed to generate work order');
       }
     } catch (error) {
-      console.error("Error generating work order:", error);
+      console.error("[TakeoffViewContent] Error generating work order", error);
       toast.error("Failed to generate work order");
     } finally {
       setLoading(false);
@@ -235,7 +262,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     : [];
 
   const mptSquareFootageSummary = (() => {
-    if (takeoff.work_type !== "MPT" || !Array.isArray(takeoff.active_sections) || !takeoff.sign_rows) {
+    if (takeoff.work_type !== "MPT" || !takeoff.sign_rows) {
       return null;
     }
 
@@ -249,7 +276,11 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     let grandSigns = 0;
     let grandSqft = 0;
 
-    for (const sectionKey of takeoff.active_sections) {
+    const sectionKeys = Array.isArray(takeoff.active_sections) && takeoff.active_sections.length > 0
+      ? takeoff.active_sections
+      : Object.keys(takeoff.sign_rows || {});
+
+    for (const sectionKey of sectionKeys) {
       let sectionSigns = 0;
       let sectionSqft = 0;
 
@@ -257,8 +288,10 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         if (!row?.signDesignation) continue;
 
         const quantity = Number(row.quantity || 0);
+        const primarySqft =
+          Number(row.totalSqft || 0) || Math.round(Number(row.sqft || 0) * quantity * 100) / 100;
         sectionSigns += quantity;
-        sectionSqft += Number(row.totalSqft || 0);
+        sectionSqft += primarySqft;
 
         for (const sec of row.secondarySigns || []) {
           if (!sec?.signDesignation) continue;
