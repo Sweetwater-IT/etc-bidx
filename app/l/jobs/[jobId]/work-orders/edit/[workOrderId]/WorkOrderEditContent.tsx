@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
@@ -31,6 +31,10 @@ export default function WorkOrderEditContent({
     firstSave: false,
   });
   const [saveAction, setSaveAction] = useState<(() => Promise<void>) | null>(null);
+
+  const handleSaveActionReady = useCallback((action: () => Promise<void>) => {
+    setSaveAction(() => action);
+  }, []);
 
   useEffect(() => {
     const loadWorkOrderMeta = async () => {
@@ -93,7 +97,7 @@ export default function WorkOrderEditContent({
           takeoffId={takeoffId}
           mode="edit"
           onSaveStateChange={setHeaderState}
-          onSaveActionReady={(action) => setSaveAction(() => action)}
+          onSaveActionReady={handleSaveActionReady}
         />
       </div>
     </div>

@@ -104,7 +104,7 @@ export async function GET(
     };
 
     // Fetch all related data in parallel
-    const [jobRes, takeoffRes, woItemsRes, sovRes, sovFullRes, docsRes, pickupRes, parentWORes] = await Promise.all([
+    const [jobRes, takeoffRes, woItemsRes, sovEntriesRes, docsRes, pickupRes, parentWORes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
@@ -114,7 +114,8 @@ export async function GET(
       // Work order items
       supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
 
-      // SOV items for picklist — query sov_entries joined with sov_items for job-specific items
+      // SOV entries for this job. Master rows are hydrated in a second query because
+      // the database does not define a relation from sov_entries.sov_item_id -> sov_items.id.
       supabase
         .from("sov_entries")
         .select(`
@@ -127,51 +128,9 @@ export async function GET(
           retainage_amount,
           notes,
           sov_item_id,
-          sov_items!inner (
-            id,
-            item_number,
-            display_item_number,
-            description,
-            display_name,
-            work_type,
-            uom_1,
-            uom_2,
-            uom_3,
-            uom_4,
-            uom_5,
-            uom_6
-          )
-        `)
-        .eq("job_id", jobId)
-        .order("sort_order", { ascending: true }),
-
-      // Full SOV items with pricing for PDFs — same query but with all fields
-      supabase
-        .from("sov_entries")
-        .select(`
-          id,
-          quantity,
-          unit_price,
-          extended_price,
-          retainage_type,
-          retainage_value,
-          retainage_amount,
-          notes,
-          sov_item_id,
-          sov_items!inner (
-            id,
-            item_number,
-            display_item_number,
-            description,
-            display_name,
-            work_type,
-            uom_1,
-            uom_2,
-            uom_3,
-            uom_4,
-            uom_5,
-            uom_6
-          )
+          sort_order,
+          created_at,
+          updated_at
         `)
         .eq("job_id", jobId)
         .order("sort_order", { ascending: true }),
@@ -238,16 +197,54 @@ export async function GET(
     // Process work order items
     const woItems: WOItem[] = (woItemsRes.data || []) as WOItem[];
 
-    // Process SOV items (from joined query)
+    // Process SOV items
     let sovItems: { id: string; item_number: string; description: string; quantity: number; uom: string }[] = [];
-    if (sovRes.data && sovRes.data.length > 0) {
-      sovItems = sovRes.data.map((s: any) => ({
-        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
-        item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.display_name || s.sov_items?.description || "",
-        quantity: Number(s.quantity) || 0,
-        uom: s.sov_items?.uom_1 || s.sov_items?.uom_2 || s.sov_items?.uom_3 || s.sov_items?.uom_4 || s.sov_items?.uom_5 || s.sov_items?.uom_6 || "EA",
-      }));
+    let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
+    if (sovEntriesRes.error) {
+      console.error('Error fetching SOV entries for work order detail:', sovEntriesRes.error);
+    } else if (sovEntriesRes.data && sovEntriesRes.data.length > 0) {
+      const sovItemIds = Array.from(
+        new Set((sovEntriesRes.data || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
+      );
+
+      const { data: masterItems, error: masterError } = await supabase
+        .from("sov_items")
+        .select("id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6")
+        .in("id", sovItemIds);
+
+      if (masterError) {
+        console.error('Error hydrating SOV master items for work order detail:', masterError);
+      } else {
+        const masterById = new Map((masterItems || []).map((item: any) => [item.id, item]));
+
+        sovItems = (sovEntriesRes.data || []).map((entry: any) => {
+          const master = masterById.get(entry.sov_item_id);
+          return {
+            id: String(entry.sov_item_id),
+            item_number: master?.item_number || master?.display_item_number || "",
+            description: master?.display_name || master?.description || "",
+            quantity: Number(entry.quantity) || 0,
+            uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6 || "EA",
+          };
+        });
+
+        sovItemsFull = (sovEntriesRes.data || []).map((entry: any) => {
+          const master = masterById.get(entry.sov_item_id);
+          return {
+            id: String(entry.sov_item_id),
+            itemNumber: master?.item_number || master?.display_item_number || "",
+            description: master?.display_name || master?.description || "",
+            uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6 || "EA",
+            quantity: Number(entry.quantity) || 0,
+            unitPrice: Number(entry.unit_price) || 0,
+            extendedPrice: Number(entry.extended_price) || 0,
+            retainageType: (entry.retainage_type as 'percent' | 'dollar') || 'percent',
+            retainageValue: Number(entry.retainage_value) || 0,
+            retainageAmount: Number(entry.retainage_amount) || 0,
+            notes: entry.notes || null,
+          };
+        });
+      }
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
       const { data: jobFull } = await supabase
@@ -262,24 +259,6 @@ export async function GET(
         description: s.description || "",
         quantity: Number(s.quantity) || 0,
         uom: s.uom || "EA",
-      }));
-    }
-
-    // Process full SOV items with pricing (from joined query)
-    let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
-    if (sovFullRes.data && sovFullRes.data.length > 0) {
-      sovItemsFull = sovFullRes.data.map((s: any) => ({
-        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
-        itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.display_name || s.sov_items?.description || "",
-        uom: s.sov_items?.uom_1 || s.sov_items?.uom_2 || s.sov_items?.uom_3 || s.sov_items?.uom_4 || s.sov_items?.uom_5 || s.sov_items?.uom_6 || "EA",
-        quantity: Number(s.quantity) || 0,
-        unitPrice: Number(s.unit_price) || 0,
-        extendedPrice: Number(s.extended_price) || 0,
-        retainageType: (s.retainage_type as 'percent' | 'dollar') || 'percent',
-        retainageValue: Number(s.retainage_value) || 0,
-        retainageAmount: Number(s.retainage_amount) || 0,
-        notes: s.notes || null,
       }));
     }
 
