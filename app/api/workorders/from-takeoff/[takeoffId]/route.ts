@@ -11,11 +11,25 @@ type SOVLookupItem = {
   quantity?: number | null;
 };
 
+type SOVMasterItem = {
+  id: number;
+  item_number: string;
+  description: string | null;
+  display_name: string | null;
+  work_type?: string | null;
+  uom_1?: string | null;
+  uom_2?: string | null;
+  uom_3?: string | null;
+  uom_4?: string | null;
+  uom_5?: string | null;
+  uom_6?: string | null;
+};
+
 const WORK_TYPE_GROUPS: Record<string, string[]> = {
   MPT: ['MPT'],
-  LANE_CLOSURE: ['LANE CLOSURE'],
+  LANE_CLOSURE: ['LANE_CLOSURE', 'LANE CLOSURE'],
   FLAGGING: ['FLAGGING'],
-  PERMANENT_SIGNS: ['PERMANENT SIGN'],
+  PERMANENT_SIGNS: ['PERMANENT_SIGNS', 'PERMANENT SIGN', 'PERMANENT SIGNS'],
   SERVICE: ['SERVICE'],
   DELIVERY: ['DELIVERY'],
   RENTAL: ['RENTAL'],
@@ -365,31 +379,61 @@ export async function POST(request: NextRequest) {
 
     const relevantWorkTypes = getRelevantWorkTypes(takeoffData.work_type);
 
-    // Fetch SOV items for this job and derive work order items directly from matching SOV entries.
-    const { data: sovEntries } = await supabase
+    // Fetch SOV entries for this job and hydrate master items separately because
+    // sov_entries.sov_item_id is not declared as a relational foreign key in Supabase.
+    const { data: sovEntries, error: sovEntriesError } = await supabase
       .from('sov_entries')
-      .select('quantity, sort_order, sov_items!inner(id, item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6)')
+      .select('sov_item_id, quantity, sort_order')
       .eq('job_id', sourceTakeoff.job_id)
       .order('sort_order', { ascending: true });
 
-    const sovItems: SOVLookupItem[] = (sovEntries || [])
-      .map((entry: any) => ({
-        id: Number(entry?.sov_items?.id),
-        item_number: String(entry?.sov_items?.item_number || ''),
-        description: String(entry?.sov_items?.display_name || entry?.sov_items?.description || ''),
-        work_type: entry?.sov_items?.work_type ?? null,
-        uom:
-          entry?.sov_items?.uom_1 ??
-          entry?.sov_items?.uom_2 ??
-          entry?.sov_items?.uom_3 ??
-          entry?.sov_items?.uom_4 ??
-          entry?.sov_items?.uom_5 ??
-          entry?.sov_items?.uom_6 ??
-          null,
-        quantity: entry?.quantity ?? null,
-        sort_order: entry?.sort_order ?? null,
-      }))
-      .filter((s: any) => Boolean(s.id));
+    if (sovEntriesError) {
+      console.error('[WO from takeoff] Failed to fetch SOV entries', sovEntriesError);
+      return NextResponse.json({ error: 'Failed to fetch SOV entries' }, { status: 500 });
+    }
+
+    const sovItemIds = Array.from(
+      new Set((sovEntries || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
+    );
+
+    const { data: masterItems, error: masterItemsError } = sovItemIds.length > 0
+      ? await supabase
+          .from('sov_items')
+          .select('id, item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
+          .in('id', sovItemIds)
+      : { data: [], error: null };
+
+    if (masterItemsError) {
+      console.error('[WO from takeoff] Failed to hydrate SOV master items', masterItemsError);
+      return NextResponse.json({ error: 'Failed to fetch SOV master items' }, { status: 500 });
+    }
+
+    const masterById = new Map<number, SOVMasterItem>(
+      ((masterItems || []) as SOVMasterItem[]).map((item) => [Number(item.id), item] as [number, SOVMasterItem])
+    );
+
+    const sovItems: SOVLookupItem[] = ((sovEntries || []) as Array<{ sov_item_id: number | null; quantity?: number | null; sort_order?: number | null }>)
+      .reduce<SOVLookupItem[]>((acc, entry) => {
+        const master = entry?.sov_item_id ? masterById.get(Number(entry.sov_item_id)) : undefined;
+        if (!master) return acc;
+
+        acc.push({
+          id: Number(master.id),
+          item_number: String(master.item_number || ''),
+          description: String(master.display_name || master.description || ''),
+          work_type: master.work_type ?? null,
+          uom:
+            master.uom_1 ??
+            master.uom_2 ??
+            master.uom_3 ??
+            master.uom_4 ??
+            master.uom_5 ??
+            master.uom_6 ??
+            null,
+          quantity: entry?.quantity ?? null,
+        });
+        return acc;
+      }, []);
 
     const matchedSovItems = sovItems.filter((item) => {
       const itemWorkType = normalizeUpper(item.work_type);

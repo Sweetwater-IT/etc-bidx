@@ -269,6 +269,24 @@ const WorkOrderDetail = ({
     [sovItems, itemPickerSearch]
   );
 
+  const primaryWorkOrderItems = useMemo(
+    () =>
+      woItems.filter((item) => {
+        if (item.sov_item_id) return true;
+        return Boolean(String(item.description || '').trim());
+      }),
+    [woItems]
+  );
+
+  const additionalWorkOrderItems = useMemo(
+    () =>
+      woItems.filter((item) => {
+        if (item.sov_item_id) return false;
+        return !String(item.description || '').trim();
+      }),
+    [woItems]
+  );
+
   // Blocking modal
   const [blockingModalOpen, setBlockingModalOpen] = useState(false);
   const [blockingModalType, setBlockingModalType] = useState<"takeoff" | "items">("takeoff");
@@ -1322,14 +1340,14 @@ const WorkOrderDetail = ({
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               Work Order Items
             </h2>
-            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => item.sov_item_id).length} SOV items</Badge>
+            <Badge variant="secondary" className="text-[10px]">{primaryWorkOrderItems.length} items</Badge>
           </div>
 
           {loadingRelated ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : woItems.filter(item => item.sov_item_id).length === 0 ? (
+          ) : primaryWorkOrderItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No SOV items found. Work order items will be automatically populated from the Schedule of Values when a takeoff is linked.
             </div>
@@ -1347,7 +1365,7 @@ const WorkOrderDetail = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {woItems.filter(item => item.sov_item_id).map((item) => (
+                  {primaryWorkOrderItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="p-1.5">
                         {canEdit ? (
@@ -1592,14 +1610,14 @@ const WorkOrderDetail = ({
               <Plus className="h-4 w-4 text-muted-foreground" />
               Additional Items
             </h2>
-            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => !item.sov_item_id).length} custom items</Badge>
+            <Badge variant="secondary" className="text-[10px]">{additionalWorkOrderItems.length} additional items</Badge>
           </div>
 
           {loadingRelated ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : woItems.filter(item => !item.sov_item_id).length === 0 ? (
+          ) : additionalWorkOrderItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No additional items. Custom items added manually will appear here.
             </div>
@@ -1617,7 +1635,7 @@ const WorkOrderDetail = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {woItems.filter(item => !item.sov_item_id).map((item) => (
+                  {additionalWorkOrderItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="p-1.5">
                         {canEdit ? (
