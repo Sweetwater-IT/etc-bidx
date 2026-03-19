@@ -77,7 +77,6 @@ export async function PUT(
           display_name: description || item_number || undefined,
           work_type: work_type ?? undefined,
           uom_1: uom ?? undefined,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', entryData.sov_item_id);
 
