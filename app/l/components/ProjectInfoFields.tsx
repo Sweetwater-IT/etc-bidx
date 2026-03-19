@@ -28,6 +28,7 @@ import {
 import { addDays, format } from "date-fns";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
 
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
@@ -64,50 +65,26 @@ const RateField = ({
   value: string | null;
   onUpdate: (field: keyof JobProjectInfo, value: string) => void;
 }) => {
-  const [localValue, setLocalValue] = useState(value || "");
-  const [focused, setFocused] = useState(false);
+  const [localValue, setLocalValue] = useState(parseFloat(value || "0") || 0);
 
-  // Sync from parent only when NOT focused (prevents cursor jump)
   useEffect(() => {
-    if (!focused) {
-      setLocalValue(value || "");
-    }
-  }, [value, focused]);
-
-  const displayValue = !focused && localValue && !isNaN(parseFloat(localValue))
-    ? parseFloat(localValue).toFixed(2)
-    : localValue;
+    setLocalValue(parseFloat(value || "0") || 0);
+  }, [value]);
 
   return (
     <div>
       <Label htmlFor={id} className="text-xs">{label}</Label>
-      <Input
-        id={id}
-        className="h-8 text-sm"
-        type="text"
-        inputMode="decimal"
-        placeholder="0.00"
-        value={displayValue}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          const cleaned = localValue.replace(/[^0-9.]/g, "");
-          const parsed = parseFloat(cleaned);
-          if (!isNaN(parsed)) {
-            const formatted = parsed.toFixed(2);
-            setLocalValue(formatted);
-            onUpdate(field, formatted);
-          } else if (localValue === "") {
-            onUpdate(field, "");
-          }
+      <DollarPercentCurrencyInputField
+        type="dollar"
+        fixedType="dollar"
+        value={localValue}
+        onTypeChange={() => {}}
+        onValueChange={(nextValue) => {
+          setLocalValue(nextValue);
+          onUpdate(field, nextValue ? nextValue.toFixed(2) : "");
         }}
-        onChange={(e) => {
-          const val = e.target.value;
-          if (val === "" || /^\d*\.?\d*$/.test(val)) {
-            setLocalValue(val);
-            onUpdate(field, val);
-          }
-        }}
+        aria-label={label}
+        className="h-8"
       />
     </div>
   );
@@ -139,7 +116,7 @@ const CertifiedPayrollSection = ({
   };
 
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
       <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         Certified Payroll Information
@@ -218,7 +195,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   // Database-driven data
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
-  const [counties, setCounties] = useState<string[]>([]);
+  const [counties, setCounties] = useState<Array<{ name: string; branch: string | null }>>([]);
   const [projectManagers, setProjectManagers] = useState<Array<{ id: string; branch_id: number | null; full_name: string }>>([]);
 
   useEffect(() => {
@@ -231,8 +208,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           setBranches(branchesResult.data);
         }
 
-        // Fetch counties (names only)
-        const countiesResponse = await fetch("/api/counties?namesOnly=true");
+        // Fetch counties with branch metadata so county selection can set the branch
+        const countiesResponse = await fetch("/api/counties?limit=1000");
         const countiesResult = await countiesResponse.json();
         if (countiesResult.success && countiesResult.data) {
           setCounties(countiesResult.data);
@@ -386,7 +363,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [countyOpen, setCountyOpen] = useState(false);
   const [countySearch, setCountySearch] = useState("");
   const filteredCounties = useMemo(
-    () => counties.filter((c) => c.toLowerCase().includes(countySearch.toLowerCase())),
+    () =>
+      counties.filter((c) =>
+        c.name.toLowerCase().includes(countySearch.toLowerCase())
+      ),
     [counties, countySearch]
   );
 
@@ -411,7 +391,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   return (
     <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
       {/* Project Details */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <Building className="h-4 w-4 text-muted-foreground" />
           Project Details
@@ -483,18 +463,40 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   <CommandList>
                     <CommandEmpty>No county found.</CommandEmpty>
                     <CommandGroup>
-                      {filteredCounties.map((c) => (
+                      {filteredCounties.map((county) => (
                         <CommandItem
-                          key={c}
-                          value={c}
+                          key={county.name}
+                          value={`${county.name} ${county.branch || ""}`}
                           onSelect={() => {
-                            update("county", c);
+                            const nextBranch = county.branch || "";
+                            const currentPm = projectInfo.etcProjectManager;
+                            const nextBranchId = nextBranch
+                              ? branches.find((b) => b.name.toLowerCase() === nextBranch.toLowerCase())?.id ?? null
+                              : null;
+                            const nextAvailablePMs = nextBranchId
+                              ? projectManagers.filter((pm) => pm.branch_id === nextBranchId)
+                              : projectManagers;
+
+                            onChange({
+                              ...projectInfo,
+                              county: county.name,
+                              etcBranch: nextBranch || projectInfo.etcBranch,
+                              etcProjectManager:
+                                currentPm && !nextAvailablePMs.some((pm) => pm.full_name === currentPm)
+                                  ? ""
+                                  : currentPm,
+                            });
                             setCountyOpen(false);
                             setCountySearch("");
                           }}
                         >
-                          <Check className={cn("mr-2 h-3 w-3", projectInfo.county === c ? "opacity-100" : "opacity-0")} />
-                          {c}
+                          <Check className={cn("mr-2 h-3 w-3", projectInfo.county === county.name ? "opacity-100" : "opacity-0")} />
+                          <div className="flex min-w-0 flex-col">
+                            <span>{county.name}</span>
+                            {county.branch ? (
+                              <span className="text-[10px] text-muted-foreground">{county.branch}</span>
+                            ) : null}
+                          </div>
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -685,7 +687,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       </div>
 
 
-      <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
           Customer Admin Information
@@ -894,7 +896,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
 
       {/* Other Notes */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
           Additional Notes

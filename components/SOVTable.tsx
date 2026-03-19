@@ -95,7 +95,7 @@ function getFirstNonNullUom(master: SovMasterItem): string {
 
 function getAvailableUoms(master: SovMasterItem): string[] {
   const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
-  return uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '');
+  return Array.from(new Set(uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '')));
 }
 
 export const SOVTable = ({
@@ -481,14 +481,14 @@ export const SOVTable = ({
 
   if (sovLoading) {
     return (
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
         <div className="text-center py-8 text-muted-foreground">Loading SOV items...</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
           <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -528,7 +528,7 @@ export const SOVTable = ({
           No line items yet. Click Add Line Item to begin.
         </div>
       ) : (
-        <div className="overflow-x-auto max-w-full">
+        <div className="max-w-full min-w-0 overflow-x-auto">
           <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>

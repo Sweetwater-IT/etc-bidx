@@ -596,14 +596,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   if (!isNew && isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center bg-background">
         <p className="text-muted-foreground">Loading contract…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-w-0 bg-slate-50">
       <NewRecordStickyPageHeader
         backLabel="Contracts"
         onBack={async () => {
@@ -631,7 +631,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
       {/* Signed contract info banner */}
       {isSigned && (
-        <div className="max-w-7xl mx-auto px-4 pt-3">
+        <div className="mx-auto max-w-7xl min-w-0 px-4 pt-3">
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
             <Lock className="h-4 w-4 text-primary shrink-0" />
             <p className="text-xs text-primary font-medium">
@@ -641,7 +641,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12 space-y-8">
+      <div className="mx-auto max-w-7xl min-w-0 px-4 py-8 sm:py-12 space-y-8">
         <ChecklistHeader title={checklistTitle} description={checklistDescription} />
 
         {/* Admin Info — always editable */}
@@ -654,7 +654,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         />
 
         {/* Schedule of Values */}
-        <div>
+        <div className="min-w-0">
           <SOVTable
             contractId={contractId}
             readOnly={false}

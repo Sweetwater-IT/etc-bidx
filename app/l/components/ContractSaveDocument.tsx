@@ -97,7 +97,7 @@ export const ContractSaveDocument = ({
   return (
     <div className="space-y-8">
       {/* Uploaded / Saved Documents */}
-      <div className="rounded-xl border bg-card p-6">
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-semibold text-foreground">Saved Documents</h3>

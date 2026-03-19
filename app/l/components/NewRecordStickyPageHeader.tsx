@@ -58,7 +58,7 @@ export function NewRecordStickyPageHeader({
   const showStatusText = saveStatusMessage !== '';
 
   return (
-    <header className="border-b bg-card sticky top-0 z-10">
+    <header className="sticky top-11 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3 min-w-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Button

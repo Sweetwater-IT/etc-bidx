@@ -14,8 +14,8 @@ export default function ContractViewPage() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
+      <SidebarInset className="min-w-0 bg-slate-50">
+        <SiteHeader showTitleBlock={false} />
         <ContractViewContent />
       </SidebarInset>
     </SidebarProvider>
