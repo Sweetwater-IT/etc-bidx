@@ -26,6 +26,22 @@ const hasValue = (value: unknown) => {
   return true;
 };
 
+const getAdditionalItemName = (item: Record<string, any> | null | undefined) => {
+  const rawName = typeof item?.name === 'string' ? item.name.trim() : '';
+  const rawDescription = typeof item?.description === 'string' ? item.description.trim() : '';
+  const genericNames = new Set(['', 'additional item', 'additional items', '__custom']);
+
+  if (!genericNames.has(rawName.toLowerCase())) {
+    return rawName;
+  }
+
+  if (rawDescription) {
+    return rawDescription;
+  }
+
+  return 'Additional Item';
+};
+
 const isConfiguredRow = (row: Record<string, any> | null | undefined) =>
   Boolean(
     row &&
@@ -171,12 +187,8 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
   const additionalItems = Array.isArray(takeoff.additional_items) ? takeoff.additional_items : [];
   for (const item of additionalItems) {
-    const productName = item?.name === '__custom'
-      ? item?.description || 'Custom Item'
-      : item?.name || 'Additional Item';
-
     items.push({
-      product_name: productName,
+      product_name: getAdditionalItemName(item),
       category: 'Additional Items',
       unit: 'EA',
       quantity: Number(item?.quantity || 0),
@@ -221,8 +233,18 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
     for (const item of takeoffItems || []) {
       const details = (item.sign_details && typeof item.sign_details === 'object') ? item.sign_details : {};
+      const isAdditionalItem =
+        String(item.category || '').toLowerCase().includes('additional') ||
+        details?.itemType === 'additional';
+      const fallbackAdditionalName = isAdditionalItem
+        ? getAdditionalItemName({
+            name: item.product_name,
+            description: details?.description || item.notes || item.sign_description,
+          })
+        : item.product_name || '';
+
       items.push({
-        product_name: item.product_name || '',
+        product_name: fallbackAdditionalName,
         category: item.category || '',
         unit: item.unit || 'EA',
         quantity: item.quantity || 0,
