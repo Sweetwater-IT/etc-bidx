@@ -162,10 +162,14 @@ const WorkOrderDetail = ({
   workOrderId,
   takeoffId,
   mode = "edit",
+  onSaveStateChange,
+  onSaveActionReady,
 }: {
   workOrderId: string;
   takeoffId?: string;
   mode?: "view" | "edit";
+  onSaveStateChange?: (state: { isSaving: boolean; lastSavedAt: Date | null; firstSave: boolean }) => void;
+  onSaveActionReady?: (saveAction: () => Promise<void>) => void;
 }) => {
   const router = useRouter();
   const { user } = useAuth();
@@ -212,6 +216,11 @@ const WorkOrderDetail = ({
   const [editPickupDate, setEditPickupDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const saveHandlerRef = useRef<() => Promise<void>>(async () => {});
+  const performSaveRef = useRef<(redirectOnSuccess: boolean) => Promise<void>>(async () => {});
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editSnapshotRef = useRef("");
+  const editStateInitializedRef = useRef(false);
 
   // SOV picklist state
   const [sovItems, setSovItems] = useState<{ id: string; item_number: string; description: string; quantity: number; uom: string }[]>([]);
@@ -294,6 +303,40 @@ const WorkOrderDetail = ({
 
   // Combined readiness
   const readyToSchedule = hasTakeoff && hasWoItems && buildComplete;
+
+  const getEditSnapshot = useCallback(
+    () =>
+      JSON.stringify({
+        editTitle,
+        editDescription,
+        editNotes,
+        editScheduledDate,
+        editAssignedTo,
+        editContractedOrAdditional,
+        editCustomerPocPhone,
+        editInstallDate,
+        editPickupDate,
+      }),
+    [
+      editAssignedTo,
+      editContractedOrAdditional,
+      editCustomerPocPhone,
+      editDescription,
+      editInstallDate,
+      editNotes,
+      editPickupDate,
+      editScheduledDate,
+      editTitle,
+    ]
+  );
+
+  useEffect(() => {
+    onSaveStateChange?.({
+      isSaving: saving,
+      lastSavedAt,
+      firstSave: Boolean(lastSavedAt),
+    });
+  }, [lastSavedAt, onSaveStateChange, saving]);
 
   // Fetch work order data (skip for new work orders)
   useEffect(() => {
@@ -461,7 +504,13 @@ const WorkOrderDetail = ({
     }
   }, [takeoffs]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (!workOrder || (takeoffs.length === 0 && !isNewWorkOrder)) return;
+    editSnapshotRef.current = getEditSnapshot();
+    editStateInitializedRef.current = true;
+  }, [getEditSnapshot, isNewWorkOrder, takeoffs, workOrder]);
+
+  const handleSave = async ({ redirectOnSuccess = mode === "edit" }: { redirectOnSuccess?: boolean } = {}) => {
     if (!workOrderId) return;
     setSaving(true);
     try {
@@ -549,9 +598,10 @@ const WorkOrderDetail = ({
           setWorkOrder(data);
         }
         fetchRelated();
+        editSnapshotRef.current = getEditSnapshot();
 
         // When saving from the edit page, send the user back to the read-only view
-        if (mode === "edit" && workOrder?.job_id) {
+        if (redirectOnSuccess && mode === "edit" && workOrder?.job_id) {
           const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
           router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/view${qs}`);
         }
@@ -562,6 +612,37 @@ const WorkOrderDetail = ({
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    saveHandlerRef.current = () => handleSave({ redirectOnSuccess: true });
+    performSaveRef.current = (redirectOnSuccess: boolean) => handleSave({ redirectOnSuccess });
+  });
+
+  useEffect(() => {
+    if (!onSaveActionReady) return;
+    onSaveActionReady(() => saveHandlerRef.current());
+  }, [onSaveActionReady]);
+
+  useEffect(() => {
+    if (mode !== "edit" || isNewWorkOrder || !editStateInitializedRef.current) return;
+
+    const currentSnapshot = getEditSnapshot();
+    if (currentSnapshot === editSnapshotRef.current) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      void performSaveRef.current(false);
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [getEditSnapshot, isNewWorkOrder, mode]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!workOrderId || !workOrder) return;

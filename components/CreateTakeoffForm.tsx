@@ -39,6 +39,7 @@ import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
 import { QuantityInput } from "@/components/ui/quantity-input";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { formatTakeoffPageTitle } from "@/app/l/utils/pageTitles";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -189,6 +190,7 @@ export const CreateTakeoffForm = ({
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
   const { user } = useAuth();
   const info = dbJob?.projectInfo;
+  const jobLabel = info?.etcJobNumber?.toString() || info?.projectName || "Project";
 
   // Fetch allowed work types from job's SOV entries
   const [allowedWorkTypes, setAllowedWorkTypes] = useState<string[]>([]);
@@ -288,6 +290,14 @@ export const CreateTakeoffForm = ({
   const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string }[]>([]);
 
   const isPermanentSigns = workType === "PERMANENT_SIGNS";
+  const resolvedPageTitle = pageTitle || formatTakeoffPageTitle({
+    workType,
+    isPickup: Boolean(draftTakeoff?.is_pickup),
+    jobLabel,
+  });
+  const resolvedPageDescription =
+    pageDescription ||
+    `Manage takeoff details, work types, materials, and scheduling information for ${jobLabel}.`;
 
   const installDateValue = parseDateString(installDate);
   const pickupDateValue = parseDateString(pickupDate);
@@ -449,6 +459,8 @@ export const CreateTakeoffForm = ({
       setTakeoffSaved(true);
       setSaveStatus('saved');
       setLastSaved(draftTakeoff.updated_at ? new Date(draftTakeoff.updated_at) : new Date());
+      setFirstSave(true);
+      setHasUnsavedChanges(false);
     }
   }, [draftTakeoff]);
 
@@ -795,9 +807,7 @@ export const CreateTakeoffForm = ({
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-      {pageTitle ? (
-        <PageTitleBlock title={pageTitle} description={pageDescription} />
-      ) : null}
+      <PageTitleBlock title={resolvedPageTitle} description={resolvedPageDescription} />
 
       {/* Project Info */}
       <div className="rounded-lg border bg-card shadow-sm">

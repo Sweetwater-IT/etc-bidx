@@ -174,6 +174,12 @@ export const SOVTable = ({
     });
   }, [sovProducts, selectorSearch]);
 
+  const customUomOptions = useMemo(() => {
+    const allUoms = sovProducts.flatMap((product) => getAvailableUoms(product));
+    const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "")));
+    return deduped.length > 0 ? deduped : ["EA"];
+  }, [sovProducts]);
+
   const addRow = () => {
     // Check if change order is required for signed contracts
     if (isSignedContract && !changeOrderApproved && onEditAttempt) {
@@ -406,7 +412,7 @@ export const SOVTable = ({
         id: newId,
         itemNumber: '',
         description: '',
-        uom: 'EA',
+        uom: customUomOptions[0] || 'EA',
         quantity: 0,
         unitPrice: 0,
         extendedPrice: 0,
@@ -420,7 +426,7 @@ export const SOVTable = ({
         rowId: newId,
         itemNumber: '',
         description: '',
-        uom: 'EA',
+        uom: customUomOptions[0] || 'EA',
         quantity: 0,
         unitPrice: 0,
         retainageType: 'dollar',
@@ -538,7 +544,7 @@ export const SOVTable = ({
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
                 <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
-                <TableHead className="w-[280px] text-xs text-right">Retainage</TableHead>
+                <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>
                 <TableHead className="w-[40px] text-xs text-center">Notes</TableHead>
                 <TableHead className="w-[40px]" />
@@ -1011,11 +1017,21 @@ export const SOVTable = ({
               <div className="grid grid-cols-3 gap-3">
                 <div className="grid gap-1.5">
                   <label className="text-xs">UOM</label>
-                  <Input
-                    className="h-8 text-sm"
+                  <Select
                     value={customDraft.uom}
-                    onChange={(e) => setCustomDraft({ ...customDraft, uom: e.target.value })}
-                  />
+                    onValueChange={(value) => setCustomDraft({ ...customDraft, uom: value })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customUomOptions.map((uom) => (
+                        <SelectItem key={uom} value={uom}>
+                          {uom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid gap-1.5">
                   <label className="text-xs">Qty</label>

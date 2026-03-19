@@ -6,8 +6,6 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 
 export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
   const router = useRouter();
-  const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);
@@ -18,8 +16,6 @@ export default function CreateTakeoffPageContent({ jobId }: { jobId: string }) {
       <CreateTakeoffForm
         jobId={jobId}
         onBack={handleBack}
-        pageTitle="Create Takeoff"
-        pageDescription={`Create a new takeoff for ${jobName}. Configure work types, materials, and scheduling details.`}
         backLabel="Job"
       />
     </div>

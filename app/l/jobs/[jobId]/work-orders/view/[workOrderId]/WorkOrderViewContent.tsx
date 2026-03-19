@@ -10,16 +10,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-
-const WORK_TYPES = [
-  { value: "MPT", label: "MPT" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
-  { value: "FLAGGING", label: "Flagging" },
-  { value: "LANE_CLOSURE", label: "Lane Closure" },
-  { value: "SERVICE", label: "Service" },
-  { value: "DELIVERY", label: "Delivery" },
-  { value: "RENTAL", label: "Rental" },
-];
+import { formatWorkOrderPageTitle } from "@/app/l/utils/pageTitles";
 
 export default function WorkOrderViewContent({
   workOrderId,
@@ -236,20 +227,11 @@ export default function WorkOrderViewContent({
   };
 
   const getTitle = () => {
-    if (!workOrderData) return "Work Order Details";
-
-    if (workOrderData.isPickup) {
-      return `Pickup workorder for ${jobName}`;
-    }
-
-    // Get work type from the associated takeoff
-    const takeoff = workOrderData.takeoffs?.[0];
-    if (takeoff) {
-      const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
-      return workTypeLabel ? `${workTypeLabel} work order for ${jobName}` : `Work order for ${jobName}`;
-    }
-
-    return `Work order for ${jobName}`;
+    return formatWorkOrderPageTitle({
+      workType: workOrderData?.takeoffs?.[0]?.work_type,
+      isPickup: workOrderData?.isPickup,
+      jobLabel: jobName,
+    });
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -30,17 +30,28 @@ export function NewRecordStickyPageHeader({
 }: NewRecordStickyPageHeaderProps) {
   const [secondCounter, setSecondCounter] = useState(0);
 
-  // Counter logic - exactly like sign order page
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setSecondCounter(prev => prev + 1);
-    }, 1000);
+    if (!firstSave || !lastSavedAt) {
+      setSecondCounter(0);
+      return;
+    }
+
+    const syncCounter = () => {
+      const secondsSinceSave = Math.max(
+        0,
+        Math.floor((Date.now() - lastSavedAt.getTime()) / 1000)
+      );
+      setSecondCounter(secondsSinceSave);
+    };
+
+    syncCounter();
+    const intervalId = setInterval(syncCounter, 1000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [firstSave, lastSavedAt]);
 
   const getSaveStatusMessage = useCallback(() => {
-    if (isSaving && !firstSave) return 'Saving...';
+    if (isSaving) return 'Saving...';
     if (!firstSave) return '';
 
     if (secondCounter < 60) {

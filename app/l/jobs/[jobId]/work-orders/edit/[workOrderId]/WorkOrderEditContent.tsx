@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
-import { useUpdateWorkOrder } from "@/hooks/useWorkOrders";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { formatWorkOrderPageTitle } from "@/app/l/utils/pageTitles";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 
 export default function WorkOrderEditContent({
@@ -18,8 +19,37 @@ export default function WorkOrderEditContent({
 }) {
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
-  const { mutateAsync: updateWorkOrder } = useUpdateWorkOrder();
-  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
+  const jobLabel = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
+  const [workOrderMeta, setWorkOrderMeta] = useState<{ isPickup: boolean; workType?: string | null } | null>(null);
+  const [headerState, setHeaderState] = useState<{
+    isSaving: boolean;
+    lastSavedAt: Date | null;
+    firstSave: boolean;
+  }>({
+    isSaving: false,
+    lastSavedAt: null,
+    firstSave: false,
+  });
+  const [saveAction, setSaveAction] = useState<(() => Promise<void>) | null>(null);
+
+  useEffect(() => {
+    const loadWorkOrderMeta = async () => {
+      try {
+        const response = await fetch(`/api/workorders/${workOrderId}/detail`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        setWorkOrderMeta({
+          isPickup: Boolean(data?.isPickup),
+          workType: data?.takeoffs?.[0]?.work_type || null,
+        });
+      } catch (error) {
+        console.error("Error loading work order details:", error);
+      }
+    };
+
+    loadWorkOrderMeta();
+  }, [workOrderId]);
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);
@@ -27,10 +57,13 @@ export default function WorkOrderEditContent({
 
   const handleDone = async () => {
     try {
-      // For now, just route to view page since the WorkOrderDetail component handles its own saving
+      if (saveAction) {
+        await saveAction();
+        return;
+      }
       router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`);
     } catch (error) {
-      console.error('Error saving work order:', error);
+      console.error("Error saving work order:", error);
     }
   };
 
@@ -40,15 +73,28 @@ export default function WorkOrderEditContent({
         backLabel="Job"
         onBack={handleBack}
         onDone={handleDone}
+        isSaving={headerState.isSaving}
+        lastSavedAt={headerState.lastSavedAt}
+        firstSave={headerState.firstSave}
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         <PageTitleBlock
-          title="Edit Work Order"
-          description={`Edit work order details for ${jobName}.`}
+          title={formatWorkOrderPageTitle({
+            workType: workOrderMeta?.workType,
+            isPickup: workOrderMeta?.isPickup,
+            jobLabel,
+          })}
+          description={`Edit work order details for ${jobLabel}.`}
         />
 
-        <WorkOrderDetail workOrderId={workOrderId} takeoffId={takeoffId} mode="edit" />
+        <WorkOrderDetail
+          workOrderId={workOrderId}
+          takeoffId={takeoffId}
+          mode="edit"
+          onSaveStateChange={setHeaderState}
+          onSaveActionReady={(action) => setSaveAction(() => action)}
+        />
       </div>
     </div>
   );

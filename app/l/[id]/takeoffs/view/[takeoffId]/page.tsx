@@ -14,16 +14,7 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ProjectFooter } from "@/components/ProjectFooter";
-
-const WORK_TYPES = [
-  { value: "MPT", label: "MPT" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
-  { value: "FLAGGING", label: "Flagging" },
-  { value: "LANE_CLOSURE", label: "Lane Closure" },
-  { value: "SERVICE", label: "Service" },
-  { value: "DELIVERY", label: "Delivery" },
-  { value: "RENTAL", label: "Rental" },
-];
+import { formatTakeoffPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
 export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
@@ -85,14 +76,11 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   }, [takeoffId]);
 
   const getTitle = () => {
-    if (!takeoff) return `Takeoff for ${jobName}`;
-
-    if (takeoff.is_pickup) {
-      return `Pick up takeoff for ${jobName}`;
-    }
-
-    const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
-    return workTypeLabel ? `${workTypeLabel} takeoff for ${jobName}` : `Takeoff for ${jobName}`;
+    return formatTakeoffPageTitle({
+      workType: takeoff?.work_type,
+      isPickup: takeoff?.is_pickup,
+      jobLabel: jobName,
+    });
   };
 
   return (
@@ -280,7 +268,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
         <div className="min-w-0">
           <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
           <p className="text-xs text-muted-foreground truncate">
-            {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
+            {getWorkTypeLabel(takeoff?.work_type) || "—"}
           </p>
         </div>
       }

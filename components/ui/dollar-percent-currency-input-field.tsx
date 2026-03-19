@@ -37,7 +37,7 @@ export function DollarPercentCurrencyInputField({
   const textSizeClass = size === 'sm' ? 'text-xs' : 'text-sm';
   const selectWidth = size === 'sm' ? 'w-10' : 'w-12';
   const effectiveType = fixedType || type;
-  const inputWidth = size === 'sm' ? 'w-[125px]' : 'flex-1';
+  const inputWidth = size === 'sm' ? 'w-[160px]' : 'flex-1';
 
   return (
     <div className={cn('flex items-center border rounded-md bg-background overflow-hidden', heightClass, className)}>
