@@ -131,6 +131,7 @@ export async function POST(
       sov_item_id,
       item_number,
       description,
+      work_type,
       uom,
       quantity,
       unit_price,
