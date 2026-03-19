@@ -139,34 +139,68 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
   return y;
 }
 
+function splitCellText(doc: jsPDF, value: string | number | null | undefined, width: number): string[] {
+  const text = value === null || value === undefined || value === "" ? "—" : String(value);
+  return doc.splitTextToSize(text, Math.max(4, width));
+}
+
+function getLineHeight(lineCount: number, minHeight = 6, lineStep = 3.5): number {
+  return Math.max(minHeight, lineCount * lineStep);
+}
+
+async function drawEtcLogo(doc: jsPDF, pageW: number, marginLeft: number) {
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+      img.src = "/logo.jpg";
+    });
+    const logoH = 12;
+    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
+    doc.addImage(img, "JPEG", marginLeft, 6, logoW, logoH);
+  } catch {
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 64, 120);
+    doc.text("ETC", marginLeft, 14);
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("ESTABLISHED TRAFFIC CONTROL", marginLeft, 17.5);
+    doc.setTextColor(0);
+  }
+}
+
 // MPT columns: [#], Designation, Legend, Dimensions, Sheeting, Qty, Sq Ft, Structure, Lights, Cover
 // Type III has # column hanging left; all other columns align with non-Type-III
 // Landscape page width ~297mm; usable area 14..283 = 269mm
 const MPT_COLS_ORDERED = [
   { label: "LOAD", x: 14, w: 8 },
-  { label: "DESIG", x: 22, w: 22 },
-  { label: "LEGEND", x: 44, w: 96 },
-  { label: "DIM", x: 140, w: 18 },
-  { label: "SHEET", x: 158, w: 14 },
-  { label: "QTY", x: 172, w: 8 },
-  { label: "SQ FT", x: 180, w: 18 },
-  { label: "STRUCTURE", x: 198, w: 38 },
-  { label: "MATL", x: 236, w: 10 },
-  { label: "LIGHTS", x: 246, w: 8 },
-  { label: "COVER", x: 254, w: 12 },
+  { label: "DESIG", x: 22, w: 18 },
+  { label: "LEGEND", x: 40, w: 86 },
+  { label: "DIM", x: 126, w: 18 },
+  { label: "SHEET", x: 144, w: 16 },
+  { label: "QTY", x: 160, w: 10 },
+  { label: "STRUCTURE", x: 170, w: 42 },
+  { label: "LIGHTS", x: 212, w: 12 },
+  { label: "SQ FT", x: 224, w: 18 },
+  { label: "MATL", x: 242, w: 12 },
+  { label: "COVER", x: 266, w: 17 },
 ];
 
 const MPT_COLS = [
-  { label: "DESIG", x: 22, w: 22 },
-  { label: "LEGEND", x: 44, w: 100 },
-  { label: "DIM", x: 144, w: 18 },
-  { label: "SHEET", x: 162, w: 16 },
-  { label: "QTY", x: 178, w: 12 },
-  { label: "SQ FT", x: 190, w: 18 },
-  { label: "STRUCTURE", x: 208, w: 45 },
-  { label: "MATL", x: 253, w: 16 },
-  { label: "LIGHTS", x: 269, w: 12 },
-  { label: "COVER", x: 281, w: 16 },
+  { label: "DESIG", x: 22, w: 20 },
+  { label: "LEGEND", x: 42, w: 92 },
+  { label: "DIM", x: 134, w: 20 },
+  { label: "SHEET", x: 154, w: 16 },
+  { label: "QTY", x: 170, w: 12 },
+  { label: "STRUCTURE", x: 182, w: 42 },
+  { label: "LIGHTS", x: 224, w: 12 },
+  { label: "SQ FT", x: 236, w: 18 },
+  { label: "MATL", x: 254, w: 12 },
+  { label: "COVER", x: 266, w: 17 },
 ];
 
 const PERM_COLS = [
@@ -350,7 +384,7 @@ function renderPermSectionSummary(
   return y;
 }
 
-export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
+export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuffer | null> {
   const doc = new jsPDF({ orientation: "landscape" });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -359,6 +393,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
   const hasBuildShopNotes = !!data.buildShopNotes?.trim();
 
   if (hasCrewNotes || hasBuildShopNotes) {
+    await drawEtcLogo(doc, pageW, 14);
     // Cover page title
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
@@ -463,6 +498,7 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
     doc.addPage();
   }
 
+  await drawEtcLogo(doc, pageW, 14);
   // ── Title line ──
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -606,10 +642,6 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       const lowerCategory  = category.toLowerCase().trim();
       const parsedItems = items.map((item) => tryParseNotes(item.notes));
 
-      console.log(
-        `[PDF] Category "${category}" (${items.length} items) | Work type: "${data.workType || '(none)'}"`
-      );
-
       // ── Job type detection ────────────────────────────────────────────────
       const isPermanentJob =
         lowerWorkType.includes("perm") ||
@@ -638,37 +670,22 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
       if (lowerCategory.includes("vehicle") || parsedItems.some((meta) => meta?.itemType === "vehicle")) {
         isVehicle = true;
         columnsUsed = VEHICLE_COLS;
-        console.log("[PDF] → VEHICLE COLUMNS");
-        console.log("     ", VEHICLE_COLS.map(c => c.label).join(" | "));
       } else if (lowerCategory.includes("rolling stock") || parsedItems.some((meta) => meta?.itemType === "rolling_stock")) {
         isRollingStock = true;
         columnsUsed = ROLLING_STOCK_COLS;
-        console.log("[PDF] → ROLLING STOCK COLUMNS");
-        console.log("     ", ROLLING_STOCK_COLS.map(c => c.label).join(" | "));
       } else if (lowerCategory.includes("additional") || parsedItems.some((meta) => meta?.itemType === "additional")) {
         isAdditional = true;
         columnsUsed = ADDITIONAL_COLS;
-        console.log("[PDF] → ADDITIONAL COLUMNS");
-        console.log("     ", ADDITIONAL_COLS.map(c => c.label).join(" | "));
       } else if (isPermanentJob && isPermanentEntryItems(items)) {
         isPermanentEntry = true;
         columnsUsed = PERM_ENTRY_COLS;
-        console.log("[PDF] → PERMANENT ENTRY COLUMNS");
-        console.log("     ", PERM_ENTRY_COLS.map(c => c.label).join(" | "));
       } else if (isPermanentJob) {
         isPerm = true;
         columnsUsed = PERM_COLS;
-        console.log("[PDF] → PERMANENT SIGN COLUMNS");
-        console.log("     ", PERM_COLS.map(c => c.label).join(" | "));
       } else if (shouldUseMPT) {
         isMPT = true;
         isTypeIII = isTypeIIICategory(category);
         columnsUsed = isTypeIII ? MPT_COLS_ORDERED : MPT_COLS;
-        console.log(`[PDF] → MPT COLUMNS ${isTypeIII ? "(with LOAD #)" : ""}`);
-        console.log("     ", columnsUsed.map(c => c.label).join(" | "));
-      } else {
-        console.log("[PDF] → SIMPLE COLUMNS (fallback – should be rare for signs)");
-        console.log("     ", SIMPLE_COLS.map(c => c.label).join(" | "));
       }
 
       _activeCols = columnsUsed;
@@ -684,22 +701,39 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           y = checkPageBreak(doc, y);
           const meta = tryParseNotes(item.notes);
 
-          const permLegendText = meta?.signLegend || "";
-          const permLegendLines = doc.splitTextToSize(permLegendText, PERM_COLS[1].w);
-          const permRowH = Math.max(6, permLegendLines.length * 3.5);
-          y = checkPageBreak(doc, y, permRowH);
-
-          doc.text((item.product_name || "").substring(0, 26), PERM_COLS[0].x, y);
-          doc.text(permLegendLines, PERM_COLS[1].x, y);
-          doc.text(meta?.dimensionLabel || "—", PERM_COLS[2].x, y);
-          doc.text(meta?.sheeting || "—", PERM_COLS[3].x, y);
-          doc.text(String(item.quantity), PERM_COLS[4].x, y);
-          doc.text(meta?.postSize || "—", PERM_COLS[5].x, y);
+          const designationLines = splitCellText(doc, item.product_name || "", PERM_COLS[0].w);
+          const permLegendLines = splitCellText(doc, meta?.signLegend || "", PERM_COLS[1].w);
+          const dimLines = splitCellText(doc, meta?.dimensionLabel || "—", PERM_COLS[2].w);
+          const postSizeLines = splitCellText(doc, meta?.postSize || "—", PERM_COLS[5].w);
           const planSheet = meta?.planSheetNum
             ? `${meta.planSheetNum}${meta.planSheetTotal ? ` of ${meta.planSheetTotal}` : ""}`
             : "—";
-          doc.text(planSheet, PERM_COLS[6].x, y);
-          doc.text(meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—", PERM_COLS[7].x, y);
+          const planSheetLines = splitCellText(doc, planSheet, PERM_COLS[6].w);
+          const sqftLines = splitCellText(
+            doc,
+            meta?.totalSqft ? String(Math.round(meta.totalSqft * 100) / 100) : "—",
+            PERM_COLS[7].w
+          );
+          const permRowH = getLineHeight(
+            Math.max(
+              designationLines.length,
+              permLegendLines.length,
+              dimLines.length,
+              postSizeLines.length,
+              planSheetLines.length,
+              sqftLines.length
+            )
+          );
+          y = checkPageBreak(doc, y, permRowH);
+
+          doc.text(designationLines, PERM_COLS[0].x, y);
+          doc.text(permLegendLines, PERM_COLS[1].x, y);
+          doc.text(dimLines, PERM_COLS[2].x, y);
+          doc.text(meta?.sheeting || "—", PERM_COLS[3].x, y);
+          doc.text(String(item.quantity), PERM_COLS[4].x, y);
+          doc.text(postSizeLines, PERM_COLS[5].x, y);
+          doc.text(planSheetLines, PERM_COLS[6].x, y);
+          doc.text(sqftLines, PERM_COLS[7].x, y);
 
           y += permRowH;
           doc.setDrawColor(220);
@@ -709,26 +743,33 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           // Secondary signs (perm)
           if (meta?.secondarySigns?.length) {
             for (const sec of meta.secondarySigns) {
-              y = checkPageBreak(doc, y);
+              const secDesignationLines = splitCellText(doc, sec.signDesignation || "", PERM_COLS[0].w - 8);
+              const secLegendLines = splitCellText(doc, sec.signLegend || "", PERM_COLS[1].w);
+              const secDimLines = splitCellText(doc, sec.dimensionLabel || "—", PERM_COLS[2].w);
+              const secSqftLines = splitCellText(doc, sec.sqft ? String(sec.sqft) : "—", PERM_COLS[7].w);
+              const secRowH = getLineHeight(
+                Math.max(secDesignationLines.length, secLegendLines.length, secDimLines.length, secSqftLines.length)
+              );
+              y = checkPageBreak(doc, y, secRowH);
               doc.setFillColor(248, 248, 250);
-              doc.rect(14, y - 3.5, pageW - 28, 6, "F");
+              doc.rect(14, y - 3.5, pageW - 28, secRowH, "F");
               doc.setDrawColor(220);
-              doc.line(14, y - 3.5, 14, y + 2.5);
+              doc.line(14, y - 3.5, 14, y + secRowH - 3.5);
               doc.setDrawColor(200);
               doc.setFont("helvetica", "italic");
               doc.setFontSize(7);
               doc.text("•", PERM_COLS[0].x + 2, y);
-              doc.text((sec.signDesignation || "").substring(0, 24), PERM_COLS[0].x + 8, y);
-              doc.text((sec.signLegend || "").substring(0, 44), PERM_COLS[1].x, y);
-              doc.text(sec.dimensionLabel || "—", PERM_COLS[2].x, y);
+              doc.text(secDesignationLines, PERM_COLS[0].x + 8, y);
+              doc.text(secLegendLines, PERM_COLS[1].x, y);
+              doc.text(secDimLines, PERM_COLS[2].x, y);
               doc.text(sec.sheeting || "—", PERM_COLS[3].x, y);
               doc.text("", PERM_COLS[4].x, y);
               doc.text("", PERM_COLS[5].x, y);
               doc.text("", PERM_COLS[6].x, y);
-              doc.text(sec.sqft ? String(sec.sqft) : "—", PERM_COLS[7].x, y);
+              doc.text(secSqftLines, PERM_COLS[7].x, y);
               doc.setFontSize(8);
               doc.setFont("helvetica", "normal");
-              y += 6;
+              y += secRowH;
             }
           }
         }
@@ -764,35 +805,51 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           y = checkPageBreak(doc, y);
           const meta = tryParseNotes(item.notes);
 
-          const desigText = cleanProductName(item.product_name || "", category).substring(0, 22);
-          const legendText = meta?.signLegend || "";
+          const desigLines = splitCellText(
+            doc,
+            cleanProductName(item.product_name || "", category),
+            (isTypeIII ? columnsUsed[1] : columnsUsed[0]).w
+          );
           const legendCol = isTypeIII ? MPT_COLS_ORDERED[2] : MPT_COLS[1];
-          const legendLines = doc.splitTextToSize(legendText, legendCol.w);
-          const rowH = Math.max(6, legendLines.length * 3.5);
+          const legendLines = splitCellText(doc, meta?.signLegend || "", legendCol.w);
+          const dimensionLines = splitCellText(doc, meta?.dimensionLabel || "—", (isTypeIII ? columnsUsed[3] : columnsUsed[2]).w);
+          const structureLines = splitCellText(
+            doc,
+            abbreviateStructure(meta?.structureType || "—"),
+            (isTypeIII ? columnsUsed[6] : columnsUsed[5]).w
+          );
+          const sqftLines = splitCellText(
+            doc,
+            meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—",
+            (isTypeIII ? columnsUsed[8] : columnsUsed[7]).w
+          );
+          const rowH = getLineHeight(
+            Math.max(desigLines.length, legendLines.length, dimensionLines.length, structureLines.length, sqftLines.length)
+          );
           y = checkPageBreak(doc, y, rowH);
 
           if (isTypeIII) {
             doc.text(String(idx + 1), columnsUsed[0].x, y);
-            doc.text(desigText, columnsUsed[1].x, y);
+            doc.text(desigLines, columnsUsed[1].x, y);
             doc.text(legendLines, columnsUsed[2].x, y);
-            doc.text(meta?.dimensionLabel || "—", columnsUsed[3].x, y);
+            doc.text(dimensionLines, columnsUsed[3].x, y);
             doc.text(meta?.sheeting || "—", columnsUsed[4].x, y);
             doc.text(String(item.quantity), columnsUsed[5].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[6].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[7].x, y);
-            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
+            doc.text(structureLines, columnsUsed[6].x, y);
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[7].x + columnsUsed[7].w, y, { align: "right" });
+            doc.text(sqftLines, columnsUsed[8].x, y);
+            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
             doc.text(meta?.cover ? "Y" : "", columnsUsed[10].x + columnsUsed[10].w, y, { align: "right" });
           } else {
-            doc.text(desigText, columnsUsed[0].x, y);
+            doc.text(desigLines, columnsUsed[0].x, y);
             doc.text(legendLines, columnsUsed[1].x, y);
-            doc.text(meta?.dimensionLabel || "—", columnsUsed[2].x, y);
+            doc.text(dimensionLines, columnsUsed[2].x, y);
             doc.text(meta?.sheeting || "—", columnsUsed[3].x, y);
             doc.text(String(item.quantity), columnsUsed[4].x, y);
-            doc.text(meta?.sqft ? String(Math.round(meta.sqft * 100) / 100) : "—", columnsUsed[5].x, y);
-            doc.text(abbreviateStructure(meta?.structureType || "—").substring(0, 22), columnsUsed[6].x, y);
-            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[7].x + columnsUsed[7].w, y, { align: "right" });
-            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
+            doc.text(structureLines, columnsUsed[5].x, y);
+            doc.text(meta?.bLights && meta.bLights !== "none" ? meta.bLights : "", columnsUsed[6].x + columnsUsed[6].w, y, { align: "right" });
+            doc.text(sqftLines, columnsUsed[7].x, y);
+            doc.text(abbreviateMaterial(item.material || meta?.material || ""), columnsUsed[8].x + columnsUsed[8].w, y, { align: "right" });
             doc.text(meta?.cover ? "Y" : "", columnsUsed[9].x + columnsUsed[9].w, y, { align: "right" });
           }
 
@@ -805,7 +862,15 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
           if (meta?.secondarySigns?.length) {
             for (const sec of meta.secondarySigns) {
               const secLegendLines = doc.splitTextToSize(sec.signLegend || "", legendCol.w);
-              const secRowH = Math.max(6, secLegendLines.length * 3.5);
+              const secDesignationLines = splitCellText(
+                doc,
+                sec.signDesignation || "",
+                (isTypeIII ? columnsUsed[1] : columnsUsed[0]).w - 4
+              );
+              const secDimLines = splitCellText(doc, sec.dimensionLabel || "—", (isTypeIII ? columnsUsed[3] : columnsUsed[2]).w);
+              const secRowH = getLineHeight(
+                Math.max(secDesignationLines.length, secLegendLines.length, secDimLines.length)
+              );
               y = checkPageBreak(doc, y, secRowH);
 
               doc.setFillColor(248, 248, 250);
@@ -816,12 +881,11 @@ export function generateTakeoffPdf(data: TakeoffPdfData): ArrayBuffer | null {
               doc.setFont("helvetica", "italic");
               doc.setFontSize(7);
 
-              const secDesig = (sec.signDesignation || "").substring(0, 20);
               doc.text("•", columnsUsed[0].x + 2, y);
-              doc.text(secDesig, columnsUsed[0].x + (isTypeIII ? 8 : 0), y); // slight offset for type III
+              doc.text(secDesignationLines, (isTypeIII ? columnsUsed[1] : columnsUsed[0]).x + (isTypeIII ? 0 : 8), y);
               doc.text(secLegendLines, legendCol.x, y);
-              doc.text(sec.dimensionLabel || "—", columnsUsed[3].x, y);
-              doc.text(sec.sheeting || "—", columnsUsed[4].x, y);
+              doc.text(secDimLines, (isTypeIII ? columnsUsed[3] : columnsUsed[2]).x, y);
+              doc.text(sec.sheeting || "—", (isTypeIII ? columnsUsed[4] : columnsUsed[3]).x, y);
 
               // empty cells for qty, sqft, structure, matl, lights, cover
               y += secRowH;

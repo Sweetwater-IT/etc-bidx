@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PDFDocument } from 'pdf-lib';
 import { generateBillingPacketPdf } from '@/utils/generateBillingPacketPdf';
-import { getBillingPacketData } from '@/utils/pdfData';
+import { generateTakeoffPdf } from '@/utils/generateTakeoffPdf';
+import { getBillingPacketData, getTakeoffPdfData } from '@/utils/pdfData';
 
 export async function GET(
   request: NextRequest,
@@ -8,21 +10,42 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const includeTakeoff = request.nextUrl.searchParams.get('include_takeoff') === 'true';
 
     // Fetch structured work order data
     const woData = await getBillingPacketData(id);
 
-    // Generate PDF
-    const pdfBytes = await generateBillingPacketPdf(woData);
+    const woBytes = await generateBillingPacketPdf({ ...woData, returnBytes: true });
 
-    if (!pdfBytes) {
+    if (!woBytes) {
       return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
+    }
+
+    let pdfBytes: ArrayBuffer = woBytes;
+
+    if (includeTakeoff && woData.primaryTakeoffId) {
+      const takeoffData = await getTakeoffPdfData(woData.primaryTakeoffId);
+      const takeoffBytes = await generateTakeoffPdf({ ...takeoffData, returnBytes: true });
+
+      if (takeoffBytes) {
+        const mergedPdf = await PDFDocument.create();
+        const woPdf = await PDFDocument.load(woBytes);
+        const takeoffPdf = await PDFDocument.load(takeoffBytes);
+
+        const woPages = await mergedPdf.copyPages(woPdf, woPdf.getPageIndices());
+        woPages.forEach((page) => mergedPdf.addPage(page));
+
+        const takeoffPages = await mergedPdf.copyPages(takeoffPdf, takeoffPdf.getPageIndices());
+        takeoffPages.forEach((page) => mergedPdf.addPage(page));
+
+        pdfBytes = (await mergedPdf.save()).buffer as ArrayBuffer;
+      }
     }
 
     return new Response(pdfBytes, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=billing-packet-${woData.woNumber || id}.pdf`,
+        'Content-Disposition': `attachment; filename=${includeTakeoff ? 'billing-packet' : 'work-order'}-${woData.woNumber || id}.pdf`,
       },
     });
   } catch (error) {

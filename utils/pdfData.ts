@@ -331,6 +331,7 @@ export async function getBillingPacketData(workOrderId: string) {
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
+    primaryTakeoffId: workOrder.takeoff_id || '',
     installDate: workOrder.install_date || '',
     pickupDate: workOrder.pickup_date || '',
     items,

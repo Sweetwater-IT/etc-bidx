@@ -63,6 +63,39 @@ function addField(doc: jsPDF, label: string, value: string, x: number, y: number
   return y;
 }
 
+function drawBillingTableHeader(
+  doc: jsPDF,
+  columns: { label: string; x: number; w: number; align?: "left" | "right" }[],
+  y: number,
+  pageW: number,
+  marginLeft: number
+): number {
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setFillColor(240, 240, 240);
+  doc.rect(marginLeft, y - 3.5, pageW - 28, 7, "F");
+
+  for (const col of columns) {
+    if (col.align === "right") {
+      doc.text(col.label, col.x + col.w, y, { align: "right" });
+    } else {
+      doc.text(col.label, col.x, y);
+    }
+  }
+
+  return y + 7;
+}
+
+function formatWorkOrderNumber(woNumber?: string | number | null): string {
+  if (woNumber === null || woNumber === undefined || woNumber === "") return "";
+  const asString = String(woNumber).trim();
+  const asNumber = Number(asString);
+  if (!Number.isNaN(asNumber) && Number.isFinite(asNumber)) {
+    return String(Math.trunc(asNumber)).padStart(3, "0");
+  }
+  return asString;
+}
+
 export async function generateBillingPacketPdf(data: BillingPacketData): Promise<ArrayBuffer | null> {
   const doc = new jsPDF({ orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -75,7 +108,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = () => reject();
-      img.src = "/ETC-2.jpg";
+      img.src = "/logo.jpg";
     });
     // Logo aspect ratio ~1.17:1, fit to h=12mm
     const logoH = 12;
@@ -96,7 +129,8 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
-  const woTitle = data.woNumber ? `WORK ORDER ${data.woNumber}` : "WORK ORDER";
+  const formattedWoNumber = formatWorkOrderNumber(data.woNumber);
+  const woTitle = formattedWoNumber ? `Work Order ${formattedWoNumber}` : "Work Order";
   doc.text(woTitle, pageW / 2, 14, { align: "center" });
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
@@ -197,27 +231,38 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   doc.text("Billing Line Items", ml, y);
   y += 5;
 
-  // Table header
-  doc.setFontSize(7);
-  doc.setFillColor(240, 240, 240);
-  doc.rect(ml, y - 3.5, pageW - 28, 7, "F");
-  doc.text("ITEM #", ml + 2, y);
-  doc.text("DESCRIPTION", 50, y);
-  doc.text("UOM", 130, y);
-  doc.text("CONTRACT QTY", 150, y);
-  doc.text("WORK ORDER QTY", 170, y);
-  y += 7;
+  const billingCols = [
+    { label: "ITEM #", x: ml + 2, w: 26 },
+    { label: "DESCRIPTION", x: ml + 30, w: 88 },
+    { label: "UOM", x: ml + 120, w: 16 },
+    { label: "CONTRACT QTY", x: ml + 142, w: 28, align: "right" as const },
+    { label: "WORK ORDER QTY", x: ml + 174, w: 18, align: "right" as const },
+  ];
+
+  y = drawBillingTableHeader(doc, billingCols, y, pageW, ml);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   for (const item of data.items) {
-    if (y > 270) { doc.addPage(); y = 20; }
-    doc.text(item.item_number || "", ml + 2, y);
-    doc.text((item.description || "").substring(0, 45), 50, y);
-    doc.text(item.uom || "EA", 130, y);
-    doc.text(String(item.contract_quantity), 158, y);
-    doc.text(String(item.work_order_quantity), 185, y);
-    y += 5;
+    const itemNumberLines = doc.splitTextToSize(item.item_number || "", billingCols[0].w);
+    const descriptionLines = doc.splitTextToSize(item.description || "", billingCols[1].w);
+    const rowLineCount = Math.max(itemNumberLines.length, descriptionLines.length, 1);
+    const rowH = Math.max(6, rowLineCount * 4);
+
+    if (y > 270 - rowH) {
+      doc.addPage();
+      y = 20;
+      y = drawBillingTableHeader(doc, billingCols, y, pageW, ml);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+    }
+
+    doc.text(itemNumberLines, billingCols[0].x, y);
+    doc.text(descriptionLines, billingCols[1].x, y);
+    doc.text(item.uom || "EA", billingCols[2].x, y);
+    doc.text(String(item.contract_quantity), billingCols[3].x + billingCols[3].w, y, { align: "right" });
+    doc.text(String(item.work_order_quantity), billingCols[4].x + billingCols[4].w, y, { align: "right" });
+    y += rowH;
     // Light grey row divider
     doc.setDrawColor(220);
     doc.setLineWidth(0.15);
