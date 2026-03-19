@@ -75,7 +75,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
   // Fetch related job explicitly to avoid relation-name mismatches
   const { data: job } = await supabase
     .from('jobs_l')
-    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, county, etc_branch, etc_project_manager, etc_job_number')
+    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, contract_number, county, etc_branch, etc_project_manager, etc_job_number')
     .eq('id', takeoff.job_id)
     .single();
 
@@ -281,6 +281,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     customerJobNumber: job?.customer_job_number || '',
     customerPM: job?.customer_pm || '',
     projectOwner: job?.project_owner || '',
+    contractNumber: job?.contract_number || '',
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
@@ -303,6 +304,7 @@ export async function getBillingPacketData(workOrderId: string) {
         customer_job_number,
         customer_pm,
         project_owner,
+        contract_number,
         county,
         etc_branch,
         etc_project_manager,
@@ -337,11 +339,11 @@ export async function getBillingPacketData(workOrderId: string) {
   }));
 
   return {
-    woNumber: workOrder.work_order_number || workOrder.id,
+    woNumber: workOrder.wo_number || workOrder.work_order_number || '',
     woTitle: workOrder.title || '',
     woDescription: workOrder.description || '',
     woNotes: workOrder.notes || '',
-    etcAssignedTo: workOrder.etc_assigned_to || '',
+    etcAssignedTo: workOrder.assigned_to || workOrder.etc_assigned_to || '',
     contractedOrAdditional: workOrder.contracted_or_additional || 'contracted',
     customerPocPhone: workOrder.customer_poc_phone || '',
     projectName: job?.project_name || '',
@@ -350,6 +352,7 @@ export async function getBillingPacketData(workOrderId: string) {
     customerJobNumber: job?.customer_job_number || '',
     customerPM: job?.customer_pm || '',
     projectOwner: job?.project_owner || '',
+    contractNumber: job?.contract_number || '',
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',

@@ -17,6 +17,7 @@ interface TakeoffPdfData {
   customerJobNumber?: string;
   customerPM?: string;
   projectOwner?: string;
+  contractNumber?: string;
   county?: string;
   etcBranch?: string;
   etcProjectManager?: string;
@@ -518,7 +519,7 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
 
   // Row 2
   addField(doc, "PROJECT OWNER", data.projectOwner || "—", col1X, y);
-  addField(doc, "OWNER JOB #", data.customerJobNumber || "—", col2X, y);
+  addField(doc, "OWNER CONTRACT #", data.contractNumber || "—", col2X, y);
   addField(doc, "COUNTY", data.county || "—", col3X, y);
   y += rowH;
   drawRowDivider(y - 2);

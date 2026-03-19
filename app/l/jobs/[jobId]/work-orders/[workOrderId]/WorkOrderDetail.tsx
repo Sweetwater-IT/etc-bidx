@@ -765,6 +765,7 @@ const WorkOrderDetail = ({
                       customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
                       customerPM: dbJob?.projectInfo?.customerPM || "",
                       projectOwner: dbJob?.projectInfo?.projectOwner || "",
+                      contractNumber: dbJob?.projectInfo?.contractNumber || "",
                       county: dbJob?.projectInfo?.county || "",
                       etcBranch: dbJob?.etc_branch || "",
                       etcProjectManager: dbJob?.etc_project_manager || "",

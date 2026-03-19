@@ -609,19 +609,19 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               </table>
             ) : (
               // MPT Signs Table
-              <table className="w-full min-w-[1100px] text-sm" style={{ tableLayout: 'fixed' }}>
+              <table className="w-full min-w-[1240px] text-sm" style={{ tableLayout: 'fixed' }}>
                 <thead className="bg-muted/70">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-[360px]">Legend</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-40">Structure</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
+                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-20">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-44">Structure</th>
+                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
+                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Sq Ft</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Material</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-16">Cover</th>
+                    <th className="px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground w-20">Cover</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -630,16 +630,16 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     const signDetails = item.sign_details || {};
                     return (
                       <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs font-medium align-top">{signDetails.signDesignation || item.product_name || '—'}</td>
+                        <td className="px-2 py-1 w-[360px] text-xs align-top break-words">{signDetails.signLegend || item.description || '—'}</td>
                         <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
                         <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
-                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
+                        <td className="px-2 py-1 w-20 text-xs tabular-nums text-right">{item.quantity || 1}</td>
+                        <td className="px-2 py-1 w-44 text-xs break-words">{signDetails.structureType || item.structure_type || '—'}</td>
+                        <td className="px-2 py-1 w-24 text-xs tabular-nums text-right">{signDetails.bLights || item.b_lights || 'none'}</td>
+                        <td className="px-2 py-1 w-28 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
                         <td className="px-2 py-1 w-24 text-xs">{signDetails.material || item.material || '—'}</td>
-                        <td className="px-2 py-1 w-16 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
+                        <td className="px-2 py-1 w-20 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
                       </tr>
                     );
                   })}

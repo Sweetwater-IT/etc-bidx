@@ -389,6 +389,19 @@ export async function POST(request: NextRequest) {
       return relevantWorkTypes.length === 0 || relevantWorkTypes.includes(itemWorkType);
     });
 
+    console.log('[WO from takeoff] SOV matching summary', {
+      takeoffId: workingTakeoffId,
+      workType: takeoffData.work_type,
+      relevantWorkTypes,
+      totalSovItems: sovItems.length,
+      matchedSovItems: matchedSovItems.map((item) => ({
+        id: item.id,
+        item_number: item.item_number,
+        work_type: item.work_type,
+        quantity: item.quantity,
+      })),
+    });
+
     // Create work order items from SOV entries only.
     const workOrderItems: Array<{
       work_order_id: string | null;
@@ -454,6 +467,52 @@ export async function POST(request: NextRequest) {
           sov_item_id: item.id,
         });
       });
+
+      if (workOrderItems.length === 0) {
+        const { data: takeoffItems, error: takeoffItemsError } = await supabase
+          .from('takeoff_items_l')
+          .select('id, product_name, quantity, unit, category, notes')
+          .eq('takeoff_id', workingTakeoffId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true });
+
+        if (takeoffItemsError) {
+          console.error('[WO from takeoff] Failed to fetch fallback takeoff items', takeoffItemsError);
+          return NextResponse.json({ error: 'Failed to fetch takeoff items' }, { status: 500 });
+        }
+
+        console.log('[WO from takeoff] Falling back to takeoff items for work order items', {
+          takeoffId: workingTakeoffId,
+          workType: takeoffData.work_type,
+          takeoffItemCount: takeoffItems?.length || 0,
+          items: (takeoffItems || []).map((item: any) => ({
+            id: item.id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit: item.unit,
+            category: item.category,
+          })),
+        });
+
+        (takeoffItems || []).forEach((item: any, index: number) => {
+          const itemNumber = String(item.product_name || item.category || `ITEM-${index + 1}`).trim();
+          const description = String(item.notes || item.product_name || item.category || '');
+          const quantity = Number(item.quantity || 0);
+
+          if (!itemNumber) return;
+
+          workOrderItems.push({
+            work_order_id: null,
+            item_number: itemNumber,
+            description,
+            contract_quantity: quantity,
+            work_order_quantity: quantity,
+            uom: String(item.unit || 'EA'),
+            sort_order: workOrderItems.length,
+            sov_item_id: null,
+          });
+        });
+      }
     }
 
     // Add additional items from the takeoff that aren't in SOV
