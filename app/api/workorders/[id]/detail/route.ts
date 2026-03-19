@@ -134,7 +134,12 @@ export async function GET(
             description,
             display_name,
             work_type,
-            uom
+            uom_1,
+            uom_2,
+            uom_3,
+            uom_4,
+            uom_5,
+            uom_6
           )
         `)
         .eq("job_id", jobId)
@@ -160,7 +165,12 @@ export async function GET(
             description,
             display_name,
             work_type,
-            uom
+            uom_1,
+            uom_2,
+            uom_3,
+            uom_4,
+            uom_5,
+            uom_6
           )
         `)
         .eq("job_id", jobId)
@@ -234,9 +244,9 @@ export async function GET(
       sovItems = sovRes.data.map((s: any) => ({
         id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
         item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.description || s.sov_items?.display_name || "",
+        description: s.sov_items?.display_name || s.sov_items?.description || "",
         quantity: Number(s.quantity) || 0,
-        uom: s.sov_items?.uom || "EA",
+        uom: s.sov_items?.uom_1 || s.sov_items?.uom_2 || s.sov_items?.uom_3 || s.sov_items?.uom_4 || s.sov_items?.uom_5 || s.sov_items?.uom_6 || "EA",
       }));
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
@@ -261,8 +271,8 @@ export async function GET(
       sovItemsFull = sovFullRes.data.map((s: any) => ({
         id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
         itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.description || s.sov_items?.display_name || "",
-        uom: s.sov_items?.uom || "EA",
+        description: s.sov_items?.display_name || s.sov_items?.description || "",
+        uom: s.sov_items?.uom_1 || s.sov_items?.uom_2 || s.sov_items?.uom_3 || s.sov_items?.uom_4 || s.sov_items?.uom_5 || s.sov_items?.uom_6 || "EA",
         quantity: Number(s.quantity) || 0,
         unitPrice: Number(s.unit_price) || 0,
         extendedPrice: Number(s.extended_price) || 0,

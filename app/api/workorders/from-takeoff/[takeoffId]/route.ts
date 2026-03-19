@@ -368,7 +368,7 @@ export async function POST(request: NextRequest) {
     // Fetch SOV items for this job and derive work order items directly from matching SOV entries.
     const { data: sovEntries } = await supabase
       .from('sov_entries')
-      .select('quantity, sort_order, sov_items!inner(id, item_number, description, work_type, uom)')
+      .select('quantity, sort_order, sov_items!inner(id, item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6)')
       .eq('job_id', sourceTakeoff.job_id)
       .order('sort_order', { ascending: true });
 
@@ -376,9 +376,16 @@ export async function POST(request: NextRequest) {
       .map((entry: any) => ({
         id: Number(entry?.sov_items?.id),
         item_number: String(entry?.sov_items?.item_number || ''),
-        description: String(entry?.sov_items?.description || ''),
+        description: String(entry?.sov_items?.display_name || entry?.sov_items?.description || ''),
         work_type: entry?.sov_items?.work_type ?? null,
-        uom: entry?.sov_items?.uom ?? null,
+        uom:
+          entry?.sov_items?.uom_1 ??
+          entry?.sov_items?.uom_2 ??
+          entry?.sov_items?.uom_3 ??
+          entry?.sov_items?.uom_4 ??
+          entry?.sov_items?.uom_5 ??
+          entry?.sov_items?.uom_6 ??
+          null,
         quantity: entry?.quantity ?? null,
         sort_order: entry?.sort_order ?? null,
       }))

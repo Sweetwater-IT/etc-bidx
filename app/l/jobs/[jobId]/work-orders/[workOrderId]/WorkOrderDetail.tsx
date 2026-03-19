@@ -541,7 +541,7 @@ const WorkOrderDetail = ({
         const result = await response.json();
         toast.success(`Work order "${editTitle}" created successfully`);
         // Navigate to edit (to preserve the "generate → edit first" flow) with takeoffId to enable immediate loading
-        router.push(`/l/jobs/${dbJob?.id}/work-orders/${result.workOrder.id}/edit?takeoffId=${takeoffId}`);
+        router.push(`/l/jobs/${dbJob?.id}/work-orders/edit/${result.workOrder.id}?takeoffId=${takeoffId}`);
       } else {
         // Update existing work order
         const response = await fetch(`/api/workorders/${workOrderId}`, {
@@ -2326,7 +2326,10 @@ const WorkOrderDetail = ({
                                   for (const row of sectionRows) {
                                     const quantity = row.quantity || 1;
                                     // Extract work type category from takeoff work_type (e.g., "MPT" from "MPT:trailblazers")
-                                    const workTypeCategory = takeoff.work_type?.split(':')[0] || 'UNKNOWN';
+                                    const workTypeCategory =
+                                      typeof takeoff.work_type === 'string' && takeoff.work_type.length > 0
+                                        ? takeoff.work_type.split(':')[0]
+                                        : 'UNKNOWN';
                                     signCounts[workTypeCategory] = (signCounts[workTypeCategory] || 0) + quantity;
                                   }
                                 }

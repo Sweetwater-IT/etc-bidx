@@ -97,6 +97,30 @@ function formatWorkOrderNumber(woNumber?: string | number | null): string {
   return asString;
 }
 
+async function loadPublicLogoDataUrl(path: string): Promise<{ dataUrl: string; width: number; height: number }> {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch logo: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Failed to read logo blob"));
+    reader.readAsDataURL(blob);
+  });
+
+  const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error("Failed to decode logo image"));
+    img.src = dataUrl;
+  });
+
+  return { dataUrl, width: dimensions.width, height: dimensions.height };
+}
+
 export async function generateBillingPacketPdf(data: BillingPacketData): Promise<ArrayBuffer | null> {
   const doc = new jsPDF({ orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -104,17 +128,11 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   // ── ETC Logo ──
   try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-      img.src = "/logo.jpg";
-    });
+    const logo = await loadPublicLogoDataUrl("/logo.jpg");
     // Logo aspect ratio ~1.17:1, fit to h=12mm
     const logoH = 12;
-    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
-    doc.addImage(img, "JPEG", ml, 6, logoW, logoH);
+    const logoW = logoH * (logo.width / logo.height);
+    doc.addImage(logo.dataUrl, "JPEG", ml, 6, logoW, logoH);
   } catch {
     // Fallback to text
     doc.setFontSize(18);
@@ -232,12 +250,13 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   doc.text("Billing Line Items", ml, y);
   y += 5;
 
+  const billingTableLeft = ml;
   const billingCols = [
-    { label: "ITEM #", x: ml + 2, w: 26 },
-    { label: "DESCRIPTION", x: ml + 30, w: 88 },
-    { label: "UOM", x: ml + 120, w: 16 },
-    { label: "CONTRACT QTY", x: ml + 142, w: 28, align: "right" as const },
-    { label: "WORK ORDER QTY", x: ml + 174, w: 18, align: "right" as const },
+    { label: "ITEM #", x: billingTableLeft + 2, w: 24 },
+    { label: "DESCRIPTION", x: billingTableLeft + 26, w: 76 },
+    { label: "UOM", x: billingTableLeft + 102, w: 14 },
+    { label: "CONTRACT QTY", x: billingTableLeft + 116, w: 30, align: "right" as const },
+    { label: "WORK ORDER QTY", x: billingTableLeft + 146, w: 36, align: "right" as const },
   ];
 
   y = drawBillingTableHeader(doc, billingCols, y, pageW, ml);
@@ -245,8 +264,8 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   for (const item of data.items) {
-    const itemNumberLines = doc.splitTextToSize(item.item_number || "", billingCols[0].w);
-    const descriptionLines = doc.splitTextToSize(item.description || "", billingCols[1].w);
+    const itemNumberLines = doc.splitTextToSize(item.item_number || "", billingCols[0].w - 2);
+    const descriptionLines = doc.splitTextToSize(item.description || "", billingCols[1].w - 2);
     const rowLineCount = Math.max(itemNumberLines.length, descriptionLines.length, 1);
     const rowH = Math.max(6, rowLineCount * 4);
 
