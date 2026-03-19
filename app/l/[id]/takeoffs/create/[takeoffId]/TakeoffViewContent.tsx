@@ -34,10 +34,19 @@ const WORK_TYPES = [
 
 const formatVehicleType = (vehicleType: string) => {
   const vehicleTypeMap: Record<string, string> = {
+    pickup_truck: "Pick Up Truck",
     message_board: "Message Board",
+    arrow_panel: "Arrow Panel",
+    speed_trailer: "Speed Trailer",
     tma: "TMA",
   };
-  return vehicleTypeMap[vehicleType] || vehicleType;
+  if (vehicleTypeMap[vehicleType]) {
+    return vehicleTypeMap[vehicleType];
+  }
+
+  return vehicleType
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const formatSqft = (value: number) =>

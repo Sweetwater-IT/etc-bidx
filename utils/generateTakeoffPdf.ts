@@ -148,31 +148,6 @@ function getLineHeight(lineCount: number, minHeight = 6, lineStep = 3.5): number
   return Math.max(minHeight, lineCount * lineStep);
 }
 
-async function drawEtcLogo(doc: jsPDF, pageW: number, marginLeft: number) {
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-      img.src = "/logo.jpg";
-    });
-    const logoH = 12;
-    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
-    doc.addImage(img, "JPEG", marginLeft, 6, logoW, logoH);
-  } catch {
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 64, 120);
-    doc.text("ETC", marginLeft, 14);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("ESTABLISHED TRAFFIC CONTROL", marginLeft, 17.5);
-    doc.setTextColor(0);
-  }
-}
-
 // MPT columns: [#], Designation, Legend, Dimensions, Sheeting, Qty, Sq Ft, Structure, Lights, Cover
 // Type III has # column hanging left; all other columns align with non-Type-III
 // Landscape page width ~297mm; usable area 14..283 = 269mm
@@ -393,16 +368,11 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
   const hasBuildShopNotes = !!data.buildShopNotes?.trim();
 
   if (hasCrewNotes || hasBuildShopNotes) {
-    await drawEtcLogo(doc, pageW, 14);
     // Cover page title
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0);
     doc.text("MATERIAL TAKEOFF", 14, 14);
-    if (data.workOrderNumber) {
-      doc.setFontSize(10);
-      doc.text(`WO# ${data.workOrderNumber}`, pageW - 14, 14, { align: "right" });
-    }
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(120);
@@ -498,16 +468,11 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
     doc.addPage();
   }
 
-  await drawEtcLogo(doc, pageW, 14);
   // ── Title line ──
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
   doc.text("MATERIAL TAKEOFF", 14, 14);
-  if (data.workOrderNumber) {
-    doc.setFontSize(10);
-    doc.text(`WO# ${data.workOrderNumber}`, pageW - 14, 14, { align: "right" });
-  }
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120);
