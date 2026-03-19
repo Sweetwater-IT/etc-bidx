@@ -124,24 +124,26 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     sort_order: finalSortOrder,
   };
 
-  let { data, error } = await supabase
-    .from('sov_entries')
-    .insert(writePayload)
-    .select(`
-      id,
-      job_id,
-      sov_item_id,
-      quantity,
-      unit_price,
-      extended_price,
-      retainage_type,
-      retainage_value,
-      retainage_amount,
-      notes,
-      sort_order,
-      created_at,
-      updated_at,
-      sov_items (
+  const selectEntryFields = `
+    id,
+    job_id,
+    sov_item_id,
+    quantity,
+    unit_price,
+    extended_price,
+    retainage_type,
+    retainage_value,
+    retainage_amount,
+    notes,
+    sort_order,
+    created_at,
+    updated_at
+  `;
+
+  const hydrateResponse = async (entry: any) => {
+    const { data: masterItem, error: masterItemError } = await supabase
+      .from('sov_items')
+      .select(`
         id,
         item_number,
         display_item_number,
@@ -154,8 +156,41 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
         uom_4,
         uom_5,
         uom_6
-      )
-    `)
+      `)
+      .eq('id', entry.sov_item_id)
+      .single();
+
+    if (masterItemError || !masterItem) {
+      throw new SovUpsertError('Failed to fetch SOV master item after save', 500, masterItemError);
+    }
+
+    return {
+      id: entry.id,
+      job_id: entry.job_id,
+      sov_item_id: entry.sov_item_id,
+      item_number: masterItem.item_number,
+      display_item_number: masterItem.display_item_number,
+      description: masterItem.description,
+      display_name: masterItem.display_name,
+      work_type: masterItem.work_type,
+      uom: masterItem.uom_1 || masterItem.uom_2 || masterItem.uom_3 || masterItem.uom_4 || masterItem.uom_5 || masterItem.uom_6,
+      quantity: entry.quantity,
+      unit_price: entry.unit_price,
+      extended_price: entry.extended_price,
+      retainage_type: entry.retainage_type,
+      retainage_value: entry.retainage_value,
+      retainage_amount: entry.retainage_amount,
+      notes: entry.notes,
+      sort_order: entry.sort_order,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+    };
+  };
+
+  let { data, error } = await supabase
+    .from('sov_entries')
+    .insert(writePayload)
+    .select(selectEntryFields)
     .single();
 
   if (error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key')) {
@@ -165,35 +200,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
       .update(updatePayload)
       .eq('job_id', jobId)
       .eq('sov_item_id', finalSovItemId)
-      .select(`
-        id,
-        job_id,
-        sov_item_id,
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order,
-        created_at,
-        updated_at,
-        sov_items (
-          id,
-          item_number,
-          display_item_number,
-          description,
-          display_name,
-          work_type,
-          uom_1,
-          uom_2,
-          uom_3,
-          uom_4,
-          uom_5,
-          uom_6
-        )
-      `)
+      .select(selectEntryFields)
       .single();
 
     if (updateError) {
@@ -212,25 +219,5 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     throw new SovUpsertError('No data returned from database operation', 500);
   }
 
-  return {
-    id: data.id,
-    job_id: data.job_id,
-    sov_item_id: data.sov_item_id,
-    item_number: (data as any).sov_items?.item_number,
-    display_item_number: (data as any).sov_items?.display_item_number,
-    description: (data as any).sov_items?.description,
-    display_name: (data as any).sov_items?.display_name,
-    work_type: (data as any).sov_items?.work_type,
-    uom: (data as any).sov_items?.uom_1 || (data as any).sov_items?.uom_2 || (data as any).sov_items?.uom_3 || (data as any).sov_items?.uom_4 || (data as any).sov_items?.uom_5 || (data as any).sov_items?.uom_6,
-    quantity: data.quantity,
-    unit_price: data.unit_price,
-    extended_price: data.extended_price,
-    retainage_type: data.retainage_type,
-    retainage_value: data.retainage_value,
-    retainage_amount: data.retainage_amount,
-    notes: data.notes,
-    sort_order: data.sort_order,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
+  return await hydrateResponse(data);
 }
