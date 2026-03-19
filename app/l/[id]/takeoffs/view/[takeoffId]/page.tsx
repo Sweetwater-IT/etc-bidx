@@ -13,6 +13,7 @@ import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { ProjectFooter } from "@/components/ProjectFooter";
 
 const WORK_TYPES = [
   { value: "MPT", label: "MPT" },
@@ -28,7 +29,7 @@ export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
   const takeoffId = params.takeoffId;
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.projectName || "Untitled Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Untitled Project";
 
   return (
     <SidebarProvider
@@ -41,14 +42,19 @@ export default function TakeoffViewPage({ params }: any) {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader showTitleBlock={false} />
         <Suspense fallback={null}>
-          <div className="min-h-screen bg-background">
-            <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
-            {/* Content Area */}
-            <div className="max-w-7xl mx-auto px-4 py-8">
-              <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
-              <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
+          <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
+                {/* Content Area */}
+                <div className="px-4 py-8">
+                  <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
+                  <TakeoffViewContent jobId={jobId} takeoffId={takeoffId} isViewMode={true} />
+                </div>
+                <ProjectFooter />
+              </div>
             </div>
           </div>
         </Suspense>

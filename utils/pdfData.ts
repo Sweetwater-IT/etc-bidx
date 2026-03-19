@@ -1,5 +1,42 @@
 import { supabase } from '@/lib/supabase';
 
+const MPT_SECTION_LABELS: Record<string, string> = {
+  trailblazers: 'Trailblazers / H-Stands',
+  type_iii: 'Type IIIs',
+  sign_stands: 'Sign Stands',
+};
+
+const formatVehicleType = (vehicleType?: string | null) => {
+  const vehicleTypeMap: Record<string, string> = {
+    message_board: 'Message Board',
+    tma: 'TMA',
+    pickup_truck: 'Pick Up Truck',
+    arrow_panel: 'Arrow Panel',
+    speed_trailer: 'Speed Trailer',
+  };
+
+  if (!vehicleType) return 'Vehicle';
+  return vehicleTypeMap[vehicleType] || vehicleType;
+};
+
+const hasValue = (value: unknown) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+};
+
+const isConfiguredRow = (row: Record<string, any> | null | undefined) =>
+  Boolean(
+    row &&
+    (
+      hasValue(row.signDesignation) ||
+      hasValue(row.signLegend) ||
+      hasValue(row.signDescription) ||
+      Number(row.quantity || 0) > 0
+    )
+  );
+
 export async function getTakeoffPdfData(takeoffId: string) {
   console.log('getTakeoffPdfData: Called with takeoffId:', takeoffId);
 
@@ -26,56 +63,183 @@ export async function getTakeoffPdfData(takeoffId: string) {
     .eq('id', takeoff.job_id)
     .single();
 
-  // Prefer relational takeoff items table (used by current takeoff flows)
-  const { data: takeoffItems } = await supabase
-    .from('takeoff_items_l')
-    .select('product_name, category, unit, quantity, notes, material')
-    .eq('takeoff_id', takeoffId)
-    .order('load_order', { ascending: true });
-
   const items: any[] = [];
 
-  if (takeoffItems && takeoffItems.length > 0) {
-    for (const item of takeoffItems) {
+  const workType = String(takeoff.work_type || '').toUpperCase();
+  const signRowsData = (takeoff.sign_rows as Record<string, any[]>) || {};
+  const activeSections = Array.isArray(takeoff.active_sections) && takeoff.active_sections.length > 0
+    ? takeoff.active_sections
+    : Object.keys(signRowsData);
+
+  const permanentSignRows = (takeoff.permanent_sign_rows as Record<string, any[]>) || {};
+  const permanentEntryRows = (takeoff.permanent_entry_rows as Record<string, any[]>) || {};
+  const activePermanentItems = Array.isArray(takeoff.active_permanent_items) && takeoff.active_permanent_items.length > 0
+    ? takeoff.active_permanent_items
+    : Array.from(new Set([...Object.keys(permanentSignRows), ...Object.keys(permanentEntryRows)]));
+
+  const pushMptLikeRows = () => {
+    for (const sectionKey of activeSections) {
+      const rows = signRowsData[sectionKey] || [];
+      const categoryLabel = MPT_SECTION_LABELS[sectionKey] || sectionKey;
+
+      for (const row of rows) {
+        if (!isConfiguredRow(row)) continue;
+        items.push({
+          product_name: row.signDesignation || row.signDescription || 'Sign',
+          category: categoryLabel,
+          unit: 'EA',
+          quantity: Number(row.quantity || 0),
+          notes: JSON.stringify({
+            ...row,
+            itemType: 'mpt_sign',
+            sectionKey,
+          }),
+          material: row.material || takeoff.default_sign_material || '',
+        });
+      }
+    }
+  };
+
+  const pushPermanentRows = () => {
+    for (const itemNumber of activePermanentItems) {
+      const signRows = permanentSignRows[itemNumber] || [];
+      const entryRows = permanentEntryRows[itemNumber] || [];
+
+      for (const row of signRows) {
+        if (!isConfiguredRow(row)) continue;
+        items.push({
+          product_name: row.signDesignation || row.signDescription || itemNumber || 'Permanent Sign',
+          category: itemNumber,
+          unit: 'EA',
+          quantity: Number(row.quantity || 0),
+          notes: JSON.stringify({
+            ...row,
+            itemType: 'permanent_sign',
+            itemNumber,
+          }),
+          material: row.material || takeoff.default_permanent_sign_material || '',
+        });
+      }
+
+      for (const row of entryRows) {
+        if (!hasValue(row?.description) && Number(row?.quantity || 0) <= 0) continue;
+        items.push({
+          product_name: itemNumber || 'Permanent Sign Item',
+          category: itemNumber,
+          unit: 'EA',
+          quantity: Number(row.quantity || 0),
+          notes: JSON.stringify({
+            ...row,
+            itemType: 'permanent_entry',
+            itemNumber,
+          }),
+          material: '',
+        });
+      }
+    }
+  };
+
+  const vehicleItems = Array.isArray(takeoff.vehicle_items) ? takeoff.vehicle_items : [];
+  for (const item of vehicleItems) {
+    items.push({
+      product_name: formatVehicleType(item?.vehicleType),
+      category: 'Vehicles',
+      unit: 'EA',
+      quantity: Number(item?.quantity || 0),
+      notes: JSON.stringify({
+        ...item,
+        itemType: 'vehicle',
+      }),
+      material: '',
+    });
+  }
+
+  const rollingStockItems = Array.isArray(takeoff.rolling_stock_items) ? takeoff.rolling_stock_items : [];
+  for (const item of rollingStockItems) {
+    items.push({
+      product_name: item?.equipmentLabel || item?.equipmentId || 'Rolling Stock',
+      category: 'Rolling Stock',
+      unit: 'EA',
+      quantity: 1,
+      notes: JSON.stringify({
+        ...item,
+        itemType: 'rolling_stock',
+      }),
+      material: '',
+    });
+  }
+
+  const additionalItems = Array.isArray(takeoff.additional_items) ? takeoff.additional_items : [];
+  for (const item of additionalItems) {
+    const productName = item?.name === '__custom'
+      ? item?.description || 'Custom Item'
+      : item?.name || 'Additional Item';
+
+    items.push({
+      product_name: productName,
+      category: 'Additional Items',
+      unit: 'EA',
+      quantity: Number(item?.quantity || 0),
+      notes: JSON.stringify({
+        ...item,
+        itemType: 'additional',
+        description: item?.description || '',
+      }),
+      material: '',
+    });
+  }
+
+  if (workType === 'PERMANENT_SIGNS') {
+    pushPermanentRows();
+  } else if (['MPT', 'FLAGGING', 'LANE_CLOSURE', 'SERVICE', 'DELIVERY'].includes(workType)) {
+    pushMptLikeRows();
+  }
+
+  if (items.length === 0) {
+    // Fallback for legacy records stored only in the relational items table
+    const { data: takeoffItems } = await supabase
+      .from('takeoff_items_l')
+      .select(`
+        product_name,
+        category,
+        unit,
+        quantity,
+        notes,
+        material,
+        sign_details,
+        sign_description,
+        sheeting,
+        width_inches,
+        height_inches,
+        sqft,
+        total_sqft,
+        load_order,
+        cover
+      `)
+      .eq('takeoff_id', takeoffId)
+      .order('load_order', { ascending: true });
+
+    for (const item of takeoffItems || []) {
+      const details = (item.sign_details && typeof item.sign_details === 'object') ? item.sign_details : {};
       items.push({
         product_name: item.product_name || '',
         category: item.category || '',
         unit: item.unit || 'EA',
         quantity: item.quantity || 0,
-        notes: item.notes ? JSON.stringify(item.notes) : null,
-        material: item.material || ''
+        notes: JSON.stringify({
+          ...details,
+          signDescription: details?.signDescription || item.sign_description || '',
+          sheeting: details?.sheeting || item.sheeting || '',
+          width: details?.width || item.width_inches || 0,
+          height: details?.height || item.height_inches || 0,
+          dimensionLabel: details?.dimensionLabel || '',
+          sqft: details?.sqft ?? item.sqft ?? 0,
+          totalSqft: details?.totalSqft ?? item.total_sqft ?? 0,
+          loadOrder: details?.loadOrder ?? item.load_order ?? 0,
+          cover: details?.cover ?? item.cover ?? false,
+        }),
+        material: item.material || '',
       });
-    }
-  } else {
-    // Fallback for legacy records still storing sign_rows JSON
-    const signRowsData = takeoff.sign_rows as Record<string, any[]> || {};
-    for (const [category, rows] of Object.entries(signRowsData)) {
-      for (const row of rows) {
-        items.push({
-          product_name: row.signDesignation || '',
-          category: category,
-          unit: 'EA',
-          quantity: row.quantity || 0,
-          notes: JSON.stringify({
-            signLegend: row.signLegend || '',
-            dimensionLabel: row.dimensionLabel || '',
-            sheeting: row.sheeting || '',
-            structureType: row.structureType || '',
-            bLights: row.bLights || '',
-            sqft: row.sqft || 0,
-            totalSqft: row.totalSqft || 0,
-            material: row.material || '',
-            itemNumber: row.itemNumber || '',
-            postSize: row.postSize || '',
-            planSheetNum: row.planSheetNum || '',
-            planSheetTotal: row.planSheetTotal || '',
-            loadOrder: row.loadOrder || 0,
-            cover: row.cover || false,
-            secondarySigns: row.secondarySigns || []
-          }),
-          material: row.material || ''
-        });
-      }
     }
   }
 

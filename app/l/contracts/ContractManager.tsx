@@ -19,6 +19,7 @@ import {
   RotateCcw, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft,
   Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
@@ -65,16 +66,19 @@ const PIPELINE_STAGES: {
   { id: "CONTRACT_RECEIPT", label: "Contract Received", shortLabel: "Received", icon: FileText, color: "text-primary", bgColor: "bg-primary/5", borderColor: "border-primary/20" },
   { id: "RETURNED_TO_CUSTOMER", label: "Returned to Customer", shortLabel: "Returned", icon: RotateCcw, color: "text-muted-foreground", bgColor: "bg-muted/50", borderColor: "border-border" },
   { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-warning", bgColor: "bg-warning/5", borderColor: "border-warning/20" },
-  { id: "SOURCE_OF_SUPPLY", label: "Source of Supply & Certs", shortLabel: "Supply & Certs", icon: CheckCircle2, color: "text-success", bgColor: "bg-success/5", borderColor: "border-success/20" },
 ];
+
+type VisiblePipelineStage =
+  | "CONTRACT_RECEIPT"
+  | "RETURNED_TO_CUSTOMER"
+  | "CONTRACT_SIGNED";
 
 type ViewMode = "kanban" | "list";
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
   CONTRACT_RECEIPT: ["RETURNED_TO_CUSTOMER"],
   RETURNED_TO_CUSTOMER: ["CONTRACT_RECEIPT", "CONTRACT_SIGNED"],
-  CONTRACT_SIGNED: ["SOURCE_OF_SUPPLY"],
-  SOURCE_OF_SUPPLY: [],
+  CONTRACT_SIGNED: [],
   // Legacy statuses — allow them to move forward
   SUBMITTED_FOR_APPROVAL: ["CONTRACT_RECEIPT"],
   APPROVED: ["CONTRACT_RECEIPT"],
@@ -84,7 +88,7 @@ const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
 const canMoveTo = (from: ContractPipelineStatus, to: ContractPipelineStatus) =>
   (ALLOWED_TRANSITIONS[from] || []).includes(to);
 
-const SIGNED_STATUSES: ContractPipelineStatus[] = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
+const SIGNED_STATUSES: ContractPipelineStatus[] = ["CONTRACT_SIGNED"];
 
 
 
@@ -345,7 +349,7 @@ const ContractManager = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
         <header className="border-b bg-card">
           <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
             <div className="h-8 w-56 rounded bg-muted animate-pulse" />
@@ -385,9 +389,9 @@ const ContractManager = () => {
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="shrink-0 border-b bg-card">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => router.push("/l/jobs")} className="h-8 w-8">
@@ -423,7 +427,7 @@ const ContractManager = () => {
       </header>
 
       {/* Pipeline progress bar */}
-      <div className="border-b bg-card/50">
+      <div className="shrink-0 border-b bg-card/50">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
           <div className="flex items-center gap-1">
             {PIPELINE_STAGES.map((stage, i) => {
@@ -449,7 +453,11 @@ const ContractManager = () => {
         </div>
       </div>
 
-      <main className="max-w-[1600px] mx-auto px-6 py-6">
+      <main
+        className={`mx-auto flex w-full max-w-[1600px] flex-1 min-h-0 flex-col px-6 py-6 ${
+          viewMode === "kanban" ? "overflow-hidden" : "overflow-y-auto"
+        }`}
+      >
         {viewMode === "kanban" ? (
           <KanbanView
             stages={PIPELINE_STAGES}
@@ -529,7 +537,7 @@ const ContractManager = () => {
           <DialogFooter>
             <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); }}>Cancel</Button>
             <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || isUploading} className="gap-2">
-              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Confirm & Sign</>}
+              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Upload</>}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -602,6 +610,12 @@ const KanbanView = ({
 }) => {
   const [dragOverStage, setDragOverStage] = useState<ContractPipelineStatus | null>(null);
   const [dragSourceStage, setDragSourceStage] = useState<ContractPipelineStatus | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const laneBodyRefs = useRef<Record<VisiblePipelineStage, HTMLDivElement | null>>({
+    CONTRACT_RECEIPT: null,
+    RETURNED_TO_CUSTOMER: null,
+    CONTRACT_SIGNED: null,
+  });
 
   const handleDragOver = (e: React.DragEvent, stageId: ContractPipelineStatus) => {
     if (dragSourceStage && !canMoveTo(dragSourceStage, stageId)) {
@@ -633,8 +647,46 @@ const KanbanView = ({
   const isInvalidTarget = (stageId: ContractPipelineStatus) =>
     dragSourceStage !== null && !canMoveTo(dragSourceStage, stageId) && dragSourceStage !== stageId;
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+
+    const logKanbanMetrics = () => {
+      const board = boardRef.current;
+      if (!board) return;
+
+      console.groupCollapsed("[ContractKanban] layout metrics");
+      console.log("board", {
+        clientHeight: board.clientHeight,
+        scrollHeight: board.scrollHeight,
+        overflowY: window.getComputedStyle(board).overflowY,
+      });
+
+      stages.forEach((stage) => {
+        const laneBody = laneBodyRefs.current[stage.id];
+        if (!laneBody) return;
+
+        console.log(stage.id, {
+          clientHeight: laneBody.clientHeight,
+          scrollHeight: laneBody.scrollHeight,
+          canScroll: laneBody.scrollHeight > laneBody.clientHeight,
+          overflowY: window.getComputedStyle(laneBody).overflowY,
+          cards: (jobsByStage[stage.id] || []).length,
+        });
+      });
+      console.groupEnd();
+    };
+
+    logKanbanMetrics();
+    window.addEventListener("resize", logKanbanMetrics);
+    return () => window.removeEventListener("resize", logKanbanMetrics);
+  }, [jobsByStage, stages]);
+
   return (
-    <div className="grid grid-cols-4 gap-2.5 items-start" style={{ height: "calc(100vh - 220px)" }}>
+    <div
+      ref={boardRef}
+      data-contract-kanban-board
+      className="flex h-full min-h-0 overflow-hidden gap-2.5"
+    >
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
@@ -643,7 +695,8 @@ const KanbanView = ({
         return (
           <div
             key={stage.id}
-            className={`rounded-lg border flex flex-col h-full transition-all duration-200 ${
+            data-contract-kanban-lane={stage.id}
+            className={`flex min-h-0 flex-1 flex-col rounded-lg border transition-all duration-200 ${
               valid && isOver ? "border-primary ring-2 ring-primary/20 bg-primary/5"
               : valid ? "border-primary/40 bg-primary/[0.02]"
               : invalid ? "border-border/30 opacity-40"
@@ -681,7 +734,13 @@ const KanbanView = ({
               )}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div
+              ref={(node) => {
+                laneBodyRefs.current[stage.id] = node;
+              }}
+              data-contract-kanban-scroll={stage.id}
+              className="min-h-0 flex-1 overflow-y-auto"
+            >
               <div className="p-2 space-y-2">
                 {(jobsByStage[stage.id] || []).length === 0 ? (
                   <div className={`py-10 text-center rounded-md border border-dashed transition-colors ${valid && isOver ? "border-primary/40 bg-primary/5" : "border-border/30"}`}>
@@ -730,7 +789,7 @@ const KanbanCard = ({
   const daysSinceCreated = differenceInDays(new Date(), new Date(job.createdAt));
   const isStale = daysSinceCreated > 5;
   const isSigned = SIGNED_STATUSES.includes(stage.id);
-  const isTerminal = stage.id === "SOURCE_OF_SUPPLY";
+  const isTerminal = false;
   const effectiveStatus = mapToDisplayStage(job.contractStatus || "CONTRACT_RECEIPT");
   const allowedTargets = ALLOWED_TRANSITIONS[effectiveStatus] || [];
   const canAdvance = currentIdx < stages.length - 1 && allowedTargets.includes(stages[currentIdx + 1].id);
@@ -887,34 +946,112 @@ const ListView = ({
   router: ReturnType<typeof useRouter>;
   stages: typeof PIPELINE_STAGES;
 }) => {
-  const [sortField, setSortField] = useState<string>("createdAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  const toggleSort = (field: string) => {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortField(field); setSortDir("asc"); }
-  };
-
-  const sorted = useMemo(() => {
-    return [...pipelineJobs].sort((a, b) => {
-      let aVal = "", bVal = "";
-      switch (sortField) {
-        case "createdAt": aVal = a.createdAt; bVal = b.createdAt; break;
-        case "contractStatus": aVal = a.contractStatus || ""; bVal = b.contractStatus || ""; break;
-        default: aVal = (a as any)[sortField] || ""; bVal = (b as any)[sortField] || "";
+  const jobsByStage = useMemo(() => {
+    const map: Record<string, ContractListItem[]> = {};
+    stages.forEach((s) => { map[s.id] = []; });
+    pipelineJobs.forEach((j) => {
+      const displayStage = mapToDisplayStage(j.contractStatus || "CONTRACT_RECEIPT");
+      if (map[displayStage]) {
+        map[displayStage].push(j);
+      } else {
+        map["CONTRACT_RECEIPT"].push(j);
       }
-      const cmp = aVal.localeCompare(bVal);
-      return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [pipelineJobs, sortField, sortDir]);
+    return map as Record<ContractPipelineStatus, ContractListItem[]>;
+  }, [pipelineJobs, stages]);
 
-  const SortHead = ({ label, field }: { label: string; field: string }) => (
-    <TableHead
-      className="font-semibold text-xs uppercase tracking-wider text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap"
-      onClick={() => toggleSort(field)}
-    >
-      <span className="inline-flex items-center gap-1">{label}<ArrowUpDown className="h-3 w-3 opacity-40" /></span>
-    </TableHead>
+  const ContractTable = ({ stage, jobs }: { stage: typeof PIPELINE_STAGES[0]; jobs: ContractListItem[] }) => (
+    <div className="rounded-lg border bg-card overflow-hidden mb-6">
+      <div className={`px-4 py-3 border-b ${stage.bgColor}`}>
+        <div className="flex items-center gap-2">
+          <stage.icon className={`h-4 w-4 ${stage.color}`} />
+          <span className={`text-sm font-semibold ${stage.color}`}>{stage.label}</span>
+          <Badge variant="outline" className="text-xs ml-auto">
+            {jobs.length} contract{jobs.length !== 1 ? "s" : ""}
+          </Badge>
+        </div>
+      </div>
+      {jobs.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground">
+          <stage.icon className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">No contracts in this stage</p>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Job Number</TableHead>
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Project</TableHead>
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Customer</TableHead>
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">County</TableHead>
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">PM</TableHead>
+              <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Created</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {jobs.map((job) => {
+              const isSigned = job.contractStatus ? SIGNED_STATUSES.includes(job.contractStatus) : false;
+              const effectiveStatus = mapToDisplayStage(job.contractStatus || "") as string;
+              const allowedTargets = ALLOWED_TRANSITIONS[effectiveStatus] || [];
+
+              return (
+                <TableRow
+                  key={job.id}
+                  className="cursor-pointer hover:bg-muted/20 transition-colors text-sm"
+                  onClick={() => {
+                    const isSigned = job.contractStatus ? SIGNED_STATUSES.includes(job.contractStatus) : false;
+                    router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`);
+                  }}
+                >
+                  <TableCell className="font-mono font-semibold text-primary py-3">
+                    {isSigned && <Lock className="h-3 w-3 inline mr-1 text-warning" />}
+                    {job.etcJobNumber || "—"}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate py-3">{job.projectName || "—"}</TableCell>
+                  <TableCell className="py-3 uppercase text-xs tracking-wide">{job.customerName || "—"}</TableCell>
+                  <TableCell className="py-3">{job.county || "—"}</TableCell>
+                  <TableCell className="py-3 text-xs">{job.etcProjectManager || "—"}</TableCell>
+                  <TableCell className="py-3 tabular-nums text-xs text-muted-foreground whitespace-nowrap">{formatDate(job.createdAt)}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push(`/l/contracts/view/${job.id}`)}>
+                  Open Contract
+                </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {allowedTargets.map((targetId) => {
+                          const s = stages.find((st) => st.id === targetId);
+                          if (!s) return null;
+                          return (
+                            <DropdownMenuItem key={s.id} onClick={() => moveContract(job.id, s.id)}>
+                              <s.icon className="h-3.5 w-3.5 mr-2" />
+                              Move to {s.shortLabel}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                        {!isSigned && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Delete Contract
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 
   if (pipelineJobs.length === 0) {
@@ -928,83 +1065,27 @@ const ListView = ({
   }
 
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/30 hover:bg-muted/30">
-            <SortHead label="Job Number" field="etcJobNumber" />
-            <SortHead label="Pipeline Stage" field="contractStatus" />
-            <SortHead label="Project" field="projectName" />
-            <SortHead label="Customer" field="customerName" />
-            <SortHead label="County" field="county" />
-            <SortHead label="PM" field="etcProjectManager" />
-            <SortHead label="Created" field="createdAt" />
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((job) => {
-            const isSigned = job.contractStatus ? SIGNED_STATUSES.includes(job.contractStatus) : false;
-            const effectiveStatus = mapToDisplayStage(job.contractStatus || "") as string;
-            const allowedTargets = ALLOWED_TRANSITIONS[effectiveStatus] || [];
-
-            return (
-              <TableRow
-                key={job.id}
-                className="cursor-pointer hover:bg-muted/20 transition-colors text-sm"
-                onClick={() => {
-                  const isSigned = job.contractStatus ? SIGNED_STATUSES.includes(job.contractStatus) : false;
-                  router.push(isSigned ? `/l/contracts/view/${job.id}` : `/l/contracts/edit/${job.id}`);
-                }}
-              >
-                <TableCell className="font-mono font-semibold text-primary py-3">
-                  {isSigned && <Lock className="h-3 w-3 inline mr-1 text-warning" />}
-                  {job.etcJobNumber || "—"}
-                </TableCell>
-                <TableCell className="py-3">{getStatusBadge(job.contractStatus || "CONTRACT_RECEIPT")}</TableCell>
-                <TableCell className="max-w-[200px] truncate py-3">{job.projectName || "—"}</TableCell>
-                <TableCell className="py-3 uppercase text-xs tracking-wide">{job.customerName || "—"}</TableCell>
-                <TableCell className="py-3">{job.county || "—"}</TableCell>
-                <TableCell className="py-3 text-xs">{job.etcProjectManager || "—"}</TableCell>
-                <TableCell className="py-3 tabular-nums text-xs text-muted-foreground whitespace-nowrap">{formatDate(job.createdAt)}</TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/l/contracts/view/${job.id}`)}>
-                Open Contract
-              </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {allowedTargets.map((targetId) => {
-                        const s = stages.find((st) => st.id === targetId);
-                        if (!s) return null;
-                        return (
-                          <DropdownMenuItem key={s.id} onClick={() => moveContract(job.id, s.id)}>
-                            <s.icon className="h-3.5 w-3.5 mr-2" />
-                            Move to {s.shortLabel}
-                          </DropdownMenuItem>
-                        );
-                      })}
-                      {!isSigned && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
-                            <Trash2 className="h-3.5 w-3.5 mr-2" />
-                            Delete Contract
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+    <Tabs defaultValue={stages[0]?.id} className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        {stages.map((stage) => (
+          <TabsTrigger key={stage.id} value={stage.id} className="flex items-center gap-2">
+            <stage.icon className="h-4 w-4" />
+            <span className="hidden sm:inline">{stage.shortLabel}</span>
+            <Badge variant="secondary" className="ml-1 text-xs">
+              {(jobsByStage[stage.id] || []).length}
+            </Badge>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {stages.map((stage) => (
+        <TabsContent key={stage.id} value={stage.id} className="mt-6">
+          <ContractTable
+            stage={stage}
+            jobs={jobsByStage[stage.id] || []}
+          />
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 };
 

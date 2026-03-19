@@ -11,9 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import {
   Popover,
   PopoverContent,
@@ -44,6 +42,7 @@ import {
 } from '@/components/ui/table';
 import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
 interface SovMasterItem {
   id: number;
   item_number: string;
@@ -51,7 +50,12 @@ interface SovMasterItem {
   description: string;
   display_name: string;
   work_type: string;
-  uom: string;
+  uom_1: string | null;
+  uom_2: string | null;
+  uom_3: string | null;
+  uom_4: string | null;
+  uom_5: string | null;
+  uom_6: string | null;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -60,6 +64,9 @@ interface SOVTableProps {
   jobId?: string;
   contractId?: string;
   readOnly?: boolean;
+  onEditAttempt?: () => void;
+  isSignedContract?: boolean;
+  changeOrderApproved?: boolean;
 }
 
 interface CustomItemDraft {
@@ -82,7 +89,23 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps) => {
+function getFirstNonNullUom(master: SovMasterItem): string {
+  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+}
+
+function getAvailableUoms(master: SovMasterItem): string[] {
+  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
+  return uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '');
+}
+
+export const SOVTable = ({
+  jobId,
+  contractId,
+  readOnly = false,
+  onEditAttempt,
+  isSignedContract = false,
+  changeOrderApproved = false
+}: SOVTableProps) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
@@ -140,6 +163,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
     return sovProducts.filter((p) => {
       const searchableText = [
         p.item_number,
+        p.display_item_number,
         p.work_type,
         p.display_name,
         p.description
@@ -151,6 +175,12 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
   }, [sovProducts, selectorSearch]);
 
   const addRow = () => {
+    // Check if change order is required for signed contracts
+    if (isSignedContract && !changeOrderApproved && onEditAttempt) {
+      onEditAttempt();
+      return;
+    }
+
     const newItem: ScheduleOfValuesItem = {
       id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
       itemNumber: '',
@@ -235,7 +265,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 ...item,
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: master.uom || 'EA',
+                uom: getFirstNonNullUom(master),
                 quantity: item.quantity || 1,
                 unitPrice: item.unitPrice || 0,
                 extendedPrice: item.extendedPrice || 0,
@@ -257,7 +287,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
         sov_item_id: master.id,
         item_number: master.item_number,
         description: master.display_name,
-        uom: master.uom || 'EA',
+        uom: getFirstNonNullUom(master),
         quantity: 1, // Default quantity
         unit_price: 0, // Default unit price
         retainage_type: 'dollar' as const,
@@ -304,7 +334,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                 id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
                 description: master.display_name,
-                uom: createdItem.uom || master.uom || 'EA',
+                uom: createdItem.uom || getFirstNonNullUom(master),
                 quantity: createdItem.quantity || payload.quantity,
                 unitPrice: createdItem.unit_price || payload.unit_price,
                 extendedPrice: createdItem.extended_price || (createdItem.quantity * createdItem.unit_price),
@@ -480,24 +510,13 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
       {items.length > 0 && !readOnly && (
         <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
-              <Select value={bulkType} onValueChange={(type) => setBulkType(type as 'percent' | 'dollar')}>
-                <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
-                  <SelectValue>{bulkType === 'percent' ? '%' : '$'}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percent">%</SelectItem>
-                  <SelectItem value="dollar">$</SelectItem>
-                </SelectContent>
-              </Select>
-              <CurrencyInput
-                value={bulkValueDigits}
-                onChange={setBulkValueDigits}
-                className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
-              />
-            </div>
-          </div>
+          <DollarPercentCurrencyInputField
+            type={bulkType}
+            value={bulkValueDigits ? parseInt(bulkValueDigits, 10) / 100 : 0}
+            onTypeChange={setBulkType}
+            onValueChange={(value) => setBulkValueDigits(Math.round(value * 100).toString())}
+            size="sm"
+          />
           <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={applyBulkRetainage}>
             Apply All
           </Button>
@@ -515,7 +534,7 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[80px] text-xs">UOM</TableHead>
+                <TableHead className="w-[200px] text-xs">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
                 <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
@@ -537,99 +556,145 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                     {readOnly ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
-                      <Dialog open={selectorOpen === item.id} onOpenChange={(open) => {
-                        setSelectorOpen(open ? item.id : null);
-                        if (!open) setSelectorSearch('');
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-between h-7 text-xs font-normal"
-                          >
-                            {item.itemNumber || 'Select item…'}
-                            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 data-[state=open]:slide-in-from-top-[48%] data-[state=open]:slide-in-from-left-[50%] data-[state=closed]:slide-out-to-top-[48%] data-[state=closed]:slide-out-to-left-[50%]">
-                          <DialogHeader className="p-6 pb-4 shrink-0">
-                            <DialogTitle>Select Schedule of Values Item Number</DialogTitle>
-                          </DialogHeader>
-                          <Separator className="w-full shrink-0" />
-                          <div className="flex-1 min-h-0 overflow-hidden px-6 py-4">
-                            <div className="mb-3 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-                              <p className="text-xs font-medium text-foreground">
-                                Select an SOV item number from the list, or use quick actions to add a custom item number.
-                              </p>
-                            </div>
-                            {/* Quick-add buttons above search */}
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'custom'); setSelectorOpen(null); }}
-                              >
-                                <Plus className="h-3.5 w-3.5" /> Custom Item Number
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'delivery'); setSelectorOpen(null); }}
-                              >
-                                <Plus className="h-3.5 w-3.5" /> Delivery
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs gap-1.5 rounded-md border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100"
-                                onClick={() => { handleQuickAdd(item.id, 'service'); setSelectorOpen(null); }}
-                              >
-                                <Plus className="h-3.5 w-3.5" /> Service
-                              </Button>
-                            </div>
-                            <Command className="border rounded-lg h-full flex flex-col overflow-hidden">
-                              <CommandInput
-                                placeholder="Search by # or name…"
-                                value={selectorSearch}
-                                onValueChange={setSelectorSearch}
-                                className="border-b"
-                              />
-                              <CommandList className="max-h-none flex-1 overflow-y-auto">
-                                <CommandEmpty className="py-2 px-3 text-xs text-muted-foreground">
-                                  No matching items found.
-                                </CommandEmpty>
-                                {/* Items grouped by work type */}
-                                {(() => {
-                                  const preferredOrder = ['MPT', 'PERMANENT SIGN', 'LANE CLOSURE', 'FLAGGING', 'SERVICE', 'DELIVERY', 'CUSTOM', 'OTHER'];
-                                  const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                    const key = (curr.work_type || 'OTHER').trim().toUpperCase();
-                                    if (!acc[key]) acc[key] = [];
-                                    acc[key].push(curr);
-                                    return acc;
-                                  }, {});
+                      <Select
+                        value={item.itemNumber || undefined}
+                        onValueChange={(value) => {
+                          if (value === "custom") {
+                            openCustomDialog(item.id);
+                            return;
+                          }
+                          if (value === "delivery") {
+                            handleQuickAdd(item.id, 'delivery');
+                            return;
+                          }
+                          if (value === "service") {
+                            handleQuickAdd(item.id, 'service');
+                            return;
+                          }
+                          const selected = sovProducts.find(p => p.item_number === value);
+                          if (selected) selectMasterItem(item.id, selected);
+                        }}
+                      >
+                        <SelectTrigger className="w-full h-7 text-xs font-mono font-normal bg-transparent">
+                          <SelectValue placeholder="Select item…">
+                            {item.itemNumber || "Select item…"}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="Search by item #, name, or work type…"
+                              value={selectorSearch}
+                              onValueChange={setSelectorSearch}
+                              autoFocus
+                            />
+                            <CommandList>
 
-                                  const orderedWorkTypes = [
-                                    ...preferredOrder.filter((type) => grouped[type]?.length),
+                              {/* Items grouped by work type */}
+                              {(() => {
+                                const searchTerm = selectorSearch.toLowerCase().trim();
+                                const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
+                                  const key = curr.work_type?.trim().toUpperCase();
+                                  if (key && !acc[key]) acc[key] = [];
+                                  if (key) acc[key].push(curr);
+                                  return acc;
+                                }, {});
+
+                                // Always show these three categories at the top when no search
+                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
+
+                                // Add synthetic groups for Delivery, Service, and Custom
+                                if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
+                                if (!grouped['SERVICE']) grouped['SERVICE'] = [];
+                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
+
+                                let allWorkTypes: string[];
+
+                                if (!searchTerm) {
+                                  // No search: show always-show categories first, then others with items
+                                  allWorkTypes = [
+                                    ...alwaysShowCategories,
                                     ...Object.keys(grouped)
-                                      .filter((type) => !preferredOrder.includes(type))
-                                      .sort(),
+                                      .filter(type => !alwaysShowCategories.includes(type) && grouped[type].length > 0)
+                                      .sort()
                                   ];
+                                } else {
+                                  // With search: show categories that have items or match search
+                                  allWorkTypes = Object.keys(grouped)
+                                    .filter(type => {
+                                      if (alwaysShowCategories.includes(type)) {
+                                        // Always show these when searched
+                                        return true;
+                                      }
+                                      return grouped[type].length > 0;
+                                    })
+                                    .sort();
+                                }
 
-                                  return orderedWorkTypes.map((workType) => {
-                                    const groupItems = grouped[workType] || [];
-                                    if (groupItems.length === 0) return null;
+                                return allWorkTypes.map((workType) => {
+                                  const groupItems = grouped[workType] || [];
 
+                                  // For synthetic sections (Delivery, Service, Custom), show items without category headers
+                                  if (workType === 'DELIVERY' && groupItems.length === 0) {
+                                    return (
+                                      <CommandItem
+                                        key="delivery-item"
+                                        value="delivery"
+                                        onSelect={() => handleQuickAdd(item.id, 'delivery')}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
+                                        <span className="truncate">Delivery</span>
+                                      </CommandItem>
+                                    );
+                                  }
+
+                                  if (workType === 'SERVICE' && groupItems.length === 0) {
+                                    return (
+                                      <CommandItem
+                                        key="service-item"
+                                        value="service"
+                                        onSelect={() => handleQuickAdd(item.id, 'service')}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
+                                        <span className="truncate">Service</span>
+                                      </CommandItem>
+                                    );
+                                  }
+
+                                  if (workType === 'CUSTOM' && groupItems.length === 0) {
+                                    return (
+                                      <CommandItem
+                                        key="custom-item"
+                                        value="custom"
+                                        onSelect={() => openCustomDialog(item.id)}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        <Check className="mr-2 h-4 w-4 opacity-0" />
+                                        <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
+                                        <span className="truncate">Custom Item Number</span>
+                                      </CommandItem>
+                                    );
+                                  }
+
+                                  // For work type groups with items, show them with category headers
+                                  if (groupItems.length > 0) {
                                     return (
                                       <CommandGroup key={workType} heading={workType}>
                                         {groupItems.map((p) => (
                                           <CommandItem
                                             key={p.id}
-                                            value={`${p.item_number} ${p.display_name}`}
-                                            onSelect={() => {
-                                              selectMasterItem(item.id, p);
-                                              setSelectorOpen(null);
-                                            }}
+                                            value={[
+                                              p.item_number,
+                                              p.display_item_number,
+                                              p.display_name,
+                                              p.description,
+                                              p.work_type,
+                                            ].filter(Boolean).join(' ')}
+                                            onSelect={() => selectMasterItem(item.id, p)}
                                             className="text-xs cursor-pointer"
                                           >
                                             <Check
@@ -644,26 +709,62 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                                         ))}
                                       </CommandGroup>
                                     );
-                                  });
-                                })()}
-                              </CommandList>
-                            </Command>
-                          </div>
-                          <Separator className="w-full shrink-0" />
-                          <div className="flex justify-end items-center p-4 px-6 shrink-0">
-                            <Button variant="outline" onClick={() => setSelectorOpen(null)}>
-                              Cancel
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                                  }
+
+                                  return null;
+                                });
+                              })()}
+
+                              {filteredItems.length === 0 && !sovMasterLoading && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
+                                  No matching items found.
+                                </div>
+                              )}
+
+                              {sovMasterLoading && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">
+                                  Loading...
+                                </div>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </SelectContent>
+                      </Select>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
                     <span className="text-xs px-1 truncate block">{item.description}</span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <span className="text-xs px-1">{item.uom}</span>
+                    {readOnly ? (
+                      <span className="text-xs px-1">{item.uom}</span>
+                    ) : (
+                      (() => {
+                        const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
+                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [];
+
+                        // Always show select if we have UOM options, otherwise show as text
+                        return availableUoms.length > 0 ? (
+                          <Select
+                            value={item.uom}
+                            onValueChange={(value) => updateRow(item.id, 'uom', value)}
+                          >
+                            <SelectTrigger className="w-full h-7 text-xs bg-transparent">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableUoms.map((uom) => (
+                                <SelectItem key={uom} value={uom} className="text-xs">
+                                  {uom}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs px-1">{item.uom}</span>
+                        );
+                      })()
+                    )}
                   </TableCell>
                   <TableCell className="p-1.5">
                     {readOnly ? (
@@ -730,28 +831,18 @@ export const SOVTable = ({ jobId, contractId, readOnly = false }: SOVTableProps)
                           : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                       </span>
                     ) : (
-                      <div className="flex items-center justify-end">
-                        <div className="flex items-center h-7 border rounded-md bg-background overflow-hidden">
-                          <Select
-                            value={item.retainageType}
-                            onValueChange={(type) => updateRetainage(item.id, type as 'percent' | 'dollar', item.retainageValue)}
-                          >
-                            <SelectTrigger className="h-7 w-10 rounded-none border-0 border-r px-0 justify-center">
-                              <SelectValue>{item.retainageType === 'percent' ? '%' : '$'}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="percent">%</SelectItem>
-                              <SelectItem value="dollar">$</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <CurrencyInput
-                            value={Math.round(item.retainageValue * 100).toString()}
-                            onChange={(digits) =>
-                              updateRetainage(item.id, item.retainageType, (parseInt(digits || '0', 10) || 0) / 100)
-                            }
-                            className="h-7 text-xs text-right w-[125px] border-0 focus-visible:ring-0"
-                          />
-                        </div>
+                      <div className="flex justify-end">
+                        <DollarPercentCurrencyInputField
+                          type={item.retainageType}
+                          value={item.retainageValue}
+                          onTypeChange={(type) => {
+                            const currentValue = item.retainageValue;
+                            const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
+                            updateRetainage(item.id, type, newValue);
+                          }}
+                          onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
+                          size="sm"
+                        />
                       </div>
                     )}
                   </TableCell>

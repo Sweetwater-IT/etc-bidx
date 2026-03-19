@@ -174,6 +174,8 @@ const toDateString = (value?: Date) => {
   return format(value, "yyyy-MM-dd");
 };
 
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+
 export const CreateTakeoffForm = ({
   jobId,
   onBack,
@@ -259,6 +261,7 @@ export const CreateTakeoffForm = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [titleEnteredAt, setTitleEnteredAt] = useState<Date | null>(null);
   const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [firstSave, setFirstSave] = useState<boolean>(false);
 
   // MPT Configuration State
   const [activeSections, setActiveSections] = useState<string[]>([]);
@@ -289,6 +292,7 @@ export const CreateTakeoffForm = ({
   const installDateValue = parseDateString(installDate);
   const pickupDateValue = parseDateString(pickupDate);
   const neededByDateValue = parseDateString(neededByDate);
+  const endDateValue = parseDateString(endDate);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -350,6 +354,10 @@ export const CreateTakeoffForm = ({
       const newTakeoffId = data.takeoff.id as string;
       setSavedTakeoffId(newTakeoffId);
       setHasUnsavedChanges(false);
+      setFirstSave(true);
+      // Reset counter to 1 like sign order page
+      // Note: We can't directly reset the counter here since it's in the header component
+      // The header component will handle showing the message based on firstSave
       if (!savedTakeoffId && newTakeoffId) {
         // Update URL without full page reload for better UX
         window.history.replaceState(null, '', `/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
@@ -375,7 +383,7 @@ export const CreateTakeoffForm = ({
         workTypeSelectedAt?.getTime() ?? 0
       );
       const shouldDelay = !savedTakeoffId && latestTrigger > 0 && now - latestTrigger < 2000;
-      const delay = shouldDelay ? 2500 - (now - latestTrigger) : 2500;
+      const delay = shouldDelay ? 5000 - (now - latestTrigger) : 5000;
 
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -782,6 +790,7 @@ export const CreateTakeoffForm = ({
         isSaving={saving}
         lastSavedAt={lastSaved}
         hasUnsavedChanges={hasUnsavedChanges}
+        firstSave={firstSave}
         additionalButtons={undefined}
       />
 
@@ -931,12 +940,23 @@ export const CreateTakeoffForm = ({
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Job Start Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={installDate}
-                  onChange={(e) => setInstallDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select job start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                  </PopoverContent>
+                </Popover>
               </div>
             ) : isPermanentSigns ? (
               <div>
@@ -962,12 +982,23 @@ export const CreateTakeoffForm = ({
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={installDate}
-                  onChange={(e) => setInstallDate(e.target.value)}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select install date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
             {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
@@ -988,12 +1019,23 @@ export const CreateTakeoffForm = ({
                 {isMultiDayJob && (
                   <div className="mt-2">
                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">End Date</Label>
-                    <Input
-                      type="date"
-                      className="text-sm"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal text-sm",
+                            !endDateValue && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDateValue ? format(endDateValue, "PPP") : "Select end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={endDateValue} onSelect={(date) => setEndDate(toDateString(date))} initialFocus />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
               </div>
@@ -1027,48 +1069,49 @@ export const CreateTakeoffForm = ({
             ) : (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                />
-              </div>
-            )}
-            <div>
-              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
-              {isPermanentSigns ? (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal text-sm",
-                        !neededByDateValue && "text-muted-foreground"
+                        !pickupDateValue && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                      {pickupDateValue ? format(pickupDateValue, "PPP") : "Select pickup date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={neededByDateValue}
-                      onSelect={handlePermanentNeededByDateChange}
-                      disabled={(date) => Boolean(installDateValue && date >= installDateValue)}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={pickupDateValue} onSelect={(date) => setPickupDate(toDateString(date))} initialFocus />
                   </PopoverContent>
                 </Popover>
-              ) : (
-                <Input
-                  type="date"
-                  className="text-sm"
-                  value={neededByDate}
-                  onChange={(e) => setNeededByDate(e.target.value)}
-                />
-              )}
+              </div>
+            )}
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal text-sm",
+                      !neededByDateValue && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={neededByDateValue}
+                    onSelect={(date) => setNeededByDate(toDateString(date))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <span className="text-[9px] text-muted-foreground mt-1 block">Internal suspense date for build/sign shop prioritization</span>
             </div>
             {workType === "PERMANENT_SIGNS" ? (
@@ -1103,16 +1146,75 @@ export const CreateTakeoffForm = ({
 
       {/* Work Type Specific Content */}
       {workType === "MPT" && (
-        <MPTSignConfiguration
-          activeSections={activeSections}
-          signRows={signRows}
-          defaultSignMaterial={defaultSignMaterial}
-          onToggleSection={handleToggleSection}
-          onSignRowsChange={handleSignRowsChange}
-          onDefaultMaterialChange={setDefaultSignMaterial}
-          onApplyMaterialToAll={handleApplyMaterialToAll}
-        />
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <MPTSignConfiguration
+            activeSections={activeSections}
+            signRows={signRows}
+            defaultSignMaterial={defaultSignMaterial}
+            onToggleSection={handleToggleSection}
+            onSignRowsChange={handleSignRowsChange}
+            onDefaultMaterialChange={setDefaultSignMaterial}
+            onApplyMaterialToAll={handleApplyMaterialToAll}
+          />
+        </div>
       )}
+
+      {/* Square Footage Summary — MPT */}
+      {workType === "MPT" && activeSections.length > 0 && (() => {
+        const sectionTotals: { label: string; signs: number; sqft: number }[] = [];
+        let grandSigns = 0;
+        let grandSqft = 0;
+        for (const sectionKey of activeSections) {
+          const section = MPT_SECTIONS.find((s) => s.key === sectionKey);
+          let sectionSigns = 0;
+          let sectionSqft = 0;
+          for (const row of signRows[sectionKey] || []) {
+            if (!row.signDesignation) continue;
+            sectionSigns += row.quantity;
+            sectionSqft += row.totalSqft;
+            for (const sec of row.secondarySigns || []) {
+              if (!sec.signDesignation) continue;
+              sectionSigns += row.quantity;
+              sectionSqft += Math.round(sec.sqft * row.quantity * 100) / 100;
+            }
+          }
+          if (sectionSigns > 0) {
+            sectionTotals.push({ label: section?.label || sectionKey, signs: sectionSigns, sqft: Math.round(sectionSqft * 100) / 100 });
+            grandSigns += sectionSigns;
+            grandSqft += sectionSqft;
+          }
+        }
+        if (grandSigns === 0) return null;
+        return (
+          <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+            <div className="bg-muted/30 px-5 py-3 border-b">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Square Footage Summary</h2>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {sectionTotals.map((s) => (
+                  <div key={s.label} className="rounded-md border p-3 bg-muted/20">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{s.label}</p>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-lg font-bold tabular-nums text-foreground">{s.sqft.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-[10px] text-muted-foreground">sq ft</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{s.signs} sign{s.signs !== 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xl font-black tabular-nums text-primary">{Math.round(grandSqft * 100 / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xs text-muted-foreground">sq ft</span>
+                  <span className="text-xs text-muted-foreground">({grandSigns} sign{grandSigns !== 1 ? "s" : ""})</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {workType === "PERMANENT_SIGNS" && (
         <PermanentSignConfiguration
@@ -1146,11 +1248,67 @@ export const CreateTakeoffForm = ({
         />
       )}
 
+      {/* Square Footage Summary — Permanent Signs */}
+      {workType === "PERMANENT_SIGNS" && activePermanentItems.length > 0 && (() => {
+        const itemTotals: { label: string; signs: number; sqft: number }[] = [];
+        let grandSigns = 0;
+        let grandSqft = 0;
+        for (const itemNum of activePermanentItems) {
+          let itemSigns = 0;
+          let itemSqft = 0;
+          for (const row of permanentSignRows[itemNum] || []) {
+            if (!row.signDesignation) continue;
+            itemSigns += row.quantity;
+            itemSqft += row.totalSqft;
+            for (const sec of row.secondarySigns || []) {
+              if (!sec.signDesignation) continue;
+              itemSigns += row.quantity;
+              itemSqft += Math.round(sec.sqft * row.quantity * 100) / 100;
+            }
+          }
+          if (itemSigns > 0) {
+            itemTotals.push({ label: itemNum, signs: itemSigns, sqft: Math.round(itemSqft * 100) / 100 });
+            grandSigns += itemSigns;
+            grandSqft += itemSqft;
+          }
+        }
+        if (grandSigns === 0) return null;
+        return (
+          <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+            <div className="bg-muted/30 px-5 py-3 border-b">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Square Footage Summary</h2>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {itemTotals.map((s) => (
+                  <div key={s.label} className="rounded-md border p-3 bg-muted/20">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 truncate" title={s.label}>{s.label}</p>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-lg font-bold tabular-nums text-foreground">{s.sqft.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span className="text-[10px] text-muted-foreground">sq ft</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{s.signs} sign{s.signs !== 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xl font-black tabular-nums text-primary">{Math.round(grandSqft * 100 / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xs text-muted-foreground">sq ft</span>
+                  <span className="text-xs text-muted-foreground">({grandSigns} sign{grandSigns !== 1 ? "s" : ""})</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {(workType === "FLAGGING" || workType === "LANE_CLOSURE" || workType === "SERVICE" || workType === "DELIVERY") && (
         <>
           {/* Sign Configuration Section */}
-          <div className="rounded-lg border bg-card shadow-sm max-w-[calc(100vw-272px-64px)]">
-            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <div className={`rounded-lg border bg-card shadow-sm overflow-x-auto ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Sign Configuration
               </h2>
@@ -1246,7 +1404,7 @@ export const CreateTakeoffForm = ({
 
           {/* Vehicles Section */}
           {(workType === "FLAGGING" || workType === "LANE_CLOSURE") && (
-          <div className="rounded-lg border bg-card shadow-sm">
+          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
               <Button
@@ -1327,7 +1485,7 @@ export const CreateTakeoffForm = ({
 
           {/* Rolling Stock Section */}
           {workType === "DELIVERY" && (
-          <div className="rounded-lg border bg-card shadow-sm">
+          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
             <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
               <Button
@@ -1484,7 +1642,7 @@ export const CreateTakeoffForm = ({
       )}
 
       {workType === "RENTAL" && (
-        <div className="rounded-lg border bg-card shadow-sm">
+        <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
           <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
             <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" disabled>
@@ -1502,76 +1660,80 @@ export const CreateTakeoffForm = ({
 
 
       {/* Additional Items */}
-      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-        <div className="bg-muted/30 px-5 py-3 flex items-center justify-between border-b">
+      <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+        <div className="px-5 py-3 border-b bg-muted/30">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
-          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), name: "", quantity: 1, description: "" },
-          ])}>
-            <Plus className="h-3 w-3" /> Add Item
-          </Button>
         </div>
-
-        {additionalItems.length === 0 ? (
-          <div className="p-6 text-center text-xs text-muted-foreground">No additional items.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-muted/20">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/3">Item</th>
-                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/6">Quantity</th>
-                  <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/2">Notes</th>
-                  <th className="px-4 py-2 w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {additionalItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                          <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
-                          <SelectContent>
-                            {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            ))}
-                            <SelectItem value="__custom">Custom…</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {item.name === "__custom" && (
-                          <Input className="h-8 text-xs w-32" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom name" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <QuantityInput
-                        value={item.quantity || 1}
-                        min={1}
-                        onChange={(value) =>
-                          setAdditionalItems((prev) =>
-                            prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
-                          )
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      {item.name !== "__custom" && (
-                        <Input className="h-8 text-xs w-full" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="p-5">
+          <div className="flex items-center justify-end mb-3">
+            <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
+              ...prev,
+              { id: crypto.randomUUID(), name: "", quantity: 1, description: "" },
+            ])}>
+              <Plus className="h-3 w-3" /> Add Item
+            </Button>
           </div>
-        )}
+
+          {additionalItems.length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-4">No additional items.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px]">
+                <thead className="bg-muted/20">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/3">Item</th>
+                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/6">Quantity</th>
+                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/2">Notes</th>
+                    <th className="px-4 py-2 w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {additionalItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                            <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                            <SelectContent>
+                              {(workType === "PERMANENT_SIGNS" ? [] : MPT_ADDITIONAL_ITEM_OPTIONS).map((opt) => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                              <SelectItem value="__custom">Custom…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {item.name === "__custom" && (
+                            <Input className="h-8 text-xs w-32" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom name" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <QuantityInput
+                          value={item.quantity || 1}
+                          min={1}
+                          onChange={(value) =>
+                            setAdditionalItems((prev) =>
+                              prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        {item.name !== "__custom" && (
+                          <Input className="h-8 text-xs w-full" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Notes */}

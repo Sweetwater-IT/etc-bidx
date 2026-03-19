@@ -79,6 +79,17 @@ type Job360Tab =
   | "documents"
   | "purchase-orders";
 
+const formatWorkType = (workType: string) => {
+  const workTypeMap: Record<string, string> = {
+    permanent_sign: "Permanent Sign",
+    permanent_signs: "Permanent Sign",
+    lane_closure: "Lane Closure",
+    flagging: "Flagging",
+    mpt: "MPT",
+  };
+  return workTypeMap[workType] || workType;
+};
+
 const ProjectDetail = () => {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
@@ -980,7 +991,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                       <span className="italic text-muted-foreground">unassigned</span>
                     )}
                   </td>
-                  <td className="px-3 py-1.5 capitalize">{takeoff.work_type}</td>
+                  <td className="px-3 py-1.5">{formatWorkType(takeoff.work_type)}</td>
                   <td className="px-3 py-1.5 text-center">{takeoff.items_count || '—'}</td>
                   <td className="px-3 py-1.5">
                     {takeoff.needed_by_date

@@ -45,6 +45,7 @@ const SEGMENTS = [
 export default function SignOrderPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<SignOrderView[]>([]);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [activeSegment, setActiveSegment] = useState("all");
   const [segmentCounts, setSegmentCounts] = useState({
     all: 0,
@@ -93,7 +94,7 @@ export default function SignOrderPage() {
   // Define filter options
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
 
-  const { startLoading, stopLoading, isLoading } = useLoading();
+  const { startLoading, stopLoading } = useLoading();
 
   const { customers, getCustomers } = useCustomers();
 
@@ -200,7 +201,7 @@ export default function SignOrderPage() {
 
   // Fetch quotes with enhanced parameters
   const fetchQuotes = useCallback(async () => {
-    startLoading();
+    setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
@@ -256,9 +257,9 @@ export default function SignOrderPage() {
     } catch (error) {
       toast.error("Failed to load sign orders");
     } finally {
-      stopLoading();
+      setIsTableLoading(false);
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters]);
 
   // Fetch counts for each segment (shop_status)
   const fetchCounts = useCallback(async () => {
@@ -548,6 +549,7 @@ export default function SignOrderPage() {
               ]} />
               <DataTable<SignOrderView>
                 data={quotes}
+                isLoading={isTableLoading}
                 columns={SIGN_ORDER_COLUMNS}
                 segments={SEGMENTS}
                 segmentValue={activeSegment}

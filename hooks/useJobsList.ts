@@ -22,6 +22,7 @@ interface JobRow {
   etc_project_manager: string | null;
   etc_billing_manager: string | null;
   certified_payroll_type: string;
+  customer_pm: string | null;
 }
 
 interface DisplayJob {
@@ -34,6 +35,7 @@ interface DisplayJob {
   etcBranch: string;
   county: string;
   etcProjectManager: string;
+  customerPM: string;
   projectStartDate: string;
   projectEndDate: string;
   contractStatus: string;
@@ -61,6 +63,7 @@ function toDisplayJob(row: JobRow): DisplayJob {
     etcBranch: row.etc_branch || "",
     county: row.county || "",
     etcProjectManager: row.etc_project_manager || "",
+    customerPM: row.customer_pm || "",
     projectStartDate: row.project_start_date || "",
     projectEndDate: row.project_end_date || "",
     contractStatus: row.contract_status,

@@ -6,6 +6,7 @@ import ContractManager from "./ContractManager";
 export default function ContractsPage() {
   return (
     <SidebarProvider
+      className="h-svh overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 68)",
@@ -14,8 +15,8 @@ export default function ContractsPage() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
+      <SidebarInset className="h-full min-h-0 overflow-hidden">
+        <SiteHeader showTitleBlock={false} />
         <ContractManager />
       </SidebarInset>
     </SidebarProvider>

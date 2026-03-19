@@ -19,7 +19,7 @@ export default function WorkOrderEditContent({
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
   const { mutateAsync: updateWorkOrder } = useUpdateWorkOrder();
-  const jobName = dbJob?.projectInfo?.projectName || "Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);

@@ -14,6 +14,7 @@ import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upl
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
+import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
 
 interface Props {
   jobId: string;
@@ -30,6 +31,19 @@ const WORK_TYPES = [
   { value: "DELIVERY", label: "Delivery" },
   { value: "RENTAL", label: "Rental" },
 ];
+
+const formatVehicleType = (vehicleType: string) => {
+  const vehicleTypeMap: Record<string, string> = {
+    message_board: "Message Board",
+    tma: "TMA",
+  };
+  return vehicleTypeMap[vehicleType] || vehicleType;
+};
+
+const formatSqft = (value: number) =>
+  value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
 
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
@@ -211,6 +225,112 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     ? takeoff.takeoff_items.filter((item: any) => item.category !== 'sign' && item.category !== 'vehicle')
     : [];
 
+  const mptSquareFootageSummary = (() => {
+    if (takeoff.work_type !== "MPT" || !Array.isArray(takeoff.active_sections) || !takeoff.sign_rows) {
+      return null;
+    }
+
+    const sectionLabelMap: Record<string, string> = {
+      trailblazers: "Trailblazers / H-Stands",
+      type_iii: "Type IIIs",
+      sign_stands: "Sign Stands",
+    };
+
+    const sectionTotals: { label: string; signs: number; sqft: number }[] = [];
+    let grandSigns = 0;
+    let grandSqft = 0;
+
+    for (const sectionKey of takeoff.active_sections) {
+      let sectionSigns = 0;
+      let sectionSqft = 0;
+
+      for (const row of takeoff.sign_rows[sectionKey] || []) {
+        if (!row?.signDesignation) continue;
+
+        const quantity = Number(row.quantity || 0);
+        sectionSigns += quantity;
+        sectionSqft += Number(row.totalSqft || 0);
+
+        for (const sec of row.secondarySigns || []) {
+          if (!sec?.signDesignation) continue;
+          sectionSigns += quantity;
+          sectionSqft += Math.round(Number(sec.sqft || 0) * quantity * 100) / 100;
+        }
+      }
+
+      if (sectionSigns > 0) {
+        const roundedSqft = Math.round(sectionSqft * 100) / 100;
+        sectionTotals.push({
+          label: sectionLabelMap[sectionKey] || sectionKey,
+          signs: sectionSigns,
+          sqft: roundedSqft,
+        });
+        grandSigns += sectionSigns;
+        grandSqft += roundedSqft;
+      }
+    }
+
+    if (grandSigns === 0) return null;
+
+    return {
+      items: sectionTotals,
+      totalSigns: grandSigns,
+      totalSqft: Math.round(grandSqft * 100) / 100,
+    };
+  })();
+
+  const permanentSquareFootageSummary = (() => {
+    if (
+      takeoff.work_type !== "PERMANENT_SIGNS" ||
+      !Array.isArray(takeoff.active_permanent_items) ||
+      !takeoff.permanent_sign_rows
+    ) {
+      return null;
+    }
+
+    const itemTotals: { label: string; signs: number; sqft: number }[] = [];
+    let grandSigns = 0;
+    let grandSqft = 0;
+
+    for (const itemNumber of takeoff.active_permanent_items) {
+      let itemSigns = 0;
+      let itemSqft = 0;
+
+      for (const row of takeoff.permanent_sign_rows[itemNumber] || []) {
+        if (!row?.signDesignation) continue;
+
+        const quantity = Number(row.quantity || 0);
+        itemSigns += quantity;
+        itemSqft += Number(row.totalSqft || 0);
+
+        for (const sec of row.secondarySigns || []) {
+          if (!sec?.signDesignation) continue;
+          itemSigns += quantity;
+          itemSqft += Math.round(Number(sec.sqft || 0) * quantity * 100) / 100;
+        }
+      }
+
+      if (itemSigns > 0) {
+        const roundedSqft = Math.round(itemSqft * 100) / 100;
+        itemTotals.push({
+          label: itemNumber,
+          signs: itemSigns,
+          sqft: roundedSqft,
+        });
+        grandSigns += itemSigns;
+        grandSqft += roundedSqft;
+      }
+    }
+
+    if (grandSigns === 0) return null;
+
+    return {
+      items: itemTotals,
+      totalSigns: grandSigns,
+      totalSqft: Math.round(grandSqft * 100) / 100,
+    };
+  })();
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Pickup Takeoff Banner */}
@@ -231,125 +351,108 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       )}
 
       {/* Project Info */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Information</h2>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
-              <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
-              <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
-              <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
-              <span className="text-sm font-medium">{info?.county || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
-              <span className="text-sm font-medium">{info?.customerName || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
-              <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
-              <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
-              <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
-              <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
-            </div>
+      <TakeoffViewCard title="Project Information">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
+            <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
+            <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
+            <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
+            <span className="text-sm font-medium">{info?.county || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
+            <span className="text-sm font-medium">{info?.customerName || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
+            <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
+            <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
+            <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
+            <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
           </div>
         </div>
-      </div>
+      </TakeoffViewCard>
 
       {/* Takeoff Details */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <div className="px-5 py-3 border-b bg-muted/30">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Details</h2>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</span>
-              <span className="text-sm font-medium">{takeoff.title || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</span>
-              <span className="text-sm font-medium">{WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
-              {formattedWorkOrderNumber ? (
-                <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Not assigned</span>
-              )}
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</span>
-              <span className="text-sm font-medium">{takeoff.contracted_or_additional === "contracted" ? "Contracted Work" : "Additional Work"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</span>
-              <span className="text-sm font-medium">{takeoff.install_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</span>
-              <span className="text-sm font-medium">{takeoff.pickup_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</span>
-              <span className="text-sm font-medium">{takeoff.needed_by_date || "—"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</span>
-              <span className="text-sm font-medium capitalize">{takeoff.priority || "standard"}</span>
-            </div>
+      <TakeoffViewCard title="Takeoff Details">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title</span>
+            <span className="text-sm font-medium">{takeoff.title || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type</span>
+            <span className="text-sm font-medium">{WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
+            {formattedWorkOrderNumber ? (
+              <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">Not assigned</span>
+            )}
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</span>
+            <span className="text-sm font-medium">{takeoff.contracted_or_additional === "contracted" ? "Contracted Work" : "Additional Work"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</span>
+            <span className="text-sm font-medium">{takeoff.install_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</span>
+            <span className="text-sm font-medium">{takeoff.pickup_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</span>
+            <span className="text-sm font-medium">{takeoff.needed_by_date || "—"}</span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</span>
+            <span className="text-sm font-medium capitalize">{takeoff.priority || "standard"}</span>
           </div>
         </div>
-      </div>
+      </TakeoffViewCard>
 
 
 
       {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
       {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
-        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              Vehicles
-            </h2>
-            <Badge variant="secondary" className="text-[10px]">{vehicleItems.length} vehicles</Badge>
-          </div>
-
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
           {vehicleItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[400px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-64">Type</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-64">Type</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {vehicleItems.map((item: any) => (
                     <tr key={item.id} className="hover:bg-muted/10">
-                      <td className="px-2 py-1 border-r w-64 text-xs font-medium">{item.vehicleType || item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-64 text-xs font-medium">{formatVehicleType(item.vehicleType) || item.product_name || '—'}</td>
                       <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
                     </tr>
                   ))}
@@ -361,33 +464,83 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               No vehicles assigned. Vehicles will appear here when the takeoff is created.
             </div>
           )}
+          </TakeoffViewCard>
+        </div>
+      )}
+
+      {mptSquareFootageSummary && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {mptSquareFootageSummary.items.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
+                  <span className="text-[10px] text-muted-foreground">sq ft</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(mptSquareFootageSummary.totalSqft)}</span>
+              <span className="text-xs text-muted-foreground">sq ft</span>
+              <span className="text-xs text-muted-foreground">({mptSquareFootageSummary.totalSigns} sign{mptSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
+            </div>
+          </div>
+          </TakeoffViewCard>
+        </div>
+      )}
+
+      {permanentSquareFootageSummary && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {permanentSquareFootageSummary.items.map((item) => (
+              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
+                <p className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground" title={item.label}>
+                  {item.label}
+                </p>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
+                  <span className="text-[10px] text-muted-foreground">sq ft</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(permanentSquareFootageSummary.totalSqft)}</span>
+              <span className="text-xs text-muted-foreground">sq ft</span>
+              <span className="text-xs text-muted-foreground">({permanentSquareFootageSummary.totalSigns} sign{permanentSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
+            </div>
+          </div>
+          </TakeoffViewCard>
         </div>
       )}
 
       {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
-      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            Takeoff Items
-          </h2>
-          <Badge variant="secondary" className="text-[10px]">{signItems.length} sign items</Badge>
-        </div>
-
+      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+        <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
         {signItems.length > 0 ? (
           <div className="overflow-x-auto">
             {takeoff.work_type === "PERMANENT_SIGNS" ? (
               // Permanent Signs Table
               <table className="w-full min-w-[1000px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Post Size</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Plan Sheet</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Post Size</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Plan Sheet</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
                   </tr>
                 </thead>
@@ -397,13 +550,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     const signDetails = item.sign_details || {};
                     return (
                       <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 border-r w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 border-r w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.postSize || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs">
+                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
+                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
+                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.postSize || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs">
                           {signDetails.planSheetNum && signDetails.planSheetTotal ? `${signDetails.planSheetNum}/${signDetails.planSheetTotal}` : '—'}
                         </td>
                         <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
@@ -415,17 +568,17 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             ) : (
               // MPT Signs Table
               <table className="w-full min-w-[1100px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/20">
+                <thead className="bg-muted/70">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-40">Structure</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">B-Lights</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Sq Ft</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-24">Material</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-40">Structure</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Material</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-16">Cover</th>
                   </tr>
                 </thead>
@@ -435,15 +588,15 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     const signDetails = item.sign_details || {};
                     return (
                       <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 border-r w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 border-r w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 border-r w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
-                        <td className="px-2 py-1 border-r w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                        <td className="px-2 py-1 border-r w-24 text-xs">{signDetails.material || item.material || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
+                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
+                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
+                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                        <td className="px-2 py-1 w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
+                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
+                        <td className="px-2 py-1 w-24 text-xs">{signDetails.material || item.material || '—'}</td>
                         <td className="px-2 py-1 w-16 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
                       </tr>
                     );
@@ -457,33 +610,27 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No takeoff items found. Sign designations will appear here when the takeoff is created.
           </div>
         )}
+        </TakeoffViewCard>
       </div>
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
-      <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-            <Plus className="h-4 w-4 text-muted-foreground" />
-            Additional Items
-          </h2>
-          <Badge variant="secondary" className="text-[10px]">{additionalItems.length} items</Badge>
-        </div>
-
+      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+        <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
         {additionalItems.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
-              <thead className="bg-muted/20">
+              <thead className="bg-muted/70">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-48">Item</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground border-r w-32">Quantity</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
                   <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {additionalItems.map((item: any) => (
                   <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-2 py-1 border-r w-48 text-xs font-medium">{item.product_name || '—'}</td>
-                    <td className="px-2 py-1 border-r w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                    <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
+                    <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
                     <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
                   </tr>
                 ))}
@@ -495,6 +642,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
             No additional items. Custom items added manually will appear here.
           </div>
         )}
+        </TakeoffViewCard>
       </div>
 
       {takeoff.is_pickup && takeoff.work_order_id && (
@@ -506,11 +654,8 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
 
       {/* Notes */}
       {(takeoff.notes || takeoff.crew_notes || takeoff.build_shop_notes || takeoff.pm_notes) && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</h2>
-          </div>
-          <div className="p-5 space-y-4">
+        <TakeoffViewCard title="Notes">
+          <div className="space-y-4">
             {takeoff.crew_notes && (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Crew Notes</Label>
@@ -539,7 +684,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
               </div>
             )}
           </div>
-        </div>
+        </TakeoffViewCard>
       )}
     </div>
   );

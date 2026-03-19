@@ -32,7 +32,7 @@ export default function WorkOrderViewContent({
 }) {
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.projectName || "Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const [pickupWO, setPickupWO] = useState<{ id: string; wo_number: string | null; status: string } | null>(null);
   const [generatingPickup, setGeneratingPickup] = useState(false);

@@ -18,6 +18,7 @@ import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
+import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 import { saveContract } from "@/lib/api-client";
 import isEqual from "lodash/isEqual";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
@@ -138,6 +139,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const isSigned = contractRow ? SIGNED_STATUSES.includes(getContractStatus(contractRow)) : false;
   const isReadOnly = forceReadOnly || isSigned;
 
+  // Change order gate state
+  const [changeOrderApproved, setChangeOrderApproved] = useState(false);
+  const [showChangeOrderDialog, setShowChangeOrderDialog] = useState(false);
+
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
@@ -145,12 +150,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
-  const jobName = projectInfo.projectName?.trim() || "Untitled Project";
+  const jobIdentifier = projectInfo.etcJobNumber?.toString() || (projectInfo.projectName?.trim() || "Untitled Project");
   const checklistTitle = isViewMode
-    ? `Contract for ${jobName}`
-    : isNew
-      ? (projectInfo.projectName?.trim() ? `New Contract for ${jobName}` : "New Contract")
-      : `Edit Contract for ${jobName}`;
+    ? `Contract for ${jobIdentifier}`
+    : "Contract";
   const checklistDescription = isViewMode
     ? "Review contract requirements, schedule of values, and supporting documents."
     : isNew
@@ -397,6 +400,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setContractRow(result);
             setLastSavedAt(new Date());
             setFirstSave(true);
+            setSecondCounter(1); // Reset counter to 1 like sign order page
           } catch (error) {
             console.error('Autosave failed:', error);
             toast.error('Failed to save contract');
@@ -404,7 +408,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setIsSaving(false);
           }
         }
-      }, 2500); // Autosave every 2.5 seconds like quotes/create
+      }, 5000); // Autosave every 5 seconds like sign orders
     }
   }, [projectInfo, contractId, isViewMode]);
 
@@ -517,6 +521,79 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   };
 
+  // Change order handlers
+  const handleChangeOrderApproved = async (method: "document" | "admin_approval", details: {
+    coNumber?: string;
+    description?: string;
+    amount?: number;
+    documentFile?: File;
+    approverUserId?: string;
+    approverName?: string;
+  }) => {
+    if (!contractId) {
+      toast.error("Contract must be saved first");
+      return;
+    }
+
+    try {
+      // Create change order record
+      const coData = {
+        coNumber: details.coNumber || `CO-AUTO-${Date.now()}`,
+        description: details.description || "SOV modification on signed contract",
+        amount: details.amount || 0,
+        status: "approved",
+        submittedDate: new Date().toISOString().split("T")[0],
+        approvedDate: new Date().toISOString().split("T")[0],
+      };
+
+      // Handle document upload if provided
+      if (method === "document" && details.documentFile) {
+        const formData = new FormData();
+        formData.append('coNumber', coData.coNumber);
+        formData.append('description', coData.description);
+        formData.append('amount', coData.amount.toString());
+        formData.append('status', coData.status);
+        formData.append('submittedDate', coData.submittedDate);
+        formData.append('approvedDate', coData.approvedDate);
+        formData.append('documentFile', details.documentFile);
+
+        const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Failed to create change order: ${error.error}`);
+        }
+      } else {
+        // Admin approval - just create the record
+        const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(coData),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Failed to create change order: ${error.error}`);
+        }
+      }
+
+      // Set approval state and close dialog
+      setChangeOrderApproved(true);
+      setShowChangeOrderDialog(false);
+      toast.success("Change order approved. SOV editing is now enabled.");
+    } catch (error: any) {
+      console.error('Error creating change order:', error);
+      toast.error(error.message || 'Failed to create change order');
+    }
+  };
+
+  const handleChangeOrderCancel = () => {
+    setShowChangeOrderDialog(false);
+  };
+
   if (!isNew && isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -578,11 +655,24 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
         {/* Schedule of Values */}
         <div>
-          <SOVTable contractId={contractId} readOnly={isReadOnly} />
-          {isSigned && (
+          <SOVTable
+            contractId={contractId}
+            readOnly={false}
+            onEditAttempt={isSigned && !changeOrderApproved ? () => setShowChangeOrderDialog(true) : undefined}
+            isSignedContract={isSigned}
+            changeOrderApproved={changeOrderApproved}
+          />
+          {isSigned && !changeOrderApproved && (
             <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
               <p className="text-xs text-warning font-medium">
                 This contract is signed. SOV changes require a Change Order.
+              </p>
+            </div>
+          )}
+          {isSigned && changeOrderApproved && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+              <p className="text-xs text-green-800 font-medium">
+                ✓ Change Order approved. SOV editing is now enabled.
               </p>
             </div>
           )}
@@ -630,6 +720,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         </DialogContent>
       </Dialog>
 
+      {/* Change Order Gate Dialog */}
+      <ChangeOrderGateDialog
+        open={showChangeOrderDialog}
+        onOpenChange={setShowChangeOrderDialog}
+        jobId={contractId || ""}
+        onApproved={handleChangeOrderApproved}
+        onCancel={handleChangeOrderCancel}
+      />
 
     </div>
   );

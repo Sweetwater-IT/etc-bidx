@@ -15,7 +15,7 @@ export default function WorkOrderNewContent({
 }) {
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.projectName || "Project";
+  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);

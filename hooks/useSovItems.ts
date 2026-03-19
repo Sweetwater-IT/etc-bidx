@@ -32,7 +32,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           id: item.id,
           itemNumber: item.item_number || '',
           description: item.description || '',
-          uom: item.uom || '',
+          uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || '',
           quantity: item.quantity || 0,
           unitPrice: item.unit_price || 0,
           extendedPrice: item.extended_price || 0,
