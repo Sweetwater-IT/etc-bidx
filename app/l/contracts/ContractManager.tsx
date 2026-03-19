@@ -68,6 +68,11 @@ const PIPELINE_STAGES: {
   { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-warning", bgColor: "bg-warning/5", borderColor: "border-warning/20" },
 ];
 
+type VisiblePipelineStage =
+  | "CONTRACT_RECEIPT"
+  | "RETURNED_TO_CUSTOMER"
+  | "CONTRACT_SIGNED";
+
 type ViewMode = "kanban" | "list";
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
@@ -606,7 +611,7 @@ const KanbanView = ({
   const [dragOverStage, setDragOverStage] = useState<ContractPipelineStatus | null>(null);
   const [dragSourceStage, setDragSourceStage] = useState<ContractPipelineStatus | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
-  const laneBodyRefs = useRef<Record<ContractPipelineStatus, HTMLDivElement | null>>({
+  const laneBodyRefs = useRef<Record<VisiblePipelineStage, HTMLDivElement | null>>({
     CONTRACT_RECEIPT: null,
     RETURNED_TO_CUSTOMER: null,
     CONTRACT_SIGNED: null,
