@@ -489,14 +489,13 @@ export async function POST(request: NextRequest) {
 
       // Create work order items using calculated square footage
       matchedSovItems.forEach((item, index) => {
-        const contractQuantity = Number(item.quantity || 0);
-        const calculatedQuantity = itemTotals.get(item.item_number) || contractQuantity;
+        const calculatedQuantity = itemTotals.get(item.item_number) || Number(item.quantity || 0);
 
         workOrderItems.push({
           work_order_id: null,
           item_number: item.item_number,
           description: item.description,
-          contract_quantity: contractQuantity,
+          contract_quantity: calculatedQuantity,
           work_order_quantity: calculatedQuantity,
           uom: item.uom || 'SF', // Use SF (square feet) for permanent signs
           sort_order: index,

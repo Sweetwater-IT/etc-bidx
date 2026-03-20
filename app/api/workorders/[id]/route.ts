@@ -63,12 +63,26 @@ export async function DELETE(
     const resolvedParams = await context.params;
     const workOrderId = resolvedParams.id;
 
-    // Get the job_id before deleting
+    // Get current status and job_id before deleting
     const { data: workOrder } = await supabase
       .from('work_orders_l')
-      .select('job_id')
+      .select('job_id, status')
       .eq('id', workOrderId)
       .single();
+
+    const deletableStatuses = new Set(['draft', 'ready', 'scheduled']);
+    const currentStatus = String(workOrder?.status || '').toLowerCase();
+
+    if (!workOrder) {
+      return NextResponse.json({ error: 'Work order not found' }, { status: 404 });
+    }
+
+    if (!deletableStatuses.has(currentStatus)) {
+      return NextResponse.json(
+        { error: 'Work orders can only be deleted through scheduled status' },
+        { status: 400 }
+      );
+    }
 
     const { error } = await supabase
       .from('work_orders_l')

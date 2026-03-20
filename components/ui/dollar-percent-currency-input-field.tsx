@@ -56,11 +56,8 @@ export function DollarPercentCurrencyInputField({
         <Select
           value={type}
           onValueChange={(newType) => {
-            const currentValue = value;
             const mappedType = newType === 'fixed' ? 'dollar' : newType as 'percent' | 'dollar';
-            const newValue = mappedType === 'percent' ? currentValue / 100 : currentValue * 100;
             onTypeChange(mappedType);
-            onValueChange(newValue);
           }}
           disabled={disabled}
         >

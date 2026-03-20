@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
-import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,6 +154,12 @@ const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
   const asString = String(workOrderNumber).trim();
   if (!asString) return "—";
   return asString.padStart(3, "0");
+};
+
+const formatQuantityValue = (value: number | string | null | undefined) => {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0";
+  return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
 const WorkOrderDetail = ({
@@ -750,8 +755,13 @@ const WorkOrderDetail = ({
   const isCombinable = (doc: WODocument) => {
     const name = doc.file_name.toLowerCase();
     const type = doc.file_type || "";
-    return type.includes("pdf") || name.endsWith(".pdf") ||
-           type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i.test(name);
+    return (
+      type.includes("pdf") ||
+      name.endsWith(".pdf") ||
+      type === "image/png" ||
+      type === "image/jpeg" ||
+      /\.(png|jpe?g)$/i.test(name)
+    );
   };
 
   const toggleAllDocs = () => {
@@ -767,40 +777,12 @@ const WorkOrderDetail = ({
     if (!workOrder || selectedDocIds.size === 0) return;
     setCombining(true);
     try {
-      // 1. Generate the WO PDF as bytes
-      const woBytes = await generateBillingPacketPdf({
-        woNumber: workOrder.wo_number || "",
-        woTitle: workOrder.title || "",
-        woDescription: workOrder.description || "",
-        woNotes: workOrder.notes || "",
-        etcAssignedTo: workOrder.assigned_to || "",
-        contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
-        customerPocPhone: workOrder.customer_poc_phone || "",
-                      projectName: dbJob?.projectInfo?.projectName || "",
-                      etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
-                      customerName: dbJob?.projectInfo?.customerName || "",
-                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
-                      customerPM: dbJob?.projectInfo?.customerPM || "",
-                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
-                      contractNumber: dbJob?.projectInfo?.contractNumber || "",
-                      county: dbJob?.projectInfo?.county || "",
-                      etcBranch: dbJob?.etc_branch || "",
-                      etcProjectManager: dbJob?.etc_project_manager || "",
-        installDate: takeoffs[0]?.install_date || "",
-        pickupDate: takeoffs[0]?.pickup_date || "",
-        items: woItems.map(i => ({
-          item_number: i.item_number,
-          description: i.description || "",
-          uom: i.uom || "EA",
-          contract_quantity: i.contract_quantity,
-          work_order_quantity: i.work_order_quantity,
-        })),
-        crewNotes: (dispatch as any)?.crew_notes || "",
-        customerNotOnSite: (dispatch as any)?.customer_not_on_site || false,
-        customerSignatureName: (dispatch as any)?.customer_signature_name || "",
-        signedAt: (dispatch as any)?.signed_at || "",
-        returnBytes: true,
-      });
+      // 1. Use the server PDF route as the source of truth for the WO packet.
+      const woPdfResponse = await fetch(`/api/workorders/${workOrderId}/pdf`);
+      if (!woPdfResponse.ok) {
+        throw new Error("Failed to generate work order PDF");
+      }
+      const woBytes = await woPdfResponse.arrayBuffer();
 
       if (!woBytes) {
         toast.error("Failed to generate work order PDF");
@@ -818,29 +800,38 @@ const WorkOrderDetail = ({
         try {
           // Get signed URL for the document
           const urlResponse = await fetch(`/api/documents/${doc.id}/signed-url`);
-          if (!urlResponse.ok) continue;
+          if (!urlResponse.ok) {
+            console.warn(`Failed to get signed URL for ${doc.file_name}`);
+            continue;
+          }
           const urlData = await urlResponse.json();
-          if (!urlData.signedUrl) continue;
+          if (!urlData.signedUrl) {
+            console.warn(`No signed URL returned for ${doc.file_name}`);
+            continue;
+          }
 
           const response = await fetch(urlData.signedUrl);
+          if (!response.ok) {
+            console.warn(`Failed to fetch file bytes for ${doc.file_name}`);
+            continue;
+          }
           const fileBytes = await response.arrayBuffer();
           const fileUint8 = new Uint8Array(fileBytes);
 
           const isPdf = doc.file_type?.includes("pdf") || doc.file_name.toLowerCase().endsWith(".pdf");
-          const isImage = doc.file_type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i.test(doc.file_name.toLowerCase());
+          const isPng = doc.file_type === "image/png" || /\.png$/i.test(doc.file_name);
+          const isJpeg = doc.file_type === "image/jpeg" || /\.jpe?g$/i.test(doc.file_name);
 
           if (isPdf) {
             const attachedPdf = await PDFDocument.load(fileBytes);
             const attachedPages = await mergedPdf.copyPages(attachedPdf, attachedPdf.getPageIndices());
             attachedPages.forEach(p => mergedPdf.addPage(p));
-          } else if (isImage) {
+          } else if (isPng || isJpeg) {
             // Embed image as a full page in the PDF
             let img;
-            const name = doc.file_name.toLowerCase();
-            if (name.endsWith(".png")) {
+            if (isPng) {
               img = await mergedPdf.embedPng(fileUint8);
             } else {
-              // Treat everything else as JPEG (jpg, jpeg, etc.)
               img = await mergedPdf.embedJpg(fileUint8);
             }
             const { width, height } = img.scaleToFit(612, 792); // Letter size
@@ -851,6 +842,8 @@ const WorkOrderDetail = ({
               width,
               height,
             });
+          } else {
+            console.warn(`Skipping unsupported combinable file type for ${doc.file_name}`);
           }
         } catch (err) {
           console.warn(`Skipping document ${doc.file_name}:`, err);
@@ -966,7 +959,9 @@ const WorkOrderDetail = ({
   const statusConfig = getStatusConfig(workOrder?.status || "draft");
   const isViewMode = mode === "view";
   const canEdit = (isAdmin || isPM) && !isViewMode;
-  const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
+  const canDeleteWorkOrder =
+    isNewWorkOrder ||
+    ["draft", "ready", "scheduled"].includes(String(workOrder?.status || "").toLowerCase());
 
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
@@ -1010,8 +1005,19 @@ const WorkOrderDetail = ({
 
         {/* ─── Work Order Details Card — matching takeoff details format ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
+          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between gap-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Work Order Details</h2>
+            {canEdit && !isNewWorkOrder && canDeleteWorkOrder && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete
+              </Button>
+            )}
           </div>
           <div className="p-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-xs">
@@ -1417,7 +1423,7 @@ const WorkOrderDetail = ({
                         <span className="text-xs px-1">{item.uom || "EA"}</span>
                       </TableCell>
                       <TableCell className="p-1.5">
-                        <span className="text-xs text-right block">{item.contract_quantity}</span>
+                        <span className="text-xs text-right block">{formatQuantityValue(item.contract_quantity)}</span>
                       </TableCell>
                       <TableCell className="p-1.5">
                         {canEdit ? (
@@ -1427,23 +1433,28 @@ const WorkOrderDetail = ({
                               size="icon"
                               className="h-6 w-6"
                               onClick={() => {
-                                const newQty = Math.max(0, (item.work_order_quantity || 0) - 1);
+                                const newQty = Math.max(0, Number(item.work_order_quantity || 0) - 1);
                                 setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
                               }}
-                              disabled={(item.work_order_quantity || 0) <= 0}
+                              disabled={Number(item.work_order_quantity || 0) <= 0}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
                             <Input
-                              className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="h-7 text-xs text-center w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
+                              inputMode={String(item.uom || "").toUpperCase() === "SF" ? "decimal" : "numeric"}
+                              pattern={String(item.uom || "").toUpperCase() === "SF" ? "[0-9]*[.]?[0-9]*" : "[0-9]*"}
                               value={item.work_order_quantity || ""}
                               onChange={(e) => {
                                 const raw = e.target.value;
-                                const cleaned = raw.replace(/\D/g, '');
-                                const num = cleaned === '' ? 0 : Math.max(0, parseInt(cleaned, 10));
+                                const allowsDecimal = String(item.uom || "").toUpperCase() === "SF";
+                                const cleaned = allowsDecimal
+                                  ? raw.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1")
+                                  : raw.replace(/\D/g, "");
+                                const num = cleaned === ''
+                                  ? 0
+                                  : Math.max(0, allowsDecimal ? parseFloat(cleaned) : parseInt(cleaned, 10));
                                 setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: num } : i));
                               }}
                               onBlur={async () => {
@@ -1468,7 +1479,7 @@ const WorkOrderDetail = ({
                               size="icon"
                               className="h-6 w-6"
                               onClick={() => {
-                                const newQty = (item.work_order_quantity || 0) + 1;
+                                const newQty = Number(item.work_order_quantity || 0) + 1;
                                 setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
                               }}
                             >
@@ -1476,7 +1487,7 @@ const WorkOrderDetail = ({
                             </Button>
                           </div>
                         ) : (
-                          <span className="text-xs text-right block">{item.work_order_quantity}</span>
+                          <span className="text-xs text-right block">{formatQuantityValue(item.work_order_quantity)}</span>
                         )}
                       </TableCell>
                       {canEdit && (
@@ -2088,7 +2099,7 @@ const WorkOrderDetail = ({
               Delete Work Order
             </DialogTitle>
             <DialogDescription>
-              This will permanently delete this draft work order and all its line items. This action cannot be undone.
+              This will permanently delete this work order and all its line items. Deletion is only allowed through scheduled status.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
