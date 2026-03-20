@@ -13,7 +13,7 @@ export interface ContractListItem {
   contractNumber: string | null;
   customerName: string | null;
   projectOwner: string | null;
-  etcJobNumber: number | null;
+  etcJobNumber: string | null;
   etcBranch: string | null;
   county: string | null;
   etcProjectManager: string | null;

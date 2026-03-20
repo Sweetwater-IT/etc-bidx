@@ -360,6 +360,24 @@ function renderPermSectionSummary(
   return y;
 }
 
+function drawProjectFooter(
+  doc: jsPDF,
+  items: Array<{ label: string; value?: string | null }>,
+  pageW: number,
+  pageH: number
+) {
+  const footerText = items
+    .map((item) => `${item.label}: ${item.value || "—"}`)
+    .join("   |   ");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(110);
+  const lines = doc.splitTextToSize(footerText, pageW - 28);
+  doc.text(lines, pageW / 2, pageH - 13, { align: "center" });
+  doc.setTextColor(0);
+}
+
 export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuffer | null> {
   const doc = new jsPDF({ orientation: "landscape" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -974,6 +992,16 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
 
   // Stamp page numbers on every page: "Page X of Y"
   const totalPages = doc.getNumberOfPages();
+  const footerItems = [
+    { label: "Job Name", value: data.projectName },
+    { label: "Project Owner", value: data.projectOwner },
+    { label: "Owner Job #", value: data.customerJobNumber },
+    { label: "County", value: data.county },
+    { label: "ETC PM", value: data.etcProjectManager },
+    { label: "ETC Job #", value: data.etcJobNumber },
+    { label: "Customer", value: data.customerName },
+    { label: "Customer Job #", value: data.customerJobNumber },
+  ];
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     const pw = doc.internal.pageSize.getWidth();
@@ -984,6 +1012,7 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
     doc.setTextColor(140);
     // Header — top right
     doc.text(pageLabel, pw - 14, 10, { align: "right" });
+    drawProjectFooter(doc, footerItems, pw, ph);
     // Footer — bottom center
     doc.text(pageLabel, pw / 2, ph - 8, { align: "center" });
     doc.setTextColor(0);

@@ -93,7 +93,7 @@ export function NewRecordStickyPageHeader({
             onClick={onDone}
             className="gap-2 h-8"
           >
-            Done
+            Save
           </Button>
         </div>
       </div>

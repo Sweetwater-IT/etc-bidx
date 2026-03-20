@@ -26,7 +26,7 @@ export interface Job {
   customer_name: string | null;
   customer_job_number: string | null;
   project_owner: string | null;
-  etc_job_number: number | null;
+  etc_job_number: string | null;
   etc_branch: string | null;
   county: string | null;
   state_route: string | null;
@@ -80,7 +80,7 @@ export interface Job {
 
 export interface JobProjectInfo {
   projectName: string | null;
-  etcJobNumber: number | null;
+  etcJobNumber: string | null;
   etcBranch?: string | null;
   customerName: string | null;
   customerJobNumber: string | null;

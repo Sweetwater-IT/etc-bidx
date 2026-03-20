@@ -395,6 +395,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   // const { jobs } = useJobs();
   // const existingJobNumbers = useMemo(() => jobs.map((j) => j.projectInfo.etcJobNumber), [jobs]);
 
+  const customerLocked = readOnly || contractSigned;
+  const jobNumberLocked = true;
+
   const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
 
   const parseDateValue = (value?: string | null) => {
@@ -545,9 +548,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             <Input
               id="etcJobNumber"
               className="h-8 text-sm"
-              placeholder="e.g. PHL-2024-0123"
+              placeholder="Assigned in signed contract modal"
               value={projectInfo.etcJobNumber || ""}
-              onChange={(e) => update("etcJobNumber", e.target.value)}
+              readOnly={jobNumberLocked}
+              disabled={jobNumberLocked}
             />
           </div>
 
@@ -712,12 +716,15 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           {/* Customer Name — searchable dropdown */}
           <div>
             <Label className="text-xs">Customer Name<RequiredMark /></Label>
-            <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+            <Popover open={customerLocked ? false : customerOpen} onOpenChange={(open) => {
+              if (!customerLocked) setCustomerOpen(open);
+            }}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={customerOpen}
+                  aria-expanded={customerLocked ? false : customerOpen}
+                  disabled={customerLocked}
                   className={cn("w-full justify-between h-8 text-sm font-normal", isInvalid("customerName") && "border-destructive ring-1 ring-destructive/30")}
                 >
                   {projectInfo.customerName || "Select customer…"}
@@ -729,12 +736,15 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   <CommandInput
                     placeholder="Search or add customer…"
                     value={customerSearch}
-                    onValueChange={setCustomerSearch}
+                    onValueChange={(value) => {
+                      if (!customerLocked) setCustomerSearch(value);
+                    }}
                   />
                   <CommandList>
                     <CommandEmpty className="p-0">
                       <button
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                        disabled={customerLocked}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                         onMouseDown={(e) => { e.preventDefault(); handleAddCustomer(); }}
                       >
                         <Plus className="h-3.5 w-3.5" /> Add {customerSearch}
@@ -746,6 +756,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                           key={c.id}
                           value={c.display_name}
                           onSelect={() => {
+                            if (customerLocked) return;
                             update("customerName", c.display_name);
                             setCustomerOpen(false);
                             setCustomerSearch("");
@@ -765,8 +776,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                       <>
                         <CommandSeparator />
                         <CommandGroup>
-                          <CommandItem
-                            onSelect={handleAddCustomer}
+                        <CommandItem
+                            onSelect={() => {
+                              if (!customerLocked) handleAddCustomer();
+                            }}
                             className="text-sm"
                           >
                             <Plus className="mr-2 h-3 w-3" /> Add {customerSearch}

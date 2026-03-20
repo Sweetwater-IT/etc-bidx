@@ -132,7 +132,9 @@ export async function PATCH(
     // Increment version
     transformedData.version = (currentContract.version || 0) + 1;
 
-    // Check if contract status is changing to CONTRACT_SIGNED and generate job number
+    // Check if contract status is changing to CONTRACT_SIGNED and preserve the
+    // job number supplied from the signed-contract modal. Auto-generation remains
+    // only as a fallback for older flows that do not send a job number.
     if (transformedData.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
@@ -144,8 +146,14 @@ export async function PATCH(
       if (!currentError && currentContract) {
         const wasNotSigned = !['CONTRACT_SIGNED', 'SOURCE_OF_SUPPLY'].includes(currentContract.contract_status || '');
         const hasNoJobNumber = !currentContract.etc_job_number;
+        const incomingJobNumber =
+          typeof transformedData.etc_job_number === 'string'
+            ? transformedData.etc_job_number.trim()
+            : '';
 
-        if (wasNotSigned && hasNoJobNumber) {
+        if (incomingJobNumber) {
+          transformedData.etc_job_number = incomingJobNumber;
+        } else if (wasNotSigned && hasNoJobNumber) {
           // Generate job number (J-0001, J-0002, etc.) - simple sequential numbering
           const { count, error: countError } = await supabase
             .from('jobs_l')

@@ -137,7 +137,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(getContractStatus(contractRow)) : false;
-  const isReadOnly = forceReadOnly || isSigned;
+  const isReadOnly = forceReadOnly;
 
   // Change order gate state
   const [changeOrderApproved, setChangeOrderApproved] = useState(false);
@@ -635,7 +635,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
             <Lock className="h-4 w-4 text-primary shrink-0" />
             <p className="text-xs text-primary font-medium">
-              This contract is signed. Admin fields can be edited freely. SOV changes require a Change Order.
+              This contract is signed. Customer and ETC job number are locked. Other admin fields remain editable. SOV changes require a Change Order.
             </p>
           </div>
         </div>
@@ -648,6 +648,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         <ProjectInfoFields
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
+          contractSigned={isSigned}
           showValidation={showValidation}
           readOnly={isReadOnly}
           contractRow={contractRow}
@@ -686,7 +687,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           onAddDocuments={handleAddDocuments}
           onRemoveDocument={handleRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
-          readOnly={isReadOnly}
+          readOnly={forceReadOnly}
         />
       </div>
 

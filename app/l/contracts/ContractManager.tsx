@@ -11,6 +11,8 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
@@ -106,6 +108,7 @@ const ContractManager = () => {
   const [signedDialogOpen, setSignedDialogOpen] = useState(false);
   const [pendingSignedJobId, setPendingSignedJobId] = useState<string | null>(null);
   const [signedFiles, setSignedFiles] = useState<File[]>([]);
+  const [signedJobNumber, setSignedJobNumber] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const signedFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -172,6 +175,7 @@ const ContractManager = () => {
     if (newStatus === "CONTRACT_SIGNED") {
       setPendingSignedJobId(jobId);
       setSignedFiles([]);
+      setSignedJobNumber(job.etcJobNumber || "");
       setSignedDialogOpen(true);
       return;
     }
@@ -240,7 +244,7 @@ const ContractManager = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleConfirmSigned = async () => {
-    if (!pendingSignedJobId || signedFiles.length === 0) return;
+    if (!pendingSignedJobId || signedFiles.length === 0 || !signedJobNumber.trim()) return;
     const job = jobs.find((j) => j.id === pendingSignedJobId);
     if (!job) return;
 
@@ -269,7 +273,7 @@ const ContractManager = () => {
       setJobs(prevJobs =>
         prevJobs.map(j =>
           j.id === pendingSignedJobId
-            ? { ...j, contractStatus: "CONTRACT_SIGNED" }
+            ? { ...j, contractStatus: "CONTRACT_SIGNED", etcJobNumber: signedJobNumber.trim() }
             : j
         )
       );
@@ -281,7 +285,8 @@ const ContractManager = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractStatus: "CONTRACT_SIGNED"
+          contractStatus: "CONTRACT_SIGNED",
+          etcJobNumber: signedJobNumber.trim(),
         }),
       });
 
@@ -290,10 +295,11 @@ const ContractManager = () => {
         throw new Error(errorData.error || 'Failed to update contract status');
       }
 
-      toast.success("Contract signed! Job number assigned.");
+      toast.success("Contract signed and saved.");
       setSignedDialogOpen(false);
       setPendingSignedJobId(null);
       setSignedFiles([]);
+      setSignedJobNumber("");
     } catch (err: any) {
       console.error('Error updating contract status:', err);
       toast.error("Sign Contract failed");
@@ -484,16 +490,27 @@ const ContractManager = () => {
       {/* Signed Contract Upload Dialog */}
       <Dialog open={signedDialogOpen} onOpenChange={(open) => {
         if (isUploading) return;
-        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); }
+        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); }
       }}>
         <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Attach Signed Contract</DialogTitle>
             <DialogDescription>
-              Upload the signed contract document (max 25 MB each). The file will be stored securely and a job number assigned automatically.
+              Enter the ETC job number, then upload the signed contract document before moving this contract into signed status.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="signed-etc-job-number" className="text-xs">ETC Job Number</Label>
+              <Input
+                id="signed-etc-job-number"
+                className="h-9 text-sm"
+                placeholder="e.g. 11-22-2025001"
+                value={signedJobNumber}
+                onChange={(e) => setSignedJobNumber(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
             <input ref={signedFileInputRef} type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleSignedFileChange} />
             {!isUploading && (
               <button onClick={() => signedFileInputRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors">
@@ -535,8 +552,8 @@ const ContractManager = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); }}>Cancel</Button>
-            <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || isUploading} className="gap-2">
+            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); }}>Cancel</Button>
+            <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || !signedJobNumber.trim() || isUploading} className="gap-2">
               {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Upload</>}
             </Button>
           </DialogFooter>

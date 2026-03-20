@@ -1198,63 +1198,6 @@ export const CreateTakeoffForm = ({
         </div>
       )}
 
-      {/* Square Footage Summary — MPT */}
-      {workType === "MPT" && activeSections.length > 0 && (() => {
-        const sectionTotals: { label: string; signs: number; sqft: number }[] = [];
-        let grandSigns = 0;
-        let grandSqft = 0;
-        for (const sectionKey of activeSections) {
-          const section = MPT_SECTIONS.find((s) => s.key === sectionKey);
-          let sectionSigns = 0;
-          let sectionSqft = 0;
-          for (const row of signRows[sectionKey] || []) {
-            if (!row.signDesignation) continue;
-            sectionSigns += row.quantity;
-            sectionSqft += row.totalSqft;
-            for (const sec of row.secondarySigns || []) {
-              if (!sec.signDesignation) continue;
-              sectionSigns += row.quantity;
-              sectionSqft += Math.round(sec.sqft * row.quantity * 100) / 100;
-            }
-          }
-          if (sectionSigns > 0) {
-            sectionTotals.push({ label: section?.label || sectionKey, signs: sectionSigns, sqft: Math.round(sectionSqft * 100) / 100 });
-            grandSigns += sectionSigns;
-            grandSqft += sectionSqft;
-          }
-        }
-        if (grandSigns === 0) return null;
-        return (
-          <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-            <div className="bg-muted/30 px-5 py-3 border-b">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Square Footage Summary</h2>
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                {sectionTotals.map((s) => (
-                  <div key={s.label} className="rounded-md border p-3 bg-muted/20">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">{s.label}</p>
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-lg font-bold tabular-nums text-foreground">{s.sqft.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="text-[10px] text-muted-foreground">sq ft</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{s.signs} sign{s.signs !== 1 ? "s" : ""}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-xl font-black tabular-nums text-primary">{Math.round(grandSqft * 100 / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  <span className="text-xs text-muted-foreground">sq ft</span>
-                  <span className="text-xs text-muted-foreground">({grandSigns} sign{grandSigns !== 1 ? "s" : ""})</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {workType === "PERMANENT_SIGNS" && (
         <PermanentSignConfiguration
           activeItems={activePermanentItems}
@@ -1286,62 +1229,6 @@ export const CreateTakeoffForm = ({
           jobId={jobId}
         />
       )}
-
-      {/* Square Footage Summary — Permanent Signs */}
-      {workType === "PERMANENT_SIGNS" && activePermanentItems.length > 0 && (() => {
-        const itemTotals: { label: string; signs: number; sqft: number }[] = [];
-        let grandSigns = 0;
-        let grandSqft = 0;
-        for (const itemNum of activePermanentItems) {
-          let itemSigns = 0;
-          let itemSqft = 0;
-          for (const row of permanentSignRows[itemNum] || []) {
-            if (!row.signDesignation) continue;
-            itemSigns += row.quantity;
-            itemSqft += row.totalSqft;
-            for (const sec of row.secondarySigns || []) {
-              if (!sec.signDesignation) continue;
-              itemSigns += row.quantity;
-              itemSqft += Math.round(sec.sqft * row.quantity * 100) / 100;
-            }
-          }
-          if (itemSigns > 0) {
-            itemTotals.push({ label: itemNum, signs: itemSigns, sqft: Math.round(itemSqft * 100) / 100 });
-            grandSigns += itemSigns;
-            grandSqft += itemSqft;
-          }
-        }
-        if (grandSigns === 0) return null;
-        return (
-          <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-            <div className="bg-muted/30 px-5 py-3 border-b">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Square Footage Summary</h2>
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                {itemTotals.map((s) => (
-                  <div key={s.label} className="rounded-md border p-3 bg-muted/20">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 truncate" title={s.label}>{s.label}</p>
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-lg font-bold tabular-nums text-foreground">{s.sqft.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      <span className="text-[10px] text-muted-foreground">sq ft</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{s.signs} sign{s.signs !== 1 ? "s" : ""}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-xl font-black tabular-nums text-primary">{Math.round(grandSqft * 100 / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  <span className="text-xs text-muted-foreground">sq ft</span>
-                  <span className="text-xs text-muted-foreground">({grandSigns} sign{grandSigns !== 1 ? "s" : ""})</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {showsSignConfiguration && (
         <>

@@ -87,6 +87,24 @@ function drawBillingTableHeader(
   return y + 7;
 }
 
+function drawProjectFooter(
+  doc: jsPDF,
+  items: Array<{ label: string; value?: string | null }>,
+  pageW: number,
+  pageH: number
+) {
+  const footerText = items
+    .map((item) => `${item.label}: ${item.value || "—"}`)
+    .join("   |   ");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(110);
+  const lines = doc.splitTextToSize(footerText, pageW - 28);
+  doc.text(lines, pageW / 2, pageH - 13, { align: "center" });
+  doc.setTextColor(0);
+}
+
 function formatWorkOrderNumber(woNumber?: string | number | null): string {
   if (woNumber === null || woNumber === undefined || woNumber === "") return "";
   const asString = String(woNumber).trim();
@@ -97,28 +115,22 @@ function formatWorkOrderNumber(woNumber?: string | number | null): string {
   return asString;
 }
 
-async function loadPublicLogoDataUrl(path: string): Promise<{ dataUrl: string; width: number; height: number }> {
-  const response = await fetch(path, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch logo: ${response.status}`);
-  }
+async function loadPublicLogoImage(path: string): Promise<HTMLImageElement> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
 
-  const blob = await response.blob();
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("Failed to read logo blob"));
-    reader.readAsDataURL(blob);
+  const resolvedPath =
+    typeof window !== "undefined"
+      ? new URL(path, window.location.origin).toString()
+      : path;
+
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error(`Failed to load logo image from ${resolvedPath}`));
+    img.src = resolvedPath;
   });
 
-  const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error("Failed to decode logo image"));
-    img.src = dataUrl;
-  });
-
-  return { dataUrl, width: dimensions.width, height: dimensions.height };
+  return img;
 }
 
 export async function generateBillingPacketPdf(data: BillingPacketData): Promise<ArrayBuffer | null> {
@@ -128,12 +140,13 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   // ── ETC Logo ──
   try {
-    const logo = await loadPublicLogoDataUrl("/logo.jpg");
+    const logo = await loadPublicLogoImage("/logo.jpg");
     // Logo aspect ratio ~1.17:1, fit to h=12mm
     const logoH = 12;
-    const logoW = logoH * (logo.width / logo.height);
-    doc.addImage(logo.dataUrl, "JPEG", ml, 6, logoW, logoH);
-  } catch {
+    const logoW = logoH * (logo.naturalWidth / logo.naturalHeight);
+    doc.addImage(logo, "JPEG", ml, 6, logoW, logoH);
+  } catch (error) {
+    console.error("[generateBillingPacketPdf] Failed to load sidebar logo", error);
     // Fallback to text
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
@@ -392,7 +405,17 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   // Page numbers + fixed Customer Acknowledgment on last page
   const totalPages = doc.getNumberOfPages();
   const pageH = doc.internal.pageSize.getHeight();
-  const sigBlockTop = pageH - 50; // fixed position above page number
+  const sigBlockTop = pageH - 56; // leave room for the shared project footer above the page number
+  const footerItems = [
+    { label: "Job Name", value: data.projectName },
+    { label: "Project Owner", value: data.projectOwner },
+    { label: "Owner Job #", value: data.customerJobNumber },
+    { label: "County", value: data.county },
+    { label: "ETC PM", value: data.etcProjectManager },
+    { label: "ETC Job #", value: data.etcJobNumber },
+    { label: "Customer", value: data.customerName },
+    { label: "Customer Job #", value: data.customerJobNumber },
+  ];
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -405,6 +428,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
     doc.setFont("helvetica", "normal");
     doc.setTextColor(140);
     doc.text(label, pw - ml, 10, { align: "right" });
+    drawProjectFooter(doc, footerItems, pw, ph);
     doc.text(label, pw / 2, ph - 5, { align: "center" });
     doc.setTextColor(0);
 

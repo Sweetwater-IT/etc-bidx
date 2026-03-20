@@ -510,62 +510,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       )}
 
-      {mptSquareFootageSummary && (
-        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {mptSquareFootageSummary.items.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
-                  <span className="text-[10px] text-muted-foreground">sq ft</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-            <div className="flex items-baseline gap-3">
-              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(mptSquareFootageSummary.totalSqft)}</span>
-              <span className="text-xs text-muted-foreground">sq ft</span>
-              <span className="text-xs text-muted-foreground">({mptSquareFootageSummary.totalSigns} sign{mptSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
-            </div>
-          </div>
-          </TakeoffViewCard>
-        </div>
-      )}
-
-      {permanentSquareFootageSummary && (
-        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {permanentSquareFootageSummary.items.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
-                <p className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground" title={item.label}>
-                  {item.label}
-                </p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
-                  <span className="text-[10px] text-muted-foreground">sq ft</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-            <div className="flex items-baseline gap-3">
-              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(permanentSquareFootageSummary.totalSqft)}</span>
-              <span className="text-xs text-muted-foreground">sq ft</span>
-              <span className="text-xs text-muted-foreground">({permanentSquareFootageSummary.totalSigns} sign{permanentSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
-            </div>
-          </div>
-          </TakeoffViewCard>
-        </div>
-      )}
-
       {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
       <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
         <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
