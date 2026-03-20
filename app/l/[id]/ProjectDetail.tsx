@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { SOVTable } from "@/components/SOVTable";
 import { EquipmentSummary } from "@/app/l/components/EquipmentSummary";
+import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 
 import {
   Sheet,
@@ -60,8 +61,6 @@ import {
   Wrench,
   FileCheck,
   ClipboardList,
-  X,
-  Save,
   Loader2,
   Maximize2,
   Trash2,
@@ -100,8 +99,8 @@ const ProjectDetail = () => {
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const [signOrderCounts, setSignOrderCounts] = useState({ submitted: 0, in_production: 0, complete: 0, closed: 0 });
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
+  const [projectNotes, setProjectNotes] = useState<Note[]>([]);
+  const [projectNotesLoading, setProjectNotesLoading] = useState(true);
   const [woDialogOpen, setWoDialogOpen] = useState(false);
   const [editJobOpen, setEditJobOpen] = useState(false);
   const [editCustomerPM, setEditCustomerPM] = useState("");
@@ -202,6 +201,102 @@ const ProjectDetail = () => {
 
     fetchTakeoffsCount();
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchProjectNotes = async () => {
+      setProjectNotesLoading(true);
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/notes`);
+        if (response.ok) {
+          const notes = await response.json();
+          setProjectNotes(Array.isArray(notes) ? notes : []);
+        } else {
+          console.error("Failed to fetch project notes");
+          setProjectNotes([]);
+        }
+      } catch (error) {
+        console.error("Error fetching project notes:", error);
+        setProjectNotes([]);
+      } finally {
+        setProjectNotesLoading(false);
+      }
+    };
+
+    fetchProjectNotes();
+  }, [id]);
+
+  const handleAddProjectNote = async (note: Note) => {
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: {
+            ...note,
+            user_email: user?.email || note.user_email,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save note");
+      }
+
+      const savedNote = await response.json();
+      setProjectNotes((prev) => [...prev, savedNote]);
+      toast.success("Note added");
+    } catch (error) {
+      console.error("Error adding project note:", error);
+      toast.error("Failed to add note");
+    }
+  };
+
+  const handleEditProjectNote = async (index: number, updatedNote: Note) => {
+    if (!id || !projectNotes[index]?.id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: projectNotes[index].id,
+          text: updatedNote.text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      const savedNote = await response.json();
+      setProjectNotes((prev) => prev.map((note, noteIndex) => (noteIndex === index ? savedNote : note)));
+      toast.success("Note updated");
+    } catch (error) {
+      console.error("Error updating project note:", error);
+      toast.error("Failed to update note");
+    }
+  };
+
+  const handleDeleteProjectNote = async (index: number) => {
+    if (!id || !projectNotes[index]?.id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes?id=${encodeURIComponent(String(projectNotes[index].id))}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      setProjectNotes((prev) => prev.filter((_, noteIndex) => noteIndex !== index));
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting project note:", error);
+      toast.error("Failed to delete note");
+    }
+  };
 
   if (jobLoading) {
     return (
@@ -411,10 +506,7 @@ const ProjectDetail = () => {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs h-7"
-            onClick={() => {
-              setNotesValue(info.otherNotes || "");
-              setEditingNotes(true);
-            }}
+            onClick={() => setActiveTab("notes")}
           >
             <StickyNote className="h-3 w-3" /> Add Note
           </Button>
@@ -567,76 +659,14 @@ const ProjectDetail = () => {
               )}
             </div>
 
-            <div className={`rounded-lg border bg-card p-4 flex flex-col ${editingNotes ? "" : "max-h-[200px]"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-violet-500/10">
-                    <StickyNote className="h-3.5 w-3.5 text-violet-600" />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project Notes</span>
-                </div>
-                {editingNotes && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setEditingNotes(false)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={async () => {
-                        if (id) {
-                          try {
-                            const response = await fetch(`/api/l/jobs/${id}/notes`, {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({ additional_notes: notesValue }),
-                            });
-
-                            if (response.ok) {
-                              toast.success("Notes saved");
-                              // Refresh the job data to show updated notes
-                              const jobResponse = await fetch(`/api/l/jobs/${id}`);
-                              if (jobResponse.ok) {
-                                const jobData = await jobResponse.json();
-                                setDbJob(jobData);
-                              }
-                            } else {
-                              toast.error("Failed to save notes");
-                            }
-                          } catch (error) {
-                            console.error('Error saving notes:', error);
-                            toast.error("Failed to save notes");
-                          }
-                        }
-                        setEditingNotes(false);
-                      }}
-                    >
-                      <Save className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {editingNotes ? (
-                <Textarea
-                  className="flex-1 text-sm min-h-[120px] resize-none"
-                  placeholder="Add project notes, scope details, special instructions..."
-                  value={notesValue}
-                  onChange={(e) => setNotesValue(e.target.value)}
-                  autoFocus
-                />
-              ) : (
-                <div className="flex-1 overflow-y-auto text-sm text-foreground whitespace-pre-wrap">
-                  {info.otherNotes ? info.otherNotes : <span className="text-muted-foreground italic text-xs">No notes yet. Use Add Note to get started.</span>}
-                </div>
-              )}
-            </div>
+            <QuoteNotes
+              title="Project Notes"
+              notes={projectNotes}
+              loading={projectNotesLoading}
+              onSave={handleAddProjectNote}
+              onEdit={handleEditProjectNote}
+              onDelete={handleDeleteProjectNote}
+            />
           </div>
         </div>
       </div>
@@ -708,11 +738,13 @@ const ProjectDetail = () => {
             </TabsContent>
 
             <TabsContent value="notes" className="m-0 p-4">
-              <TabPlaceholder
-                icon={StickyNote}
+              <QuoteNotes
                 title="Notes & Photos"
-                description="Chronological feed of field notes, photos, and attachments from technicians and project managers."
-                columns={["Date", "Author", "Type", "Content"]}
+                notes={projectNotes}
+                loading={projectNotesLoading}
+                onSave={handleAddProjectNote}
+                onEdit={handleEditProjectNote}
+                onDelete={handleDeleteProjectNote}
               />
             </TabsContent>
 

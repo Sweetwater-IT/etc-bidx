@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
 
 export async function GET(
   request: NextRequest,
@@ -21,6 +22,8 @@ export async function GET(
     }
 
     console.log('[API] Contract fetched successfully:', data?.id);
+
+    const parsedNotes = parseJobNotes(data.additional_notes);
 
     // Transform the data to match the expected format
     const contract = {
@@ -51,9 +54,12 @@ export async function GET(
       rejected_by: data.rejected_by,
       rejection_reason: data.rejection_reason,
       rejection_notes: data.rejection_notes,
+      additional_notes: parsedNotes.contractNotes,
       // Include all other fields
       ...data
     };
+
+    contract.additional_notes = parsedNotes.contractNotes;
 
     return NextResponse.json(contract);
   } catch (error) {
@@ -75,7 +81,7 @@ export async function PATCH(
     // Get current contract to check version
     const { data: currentContract, error: currentError } = await supabase
       .from('jobs_l')
-      .select('version')
+      .select('version, additional_notes')
       .eq('id', contractId)
       .single();
 
@@ -121,12 +127,22 @@ export async function PATCH(
       internalId: 'internal_id',
     };
 
+    // Preserve structured job notes when contract/admin notes are updated.
+    const currentNotesPayload = parseJobNotes((currentContract as any).additional_notes);
+
     // Transform camelCase fields to snake_case
     const transformedData: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updateData)) {
       if (key === 'clientVersion') continue; // Skip version from client
       const snakeKey = fieldMapping[key] || key;
       transformedData[snakeKey] = value;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(transformedData, 'additional_notes')) {
+      transformedData.additional_notes = stringifyJobNotes(
+        typeof transformedData.additional_notes === 'string' ? transformedData.additional_notes : '',
+        currentNotesPayload.projectLog
+      );
     }
 
     // Increment version

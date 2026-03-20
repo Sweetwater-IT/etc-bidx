@@ -13,7 +13,7 @@ import { MoreVertical } from 'lucide-react'
 import { useAuth } from "@/contexts/auth-context";
 
 export interface Note {
-  id?: number;
+  id?: number | string;
   text: string;
   timestamp: number;
   user_email?: string

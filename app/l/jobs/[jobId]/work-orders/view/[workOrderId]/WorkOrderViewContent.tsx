@@ -5,7 +5,7 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { Button } from "@/components/ui/button";
-import { Edit, ClipboardList, Download, CheckCircle } from "lucide-react";
+import { Edit, ClipboardList, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
@@ -202,35 +202,6 @@ export default function WorkOrderViewContent({
     }
   };
 
-  const handleMarkAsReady = async () => {
-    try {
-      const response = await fetch(`/api/workorders/${workOrderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'ready'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark work order as ready');
-      }
-
-      toast.success("Work order marked as ready");
-      // Refresh the work order data
-      const detailResponse = await fetch(`/api/workorders/${workOrderId}/detail`);
-      if (detailResponse.ok) {
-        const data = await detailResponse.json();
-        setWorkOrderData(data);
-      }
-    } catch (error) {
-      console.error("Error marking work order as ready:", error);
-      toast.error("Failed to mark work order as ready");
-    }
-  };
-
   const getTitle = () => {
     return formatWorkOrderPageTitle({
       workType: workOrderData?.takeoffs?.[0]?.work_type,
@@ -240,6 +211,7 @@ export default function WorkOrderViewContent({
   };
 
   const isMptTakeoff = workOrderData?.takeoffs?.[0]?.work_type === "MPT";
+  const canGeneratePickup = !workOrderData?.isPickup && isMptTakeoff && workOrderData?.status === "installed";
 
   return (
     <div>
@@ -275,26 +247,17 @@ export default function WorkOrderViewContent({
               <Download className="h-3.5 w-3.5 mr-1.5" />
               {downloadingPdf === 'combined' ? "Downloading…" : "WO + Takeoff PDF"}
             </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMarkAsReady}
-              disabled={workOrderData?.status === 'ready'}
-            >
-              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-              {workOrderData?.status === 'ready' ? 'Ready' : 'Mark as Ready'}
-            </Button>
             {!workOrderData?.isPickup && isMptTakeoff && (pickupWO ? (
               <Button variant="outline" size="sm" onClick={handleViewPickupWorkOrder}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 View Pickup Work Order
               </Button>
-            ) : (
+            ) : canGeneratePickup ? (
               <Button variant="outline" size="sm" onClick={handleGeneratePickupWorkOrder} disabled={generatingPickup}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 {generatingPickup ? "Creating…" : "Generate Pickup Work Order"}
               </Button>
-            ))}
+            ) : null)}
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Edit className="h-3.5 w-3.5 mr-1.5" />
               Edit

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import type { Job, JobFromDB, JobProjectInfo } from '@/types/job';
+import { parseJobNotes } from '@/lib/jobNotes';
 
 export async function GET(
   request: NextRequest,
@@ -31,6 +32,8 @@ export async function GET(
     // Transform the database job into the expected format
     const job: Job = data;
 
+    const parsedNotes = parseJobNotes(job.additional_notes);
+
     const projectInfo: JobProjectInfo = {
       projectName: job.project_name,
       etcJobNumber: job.etc_job_number,
@@ -46,7 +49,7 @@ export async function GET(
       projectStartDate: job.project_start_date,
       projectEndDate: job.project_end_date,
       extensionDate: job.extension_date,
-      otherNotes: job.additional_notes,
+      otherNotes: parsedNotes.contractNotes,
       isCertifiedPayroll: (job.certified_payroll_type === "state" ? "state" : job.certified_payroll_type === "federal" ? "federal" : "none") as "none" | "state" | "federal",
       shopRate: job.shop_rate?.toString() || null,
       stateMptBaseRate: job.state_base_rate?.toString() || null,

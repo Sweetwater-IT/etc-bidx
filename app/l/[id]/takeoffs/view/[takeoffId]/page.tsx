@@ -119,6 +119,7 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
 function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId: string }) {
   const router = useRouter();
   const [takeoff, setTakeoff] = useState<any>(null);
+  const [linkedWorkOrderStatus, setLinkedWorkOrderStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
@@ -138,6 +139,22 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
           linkedWorkOrderId: data?.work_order_id,
         });
         setTakeoff(data);
+        if (data?.work_order_id) {
+          try {
+            const workOrderResponse = await fetch(`/api/workorders/${data.work_order_id}`);
+            if (workOrderResponse.ok) {
+              const workOrder = await workOrderResponse.json();
+              setLinkedWorkOrderStatus(workOrder?.status || null);
+            } else {
+              setLinkedWorkOrderStatus(null);
+            }
+          } catch (workOrderError) {
+            console.error('[TakeoffViewPageHeader] Error loading linked work order', workOrderError);
+            setLinkedWorkOrderStatus(null);
+          }
+        } else {
+          setLinkedWorkOrderStatus(null);
+        }
       } catch (error) {
         console.error('[TakeoffViewPageHeader] Error loading takeoff', error);
         toast.error('Failed to load takeoff');
@@ -157,6 +174,13 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
     router.push(`/l/${resolvedJobId}/takeoffs/edit/${resolvedTakeoffId}`);
   };
+
+  const isMptTakeoff = takeoff?.work_type === "MPT";
+  const canGeneratePickupWorkOrder =
+    !takeoff?.is_pickup &&
+    isMptTakeoff &&
+    takeoff?.work_order_id &&
+    linkedWorkOrderStatus === "installed";
 
   const handleDownloadPdf = async () => {
     setGeneratingPdf(true);
@@ -286,8 +310,6 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
   };
 
-  const isMptTakeoff = takeoff?.work_type === "MPT";
-
   return (
     <StickyPageHeader
       backLabel="Job"
@@ -336,7 +358,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
                 <ClipboardList className="h-3.5 w-3.5" />
                 View Work Order
               </Button>
-              {!takeoff?.is_pickup && isMptTakeoff && (
+              {canGeneratePickupWorkOrder && (
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreatePickupWorkOrder} disabled={loading}>
                   <ClipboardList className="h-3.5 w-3.5" />
                   {loading ? "Creating…" : "Generate Pickup Work Order"}

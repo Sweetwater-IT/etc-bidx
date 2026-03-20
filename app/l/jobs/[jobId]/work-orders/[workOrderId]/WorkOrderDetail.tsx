@@ -87,7 +87,7 @@ const WO_STATUSES = [
   { value: "draft", label: "Draft", color: "bg-muted text-muted-foreground" },
   { value: "ready", label: "Ready", color: "bg-emerald-500/15 text-emerald-700" },
   { value: "scheduled", label: "Scheduled", color: "bg-indigo-500/15 text-indigo-700" },
-  { value: "completed", label: "Complete", color: "bg-emerald-600/15 text-emerald-800" },
+  { value: "installed", label: "Installed", color: "bg-emerald-600/15 text-emerald-800" },
 ];
 
 const TAKEOFF_STATUSES: Record<string, { label: string; color: string }> = {
@@ -671,7 +671,7 @@ const WorkOrderDetail = ({
       return;
     }
 
-    const schedulingStatuses = ["scheduled", "completed"];
+    const schedulingStatuses = ["scheduled", "installed"];
     if (schedulingStatuses.includes(newStatus) && newStatus !== workOrder.status && !hasWoItems) {
       setPendingStatusTransition(newStatus);
       setBlockingModalType("items");
@@ -1113,97 +1113,6 @@ const WorkOrderDetail = ({
             </div>
           </div>
         </div>
-
-        {/* ─── Execution Readiness ─── */}
-        {!isViewMode && (
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Execution Readiness</h2>
-          </div>
-          <div className="p-5">
-            <div className="flex flex-wrap gap-6">
-              <div className="flex items-center gap-2 text-xs">
-                {hasTakeoff ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={hasTakeoff ? "text-emerald-700" : "text-amber-700"}>
-                  {hasTakeoff ? `${takeoffs.length} takeoff(s) attached` : "No takeoff attached"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {hasWoItems ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={hasWoItems ? "text-emerald-700" : "text-amber-700"}>
-                  Items: {woItems.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {buildComplete ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Hammer className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={buildComplete ? "text-emerald-700" : "text-amber-700"}>
-                  {!latestBuildRequest ? "Build: N/A" : buildComplete ? "Build complete" : `Build: ${latestBuildRequest.status.replace(/_/g, " ")}`}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {(workOrder?.status === "completed") ? <Truck className="h-3.5 w-3.5 text-emerald-600" /> : <Truck className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className={workOrder?.status === "completed" ? "text-emerald-700" : "text-muted-foreground"}>
-                  {workOrder?.status === "completed" ? "Complete" : "Not complete"}
-                </span>
-              </div>
-            </div>
-            {/* Quick actions row */}
-            {canEdit && (
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                {workOrder.status === "ready" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs gap-1.5"
-                    onClick={() => setShowScheduleDialog(true)}
-                    disabled={!readyToSchedule || !!dispatch}
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {dispatch ? "Dispatch Scheduled" : "Schedule Dispatch"}
-                  </Button>
-                )}
-                {dispatch && (
-                  <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => router.push(`/dispatch/${dispatch.id}`)}>
-                    <Truck className="h-3.5 w-3.5" /> View Dispatch
-                  </Button>
-                )}
-                {dispatch?.status === "completed" && workOrder.status !== "sent_to_billing" && (
-                  <Button
-                    size="sm"
-                    className="text-xs gap-1.5"
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(`/api/workorders/${workOrderId}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ status: "completed" }),
-                        });
-
-                        if (!response.ok) {
-                          const error = await response.json();
-                          throw new Error(error.error || 'Failed to update status');
-                        }
-
-                        toast.success("Marked as sent to billing");
-                        // Refetch work order data
-                        const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
-                        if (workOrderResponse.ok) {
-                          const data = await workOrderResponse.json();
-                          setWorkOrder(data);
-                        }
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to send to billing');
-                      }
-                    }}
-                  >
-                    <DollarSign className="h-3.5 w-3.5" /> Send to Billing
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        )}
 
         {/* ─── Linked Takeoffs Card ─── */}
         <div className="rounded-lg border bg-card shadow-sm">

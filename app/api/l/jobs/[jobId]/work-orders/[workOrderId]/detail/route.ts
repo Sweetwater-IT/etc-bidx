@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes } from '@/lib/jobNotes';
 
 interface TakeoffSummary {
   id: string;
@@ -102,6 +103,7 @@ export async function GET(
     let job = null;
     if (jobRes.data) {
       const jobData = jobRes.data;
+      const parsedNotes = parseJobNotes(jobData.additional_notes);
       const projectInfo = {
         projectName: jobData.project_name,
         etcJobNumber: jobData.etc_job_number,
@@ -116,7 +118,7 @@ export async function GET(
         projectStartDate: jobData.project_start_date,
         projectEndDate: jobData.project_end_date,
         extensionDate: jobData.extension_date,
-        otherNotes: jobData.additional_notes,
+        otherNotes: parsedNotes.contractNotes,
       };
 
       job = {
