@@ -252,6 +252,7 @@ export const CreateTakeoffForm = ({
   const [workOrderExists, setWorkOrderExists] = useState(false);
   const [showWorkTypeChangeDialog, setShowWorkTypeChangeDialog] = useState(false);
   const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<null | { type: "vehicle" | "rollingStock" | "additionalItem"; id: string }>(null);
   const [workTypeSelectedAt, setWorkTypeSelectedAt] = useState<Date | null>(null);
   const hasCreatedTakeoff = Boolean(savedTakeoffId);
   const isEditMode = mode === "edit";
@@ -1397,7 +1398,7 @@ export const CreateTakeoffForm = ({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 ml-auto"
-                        onClick={() => setVehicleItems((prev) => prev.filter((vi) => vi.id !== item.id))}
+                        onClick={() => setPendingDeleteAction({ type: "vehicle", id: item.id })}
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
@@ -1555,7 +1556,7 @@ export const CreateTakeoffForm = ({
                           size="icon"
                           disabled
                           className="h-8 w-8"
-                          onClick={() => setRollingStockItems((prev) => prev.filter((rs) => rs.id !== item.id))}
+                          onClick={() => setPendingDeleteAction({ type: "rollingStock", id: item.id })}
                         >
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
@@ -1650,7 +1651,7 @@ export const CreateTakeoffForm = ({
                         )}
                       </td>
                       <td className="px-4 py-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdditionalItems((prev) => prev.filter((i) => i.id !== item.id))}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </td>
@@ -1704,6 +1705,36 @@ export const CreateTakeoffForm = ({
           </div>
         </div>
       </div>
+
+      <Dialog open={!!pendingDeleteAction} onOpenChange={(open) => !open && setPendingDeleteAction(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              This will remove the selected row. Choose confirm to continue or cancel to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteAction(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingDeleteAction) return;
+                if (pendingDeleteAction.type === "vehicle") {
+                  setVehicleItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                } else if (pendingDeleteAction.type === "rollingStock") {
+                  setRollingStockItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                } else if (pendingDeleteAction.type === "additionalItem") {
+                  setAdditionalItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                }
+                setPendingDeleteAction(null);
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Work Type Change Confirmation Dialog */}
       <Dialog open={showWorkTypeChangeDialog} onOpenChange={setShowWorkTypeChangeDialog}>

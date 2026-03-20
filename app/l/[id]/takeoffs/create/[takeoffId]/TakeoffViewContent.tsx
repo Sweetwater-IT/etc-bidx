@@ -5,16 +5,13 @@ import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
-import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
 import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
+import type { SignMaterial } from "@/utils/signMaterial";
 
 interface Props {
   jobId: string;
@@ -251,9 +248,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   };
 
   // Separate takeoff items by category
-  const signItems = Array.isArray(takeoff.takeoff_items)
-    ? takeoff.takeoff_items.filter((item: any) => item.category === 'sign' || !item.category)
-    : [];
   const vehicleItems = Array.isArray(takeoff.takeoff_items)
     ? takeoff.takeoff_items.filter((item: any) => item.category === 'vehicle')
     : [];
@@ -510,94 +504,36 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       )}
 
-      {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
-      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-        <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
-        {signItems.length > 0 ? (
-          <div className="overflow-x-auto">
-            {takeoff.work_type === "PERMANENT_SIGNS" ? (
-              // Permanent Signs Table
-              <table className="w-full min-w-[1000px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/70">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Post Size</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Plan Sheet</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {signItems.map((item: any) => {
-                    // Extract sign details from the jsonb field
-                    const signDetails = item.sign_details || {};
-                    return (
-                      <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.postSize || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs">
-                          {signDetails.planSheetNum && signDetails.planSheetTotal ? `${signDetails.planSheetNum}/${signDetails.planSheetTotal}` : '—'}
-                        </td>
-                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              // MPT Signs Table
-              <table className="w-full min-w-[1240px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/70">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-[360px]">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-20">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-44">Structure</th>
-                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
-                    <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Sq Ft</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Material</th>
-                    <th className="px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground w-20">Cover</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {signItems.map((item: any) => {
-                    // Extract sign details from the jsonb field
-                    const signDetails = item.sign_details || {};
-                    return (
-                      <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 w-32 text-xs font-medium align-top">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 w-[360px] text-xs align-top break-words">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 w-20 text-xs tabular-nums text-right">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 w-44 text-xs break-words">{signDetails.structureType || item.structure_type || '—'}</td>
-                        <td className="px-2 py-1 w-24 text-xs tabular-nums text-right">{signDetails.bLights || item.b_lights || 'none'}</td>
-                        <td className="px-2 py-1 w-28 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.material || item.material || '—'}</td>
-                        <td className="px-2 py-1 w-20 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No takeoff items found. Sign designations will appear here when the takeoff is created.
-          </div>
-        )}
-        </TakeoffViewCard>
-      </div>
+      {(takeoff.work_type === "MPT" || takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <MPTSignConfiguration
+            activeSections={Array.isArray(takeoff.active_sections) ? takeoff.active_sections : []}
+            signRows={(takeoff.sign_rows || {}) as Record<string, MPTSignRow[]>}
+            defaultSignMaterial={(takeoff.default_sign_material || "PLASTIC") as SignMaterial}
+            onToggleSection={() => {}}
+            onSignRowsChange={() => {}}
+            onDefaultMaterialChange={() => {}}
+            onApplyMaterialToAll={() => {}}
+            disabled
+          />
+        </div>
+      )}
+
+      {takeoff.work_type === "PERMANENT_SIGNS" && (
+        <PermanentSignConfiguration
+          activeItems={Array.isArray(takeoff.active_permanent_items) ? takeoff.active_permanent_items : []}
+          signRows={takeoff.permanent_sign_rows || {}}
+          entryRows={takeoff.permanent_entry_rows || {}}
+          defaultSignMaterial={(takeoff.default_permanent_sign_material || "ALUMINUM") as SignMaterial}
+          onToggleItem={() => {}}
+          onSignRowsChange={() => {}}
+          onEntryRowsChange={() => {}}
+          onDefaultMaterialChange={() => {}}
+          onApplyMaterialToAll={() => {}}
+          disabled
+          jobId={jobId}
+        />
+      )}
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
       <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
@@ -630,13 +566,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         )}
         </TakeoffViewCard>
       </div>
-
-      {takeoff.is_pickup && takeoff.work_order_id && (
-        <ReturnInventoryCard
-          takeoffId={takeoffId}
-          jobInfo={jobInfo}
-        />
-      )}
 
       {/* Notes */}
       {(takeoff.notes || takeoff.crew_notes || takeoff.build_shop_notes || takeoff.pm_notes) && (

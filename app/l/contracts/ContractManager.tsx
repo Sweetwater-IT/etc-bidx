@@ -110,6 +110,7 @@ const ContractManager = () => {
   const [signedFiles, setSignedFiles] = useState<File[]>([]);
   const [signedJobNumber, setSignedJobNumber] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingSignedFileDeleteIndex, setPendingSignedFileDeleteIndex] = useState<number | null>(null);
   const signedFileInputRef = useRef<HTMLInputElement>(null);
 
   // Missing requirements modal
@@ -542,7 +543,7 @@ const ContractManager = () => {
                     <span className="text-sm text-foreground truncate flex-1">{file.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
                     {!isUploading && (
-                      <button onClick={() => removeSignedFile(i)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                      <button onClick={() => setPendingSignedFileDeleteIndex(i)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     )}
@@ -555,6 +556,33 @@ const ContractManager = () => {
             <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); }}>Cancel</Button>
             <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || !signedJobNumber.trim() || isUploading} className="gap-2">
               {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Upload</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pendingSignedFileDeleteIndex !== null} onOpenChange={(open) => {
+        if (!open) setPendingSignedFileDeleteIndex(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove Uploaded File?</DialogTitle>
+            <DialogDescription>
+              This will remove the selected signed-contract file from the upload list.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingSignedFileDeleteIndex(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingSignedFileDeleteIndex !== null) removeSignedFile(pendingSignedFileDeleteIndex);
+                setPendingSignedFileDeleteIndex(null);
+              }}
+            >
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>

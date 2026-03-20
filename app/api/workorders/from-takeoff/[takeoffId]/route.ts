@@ -177,8 +177,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Parent work order is required for pickup creation' }, { status: 400 });
       }
 
-      if (!['MPT', 'RENTAL'].includes(String(takeoff.work_type || '').toUpperCase())) {
-        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT or RENTAL takeoffs' }, { status: 400 });
+      if (String(takeoff.work_type || '').toUpperCase() !== 'MPT') {
+        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT takeoffs' }, { status: 400 });
       }
 
       const { data: existingPickupWO } = await supabase

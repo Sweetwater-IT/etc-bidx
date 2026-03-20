@@ -75,7 +75,6 @@ import {
   File,
   X,
   ExternalLink,
-  Lock,
   Paperclip,
   RotateCcw,
 } from "lucide-react";
@@ -282,7 +281,7 @@ const WorkOrderDetail = ({
     () =>
       woItems.filter((item) => {
         if (item.sov_item_id) return false;
-        return !String(item.description || '').trim();
+        return !String(item.description || "").trim();
       }),
     [woItems]
   );
@@ -989,25 +988,6 @@ const WorkOrderDetail = ({
           </div>
         )}
 
-        {/* Backlink to linked takeoff (when present) */}
-        {!!workOrder?.takeoff_id && !!workOrder?.job_id && (
-          <div className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground shrink-0">Linked takeoff</span>
-              <span className="text-xs font-mono truncate">{workOrder.takeoff_id}</span>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs gap-1.5 shrink-0"
-              onClick={() => router.push(`/l/${workOrder.job_id}/takeoffs/view/${workOrder.takeoff_id}`)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> View Takeoff
-            </Button>
-          </div>
-        )}
-
         {/* ─── Project Information Card — matching takeoff ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="px-5 py-3 border-b bg-muted/30">
@@ -1135,6 +1115,7 @@ const WorkOrderDetail = ({
         </div>
 
         {/* ─── Execution Readiness ─── */}
+        {!isViewMode && (
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="px-5 py-3 border-b bg-muted/30">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Execution Readiness</h2>
@@ -1222,6 +1203,7 @@ const WorkOrderDetail = ({
             )}
           </div>
         </div>
+        )}
 
         {/* ─── Linked Takeoffs Card ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
@@ -1604,7 +1586,7 @@ const WorkOrderDetail = ({
         </div>
 
         {/* ─── Additional Items Card — Custom items added manually ─── */}
-        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+        {false && <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Plus className="h-4 w-4 text-muted-foreground" />
@@ -1871,7 +1853,7 @@ const WorkOrderDetail = ({
               </Table>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* ─── Documents Card ─── */}
         <div className="rounded-lg border bg-card shadow-sm">

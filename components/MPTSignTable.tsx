@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Minus, Trash2, Search, Settings, GripVertical, Check, Copy, FilePlus } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import {
@@ -87,12 +88,15 @@ const B_LIGHT_OPTIONS = [
   { value: '2w', label: '2 White' },
 ];
 
+const TYPE_III_STRUCTURE_SQFT = 8.01;
+const roundToTwo = (value: number) => Math.round(value * 100) / 100;
+
 // Sortable table row component
 const SortableRow = ({
   row,
   columns,
   renderCell,
-  removeRow,
+  requestDeleteRow,
   duplicateRow,
   addSecondarySign,
   disabled,
@@ -101,7 +105,7 @@ const SortableRow = ({
   row: MPTSignRow;
   columns: { key: string; label: string; width: string }[];
   renderCell: (row: MPTSignRow, column: { key: string; label: string; width: string }) => React.ReactNode;
-  removeRow: (id: string) => void;
+  requestDeleteRow: (id: string) => void;
   duplicateRow: (id: string) => void;
   addSecondarySign: (id: string) => void;
   disabled: boolean;
@@ -168,7 +172,7 @@ const SortableRow = ({
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => removeRow(row.id)}
+              onClick={() => requestDeleteRow(row.id)}
             >
               <Trash2 className="h-3 w-3 text-destructive" />
             </Button>
@@ -195,6 +199,18 @@ export const MPTSignTable = ({
   // DesignationSearcher state
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
+  const isTypeIIISection = sectionTitle.toLowerCase().includes('type iii');
+  const [pendingDelete, setPendingDelete] = useState<{ type: "row" | "secondary"; rowId: string; secondaryId?: string } | null>(null);
+
+  const getPrimaryTotalSqft = (row: Partial<MPTSignRow>) => {
+    const quantity = isTypeIIISection ? 1 : Math.max(1, Number(row.quantity || 1));
+    const signSqft = Number(row.sqft || 0) * quantity;
+    const structureSqft =
+      isTypeIIISection && row.structureType && row.structureType !== "Loose"
+        ? TYPE_III_STRUCTURE_SQFT * quantity
+        : 0;
+    return roundToTwo(signSqft + structureSqft);
+  };
 
   // Debugging ref
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -270,6 +286,28 @@ export const MPTSignTable = ({
 
     fetchSigns();
   }, []);
+
+  useEffect(() => {
+    if (!isTypeIIISection) return;
+
+    const hasInvalidQuantity = rows.some((row) => row.quantity !== 1);
+    const hasInvalidSecondaryQuantity = rows.some((row) =>
+      (row.secondarySigns || []).some((secondary) => secondary.quantity !== 1)
+    );
+
+    if (!hasInvalidQuantity && !hasInvalidSecondaryQuantity) return;
+
+    onRowsChange(
+      rows.map((row) => ({
+        ...row,
+        quantity: 1,
+        secondarySigns: (row.secondarySigns || []).map((secondary) => ({
+          ...secondary,
+          quantity: 1,
+        })),
+      }))
+    );
+  }, [isTypeIIISection, onRowsChange, rows]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -440,7 +478,22 @@ export const MPTSignTable = ({
   };
 
   const updateRow = (id: string, updates: Partial<MPTSignRow>) => {
-    onRowsChange(rows.map(row => row.id === id ? { ...row, ...updates } : row));
+    onRowsChange(
+      rows.map((row) => {
+        if (row.id !== id) return row;
+
+        const nextRow: MPTSignRow = {
+          ...row,
+          ...updates,
+          quantity: isTypeIIISection ? 1 : (updates.quantity ?? row.quantity),
+        };
+
+        return {
+          ...nextRow,
+          totalSqft: getPrimaryTotalSqft(nextRow),
+        };
+      })
+    );
   };
 
   const removeRow = (id: string) => {
@@ -453,6 +506,11 @@ export const MPTSignTable = ({
       const duplicatedRow: MPTSignRow = {
         ...rowToDuplicate,
         id: crypto.randomUUID(),
+        quantity: isTypeIIISection ? 1 : rowToDuplicate.quantity,
+        totalSqft: getPrimaryTotalSqft({
+          ...rowToDuplicate,
+          quantity: isTypeIIISection ? 1 : rowToDuplicate.quantity,
+        }),
         loadOrder: rows.length + 1,
         secondarySigns: [], // Don't duplicate secondary signs
       };
@@ -506,6 +564,16 @@ export const MPTSignTable = ({
     }
   };
 
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    if (pendingDelete.type === "row") {
+      removeRow(pendingDelete.rowId);
+    } else if (pendingDelete.secondaryId) {
+      removeSecondarySign(pendingDelete.rowId, pendingDelete.secondaryId);
+    }
+    setPendingDelete(null);
+  };
+
   // Handle designation selection from DesignationSearcher
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
     if (!localSign) return;
@@ -522,10 +590,11 @@ export const MPTSignTable = ({
         height: updatedSign.height,
         dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
         sheeting: updatedSign.sheeting as any,
-        sqft: (updatedSign.width * updatedSign.height) / 144, // Convert to square feet
+        sqft: roundToTwo((updatedSign.width * updatedSign.height) / 144), // Convert to square feet
       });
     } else {
       // Update primary sign row
+      const primarySqft = roundToTwo((updatedSign.width * updatedSign.height) / 144);
       updateRow(localSign.id, {
         signDesignation: updatedSign.designation,
         signDescription: updatedSign.description || '',
@@ -534,7 +603,14 @@ export const MPTSignTable = ({
         height: updatedSign.height,
         dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
         sheeting: updatedSign.sheeting as any,
-        sqft: (updatedSign.width * updatedSign.height) / 144, // Convert to square feet
+        sqft: primarySqft,
+        totalSqft: getPrimaryTotalSqft({
+          ...rows.find((row) => row.id === localSign.id),
+          width: updatedSign.width,
+          height: updatedSign.height,
+          sqft: primarySqft,
+          quantity: updatedSign.quantity,
+        }),
         quantity: updatedSign.quantity,
         cover: updatedSign.cover,
         // Map bLights from the searcher format to our format
@@ -621,6 +697,18 @@ export const MPTSignTable = ({
           </Select>
         );
       case 'qty':
+        if (isTypeIIISection) {
+          return (
+            <Input
+              type="text"
+              readOnly
+              aria-readonly="true"
+              className="h-8 text-xs text-center w-12 tabular-nums bg-muted/40"
+              value={1}
+              disabled={disabled}
+            />
+          );
+        }
         return (
           <div className="flex items-center gap-1">
             <Button
@@ -698,8 +786,8 @@ export const MPTSignTable = ({
               type="number"
               step="0.01"
               className="h-8 text-xs flex-1 rounded-r-none border-r-0"
-              value={row.sqft}
-              onChange={(e) => updateRow(row.id, { sqft: Math.round((parseFloat(e.target.value) || 0) * 100) / 100 })}
+              value={getPrimaryTotalSqft(row)}
+              onChange={(e) => updateRow(row.id, { sqft: roundToTwo((parseFloat(e.target.value) || 0)) })}
               disabled={true}
             />
             <span className="h-8 px-2 bg-muted border border-l-0 rounded-r flex items-center text-xs text-muted-foreground">
@@ -737,11 +825,11 @@ export const MPTSignTable = ({
       case 'loadOrder':
         return (
           <Input
-            type="number"
-            min={1}
-            className="h-8 text-xs w-16"
+            type="text"
+            readOnly
+            aria-readonly="true"
+            className="h-8 text-xs w-16 text-center tabular-nums bg-muted/40"
             value={row.loadOrder}
-            onChange={(e) => updateRow(row.id, { loadOrder: Math.max(1, parseInt(e.target.value) || 1) })}
             disabled={disabled}
           />
         );
@@ -755,7 +843,7 @@ export const MPTSignTable = ({
       if (!row.signDesignation) return acc;
 
       const rowQty = row.quantity || 0;
-      const primarySqft = (row.totalSqft || 0) || Math.round((row.sqft || 0) * rowQty * 100) / 100;
+      const primarySqft = Number(row.totalSqft || 0) || getPrimaryTotalSqft(row);
       const sqftTotal = primarySqft + (row.secondarySigns || []).reduce((secTotal, sec) => {
         const secSqft = sec.sqft || 0;
         return secTotal + Math.round(secSqft * rowQty * 100) / 100;
@@ -831,7 +919,7 @@ export const MPTSignTable = ({
                           row={row}
                           columns={columns}
                           renderCell={renderCell}
-                          removeRow={removeRow}
+                          requestDeleteRow={(id) => setPendingDelete({ type: "row", rowId: id })}
                           duplicateRow={duplicateRow}
                           addSecondarySign={addSecondarySign}
                           disabled={disabled}
@@ -892,7 +980,7 @@ export const MPTSignTable = ({
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
-                                onClick={() => removeRow(row.id)}
+                                onClick={() => setPendingDelete({ type: "row", rowId: row.id })}
                               >
                                 <Trash2 className="h-3 w-3 text-destructive" />
                               </Button>
@@ -972,7 +1060,7 @@ export const MPTSignTable = ({
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6"
-                                    onClick={() => removeSecondarySign(row.id, sec.id)}
+                                    onClick={() => setPendingDelete({ type: "secondary", rowId: row.id, secondaryId: sec.id })}
                                   >
                                     <Trash2 className="h-3 w-3 text-destructive" />
                                   </Button>
@@ -1027,6 +1115,20 @@ export const MPTSignTable = ({
           onOpenChange={setDesignationSearcherOpen}
         />
       )}
+      <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              This will remove the selected sign row. Choose confirm to continue or cancel to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

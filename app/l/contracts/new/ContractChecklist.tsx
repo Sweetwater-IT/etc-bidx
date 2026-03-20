@@ -144,6 +144,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [showChangeOrderDialog, setShowChangeOrderDialog] = useState(false);
 
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
+  const [pendingDocumentDeleteId, setPendingDocumentDeleteId] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
@@ -499,6 +500,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   };
 
+  const requestRemoveDocument = (id: string) => {
+    setPendingDocumentDeleteId(id);
+  };
+
   const handleUpdateDocumentCategory = async (id: string, category: DocumentCategory) => {
     try {
       const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
@@ -685,7 +690,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           projectInfo={projectInfo}
           jobId={routeId}
           onAddDocuments={handleAddDocuments}
-          onRemoveDocument={handleRemoveDocument}
+          onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
           readOnly={forceReadOnly}
         />
@@ -729,6 +734,35 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         onApproved={handleChangeOrderApproved}
         onCancel={handleChangeOrderCancel}
       />
+
+      <Dialog open={!!pendingDocumentDeleteId} onOpenChange={(open) => {
+        if (!open) setPendingDocumentDeleteId(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Document?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the selected contract document.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDocumentDeleteId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (pendingDocumentDeleteId) {
+                  await handleRemoveDocument(pendingDocumentDeleteId);
+                }
+                setPendingDocumentDeleteId(null);
+              }}
+            >
+              Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

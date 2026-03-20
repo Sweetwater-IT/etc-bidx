@@ -135,15 +135,108 @@ export async function GET(
       pickupTakeoff = child || null;
     }
 
-    const { data: takeoffItems, error: takeoffItemsError } = await supabase
-      .from('takeoff_items_l')
-      .select('*')
-      .eq('takeoff_id', id)
-      .is('deleted_at', null)
-      .order('load_order', { ascending: true });
+    let takeoffItems: any[] = [];
 
-    if (takeoffItemsError) {
-      console.error('API: Error fetching takeoff items:', takeoffItemsError);
+    if (data.is_pickup) {
+      const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
+        .from('pickup_takeoffs_l')
+        .select('id')
+        .eq('parent_takeoff_id', data.parent_takeoff_id)
+        .maybeSingle();
+
+      if (pickupTakeoffEntryError) {
+        console.error('API: Error fetching pickup takeoff entry:', pickupTakeoffEntryError);
+      } else if (pickupTakeoffEntry?.id) {
+        const { data: pickupItems, error: pickupItemsError } = await supabase
+          .from('pickup_takeoff_items_l')
+          .select(`
+            id,
+            pickup_takeoff_id,
+            parent_item_id,
+            sign_condition,
+            structure_condition,
+            light_condition,
+            pickup_images,
+            return_details,
+            notes,
+            created_at,
+            updated_at,
+            takeoff_items_l!inner (
+              id,
+              product_name,
+              category,
+              unit,
+              quantity,
+              requisition_type,
+              notes,
+              in_stock_qty,
+              to_order_qty,
+              inventory_status,
+              material,
+              sign_details,
+              sign_description,
+              sheeting,
+              width_inches,
+              height_inches,
+              sqft,
+              total_sqft,
+              load_order,
+              cover,
+              secondary_signs
+            )
+          `)
+          .eq('pickup_takeoff_id', pickupTakeoffEntry.id)
+          .order('created_at', { ascending: true });
+
+        if (pickupItemsError) {
+          console.error('API: Error fetching pickup takeoff items:', pickupItemsError);
+        } else {
+          takeoffItems = (pickupItems || []).map((item: any) => {
+            const parentItem = item.takeoff_items_l as any;
+            return {
+              id: item.id,
+              product_name: parentItem.product_name,
+              category: parentItem.category,
+              unit: parentItem.unit,
+              quantity: parentItem.quantity,
+              requisition_type: parentItem.requisition_type,
+              notes: parentItem.notes,
+              in_stock_qty: parentItem.in_stock_qty,
+              to_order_qty: parentItem.to_order_qty,
+              inventory_status: parentItem.inventory_status,
+              material: parentItem.material,
+              sign_details: parentItem.sign_details,
+              sign_description: parentItem.sign_description,
+              sheeting: parentItem.sheeting,
+              width_inches: parentItem.width_inches,
+              height_inches: parentItem.height_inches,
+              sqft: parentItem.sqft,
+              total_sqft: parentItem.total_sqft,
+              load_order: parentItem.load_order,
+              cover: parentItem.cover,
+              secondary_signs: parentItem.secondary_signs,
+              return_details: item.return_details || {},
+              pickup_images: item.pickup_images || [],
+              sign_condition: item.sign_condition,
+              structure_condition: item.structure_condition,
+              light_condition: item.light_condition,
+            };
+          });
+        }
+      }
+    } else {
+      const { data: regularTakeoffItems, error: takeoffItemsError } = await supabase
+        .from('takeoff_items_l')
+        .select('*')
+        .eq('takeoff_id', id)
+        .is('deleted_at', null)
+        .order('load_order', { ascending: true });
+
+      if (takeoffItemsError) {
+        console.error('API: Error fetching takeoff items:', takeoffItemsError);
+      } else {
+        takeoffItems = regularTakeoffItems || [];
+      }
     }
 
     console.log('API: Successfully fetched takeoff:', data);

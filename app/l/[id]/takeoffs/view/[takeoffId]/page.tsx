@@ -286,6 +286,8 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
   };
 
+  const isMptTakeoff = takeoff?.work_type === "MPT";
+
   return (
     <StickyPageHeader
       backLabel="Job"
@@ -309,7 +311,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               View Parent Takeoff
             </Button>
           )}
-          {!takeoff?.is_pickup && takeoff?.pickup_takeoff?.id && (
+          {!takeoff?.is_pickup && isMptTakeoff && takeoff?.pickup_takeoff?.id && (
             <Button
               variant="outline"
               size="sm"
@@ -334,7 +336,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
                 <ClipboardList className="h-3.5 w-3.5" />
                 View Work Order
               </Button>
-              {!takeoff?.is_pickup && (
+              {!takeoff?.is_pickup && isMptTakeoff && (
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreatePickupWorkOrder} disabled={loading}>
                   <ClipboardList className="h-3.5 w-3.5" />
                   {loading ? "Creating…" : "Generate Pickup Work Order"}

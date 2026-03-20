@@ -72,12 +72,11 @@ function buildPermanentItems(
       const height = Number(row?.height || 0);
       const sqft = calcSqft(width, height);
       const quantity = Number(row?.quantity || 0);
-      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
-      const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
-        const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
-        return sum + roundTo(secSqft * quantity, 4);
-      }, 0);
-      const totalSqft = roundTo((Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4)) + secondaryTotal, 4);
+      const totalSqft = roundTo(Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4), 4);
+      const sanitizedRow = {
+        ...row,
+        secondarySigns: [],
+      };
 
       items.push({
         takeoff_id: takeoffId,
@@ -91,7 +90,7 @@ function buildPermanentItems(
         to_order_qty: 0,
         inventory_status: 'pending_review',
         material: row?.material || null,
-        sign_details: row,
+        sign_details: sanitizedRow,
         sign_description: row?.signDescription || null,
         sheeting: row?.sheeting || null,
         width_inches: width || null,
@@ -100,7 +99,7 @@ function buildPermanentItems(
         total_sqft: totalSqft,
         load_order: index + 1,
         cover: true,
-        secondary_signs: secondarySigns,
+        secondary_signs: [],
       });
     });
   });
@@ -257,6 +256,14 @@ export async function POST(request: NextRequest) {
 
     const normalizedTitle = typeof title === 'string' ? title.trim() : '';
     const normalizedWorkType = typeof workType === 'string' ? workType.trim() : '';
+    const sanitizedPermanentSignRows = Object.fromEntries(
+      Object.entries(permanentSignRows || {}).map(([itemNumber, rows]) => [
+        itemNumber,
+        Array.isArray(rows)
+          ? rows.map((row) => ({ ...row, secondarySigns: [] }))
+          : [],
+      ])
+    );
 
     if (!jobId || !normalizedTitle || !normalizedWorkType) {
       return NextResponse.json(
@@ -300,7 +307,7 @@ export async function POST(request: NextRequest) {
       sign_rows: signRows || {},
       default_sign_material: defaultSignMaterial || 'PLASTIC',
       active_permanent_items: activePermanentItems || [],
-      permanent_sign_rows: permanentSignRows || {},
+      permanent_sign_rows: sanitizedPermanentSignRows,
       permanent_entry_rows: permanentEntryRows || {},
       default_permanent_sign_material: defaultPermanentSignMaterial || 'ALUMINUM',
       vehicle_items: vehicleItems || [],
@@ -350,7 +357,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedItems = [
       ...buildMptItems(takeoff.id, signRows || {}),
-      ...buildPermanentItems(takeoff.id, permanentSignRows || {}, permanentEntryRows || {}),
+      ...buildPermanentItems(takeoff.id, sanitizedPermanentSignRows, permanentEntryRows || {}),
       ...buildGeneralItems(takeoff.id, normalizedWorkType, vehicleItems || [], rollingStockItems || [], additionalItems || []),
     ];
 

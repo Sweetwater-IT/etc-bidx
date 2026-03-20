@@ -8,6 +8,7 @@ import { useSovItems } from '@/hooks/useSovItems';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -104,9 +105,26 @@ function getFirstNonNullUom(master: SovMasterItem): string {
   return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
 }
 
+function normalizeUom(uom: string): string {
+  const trimmed = uom.trim().replace(/\s+/g, " ");
+  const normalizedKey = trimmed.replace(/\./g, "").toUpperCase();
+
+  if (normalizedKey === "SQ FT" || normalizedKey === "SQFT") return "SQ. FT";
+  if (normalizedKey === "SF") return "SF";
+  if (normalizedKey === "LS" || normalizedKey === "LUMP SUM") return "LUMP SUM";
+
+  return trimmed.toUpperCase();
+}
+
 function getAvailableUoms(master: SovMasterItem): string[] {
   const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
-  return Array.from(new Set(uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '')));
+  return Array.from(
+    new Set(
+      uoms
+        .filter((uom): uom is string => uom !== null && uom.trim() !== '')
+        .map(normalizeUom)
+    )
+  );
 }
 
 export const SOVTable = ({
@@ -155,6 +173,7 @@ export const SOVTable = ({
   const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
   const [selectorSearch, setSelectorSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
+  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
 
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('dollar');
@@ -164,6 +183,7 @@ export const SOVTable = ({
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
+  const showPricingColumns = !readOnly;
 
   const filteredItems = useMemo(() => {
     if (!selectorSearch.trim()) return sovProducts;
@@ -187,7 +207,7 @@ export const SOVTable = ({
 
   const customUomOptions = useMemo(() => {
     const allUoms = sovProducts.flatMap((product) => getAvailableUoms(product));
-    const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "")));
+    const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "").map(normalizeUom)));
     return deduped.length > 0 ? deduped : ["EA"];
   }, [sovProducts]);
 
@@ -552,17 +572,17 @@ export const SOVTable = ({
         </div>
       ) : (
         <div className="max-w-full min-w-0 overflow-x-auto">
-          <Table className="min-w-[800px]">
+          <Table className={cn("min-w-[800px]", readOnly && "min-w-[620px]")}>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
                 <TableHead className="w-[200px] text-xs">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
-                <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
-                <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
-                <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>
-                <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>
+                {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>}
+                {showPricingColumns && <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>}
+                {showPricingColumns && <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>}
+                {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>}
                 <TableHead className="w-[40px] text-xs text-center">Notes</TableHead>
                 <TableHead className="w-[40px]" />
               </TableRow>
@@ -827,51 +847,59 @@ export const SOVTable = ({
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        ) : (
-                        <div className="flex items-center h-7 border rounded-md bg-background">
-                          <span className="px-2 text-xs text-muted-foreground border-r">$</span>
-                          <CurrencyInput
-                            value={Math.round(item.unitPrice * 100).toFixed(0)}
-                            onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                            className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
+                      {readOnly ? (
+                        <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                          ) : (
+                          <div className="flex items-center h-7 border rounded-md bg-background">
+                            <span className="px-2 text-xs text-muted-foreground border-r">$</span>
+                            <CurrencyInput
+                              value={Math.round(item.unitPrice * 100).toFixed(0)}
+                              onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                              className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                            />
+                          </div>
+                          )}
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
+                      <span className="text-xs text-right block px-1 font-medium">
+                        ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
+                      {readOnly ? (
+                        <span className="text-xs text-right block px-1">
+                          {item.retainageType === 'percent'
+                            ? `${item.retainageValue}%`
+                            : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                        </span>
+                      ) : (
+                        <div className="flex justify-end">
+                          <DollarPercentCurrencyInputField
+                            type={item.retainageType}
+                            value={item.retainageValue}
+                            onTypeChange={(type) => {
+                              const currentValue = item.retainageValue;
+                              const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
+                              updateRetainage(item.id, type, newValue);
+                            }}
+                            onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
+                            size="sm"
                           />
                         </div>
-                        )}
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <span className="text-xs text-right block px-1 font-medium">
-                      ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">
-                        {item.retainageType === 'percent'
-                          ? `${item.retainageValue}%`
-                          : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-                      </span>
-                    ) : (
-                      <div className="flex justify-end">
-                        <DollarPercentCurrencyInputField
-                          type={item.retainageType}
-                          value={item.retainageValue}
-                          onTypeChange={(type) => {
-                            const currentValue = item.retainageValue;
-                            const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
-                            updateRetainage(item.id, type, newValue);
-                          }}
-                          onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
-                    ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </TableCell>
+                      )}
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
+                      ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5 text-center relative">
                     {readOnly ? (
                       <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
@@ -947,7 +975,7 @@ export const SOVTable = ({
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => removeRow(item.id)}
+                          onClick={() => setPendingDeleteRowId(item.id)}
                         >
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
@@ -957,7 +985,7 @@ export const SOVTable = ({
                 </TableRow>
                 {hasNotes && (
                   <TableRow className="border-t-0">
-                    <TableCell colSpan={10} className="p-1.5 pt-0">
+                    <TableCell colSpan={showPricingColumns ? 10 : 6} className="p-1.5 pt-0">
                       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
                         <div className="flex items-start gap-2">
                           <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-foreground/70 shrink-0" />
@@ -974,23 +1002,24 @@ export const SOVTable = ({
                 );
               })}
 
-              {/* Totals row */}
-              <TableRow className="bg-muted/30 font-semibold">
-                <TableCell colSpan={5} className="p-1.5 text-xs text-right">
-                  Total
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs">
-                  ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs">
-                  Retainage
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs text-primary">
-                  ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </TableCell>
-                <TableCell />
-                <TableCell />
-              </TableRow>
+              {showPricingColumns && (
+                <TableRow className="bg-muted/30 font-semibold">
+                  <TableCell colSpan={5} className="p-1.5 text-xs text-right">
+                    Total
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs">
+                    ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs">
+                    Retainage
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs text-primary">
+                    ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell />
+                  <TableCell />
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -1126,6 +1155,33 @@ export const SOVTable = ({
               onClick={saveCustomItem}
             >
               Add to Table
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingDeleteRowId} onOpenChange={(open) => {
+        if (!open) setPendingDeleteRowId(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete SOV Item?</DialogTitle>
+            <DialogDescription>
+              This will remove the selected schedule of values row.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteRowId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDeleteRowId) removeRow(pendingDeleteRowId);
+                setPendingDeleteRowId(null);
+              }}
+            >
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>

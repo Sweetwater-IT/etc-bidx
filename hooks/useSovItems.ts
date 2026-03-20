@@ -355,9 +355,10 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const results = await Promise.all(operations);
         console.log('[SOV save] All operations completed successfully:', results.length, 'results');
 
-        // Update original items reference with current state
-        originalItemsRef.current = currentItems.map(item => ({ ...item }));
-        console.log('[SOV save] Updated original items reference');
+        // Rehydrate from the API so newly created custom/master rows pick up
+        // their real database IDs before the next edit/delete cycle.
+        await fetchItems();
+        console.log('[SOV save] Rehydrated items from API after save');
 
         setSaveStatus('saved');
         console.log('[SOV save] Save operation completed successfully');
@@ -391,7 +392,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
       inFlightRef.current = null;
       console.log('[SOV save] In-flight reference cleared');
     }
-  }, [id, isContract]);
+  }, [id, isContract, fetchItems, isItemValidForSave]);
 
   // When id transitions from undefined to a real value, persist any locally-queued items
   const prevIdRef = useRef<string | undefined>(undefined);

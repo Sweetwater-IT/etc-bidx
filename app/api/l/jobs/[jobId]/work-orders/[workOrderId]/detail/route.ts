@@ -86,8 +86,8 @@ export async function GET(
       // SOV items for picklist — try dedicated table first, fall back to JSONB column
       supabase.from("sov_items").select("id, item_number, description, quantity, uom").eq("job_id", jobId).order("sort_order", { ascending: true }),
 
-      // Documents linked to this work order (via job + checklist)
-      supabase.from("documents").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
+      // Documents linked to this work order. Newer /l flows use documents_l.
+      supabase.from("documents_l").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
 
       // Pickup work order if this is a parent
       !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),

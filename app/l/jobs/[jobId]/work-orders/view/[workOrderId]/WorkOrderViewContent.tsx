@@ -239,6 +239,8 @@ export default function WorkOrderViewContent({
     });
   };
 
+  const isMptTakeoff = workOrderData?.takeoffs?.[0]?.work_type === "MPT";
+
   return (
     <div>
       <StickyPageHeader
@@ -282,7 +284,7 @@ export default function WorkOrderViewContent({
               <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
               {workOrderData?.status === 'ready' ? 'Ready' : 'Mark as Ready'}
             </Button>
-            {!workOrderData?.isPickup && (pickupWO ? (
+            {!workOrderData?.isPickup && isMptTakeoff && (pickupWO ? (
               <Button variant="outline" size="sm" onClick={handleViewPickupWorkOrder}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 View Pickup Work Order
