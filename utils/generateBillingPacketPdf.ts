@@ -93,15 +93,45 @@ function drawProjectFooter(
   pageW: number,
   pageH: number
 ) {
-  const footerText = items
-    .map((item) => `${item.label}: ${item.value || "—"}`)
-    .join("   |   ");
+  const footerX = 14;
+  const footerY = pageH - 20;
+  const footerW = pageW - 28;
+  const footerH = 10;
+  const colW = footerW / 4;
+  const topRow = items.slice(0, 4);
+  const bottomRow = items.slice(4, 8);
+  const fitValue = (value?: string | null, width = colW - 6) => {
+    const [line] = doc.splitTextToSize(value || "—", width);
+    return line || "—";
+  };
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6);
-  doc.setTextColor(110);
-  const lines = doc.splitTextToSize(footerText, pageW - 28);
-  doc.text(lines, pageW / 2, pageH - 13, { align: "center" });
+  doc.setDrawColor(210);
+  doc.setLineWidth(0.2);
+  doc.setFillColor(248, 248, 248);
+  doc.rect(footerX, footerY, footerW, footerH, "FD");
+
+  for (let i = 1; i < 4; i++) {
+    const x = footerX + colW * i;
+    doc.line(x, footerY, x, footerY + footerH);
+  }
+  doc.line(footerX, footerY + footerH / 2, footerX + footerW, footerY + footerH / 2);
+
+  const drawRow = (row: Array<{ label: string; value?: string | null }>, y: number) => {
+    row.forEach((item, index) => {
+      const x = footerX + colW * index + 2;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(5.5);
+      doc.setTextColor(115);
+      doc.text(item.label.toUpperCase(), x, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(0);
+      doc.text(fitValue(item.value), x, y + 2.8);
+    });
+  };
+
+  drawRow(topRow, footerY + 2.6);
+  drawRow(bottomRow, footerY + footerH / 2 + 2.6);
   doc.setTextColor(0);
 }
 
@@ -405,7 +435,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   // Page numbers + fixed Customer Acknowledgment on last page
   const totalPages = doc.getNumberOfPages();
   const pageH = doc.internal.pageSize.getHeight();
-  const sigBlockTop = pageH - 56; // leave room for the shared project footer above the page number
+  const sigBlockTop = pageH - 66; // leave room for the boxed project footer and page number
   const footerItems = [
     { label: "Job Name", value: data.projectName },
     { label: "Project Owner", value: data.projectOwner },

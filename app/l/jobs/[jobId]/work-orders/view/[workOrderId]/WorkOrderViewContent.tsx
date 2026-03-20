@@ -48,6 +48,11 @@ export default function WorkOrderViewContent({
   }, [workOrderId]);
 
   const handleBack = () => {
+    const linkedTakeoffId = takeoffId || workOrderData?.takeoffs?.[0]?.id;
+    if (linkedTakeoffId) {
+      router.push(`/l/${jobId}/takeoffs/view/${linkedTakeoffId}`);
+      return;
+    }
     router.push(`/l/${jobId}`);
   };
 
