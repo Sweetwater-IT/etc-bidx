@@ -278,7 +278,7 @@ export const CreateTakeoffForm = ({
   const [defaultPermanentSignMaterial, setDefaultPermanentSignMaterial] = useState<SignMaterial>("ALUMINUM");
 
   // Flagging/Lane Closure State
-  const [vehicleItems, setVehicleItems] = useState<{ id: string; vehicleType: string; quantity: number }[]>([]);
+  const [vehicleItems, setVehicleItems] = useState<{ id: string; vehicleType: string; quantity: number; description: string }[]>([]);
   const [rollingStockItems, setRollingStockItems] = useState<{ id: string; equipmentId: string; equipmentLabel: string }[]>([]);
   const [availableEquipment, setAvailableEquipment] = useState<{
     id: string; equipment_number: string; category: string; equipment_type: string;
@@ -288,7 +288,7 @@ export const CreateTakeoffForm = ({
   }[]>([]);
 
   // Additional Items State
-  const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string }[]>([]);
+  const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string; customName?: string }[]>([]);
 
   const isPermanentSigns = workType === "PERMANENT_SIGNS";
   const showsSignConfiguration = workType === "FLAGGING" || workType === "LANE_CLOSURE";
@@ -455,9 +455,24 @@ export const CreateTakeoffForm = ({
       setPermanentSignRows(draftTakeoff.permanent_sign_rows || {});
       setPermanentEntryRows(draftTakeoff.permanent_entry_rows || {});
       setDefaultPermanentSignMaterial(draftTakeoff.default_permanent_sign_material || "ALUMINUM");
-      setVehicleItems(draftTakeoff.vehicle_items || []);
+      setVehicleItems(
+        (draftTakeoff.vehicle_items || []).map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          vehicleType: item.vehicleType || "",
+          quantity: Number(item.quantity || 1),
+          description: item.description || "",
+        }))
+      );
       setRollingStockItems(draftTakeoff.rolling_stock_items || []);
-      setAdditionalItems(draftTakeoff.additional_items || []);
+      setAdditionalItems(
+        (draftTakeoff.additional_items || []).map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          name: item.name || "",
+          quantity: Number(item.quantity || 1),
+          description: item.description || "",
+          customName: item.customName || (item.name === "__custom" ? item.description || "" : ""),
+        }))
+      );
       setSavedTakeoffId(draftTakeoff.id);
       setTakeoffSaved(true);
       setSaveStatus('saved');
@@ -1341,7 +1356,7 @@ export const CreateTakeoffForm = ({
                 onClick={() =>
                   setVehicleItems((prev) => [
                     ...prev,
-                    { id: crypto.randomUUID(), vehicleType: "", quantity: 1 },
+                    { id: crypto.randomUUID(), vehicleType: "", quantity: 1, description: "" },
                   ])
                 }
               >
@@ -1358,7 +1373,7 @@ export const CreateTakeoffForm = ({
               ) : (
                 <div className="space-y-2">
                   {vehicleItems.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background max-w-fit">
+                    <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background">
                       <Select
                         value={item.vehicleType}
                         onValueChange={(v) =>
@@ -1392,6 +1407,23 @@ export const CreateTakeoffForm = ({
                               )
                             )
                           }
+                        />
+                      </div>
+                      <div className="flex flex-col items-start gap-0.5 min-w-[220px]">
+                        <span className="text-[10px] text-muted-foreground font-medium">Notes</span>
+                        <Input
+                          className="h-8 text-xs w-[240px]"
+                          value={item.description}
+                          onChange={(e) =>
+                            setVehicleItems((prev) =>
+                              prev.map((vi) =>
+                                vi.id === item.id
+                                  ? { ...vi, description: e.target.value }
+                                  : vi
+                              )
+                            )
+                          }
+                          placeholder="Notes (optional)"
                         />
                       </div>
                       <Button
@@ -1596,7 +1628,7 @@ export const CreateTakeoffForm = ({
           <div className="flex items-center justify-end mb-3">
             <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
               ...prev,
-              { id: crypto.randomUUID(), name: "", quantity: 1, description: "" },
+              { id: crypto.randomUUID(), name: "", quantity: 1, description: "", customName: "" },
             ])}>
               <Plus className="h-3 w-3" /> Add Item
             </Button>
@@ -1630,7 +1662,12 @@ export const CreateTakeoffForm = ({
                             </SelectContent>
                           </Select>
                           {item.name === "__custom" && (
-                            <Input className="h-8 text-xs w-32" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Custom name" />
+                            <Input
+                              className="h-8 text-xs w-32"
+                              value={item.customName || ""}
+                              onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, customName: e.target.value } : i)))}
+                              placeholder="Custom name"
+                            />
                           )}
                         </div>
                       </td>
@@ -1646,9 +1683,12 @@ export const CreateTakeoffForm = ({
                         />
                       </td>
                       <td className="px-4 py-2">
-                        {item.name !== "__custom" && (
-                          <Input className="h-8 text-xs w-full" value={item.description} onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))} placeholder="Notes (optional)" />
-                        )}
+                        <Input
+                          className="h-8 text-xs w-full"
+                          value={item.description}
+                          onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
+                          placeholder="Notes (optional)"
+                        />
                       </td>
                       <td className="px-4 py-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>

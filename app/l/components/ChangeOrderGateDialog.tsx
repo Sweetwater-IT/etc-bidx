@@ -32,7 +32,7 @@ interface ChangeOrderGateDialogProps {
     documentFile?: File;
     approverUserId?: string;
     approverName?: string;
-  }) => void;
+  }) => Promise<boolean> | boolean;
   onCancel: () => void;
 }
 
@@ -51,7 +51,7 @@ export const ChangeOrderGateDialog = ({
   const [approverUserId, setApproverUserId] = useState("");
   const [approverName, setApproverName] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const details = {
       coNumber: coNumber || undefined,
       description: description || undefined,
@@ -61,8 +61,8 @@ export const ChangeOrderGateDialog = ({
       approverName: method === "admin_approval" ? approverName || undefined : undefined,
     };
 
-    onApproved(method, details);
-    handleClose();
+    const success = await onApproved(method, details);
+    if (success) handleClose();
   };
 
   const handleClose = () => {

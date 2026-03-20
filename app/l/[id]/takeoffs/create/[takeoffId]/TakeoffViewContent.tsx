@@ -483,6 +483,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-64">Type</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -490,6 +491,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     <tr key={item.id} className="hover:bg-muted/10">
                       <td className="px-2 py-1 w-64 text-xs font-medium">{formatVehicleType(item.vehicleType) || item.product_name || '—'}</td>
                       <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || item.sign_details?.description || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

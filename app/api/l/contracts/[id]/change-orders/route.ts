@@ -1,20 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: jobId } = await params;
+
+    const { data, error } = await supabase
+      .from("change_orders")
+      .select("id, status, approved_date, submitted_date")
+      .eq("job_id", jobId)
+      .order("approved_date", { ascending: false, nullsFirst: false })
+      .order("submitted_date", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error('Error fetching change orders:', error);
+      return NextResponse.json({ error: 'Failed to fetch change orders' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      hasApprovedChangeOrder: (data || []).some((row: any) => row.status === "approved"),
+    });
+  } catch (error) {
+    console.error('Error in change orders GET API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const {
-      coNumber,
-      description,
-      amount,
-      status,
-      submittedDate,
-      approvedDate,
-      documentFile
-    } = await request.json();
+    const contentType = request.headers.get("content-type") || "";
+    let coNumber: string | null = null;
+    let description: string | null = null;
+    let amount: number | null = null;
+    let status: string | null = null;
+    let submittedDate: string | null = null;
+    let approvedDate: string | null = null;
+    let documentFile: File | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      coNumber = String(formData.get("coNumber") || "") || null;
+      description = String(formData.get("description") || "") || null;
+      amount = Number(formData.get("amount") || 0);
+      status = String(formData.get("status") || "") || null;
+      submittedDate = String(formData.get("submittedDate") || "") || null;
+      approvedDate = String(formData.get("approvedDate") || "") || null;
+      const fileCandidate = formData.get("documentFile");
+      documentFile = fileCandidate instanceof File ? fileCandidate : null;
+    } else {
+      const body = await request.json();
+      coNumber = body.coNumber ?? null;
+      description = body.description ?? null;
+      amount = body.amount != null ? Number(body.amount) : null;
+      status = body.status ?? null;
+      submittedDate = body.submittedDate ?? null;
+      approvedDate = body.approvedDate ?? null;
+      documentFile = body.documentFile ?? null;
+    }
 
     const { id: jobId } = await params;
 
@@ -35,7 +85,7 @@ export async function POST(
     }
 
     // Handle document upload if provided
-    if (documentFile) {
+    if (documentFile instanceof File) {
       const filePath = `contracts/${jobId}/change-orders/${Date.now()}-${documentFile.name}`;
       const { error: uploadErr } = await supabase.storage
         .from("files")
@@ -53,6 +103,7 @@ export async function POST(
         file_path: filePath,
         file_type: documentFile.type,
         file_size: documentFile.size,
+        category: "other",
       });
     }
 

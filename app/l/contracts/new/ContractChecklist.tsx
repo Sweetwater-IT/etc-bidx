@@ -190,6 +190,37 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     };
   }, []);
 
+  useEffect(() => {
+    if (!contractId || !isSigned) {
+      setChangeOrderApproved(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchChangeOrderState = async () => {
+      try {
+        const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch change orders: ${response.status}`);
+        }
+        const result = await response.json();
+        if (!cancelled) {
+          setChangeOrderApproved(!!result?.hasApprovedChangeOrder);
+        }
+      } catch (error) {
+        console.error('Error loading change order state:', error);
+        if (!cancelled) setChangeOrderApproved(false);
+      }
+    };
+
+    fetchChangeOrderState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contractId, isSigned]);
+
   // Fetch contract data for existing contracts
   useEffect(() => {
     if (isNew || !contractId) return;
@@ -534,10 +565,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     documentFile?: File;
     approverUserId?: string;
     approverName?: string;
-  }) => {
+  }): Promise<boolean> => {
     if (!contractId) {
       toast.error("Contract must be saved first");
-      return;
+      return false;
     }
 
     try {
@@ -589,9 +620,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setChangeOrderApproved(true);
       setShowChangeOrderDialog(false);
       toast.success("Change order approved. SOV editing is now enabled.");
+      return true;
     } catch (error: any) {
       console.error('Error creating change order:', error);
       toast.error(error.message || 'Failed to create change order');
+      return false;
     }
   };
 

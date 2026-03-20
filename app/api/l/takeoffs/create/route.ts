@@ -141,20 +141,21 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
   const items: JsonRecord[] = [];
 
   vehicleItems.forEach((item, index) => {
+    const vehicleLabel = item?.vehicleType || 'Vehicle';
     items.push({
       takeoff_id: takeoffId,
-      product_name: item?.vehicleType || 'Vehicle',
+      product_name: vehicleLabel,
       category: 'vehicle',
       unit: 'EA',
       quantity: Number(item?.quantity || 0),
       requisition_type: 'none',
-      notes: null,
+      notes: item?.description || null,
       in_stock_qty: 0,
       to_order_qty: 0,
       inventory_status: 'pending_review',
       material: null,
       sign_details: item,
-      sign_description: item?.vehicleType || null,
+      sign_description: item?.description || vehicleLabel || null,
       sheeting: null,
       width_inches: null,
       height_inches: null,
@@ -193,7 +194,9 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
   });
 
   additionalItems.forEach((item, index) => {
-    const productName = item?.name === '__custom' ? item?.description || 'Custom Item' : item?.name || 'Additional Item';
+    const productName = item?.name === '__custom'
+      ? item?.customName || 'Custom Item'
+      : item?.name || 'Additional Item';
     items.push({
       takeoff_id: takeoffId,
       product_name: productName,
