@@ -15,10 +15,12 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   const originalItemsRef = useRef<ScheduleOfValuesItem[]>([]);
 
   // Fetch SOV items
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (options?: { silent?: boolean }) => {
     if (!id) return;
 
-    setLoading(true);
+    if (!options?.silent) {
+      setLoading(true);
+    }
     try {
       // Determine the correct API endpoint based on whether we're dealing with a contract or job
       const apiEndpoint = isContract 
@@ -52,7 +54,9 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
     } catch (error) {
       console.error('Error fetching SOV items:', error);
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [id, isContract]);
 
@@ -355,10 +359,12 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const results = await Promise.all(operations);
         console.log('[SOV save] All operations completed successfully:', results.length, 'results');
 
-        // Rehydrate from the API so newly created custom/master rows pick up
-        // their real database IDs before the next edit/delete cycle.
-        await fetchItems();
-        console.log('[SOV save] Rehydrated items from API after save');
+        if (itemsToCreate.length > 0) {
+          // Rehydrate only after creates so new rows pick up their real
+          // database IDs without forcing the table back through a loading state.
+          await fetchItems({ silent: true });
+          console.log('[SOV save] Rehydrated items from API after create');
+        }
 
         setSaveStatus('saved');
         console.log('[SOV save] Save operation completed successfully');
@@ -405,18 +411,18 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   }, [id, items, saveItems]);
 
   // Debounced save
-  const scheduleSave = useCallback(() => {
+  const scheduleSave = useCallback((nextItems: ScheduleOfValuesItem[]) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
-      saveItems(items);
+      saveItems(nextItems);
     }, DEBOUNCE_MS);
-  }, [saveItems, items]);
+  }, [saveItems]);
 
   // Update items and trigger save
   const updateItems = useCallback((newItems: ScheduleOfValuesItem[]) => {
     setItems(newItems);
-    scheduleSave();
+    scheduleSave(newItems);
   }, [scheduleSave]);
 
   // Add new item
