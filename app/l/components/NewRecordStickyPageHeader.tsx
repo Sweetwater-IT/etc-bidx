@@ -11,6 +11,7 @@ interface NewRecordStickyPageHeaderProps {
   leftContent?: ReactNode;
   additionalButtons?: ReactNode;
   doneLabel?: string;
+  saveStatusLabel?: string;
   // Autosave props
   isSaving?: boolean;
   lastSavedAt?: Date | null;
@@ -25,6 +26,7 @@ export function NewRecordStickyPageHeader({
   leftContent,
   additionalButtons,
   doneLabel = "Save",
+  saveStatusLabel = "Draft",
   isSaving = false,
   lastSavedAt = null,
   hasUnsavedChanges = false,
@@ -40,7 +42,7 @@ export function NewRecordStickyPageHeader({
 
     const syncCounter = () => {
       const secondsSinceSave = Math.max(
-        0,
+        1,
         Math.floor((Date.now() - lastSavedAt.getTime()) / 1000)
       );
       setSecondCounter(secondsSinceSave);
@@ -57,15 +59,15 @@ export function NewRecordStickyPageHeader({
     if (!firstSave) return '';
 
     if (secondCounter < 60) {
-      return `Draft saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
+      return `${saveStatusLabel} saved ${secondCounter} second${secondCounter !== 1 ? 's' : ''} ago`;
     } else if (secondCounter < 3600) {
       const minutesAgo = Math.floor(secondCounter / 60);
-      return `Draft saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+      return `${saveStatusLabel} saved ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
     } else {
       const hoursAgo = Math.floor(secondCounter / 3600);
-      return `Draft saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
+      return `${saveStatusLabel} saved ${hoursAgo} hour${hoursAgo !== 1 ? 's' : ''} ago`;
     }
-  }, [isSaving, firstSave, secondCounter]);
+  }, [isSaving, firstSave, secondCounter, saveStatusLabel]);
 
   const saveStatusMessage = getSaveStatusMessage();
   const showStatusText = saveStatusMessage !== '';

@@ -484,9 +484,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
     if (!currentContractId) {
       const hasProjectName = Boolean(projectInfo.projectName?.trim());
-      if (!hasProjectName) return;
+      if (!hasProjectName) return null;
       currentContractId = await ensureContractExists(projectInfo);
-      if (!currentContractId) return;
+      if (!currentContractId) return null;
     }
 
     try {
@@ -502,13 +502,22 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setLastSavedAt(new Date());
       setFirstSave(true);
       toast.success('Contract saved successfully');
+      return currentContractId;
     } catch (error) {
       console.error('Manual save failed:', error);
       toast.error('Failed to save contract');
+      return null;
     } finally {
       setIsSaving(false);
     }
   }, [contractId, projectInfo, ensureContractExists, contractRow]);
+
+  const handleDone = useCallback(async () => {
+    const savedContractId = await manualSave();
+    if (isNew && savedContractId) {
+      router.push(`/l/contracts/view/${savedContractId}`);
+    }
+  }, [isNew, manualSave, router]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {
@@ -685,8 +694,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           if (!isViewMode) await manualSave();
           router.push("/l/contracts");
         }}
-        onDone={manualSave}
+        onDone={handleDone}
         doneLabel={isNew ? "Create Contract" : "Save Contract"}
+        saveStatusLabel="Contract"
         isSaving={isSaving}
         lastSavedAt={lastSavedAt}
         hasUnsavedChanges={!lastSavedAt && firstSave}
