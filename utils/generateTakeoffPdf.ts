@@ -367,15 +367,14 @@ function drawProjectFooter(
   pageH: number
 ) {
   const footerX = 14;
-  const footerY = pageH - 20;
+  const footerY = pageH - 11;
   const footerW = pageW - 28;
-  const footerH = 10;
-  const colW = footerW / 4;
-  const topRow = items.slice(0, 4);
-  const bottomRow = items.slice(4, 8);
-  const fitValue = (value?: string | null, width = colW - 6) => {
-    const [line] = doc.splitTextToSize(value || "—", width);
-    return line || "—";
+  const footerH = 5.5;
+  const footerItems = items.slice(0, 8);
+  const colW = footerW / footerItems.length;
+  const fitInline = (label: string, value?: string | null) => {
+    const [line] = doc.splitTextToSize(`${label}: ${(value || "—").toString()}`, colW - 2);
+    return line || `${label}: —`;
   };
 
   doc.setDrawColor(210);
@@ -383,28 +382,17 @@ function drawProjectFooter(
   doc.setFillColor(248, 248, 248);
   doc.rect(footerX, footerY, footerW, footerH, "FD");
 
-  for (let i = 1; i < 4; i++) {
+  for (let i = 1; i < footerItems.length; i++) {
     const x = footerX + colW * i;
     doc.line(x, footerY, x, footerY + footerH);
   }
-  doc.line(footerX, footerY + footerH / 2, footerX + footerW, footerY + footerH / 2);
-
-  const drawRow = (row: Array<{ label: string; value?: string | null }>, y: number) => {
-    row.forEach((item, index) => {
-      const x = footerX + colW * index + 2;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(5.5);
-      doc.setTextColor(115);
-      doc.text(item.label.toUpperCase(), x, y);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(0);
-      doc.text(fitValue(item.value), x, y + 2.8);
-    });
-  };
-
-  drawRow(topRow, footerY + 2.6);
-  drawRow(bottomRow, footerY + footerH / 2 + 2.6);
+  footerItems.forEach((item, index) => {
+    const x = footerX + colW * index + 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(80);
+    doc.text(fitInline(item.label, item.value), x, footerY + 3.6);
+  });
   doc.setTextColor(0);
 }
 

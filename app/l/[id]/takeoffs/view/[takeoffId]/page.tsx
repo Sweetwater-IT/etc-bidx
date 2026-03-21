@@ -37,7 +37,7 @@ export default function TakeoffViewPage({ params }: any) {
         <Suspense fallback={null}>
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
                 <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
                 {/* Content Area */}
                 <div className="px-4 py-8">

@@ -44,6 +44,31 @@ function fmtDate(d?: string | null): string {
   return `${dd}-${m}-${yy}`;
 }
 
+async function loadPublicLogoDataUrl(path: string): Promise<string> {
+  if (typeof window === "undefined") {
+    const { readFile } = await import("fs/promises");
+    const pathModule = await import("path");
+    const filePath = pathModule.join(process.cwd(), "public", path.replace(/^\//, ""));
+    const file = await readFile(filePath);
+    return `data:image/jpeg;base64,${file.toString("base64")}`;
+  }
+
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch logo image from ${path}: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read logo blob"));
+    reader.readAsDataURL(blob);
+  });
+
+  return dataUrl;
+}
+
 function addField(doc: jsPDF, label: string, value: string, x: number, y: number) {
   doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
@@ -92,22 +117,11 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
 
   // ── ETC Logo (top-right) ──
   try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-      img.src = "/logo.jpg";
-    });
+    const img = await loadPublicLogoDataUrl("/logo.jpg");
     const logoH = 12;
-    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
+    const logoW = logoH * (1152 / 648);
     doc.addImage(img, "JPEG", pageW - ml - logoW, 6, logoW, logoH);
   } catch {
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 64, 120);
-    doc.text("ETC", pageW - ml, 14, { align: "right" });
-    doc.setTextColor(0);
   }
 
   // ── Title ──

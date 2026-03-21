@@ -94,15 +94,14 @@ function drawProjectFooter(
   pageH: number
 ) {
   const footerX = 14;
-  const footerY = pageH - 20;
+  const footerY = pageH - 11;
   const footerW = pageW - 28;
-  const footerH = 10;
-  const colW = footerW / 4;
-  const topRow = items.slice(0, 4);
-  const bottomRow = items.slice(4, 8);
-  const fitValue = (value?: string | null, width = colW - 6) => {
-    const [line] = doc.splitTextToSize(value || "—", width);
-    return line || "—";
+  const footerH = 5.5;
+  const footerItems = items.slice(0, 8);
+  const colW = footerW / footerItems.length;
+  const fitInline = (label: string, value?: string | null) => {
+    const [line] = doc.splitTextToSize(`${label}: ${(value || "—").toString()}`, colW - 2);
+    return line || `${label}: —`;
   };
 
   doc.setDrawColor(210);
@@ -110,28 +109,17 @@ function drawProjectFooter(
   doc.setFillColor(248, 248, 248);
   doc.rect(footerX, footerY, footerW, footerH, "FD");
 
-  for (let i = 1; i < 4; i++) {
+  for (let i = 1; i < footerItems.length; i++) {
     const x = footerX + colW * i;
     doc.line(x, footerY, x, footerY + footerH);
   }
-  doc.line(footerX, footerY + footerH / 2, footerX + footerW, footerY + footerH / 2);
-
-  const drawRow = (row: Array<{ label: string; value?: string | null }>, y: number) => {
-    row.forEach((item, index) => {
-      const x = footerX + colW * index + 2;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(5.5);
-      doc.setTextColor(115);
-      doc.text(item.label.toUpperCase(), x, y);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(0);
-      doc.text(fitValue(item.value), x, y + 2.8);
-    });
-  };
-
-  drawRow(topRow, footerY + 2.6);
-  drawRow(bottomRow, footerY + footerH / 2 + 2.6);
+  footerItems.forEach((item, index) => {
+    const x = footerX + colW * index + 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(80);
+    doc.text(fitInline(item.label, item.value), x, footerY + 3.6);
+  });
   doc.setTextColor(0);
 }
 
@@ -145,22 +133,29 @@ function formatWorkOrderNumber(woNumber?: string | number | null): string {
   return asString;
 }
 
-async function loadPublicLogoImage(path: string): Promise<HTMLImageElement> {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
+async function loadPublicLogoDataUrl(path: string): Promise<string> {
+  if (typeof window === "undefined") {
+    const { readFile } = await import("fs/promises");
+    const pathModule = await import("path");
+    const filePath = pathModule.join(process.cwd(), "public", path.replace(/^\//, ""));
+    const file = await readFile(filePath);
+    return `data:image/jpeg;base64,${file.toString("base64")}`;
+  }
 
-  const resolvedPath =
-    typeof window !== "undefined"
-      ? new URL(path, window.location.origin).toString()
-      : path;
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch logo image from ${path}: ${response.status}`);
+  }
 
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error(`Failed to load logo image from ${resolvedPath}`));
-    img.src = resolvedPath;
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read logo blob"));
+    reader.readAsDataURL(blob);
   });
 
-  return img;
+  return dataUrl;
 }
 
 export async function generateBillingPacketPdf(data: BillingPacketData): Promise<ArrayBuffer | null> {
@@ -170,22 +165,12 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   // ── ETC Logo ──
   try {
-    const logo = await loadPublicLogoImage("/logo.jpg");
-    // Logo aspect ratio ~1.17:1, fit to h=12mm
+    const logo = await loadPublicLogoDataUrl("/logo.jpg");
     const logoH = 12;
-    const logoW = logoH * (logo.naturalWidth / logo.naturalHeight);
+    const logoW = logoH * (1152 / 648);
     doc.addImage(logo, "JPEG", ml, 6, logoW, logoH);
   } catch (error) {
     console.error("[generateBillingPacketPdf] Failed to load sidebar logo", error);
-    // Fallback to text
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 64, 120);
-    doc.text("ETC", ml, 14);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("ESTABLISHED TRAFFIC CONTROL", ml, 17.5);
   }
   // ── Title line ──
   doc.setFontSize(14);

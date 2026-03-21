@@ -626,22 +626,22 @@ const ProjectDetail = () => {
               ) : (
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {workOrders.slice(0, 3).map((wo) => (
-                    <div key={wo.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                    <button
+                      key={wo.id}
+                      type="button"
+                      className="flex w-full items-center justify-between p-2 rounded bg-muted/30 text-left transition-colors hover:bg-muted/50"
+                      onClick={() => router.push(`/l/jobs/${id}/work-orders/view/${wo.id}`)}
+                    >
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium truncate">
                           {formatWorkOrderNumber(wo.workOrderNumber ?? wo.wo_number)}
                         </div>
                         <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => router.push(`/l/jobs/${id}/work-orders/${wo.id}`)}
-                      >
+                      <span className="inline-flex h-6 w-6 items-center justify-center">
                         <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </div>
+                      </span>
+                    </button>
                   ))}
                   {workOrders.length > 3 && (
                     <div className="text-center pt-1">

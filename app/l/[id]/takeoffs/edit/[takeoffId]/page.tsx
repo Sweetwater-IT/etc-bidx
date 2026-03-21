@@ -26,7 +26,7 @@ export default function EditTakeoffPage({ params }: any) {
         <Suspense fallback={null}>
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
                 <EditTakeoffPageContent jobId={jobId} takeoffId={takeoffId} />
                 <ProjectFooter />
               </div>
