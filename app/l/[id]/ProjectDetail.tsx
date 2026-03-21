@@ -678,6 +678,7 @@ const ProjectDetail = () => {
               addButtonClassName={notesButtonClassName}
               submitButtonClassName={notesButtonClassName}
               containerClassName="bg-card"
+              addButtonInHeader
             />
           </div>
         </div>

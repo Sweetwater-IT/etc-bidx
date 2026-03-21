@@ -19,7 +19,7 @@ export default async function JobDetailPage({ params }: any) {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader showTitleBlock={false} />
         <Suspense fallback={null}>
           <ProjectDetail />
         </Suspense>

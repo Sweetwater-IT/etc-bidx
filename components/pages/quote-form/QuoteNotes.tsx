@@ -34,6 +34,7 @@ interface QuoteNotesProps {
   addButtonClassName?: string;
   submitButtonClassName?: string;
   containerClassName?: string;
+  addButtonInHeader?: boolean;
 }
 
 function formatDateTime(ts: number) {
@@ -91,7 +92,8 @@ export function QuoteNotes({
   emptyState,
   addButtonClassName,
   submitButtonClassName,
-  containerClassName
+  containerClassName,
+  addButtonInHeader = false
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -147,9 +149,22 @@ export function QuoteNotes({
     setDeleteIndex(null)
   }
 
+  const addButton = canEdit && !isAdding ? (
+    <Button
+      variant={addButtonClassName ? 'default' : 'outline'}
+      className={addButtonClassName}
+      onClick={handleAddNote}
+    >
+      + Add note
+    </Button>
+  ) : null
+
   return (
     <div className={`rounded-lg ${showBorder ? 'border' : ''} p-6 ${containerClassName || ''}`}>
-      <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
+      <div className='mb-4 flex items-center justify-between gap-3'>
+        <h2 className='text-lg font-semibold'>{title}</h2>
+        {addButtonInHeader ? addButton : null}
+      </div>
       {activities?.length ? (
         <div className="mb-4 space-y-1 text-sm text-muted-foreground">
           {activities.map((activity, i) => (
@@ -290,15 +305,7 @@ export function QuoteNotes({
               </Button>
             </div>
           </div>
-        ) : canEdit && (
-          <Button
-            variant={addButtonClassName ? 'default' : 'outline'}
-            className={addButtonClassName}
-            onClick={handleAddNote}
-          >
-            + Add note
-          </Button>
-        )}
+        ) : !addButtonInHeader ? addButton : null}
       </div>
       {/* Delete confirmation modal */}
       {showDeleteModal && (
