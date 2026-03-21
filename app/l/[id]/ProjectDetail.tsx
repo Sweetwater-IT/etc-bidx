@@ -359,7 +359,7 @@ const ProjectDetail = () => {
         <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
           {/* ─── TOP HEADER BAR ─── */}
           <header className="border-b bg-card shrink-0">
-        <div className="w-full px-4 pt-0 pb-2">
+        <div className="w-full px-4 pt-2 pb-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Button
