@@ -132,6 +132,30 @@ function getAvailableUoms(master: SovMasterItem): string[] {
   );
 }
 
+function getSyntheticWorkType(item: SovMasterItem): 'SERVICE' | 'DELIVERY' | null {
+  const normalizedItemNumber = item.item_number?.trim().toUpperCase();
+  const normalizedDisplayName = item.display_name?.trim().toUpperCase();
+  const normalizedDescription = item.description?.trim().toUpperCase();
+
+  if (
+    normalizedItemNumber === 'SERVICE' ||
+    normalizedDisplayName === 'SERVICE' ||
+    normalizedDescription === 'SERVICE'
+  ) {
+    return 'SERVICE';
+  }
+
+  if (
+    normalizedItemNumber === 'DELIVERY' ||
+    normalizedDisplayName === 'DELIVERY' ||
+    normalizedDescription === 'DELIVERY'
+  ) {
+    return 'DELIVERY';
+  }
+
+  return null;
+}
+
 const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   jobId,
   contractId,
@@ -256,19 +280,19 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       notes: '',
     };
     // Add to items but don't trigger save yet (validation will prevent it)
-    updateItems([...items, newItem]);
+    updateItems((prev) => [...prev, newItem]);
     // Open selector immediately to reduce one extra click
     setSelectorOpen(newItem.id);
     setSelectorSearch('');
   };
 
   const removeRow = (id: string) => {
-    updateItems(items.filter((i) => i.id !== id));
+    updateItems((prev) => prev.filter((i) => i.id !== id));
   };
 
   const updateRow = (id: string, field: keyof ScheduleOfValuesItem, value: string | number) => {
-    updateItems(
-      items.map((item) => {
+    updateItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id !== id) return item;
         const updated = { ...item, [field]: value };
         if (field === 'quantity' || field === 'unitPrice') {
@@ -324,8 +348,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     // useSovItems will persist the items once a contractId becomes available.
     if (!effectiveId) {
       console.log('[SOVTable] No effectiveId yet — updating local state optimistically');
-      updateItems(
-        items.map((item) =>
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
           item.id === rowId
             ? {
                 ...item,
@@ -393,8 +417,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         : result.data;
 
       // Replace the temp item with the real database record
-      updateItems(
-        items.map((item) =>
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
           item.id === rowId
             ? {
                 ...item,
@@ -445,8 +469,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       notes: '',
     };
 
-    updateItems(
-      items.map((item) => (item.id === rowId ? newItem : item))
+    updateItems((prevItems) =>
+      prevItems.map((item) => (item.id === rowId ? newItem : item))
     );
     setSelectorOpen(null);
   };
@@ -485,7 +509,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         retainageAmount: 0,
         notes: '',
       };
-      updateItems([...items, newItem]);
+      updateItems((prevItems) => [...prevItems, newItem]);
       setCustomDraft({
         rowId: newId,
         itemNumber: '',
@@ -506,8 +530,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     if (!customDraft || !customDraft.itemNumber.trim() || !customDraft.description.trim()) return;
     const extendedPrice = Math.round(customDraft.quantity * customDraft.unitPrice * 100) / 100;
     const retainageAmount = calcRetainageAmount(extendedPrice, customDraft.retainageType, customDraft.retainageValue);
-    updateItems(
-      items.map((item) =>
+    updateItems((prevItems) =>
+      prevItems.map((item) =>
         item.id === customDraft.rowId
           ? {
               ...item,
@@ -533,8 +557,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     if (bulkType === 'percent') val = clampNumber(val, 0, 100);
     val = Math.round(val * 100) / 100;
 
-    updateItems(
-      items.map((item) => ({
+    updateItems((prevItems) =>
+      prevItems.map((item) => ({
         ...item,
         retainageType: bulkType,
         retainageValue: val,
@@ -666,7 +690,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                               {(() => {
                                 const searchTerm = selectorSearch.toLowerCase().trim();
                                 const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                  const key = curr.work_type?.trim().toUpperCase();
+                                  const syntheticType = getSyntheticWorkType(curr);
+                                  const key = syntheticType || curr.work_type?.trim().toUpperCase();
                                   if (key && !acc[key]) acc[key] = [];
                                   if (key) acc[key].push(curr);
                                   return acc;

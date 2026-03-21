@@ -3,6 +3,7 @@ import { ScheduleOfValuesItem } from '@/types/job';
 import { toast } from 'sonner';
 
 const DEBOUNCE_MS = 750;
+type ItemsUpdater = ScheduleOfValuesItem[] | ((prev: ScheduleOfValuesItem[]) => ScheduleOfValuesItem[]);
 
 export function useSovItems(id: string | undefined, isContract: boolean = false) {
   const [items, setItems] = useState<ScheduleOfValuesItem[]>([]);
@@ -420,9 +421,12 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   }, [saveItems]);
 
   // Update items and trigger save
-  const updateItems = useCallback((newItems: ScheduleOfValuesItem[]) => {
-    setItems(newItems);
-    scheduleSave(newItems);
+  const updateItems = useCallback((updater: ItemsUpdater) => {
+    setItems((prev) => {
+      const nextItems = typeof updater === 'function' ? updater(prev) : updater;
+      scheduleSave(nextItems);
+      return nextItems;
+    });
   }, [scheduleSave]);
 
   // Add new item
@@ -446,18 +450,16 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
       work_type: itemData.work_type || '',
     };
 
-    const newItems = [...items, newItem];
-    updateItems(newItems);
-  }, [items, updateItems]);
+    updateItems((prev) => [...prev, newItem]);
+  }, [updateItems]);
 
   // Update existing item
   const updateItem = useCallback((id: string, updates: Partial<ScheduleOfValuesItem>) => {
-    const newItems = items.map(item => {
+    updateItems((prev) => prev.map(item => {
       if (item.id !== id) return item;
 
       const updated = { ...item, ...updates };
 
-      // Recalculate extended price and retainage
       if (updates.quantity !== undefined || updates.unitPrice !== undefined) {
         updated.extendedPrice = updated.quantity * updated.unitPrice;
         updated.retainageAmount = calcRetainageAmount(
@@ -476,16 +478,13 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
       }
 
       return updated;
-    });
-
-    updateItems(newItems);
-  }, [items, updateItems]);
+    }));
+  }, [updateItems]);
 
   // Remove item
   const removeItem = useCallback((id: string) => {
-    const newItems = items.filter(item => item.id !== id);
-    updateItems(newItems);
-  }, [items, updateItems]);
+    updateItems((prev) => prev.filter(item => item.id !== id));
+  }, [updateItems]);
 
   // Save immediately
   const saveNow = useCallback(async () => {
