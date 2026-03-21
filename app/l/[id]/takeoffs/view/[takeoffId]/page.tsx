@@ -6,13 +6,12 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Edit, Download, ClipboardList } from "lucide-react";
+import { Edit, Download, ClipboardList, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ProjectFooter } from "@/components/ProjectFooter";
 import { formatTakeoffPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
@@ -38,7 +37,7 @@ export default function TakeoffViewPage({ params }: any) {
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
               <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
-                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
+                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
                 {/* Content Area */}
                 <div className="px-4 py-8">
                   <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
@@ -92,22 +91,6 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
 
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{jobName}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <PageTitleBlock
         title={getTitle()}
         description="Review takeoff details, materials, and linked work order actions."
@@ -116,7 +99,7 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   );
 }
 
-function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId: string }) {
+function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; takeoffId: string; jobName: string }) {
   const router = useRouter();
   const [takeoff, setTakeoff] = useState<any>(null);
   const [linkedWorkOrderStatus, setLinkedWorkOrderStatus] = useState<string | null>(null);
@@ -310,16 +293,39 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
   };
 
+  const workTypeLabel = getWorkTypeLabel(takeoff?.work_type);
+  const breadcrumbCurrentLabel = takeoff?.is_pickup
+    ? "Pickup takeoff"
+    : workTypeLabel
+      ? `${workTypeLabel} takeoff`
+      : "Takeoff";
+
   return (
     <StickyPageHeader
       backLabel="Job"
       onBack={() => router.push(`/l/${jobId}`)}
+      showBackButton={false}
       leftContent={
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
-          <p className="text-xs text-muted-foreground truncate">
-            {getWorkTypeLabel(takeoff?.work_type) || "—"}
-          </p>
+        <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => router.push("/l/jobs")}
+            className="whitespace-nowrap transition-colors hover:text-foreground"
+          >
+            Jobs
+          </button>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <button
+            type="button"
+            onClick={() => router.push(`/l/${jobId}`)}
+            className="whitespace-nowrap transition-colors hover:text-foreground"
+          >
+            {jobName}
+          </button>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <span className="whitespace-nowrap font-medium text-foreground">
+            {breadcrumbCurrentLabel}
+          </span>
         </div>
       }
       rightContent={

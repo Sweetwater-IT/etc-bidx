@@ -5,12 +5,11 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { Button } from "@/components/ui/button";
-import { Edit, ClipboardList, Download } from "lucide-react";
+import { Edit, ClipboardList, Download, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { formatWorkOrderPageTitle } from "@/app/l/utils/pageTitles";
+import { formatWorkOrderPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
 export default function WorkOrderViewContent({
   workOrderId,
@@ -212,12 +211,42 @@ export default function WorkOrderViewContent({
 
   const isMptTakeoff = workOrderData?.takeoffs?.[0]?.work_type === "MPT";
   const canGeneratePickup = !workOrderData?.isPickup && isMptTakeoff && workOrderData?.status === "installed";
+  const workTypeLabel = getWorkTypeLabel(workOrderData?.takeoffs?.[0]?.work_type);
+  const breadcrumbCurrentLabel = workOrderData?.isPickup
+    ? "Pickup work order"
+    : workTypeLabel
+      ? `${workTypeLabel} work order`
+      : "Work order";
 
   return (
     <div>
       <StickyPageHeader
         backLabel="Job"
         onBack={handleBack}
+        showBackButton={false}
+        leftContent={
+          <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => router.push("/l/jobs")}
+              className="whitespace-nowrap transition-colors hover:text-foreground"
+            >
+              Jobs
+            </button>
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <button
+              type="button"
+              onClick={() => router.push(`/l/${jobId}`)}
+              className="whitespace-nowrap transition-colors hover:text-foreground"
+            >
+              {jobName}
+            </button>
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <span className="whitespace-nowrap font-medium text-foreground">
+              {breadcrumbCurrentLabel}
+            </span>
+          </div>
+        }
         rightContent={
           <>
             <Button
@@ -267,26 +296,6 @@ export default function WorkOrderViewContent({
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/${jobId}/takeoffs/view/${workOrderData?.takeoffs?.[0]?.id || takeoffId}`}>Takeoff</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{jobName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <PageTitleBlock
           title={getTitle()}
           description={`View work order details for ${jobName}.`}

@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { SOVTable } from "@/components/SOVTable";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import type { JobProjectInfo } from "@/types/job";
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -159,6 +158,22 @@ export default function ContractViewContent() {
       <StickyPageHeader
         backLabel="Contracts"
         onBack={() => router.push("/l/contracts")}
+        showBackButton={false}
+        leftContent={
+          <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => router.push("/l/contracts")}
+              className="whitespace-nowrap transition-colors hover:text-foreground"
+            >
+              Contracts
+            </button>
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <span className="whitespace-nowrap font-medium text-foreground">
+              Contract for {jobName}
+            </span>
+          </div>
+        }
         rightContent={
           <Button variant="outline" size="sm" onClick={handleEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" />
@@ -168,18 +183,6 @@ export default function ContractViewContent() {
       />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/l/contracts">Contracts</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{jobName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <PageTitleBlock
           title={`Contract for ${jobName}`}
           description="Review contract details, schedule of values, and supporting documents."
