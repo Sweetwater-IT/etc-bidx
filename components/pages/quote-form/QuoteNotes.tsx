@@ -33,6 +33,7 @@ interface QuoteNotesProps {
   emptyState?: ReactNode;
   addButtonClassName?: string;
   submitButtonClassName?: string;
+  containerClassName?: string;
 }
 
 function formatDateTime(ts: number) {
@@ -89,7 +90,8 @@ export function QuoteNotes({
   showBorder = true,
   emptyState,
   addButtonClassName,
-  submitButtonClassName
+  submitButtonClassName,
+  containerClassName
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -146,7 +148,7 @@ export function QuoteNotes({
   }
 
   return (
-    <div className={`rounded-lg ${showBorder && "border" }  p-6`}>
+    <div className={`rounded-lg ${showBorder ? 'border' : ''} p-6 ${containerClassName || ''}`}>
       <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
       {activities?.length ? (
         <div className="mb-4 space-y-1 text-sm text-muted-foreground">
