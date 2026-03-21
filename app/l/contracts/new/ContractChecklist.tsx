@@ -862,39 +862,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           hideNotesSection
         />
 
-        <QuoteNotes
-          title="Additional Notes"
-          notes={contractNotes}
-          loading={contractNotesLoading}
-          onSave={handleAddContractNote}
-          onEdit={handleEditContractNote}
-          onDelete={handleDeleteContractNote}
-          submitLabel="Save"
-          updateLabel="Save"
-          actionAlignment="right"
-          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
-          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
-          containerClassName="bg-card"
-          addButtonInHeader
-          headerContent={
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="rounded-md bg-violet-500/10 p-1.5">
-                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Additional Notes
-                </span>
-              </div>
-            </div>
-          }
-          emptyState={
-            <div className="text-xs italic text-muted-foreground">
-              No notes yet. Use &quot;Add Note&quot; to get started.
-            </div>
-          }
-        />
-
         {/* Schedule of Values */}
         <div className="min-w-0">
           <SOVTable
@@ -930,6 +897,39 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
           readOnly={forceReadOnly}
+        />
+
+        <QuoteNotes
+          title="Additional Notes"
+          notes={contractNotes}
+          loading={contractNotesLoading}
+          onSave={handleAddContractNote}
+          onEdit={handleEditContractNote}
+          onDelete={handleDeleteContractNote}
+          submitLabel="Save"
+          updateLabel="Save"
+          actionAlignment="right"
+          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
+          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
+          containerClassName="bg-card"
+          addButtonInHeader
+          headerContent={
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-violet-500/10 p-1.5">
+                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Additional Notes
+                </span>
+              </div>
+            </div>
+          }
+          emptyState={
+            <div className="text-xs italic text-muted-foreground">
+              No notes yet. Use &quot;Add Note&quot; to get started.
+            </div>
+          }
         />
       </div>
 
