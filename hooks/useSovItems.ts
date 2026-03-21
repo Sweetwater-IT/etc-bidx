@@ -14,6 +14,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
   const originalItemsRef = useRef<ScheduleOfValuesItem[]>([]);
+  const itemsRef = useRef<ScheduleOfValuesItem[]>([]);
 
   // Fetch SOV items
   const fetchItems = useCallback(async (options?: { silent?: boolean }) => {
@@ -48,6 +49,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           _unitPriceCents: Math.round((item.unit_price || 0) * 100).toString(),
         }));
         setItems(formattedItems);
+        itemsRef.current = formattedItems;
         originalItemsRef.current = formattedItems;
       } else {
         console.error('Failed to fetch SOV items');
@@ -406,17 +408,17 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   useEffect(() => {
     if (id && !prevIdRef.current && items.length > 0) {
       console.log('[useSovItems] id became available, triggering save for queued items');
-      saveItems(items);
+      saveItems(itemsRef.current);
     }
     prevIdRef.current = id;
-  }, [id, items, saveItems]);
+  }, [id, items.length, saveItems]);
 
   // Debounced save
   const scheduleSave = useCallback((nextItems: ScheduleOfValuesItem[]) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
-      saveItems(nextItems);
+      saveItems(itemsRef.current);
     }, DEBOUNCE_MS);
   }, [saveItems]);
 
@@ -424,6 +426,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   const updateItems = useCallback((updater: ItemsUpdater) => {
     setItems((prev) => {
       const nextItems = typeof updater === 'function' ? updater(prev) : updater;
+      itemsRef.current = nextItems;
       scheduleSave(nextItems);
       return nextItems;
     });
@@ -492,8 +495,8 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
-    await saveItems(items);
-  }, [saveItems, items]);
+    await saveItems(itemsRef.current);
+  }, [saveItems]);
 
   // Check if there are pending changes
   const hasPendingChanges = useCallback(() => {
@@ -507,10 +510,10 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         clearTimeout(debounceRef.current);
         debounceRef.current = null;
         // Fire-and-forget final save
-        saveItems(items);
+        saveItems(itemsRef.current);
       }
     };
-  }, [saveItems, items]);
+  }, [saveItems]);
 
   return {
     items,
