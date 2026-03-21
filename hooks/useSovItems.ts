@@ -488,12 +488,12 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
   }, [items, updateItems]);
 
   // Save immediately
-  const saveNow = useCallback(() => {
+  const saveNow = useCallback(async () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
-    saveItems(items);
+    await saveItems(items);
   }, [saveItems, items]);
 
   // Check if there are pending changes

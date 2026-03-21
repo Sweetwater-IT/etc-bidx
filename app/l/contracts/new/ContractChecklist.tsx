@@ -16,7 +16,7 @@ import { Lock, Pencil, StickyNote } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
-import { SOVTable } from "@/components/SOVTable";
+import { SOVTable, type SOVTableHandle } from "@/components/SOVTable";
 import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
@@ -136,6 +136,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [firstSave, setFirstSave] = useState<boolean>(false);
   const saveTimeoutRef = useRef<number | null>(null);
+  const sovTableRef = useRef<SOVTableHandle | null>(null);
 
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(getContractStatus(contractRow)) : false;
@@ -512,6 +513,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
+
+    await sovTableRef.current?.flushPendingSave();
 
     let currentContractId = contractId;
 
@@ -895,6 +898,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         {/* Schedule of Values */}
         <div className="min-w-0">
           <SOVTable
+            ref={sovTableRef}
             contractId={contractId}
             readOnly={false}
             onEditAttempt={isSigned && !changeOrderApproved ? handleSovEditAttempt : undefined}

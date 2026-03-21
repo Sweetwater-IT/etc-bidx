@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -71,6 +71,10 @@ interface SOVTableProps {
   forceShowPricing?: boolean;
 }
 
+export interface SOVTableHandle {
+  flushPendingSave: () => Promise<void>;
+}
+
 interface CustomItemDraft {
   rowId: string;
   itemNumber: string;
@@ -128,7 +132,7 @@ function getAvailableUoms(master: SovMasterItem): string[] {
   );
 }
 
-const SOVTableComponent = ({
+const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   jobId,
   contractId,
   readOnly = false,
@@ -136,7 +140,7 @@ const SOVTableComponent = ({
   isSignedContract = false,
   changeOrderApproved = false,
   forceShowPricing = false
-}: SOVTableProps) => {
+}, ref) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
@@ -188,6 +192,12 @@ const SOVTableComponent = ({
   const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>({});
   const [activePriceInputId, setActivePriceInputId] = useState<string | null>(null);
   const showPricingColumns = forceShowPricing || !readOnly;
+
+  useImperativeHandle(ref, () => ({
+    flushPendingSave: async () => {
+      await saveNow();
+    },
+  }), [saveNow]);
 
   useEffect(() => {
     setUnitPriceDrafts((prev) => {
@@ -1214,7 +1224,9 @@ const SOVTableComponent = ({
       </Dialog>
     </div>
   );
-};
+});
+
+SOVTableComponent.displayName = 'SOVTableComponent';
 
 export const SOVTable = memo(SOVTableComponent, (prevProps, nextProps) => (
   prevProps.jobId === nextProps.jobId &&
@@ -1225,3 +1237,5 @@ export const SOVTable = memo(SOVTableComponent, (prevProps, nextProps) => (
   prevProps.changeOrderApproved === nextProps.changeOrderApproved &&
   prevProps.forceShowPricing === nextProps.forceShowPricing
 ));
+
+SOVTable.displayName = 'SOVTable';
