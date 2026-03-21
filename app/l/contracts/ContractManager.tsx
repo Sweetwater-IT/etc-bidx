@@ -65,9 +65,9 @@ const PIPELINE_STAGES: {
   bgColor: string;
   borderColor: string;
 }[] = [
-  { id: "CONTRACT_RECEIPT", label: "Contract Received", shortLabel: "Received", icon: FileText, color: "text-primary", bgColor: "bg-primary/5", borderColor: "border-primary/20" },
-  { id: "RETURNED_TO_CUSTOMER", label: "Returned to Customer", shortLabel: "Returned", icon: RotateCcw, color: "text-muted-foreground", bgColor: "bg-muted/50", borderColor: "border-border" },
-  { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-warning", bgColor: "bg-warning/5", borderColor: "border-warning/20" },
+  { id: "CONTRACT_RECEIPT", label: "Contract Received", shortLabel: "Received", icon: FileText, color: "text-blue-900", bgColor: "bg-blue-950/5", borderColor: "border-blue-900/20" },
+  { id: "RETURNED_TO_CUSTOMER", label: "Contract Sent", shortLabel: "Sent", icon: RotateCcw, color: "text-amber-700", bgColor: "bg-amber-500/5", borderColor: "border-amber-500/20" },
+  { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-emerald-700", bgColor: "bg-emerald-500/5", borderColor: "border-emerald-500/20" },
 ];
 
 type VisiblePipelineStage =
