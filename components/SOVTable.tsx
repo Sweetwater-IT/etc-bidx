@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -128,7 +128,7 @@ function getAvailableUoms(master: SovMasterItem): string[] {
   );
 }
 
-export const SOVTable = ({
+const SOVTableComponent = ({
   jobId,
   contractId,
   readOnly = false,
@@ -1191,3 +1191,13 @@ export const SOVTable = ({
     </div>
   );
 };
+
+export const SOVTable = memo(SOVTableComponent, (prevProps, nextProps) => (
+  prevProps.jobId === nextProps.jobId &&
+  prevProps.contractId === nextProps.contractId &&
+  prevProps.readOnly === nextProps.readOnly &&
+  prevProps.onEditAttempt === nextProps.onEditAttempt &&
+  prevProps.isSignedContract === nextProps.isSignedContract &&
+  prevProps.changeOrderApproved === nextProps.changeOrderApproved &&
+  prevProps.forceShowPricing === nextProps.forceShowPricing
+));

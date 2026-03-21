@@ -26,7 +26,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { addDays, format } from "date-fns";
-import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
+import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
 
@@ -43,6 +43,8 @@ interface ProjectInfoFieldsProps {
   readOnly?: boolean;
   contractRow?: any;
   onProjectNameBlur?: () => void | Promise<void>;
+  onSaveNotes?: (notes: string) => Promise<void>;
+  notesSaving?: boolean;
 }
 
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
@@ -191,10 +193,12 @@ const CertifiedPayrollSection = ({
   );
 };
 
-export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur }: ProjectInfoFieldsProps) => {
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur, onSaveNotes, notesSaving = false }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [projectStartOpen, setProjectStartOpen] = useState(false);
   const [projectEndOpen, setProjectEndOpen] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(projectInfo.otherNotes || "");
 
   // Database-driven data
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
@@ -258,6 +262,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       return () => clearTimeout(t);
     }
   }, [dateWarning]);
+
+  useEffect(() => {
+    if (!editingNotes) {
+      setNotesDraft(projectInfo.otherNotes || "");
+    }
+  }, [editingNotes, projectInfo.otherNotes]);
 
   const update = (field: keyof JobProjectInfo, value: string) => {
     if (readOnly) return;
@@ -962,18 +972,78 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       {/* Certified Payroll Information */}
       <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
 
-      {/* Other Notes */}
+      {/* Additional Notes */}
       <div className="rounded-xl border bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          Additional Notes
-        </h2>
-        <Textarea
-          placeholder="Enter any additional notes, comments, or special instructions…"
-          className="min-h-[100px] text-sm"
-          value={projectInfo.otherNotes || ""}
-          onChange={(e) => update("otherNotes", e.target.value)}
-        />
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-violet-500/10">
+              <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Additional Notes
+            </span>
+          </div>
+          {!readOnly && (
+            editingNotes ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setNotesDraft(projectInfo.otherNotes || "");
+                    setEditingNotes(false);
+                  }}
+                  disabled={notesSaving}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={async () => {
+                    onChange({ ...projectInfo, otherNotes: notesDraft });
+                    if (onSaveNotes) {
+                      await onSaveNotes(notesDraft);
+                    }
+                    setEditingNotes(false);
+                  }}
+                  disabled={notesSaving}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                className="h-7 gap-1.5 text-xs bg-[#16335A] text-white hover:bg-[#122947]"
+                onClick={() => setEditingNotes(true)}
+              >
+                <StickyNote className="h-3 w-3" />
+                {projectInfo.otherNotes?.trim() ? "Edit Note" : "Add Note"}
+              </Button>
+            )
+          )}
+        </div>
+        {editingNotes && !readOnly ? (
+          <Textarea
+            placeholder="Enter any additional notes, comments, or special instructions…"
+            className="min-h-[120px] text-sm resize-none"
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            autoFocus
+          />
+        ) : (
+          <div className="min-h-[72px] text-sm text-foreground whitespace-pre-wrap">
+            {projectInfo.otherNotes?.trim() ? (
+              projectInfo.otherNotes
+            ) : (
+              <span className="text-muted-foreground italic text-xs">
+                No notes yet. Use "Add Note" to get started.
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Pencil, ChevronRight } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Pencil, ChevronRight, StickyNote, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
@@ -34,6 +35,9 @@ export default function ContractViewContent() {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     const loadContract = async () => {
@@ -85,6 +89,7 @@ export default function ContractViewContent() {
           extensionDate: contractData.extension_date || "",
         };
         setProjectInfo(transformedProjectInfo);
+        setNotesDraft(transformedProjectInfo.otherNotes || "");
 
         // Load documents
         const docsResponse = await fetch(`/api/l/contracts/${contractId}/documents`);
@@ -118,6 +123,30 @@ export default function ContractViewContent() {
 
   const handleEdit = () => {
     router.push(`/l/contracts/edit/${contractId}`);
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      setSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ otherNotes: notesDraft }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save notes: ${response.status}`);
+      }
+
+      setProjectInfo((prev) => (prev ? { ...prev, otherNotes: notesDraft } : prev));
+      setEditingNotes(false);
+      toast.success("Notes saved");
+    } catch (error) {
+      console.error("Error saving contract notes:", error);
+      toast.error("Failed to save notes");
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
   if (loading) {
@@ -381,16 +410,70 @@ export default function ContractViewContent() {
         )}
 
         {/* Additional Notes */}
-        {projectInfo.otherNotes && (
-          <div className="rounded-lg border bg-card shadow-sm">
-            <div className="px-5 py-3 border-b bg-muted/30">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Notes</h2>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-md bg-violet-500/10">
+                <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Additional Notes
+              </span>
             </div>
-            <div className="p-5">
-              <div className="text-sm">{projectInfo.otherNotes}</div>
-            </div>
+            {editingNotes ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setNotesDraft(projectInfo.otherNotes || "");
+                    setEditingNotes(false);
+                  }}
+                  disabled={savingNotes}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                className="h-7 gap-1.5 text-xs bg-[#16335A] text-white hover:bg-[#122947]"
+                onClick={() => setEditingNotes(true)}
+              >
+                <StickyNote className="h-3 w-3" />
+                {projectInfo.otherNotes?.trim() ? "Edit Note" : "Add Note"}
+              </Button>
+            )}
           </div>
-        )}
+          {editingNotes ? (
+            <Textarea
+              placeholder="Enter any additional notes, comments, or special instructions…"
+              className="min-h-[120px] text-sm resize-none"
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              autoFocus
+            />
+          ) : (
+            <div className="min-h-[72px] text-sm text-foreground whitespace-pre-wrap">
+              {projectInfo.otherNotes?.trim() ? (
+                projectInfo.otherNotes
+              ) : (
+                <span className="text-muted-foreground italic text-xs">
+                  No notes yet. Use "Add Note" to get started.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Schedule of Values */}
         <div>

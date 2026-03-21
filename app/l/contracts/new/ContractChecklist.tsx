@@ -147,6 +147,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const handleSovEditAttempt = useCallback(() => {
+    setShowChangeOrderDialog(true);
+  }, []);
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
@@ -512,6 +516,42 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   }, [contractId, projectInfo, ensureContractExists, contractRow]);
 
+  const handleSaveNotes = useCallback(async (notes: string) => {
+    let currentContractId = contractId;
+    const nextProjectInfo = { ...projectInfo, otherNotes: notes };
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    setProjectInfo(nextProjectInfo);
+
+    if (!currentContractId) {
+      const hasProjectName = Boolean(nextProjectInfo.projectName?.trim());
+      if (!hasProjectName) return;
+      currentContractId = await ensureContractExists(nextProjectInfo);
+      if (!currentContractId) return;
+    }
+
+    try {
+      setIsSavingNotes(true);
+      const result = await saveContract({
+        contractId: currentContractId,
+        data: mapProjectInfoToContractData(nextProjectInfo, getContractStatus(contractRow)),
+      });
+      setContractRow(result);
+      setLastSavedAt(new Date());
+      setFirstSave(true);
+      toast.success("Notes saved");
+    } catch (error) {
+      console.error("Notes save failed:", error);
+      toast.error("Failed to save notes");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [contractId, projectInfo, ensureContractExists, contractRow]);
+
   const handleDone = useCallback(async () => {
     const savedContractId = await manualSave();
     if (isNew && savedContractId) {
@@ -731,6 +771,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
           onProjectNameBlur={handleProjectNameBlur}
+          onSaveNotes={handleSaveNotes}
+          notesSaving={isSavingNotes}
           contractSigned={isSigned}
           showValidation={showValidation}
           readOnly={isReadOnly}
@@ -742,7 +784,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           <SOVTable
             contractId={contractId}
             readOnly={false}
-            onEditAttempt={isSigned && !changeOrderApproved ? () => setShowChangeOrderDialog(true) : undefined}
+            onEditAttempt={isSigned && !changeOrderApproved ? handleSovEditAttempt : undefined}
             isSignedContract={isSigned}
             changeOrderApproved={changeOrderApproved}
           />
