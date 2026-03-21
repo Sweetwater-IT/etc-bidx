@@ -42,6 +42,7 @@ interface ProjectInfoFieldsProps {
   showValidation?: boolean;
   readOnly?: boolean;
   contractRow?: any;
+  onProjectNameBlur?: () => void | Promise<void>;
 }
 
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
@@ -190,7 +191,7 @@ const CertifiedPayrollSection = ({
   );
 };
 
-export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow }: ProjectInfoFieldsProps) => {
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [projectStartOpen, setProjectStartOpen] = useState(false);
   const [projectEndOpen, setProjectEndOpen] = useState(false);
@@ -484,6 +485,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               placeholder="e.g. Highway 101 Overpass"
               value={projectInfo.projectName || ""}
               onChange={(e) => update("projectName", e.target.value)}
+              onBlur={() => void onProjectNameBlur?.()}
             />
           </div>
           <div className="sm:col-span-2">

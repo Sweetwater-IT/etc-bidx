@@ -353,6 +353,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         const newId = result.id;
         setContractId(newId);
         setContractRow(result);
+        setLastSavedAt(new Date());
+        setFirstSave(true);
         // Update URL without full page reload for better UX
         window.history.replaceState(null, '', `/l/contracts/edit/${newId}`);
         return newId;
@@ -367,32 +369,37 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     return promise;
   }, [contractId, contractRow]);
 
+  const handleProjectNameBlur = useCallback(async () => {
+    if (isReadOnly || contractId) return;
+    const trimmedProjectName = projectInfo.projectName?.trim();
+    if (!trimmedProjectName) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    try {
+      setIsSaving(true);
+      await ensureContractExists(projectInfo);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isReadOnly, contractId, projectInfo, ensureContractExists]);
+
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {
       setProjectInfo(newInfo);
 
       if (!contractId) {
-        // Only create contract if job name is entered
-        if (newInfo.projectName && newInfo.projectName.trim()) {
-          // Clear any existing timeout
-          if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-          }
-
-          // Set a 4-second delay before creating the contract
-          saveTimeoutRef.current = window.setTimeout(async () => {
-            await ensureContractExists(newInfo);
-          }, 4000);
-        } else {
-          // If job name is cleared, cancel the timeout
-          if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-          }
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
         }
         return;
       }
     },
-    [contractId, ensureContractExists]
+    [contractId]
   );
 
   // Autosave logic - exactly like sign-orders
@@ -713,6 +720,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         <ProjectInfoFields
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
+          onProjectNameBlur={handleProjectNameBlur}
           contractSigned={isSigned}
           showValidation={showValidation}
           readOnly={isReadOnly}
