@@ -17,6 +17,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -200,6 +208,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [projectEndOpen, setProjectEndOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState(projectInfo.otherNotes || "");
+  const [projectOwnerModalOpen, setProjectOwnerModalOpen] = useState(false);
+  const [projectOwnerDraft, setProjectOwnerDraft] = useState("");
 
   // Database-driven data
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
@@ -439,6 +449,15 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     return parseDateValue(projectInfo.projectEndDate) ?? new Date();
   }, [projectInfo.projectStartDate, projectInfo.projectEndDate]);
 
+  useEffect(() => {
+    if (projectOwnerModalOpen) return;
+    const currentOwner = (projectInfo.projectOwner || "").trim();
+    const nextDraft = PROJECT_OWNER_OPTIONS.includes(currentOwner as typeof PROJECT_OWNER_OPTIONS[number])
+      ? ""
+      : currentOwner;
+    setProjectOwnerDraft(nextDraft);
+  }, [projectInfo.projectOwner, projectOwnerModalOpen]);
+
   return (
     <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
       {/* Project Details */}
@@ -459,7 +478,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   const nextOwner = PROJECT_OWNER_OPTIONS.includes(currentOwner as typeof PROJECT_OWNER_OPTIONS[number])
                     ? ""
                     : currentOwner;
-                  update("projectOwner", nextOwner);
+                  setProjectOwnerDraft(nextOwner);
+                  setProjectOwnerModalOpen(true);
                   return;
                 }
                 update("projectOwner", val);
@@ -476,18 +496,6 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               </SelectContent>
             </Select>
           </div>
-          {projectOwnerSelection === "Other" && (
-            <div className="sm:col-span-2">
-              <Label htmlFor="projectOwnerOther" className="text-xs">Specific Project Owner<RequiredMark /></Label>
-              <Input
-                id="projectOwnerOther"
-                className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}
-                placeholder="Enter project owner"
-                value={projectInfo.projectOwner || ""}
-                onChange={(e) => update("projectOwner", e.target.value)}
-              />
-            </div>
-          )}
           <div className="sm:col-span-2">
             <Label htmlFor="projectName" className="text-xs">Job Name<RequiredMark /></Label>
             <Input
@@ -1046,6 +1054,65 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
         )}
       </div>}
+
+      <Dialog
+        open={projectOwnerModalOpen && !readOnly}
+        onOpenChange={(open) => {
+          setProjectOwnerModalOpen(open);
+          if (!open && !(projectInfo.projectOwner || "").trim()) {
+            setProjectOwnerDraft("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Project Owner</DialogTitle>
+            <DialogDescription>
+              Add the specific project owner name as plain text.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="projectOwnerOther" className="text-xs">
+              Project Owner<RequiredMark />
+            </Label>
+            <Input
+              id="projectOwnerOther"
+              className={cn(
+                "h-9 text-sm",
+                showValidation && !projectOwnerDraft.trim() && "border-destructive ring-1 ring-destructive/30"
+              )}
+              placeholder="Enter project owner"
+              value={projectOwnerDraft}
+              onChange={(e) => setProjectOwnerDraft(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProjectOwnerModalOpen(false);
+                if (!(projectInfo.projectOwner || "").trim()) {
+                  setProjectOwnerDraft("");
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const trimmedOwner = projectOwnerDraft.trim();
+                if (!trimmedOwner) return;
+                update("projectOwner", trimmedOwner);
+                setProjectOwnerModalOpen(false);
+              }}
+              disabled={!projectOwnerDraft.trim()}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
