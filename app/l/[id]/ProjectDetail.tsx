@@ -637,17 +637,17 @@ const ProjectDetail = () => {
                     <button
                       key={wo.id}
                       type="button"
-                      className="flex w-full items-center justify-between p-2 rounded bg-muted/30 text-left transition-colors hover:bg-muted/50"
+                      className="group flex w-full items-center justify-between rounded border border-transparent bg-muted/30 p-2 text-left transition-colors hover:border-[#16335A]/20 hover:bg-[#16335A]/5"
                       onClick={() => router.push(`/l/jobs/${id}/work-orders/view/${wo.id}`)}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">
+                        <div className="truncate text-xs font-medium transition-colors group-hover:text-[#16335A]">
                           {formatWorkOrderNumber(wo.workOrderNumber ?? wo.wo_number)}
                         </div>
                         <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
                       </div>
-                      <span className="inline-flex h-6 w-6 items-center justify-center">
-                        <ChevronRight className="h-3 w-3" />
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors group-hover:bg-[#16335A]/10">
+                        <ChevronRight className="h-3 w-3 transition-colors group-hover:text-[#16335A]" />
                       </span>
                     </button>
                   ))}

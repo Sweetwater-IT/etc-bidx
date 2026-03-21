@@ -309,8 +309,8 @@ export function QuoteNotes({
       </div>
       {/* Delete confirmation modal */}
       {showDeleteModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30'>
-          <div className='bg-white rounded-lg p-6 shadow-lg w-80'>
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-slate-900/10 backdrop-blur-[1px]'>
+          <div className='w-80 rounded-lg bg-white p-6 shadow-lg ring-1 ring-black/5'>
             <h3 className='text-lg font-semibold mb-4'>Delete Note</h3>
             <p className='mb-6'>Are you sure you want to delete this note?</p>
             <div className='flex justify-end gap-2'>
