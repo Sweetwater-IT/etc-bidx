@@ -186,6 +186,7 @@ const SOVTableComponent = ({
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
   const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>({});
+  const [activePriceInputId, setActivePriceInputId] = useState<string | null>(null);
   const showPricingColumns = forceShowPricing || !readOnly;
 
   useEffect(() => {
@@ -870,12 +871,19 @@ const SOVTableComponent = ({
                       {readOnly ? (
                         <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                           ) : (
-                          <div className="flex items-center h-7 border rounded-md bg-background">
+                          <div
+                            className={cn(
+                              "flex items-center h-7 border rounded-md bg-background transition-colors",
+                              activePriceInputId === item.id && "border-[#16335A]/25 bg-[#16335A]/5 shadow-[0_0_0_1px_rgba(22,51,90,0.15)]"
+                            )}
+                          >
                             <span className="px-2 text-xs text-muted-foreground border-r">$</span>
                             <CurrencyInput
                               value={unitPriceDrafts[item.id] ?? Math.round(item.unitPrice * 100).toFixed(0)}
                               onChange={(digits) => updateUnitPrice(item.id, digits)}
-                              className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
+                              onFocus={() => setActivePriceInputId(item.id)}
+                              onBlur={() => setActivePriceInputId((current) => (current === item.id ? null : current))}
+                              className="h-7 text-xs text-right w-[100px] border-0 bg-transparent focus-visible:ring-0 cursor-text"
                             />
                           </div>
                           )}

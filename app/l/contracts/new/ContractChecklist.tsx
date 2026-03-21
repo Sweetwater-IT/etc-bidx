@@ -635,10 +635,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   const handleDone = useCallback(async () => {
     const savedContractId = await manualSave();
-    if (isNew && savedContractId) {
+    if (savedContractId) {
       router.push(`/l/contracts/view/${savedContractId}`);
     }
-  }, [isNew, manualSave, router]);
+  }, [manualSave, router]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {

@@ -9,6 +9,8 @@ interface CurrencyInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export function CurrencyInput({
@@ -16,14 +18,31 @@ export function CurrencyInput({
   onChange,
   placeholder = "0.00",
   className = '',
-  disabled = false
+  disabled = false,
+  onFocus,
+  onBlur,
 }: CurrencyInputProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const [isFocused, setIsFocused] = React.useState(false);
 
   const normalizeDigits = React.useCallback((raw: string) => {
     const digitsOnly = raw.replace(/\D/g, '').slice(0, 8);
     return digitsOnly === '' ? '0' : digitsOnly;
   }, []);
+
+  const [draftDigits, setDraftDigits] = React.useState(() => normalizeDigits(value));
+  const draftDigitsRef = React.useRef(draftDigits);
+
+  React.useEffect(() => {
+    draftDigitsRef.current = draftDigits;
+  }, [draftDigits]);
+
+  React.useEffect(() => {
+    if (isFocused) return;
+    const normalized = normalizeDigits(value);
+    draftDigitsRef.current = normalized;
+    setDraftDigits(normalized);
+  }, [isFocused, normalizeDigits, value]);
 
   const formatDecimal = (digits: string): string => {
     if (!digits || digits === "0") return "0.00";
@@ -36,6 +55,13 @@ export function CurrencyInput({
     });
   };
 
+  const applyDigits = React.useCallback((nextRaw: string) => {
+    const normalized = normalizeDigits(nextRaw);
+    draftDigitsRef.current = normalized;
+    setDraftDigits(normalized);
+    onChange(normalized);
+  }, [normalizeDigits, onChange]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (disabled) return;
 
@@ -43,19 +69,19 @@ export function CurrencyInput({
 
     if (/^\d$/.test(e.key)) {
       e.preventDefault();
-      onChange(normalizeDigits(`${value}${e.key}`));
+      applyDigits(`${draftDigitsRef.current}${e.key}`);
       return;
     }
 
     if (e.key === 'Backspace') {
       e.preventDefault();
-      onChange(normalizeDigits(value.slice(0, -1)));
+      applyDigits(draftDigitsRef.current.slice(0, -1));
       return;
     }
 
     if (e.key === 'Delete') {
       e.preventDefault();
-      onChange('0');
+      applyDigits('0');
       return;
     }
 
@@ -79,7 +105,7 @@ export function CurrencyInput({
     if (disabled) return;
     e.preventDefault();
     const pasted = e.clipboardData.getData('text');
-    onChange(normalizeDigits(pasted));
+    applyDigits(pasted);
   };
 
   const moveCaretToEnd = React.useCallback(() => {
@@ -97,12 +123,20 @@ export function CurrencyInput({
       type="text"
       className={className}
       placeholder={placeholder}
-      value={formatDecimal(value)}
+      value={formatDecimal(draftDigits)}
       inputMode="numeric"
       readOnly
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
-      onFocus={moveCaretToEnd}
+      onFocus={() => {
+        setIsFocused(true);
+        moveCaretToEnd();
+        onFocus?.();
+      }}
+      onBlur={() => {
+        setIsFocused(false);
+        onBlur?.();
+      }}
       onClick={moveCaretToEnd}
       disabled={disabled}
     />
