@@ -367,7 +367,7 @@ function drawProjectFooter(
   pageH: number
 ) {
   const footerX = 14;
-  const footerY = pageH - 11;
+  const footerY = pageH - 16;
   const footerW = pageW - 28;
   const footerH = 5.5;
   const footerItems = items.slice(0, 8);
@@ -379,8 +379,7 @@ function drawProjectFooter(
 
   doc.setDrawColor(210);
   doc.setLineWidth(0.2);
-  doc.setFillColor(248, 248, 248);
-  doc.rect(footerX, footerY, footerW, footerH, "FD");
+  doc.rect(footerX, footerY, footerW, footerH, "S");
 
   for (let i = 1; i < footerItems.length; i++) {
     const x = footerX + colW * i;
