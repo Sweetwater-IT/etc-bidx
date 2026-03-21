@@ -68,6 +68,7 @@ interface SOVTableProps {
   onEditAttempt?: () => void;
   isSignedContract?: boolean;
   changeOrderApproved?: boolean;
+  forceShowPricing?: boolean;
 }
 
 interface CustomItemDraft {
@@ -133,7 +134,8 @@ export const SOVTable = ({
   readOnly = false,
   onEditAttempt,
   isSignedContract = false,
-  changeOrderApproved = false
+  changeOrderApproved = false,
+  forceShowPricing = false
 }: SOVTableProps) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
@@ -183,7 +185,7 @@ export const SOVTable = ({
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
-  const showPricingColumns = !readOnly;
+  const showPricingColumns = forceShowPricing || !readOnly;
 
   const filteredItems = useMemo(() => {
     if (!selectorSearch.trim()) return sovProducts;

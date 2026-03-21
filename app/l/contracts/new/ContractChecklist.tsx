@@ -679,9 +679,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           router.push("/l/contracts");
         }}
         onDone={manualSave}
+        doneLabel={isNew ? "Create Contract" : "Save Contract"}
         isSaving={isSaving}
         lastSavedAt={lastSavedAt}
         hasUnsavedChanges={!lastSavedAt && firstSave}
+        firstSave={firstSave}
         additionalButtons={
           isViewMode ? (
             <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">

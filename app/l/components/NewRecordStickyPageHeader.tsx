@@ -10,6 +10,7 @@ interface NewRecordStickyPageHeaderProps {
   onDone: () => void;
   leftContent?: ReactNode;
   additionalButtons?: ReactNode;
+  doneLabel?: string;
   // Autosave props
   isSaving?: boolean;
   lastSavedAt?: Date | null;
@@ -23,6 +24,7 @@ export function NewRecordStickyPageHeader({
   onDone,
   leftContent,
   additionalButtons,
+  doneLabel = "Save",
   isSaving = false,
   lastSavedAt = null,
   hasUnsavedChanges = false,
@@ -93,7 +95,7 @@ export function NewRecordStickyPageHeader({
             onClick={onDone}
             className="gap-2 h-8"
           >
-            Save
+            {doneLabel}
           </Button>
         </div>
       </div>

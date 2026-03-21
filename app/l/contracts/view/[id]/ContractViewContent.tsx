@@ -394,7 +394,7 @@ export default function ContractViewContent() {
 
         {/* Schedule of Values */}
         <div>
-          <SOVTable contractId={contractId} readOnly={true} />
+          <SOVTable contractId={contractId} readOnly={true} forceShowPricing={true} />
         </div>
 
         {/* Documents & Forms */}
