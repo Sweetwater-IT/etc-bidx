@@ -356,7 +356,7 @@ const ContractManager = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
         <header className="border-b bg-card">
           <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
             <div className="h-8 w-56 rounded bg-muted animate-pulse" />
@@ -396,7 +396,7 @@ const ContractManager = () => {
 
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
       {/* Header */}
       <header className="shrink-0 border-b bg-card">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
@@ -425,7 +425,10 @@ const ContractManager = () => {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            <Button onClick={() => router.push("/l/contracts/new")} className="gap-2">
+            <Button
+              onClick={() => router.push("/l/contracts/new")}
+              className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            >
               <Plus className="h-4 w-4" />
               New Contract
             </Button>
@@ -1101,7 +1104,7 @@ const ListView = ({
 
   if (pipelineJobs.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-16 text-center">
+      <div className="rounded-lg border bg-card/90 p-16 text-center shadow-sm">
         <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
         <p className="text-muted-foreground font-medium">No contracts in pipeline</p>
         <p className="text-sm text-muted-foreground mt-1">Create a new contract to get started.</p>
