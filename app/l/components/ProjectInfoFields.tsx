@@ -486,7 +486,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               }}
             >
               <SelectTrigger id="projectOwner" className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}>
-                <SelectValue placeholder="Select owner…" />
+                <SelectValue placeholder="Select owner…">
+                  {projectOwnerSelection === "Other"
+                    ? (projectInfo.projectOwner || "Other")
+                    : (projectOwnerSelection || "Select owner…")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {PROJECT_OWNER_OPTIONS.map((owner) => (
