@@ -2,6 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
 
+const REQUIRED_CONTRACT_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'project_owner', label: 'Project Owner' },
+  { key: 'project_name', label: 'Job Name' },
+  { key: 'contract_number', label: 'Project Owner Contract #' },
+  { key: 'county', label: 'County' },
+  { key: 'etc_branch', label: 'ETC Branch' },
+  { key: 'etc_project_manager', label: 'ETC Project Manager' },
+  { key: 'project_start_date', label: 'Project Start Date' },
+  { key: 'project_end_date', label: 'Project End Date' },
+  { key: 'customer_name', label: 'Customer Name' },
+  { key: 'customer_job_number', label: 'Customer Job #' },
+  { key: 'customer_pm', label: 'Customer PM' },
+  { key: 'customer_pm_email', label: 'Customer PM Email' },
+  { key: 'certified_payroll_contact', label: 'Certified Payroll Contact' },
+  { key: 'certified_payroll_email', label: 'Certified Payroll Email' },
+  { key: 'certified_payroll_type', label: 'Certified Payroll Type' },
+];
+
+function getMissingContractRequirements(contractData: Record<string, unknown>) {
+  return REQUIRED_CONTRACT_FIELDS.flatMap(({ key, label }) => {
+    const value = contractData[key];
+
+    if (key === 'certified_payroll_type') {
+      return value === 'none' || value === 'state' || value === 'federal' ? [] : [label];
+    }
+
+    const normalized = typeof value === 'string' ? value.trim() : value;
+    if (!normalized) return [label];
+    if (key === 'project_owner' && normalized === 'Other') return [label];
+    return [];
+  });
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -81,7 +114,7 @@ export async function PATCH(
     // Get current contract to check version
     const { data: currentContract, error: currentError } = await supabase
       .from('jobs_l')
-      .select('version, additional_notes')
+      .select('*')
       .eq('id', contractId)
       .single();
 
@@ -143,6 +176,30 @@ export async function PATCH(
         typeof transformedData.additional_notes === 'string' ? transformedData.additional_notes : '',
         currentNotesPayload.projectLog
       );
+    }
+
+    const nextContractStatus = transformedData.contract_status as string | undefined;
+    const currentContractStatus = currentContract.contract_status as string | undefined;
+    if (
+      nextContractStatus &&
+      nextContractStatus !== currentContractStatus &&
+      nextContractStatus !== 'CONTRACT_RECEIPT'
+    ) {
+      const mergedContractData = {
+        ...currentContract,
+        ...transformedData,
+      };
+      const missing = getMissingContractRequirements(mergedContractData);
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Missing required fields',
+            code: 'MISSING_REQUIREMENTS',
+            missing,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Increment version

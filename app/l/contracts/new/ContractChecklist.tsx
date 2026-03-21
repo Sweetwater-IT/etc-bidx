@@ -131,7 +131,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [secondCounter, setSecondCounter] = useState<number>(0);
   const [firstSave, setFirstSave] = useState<boolean>(false);
   const saveTimeoutRef = useRef<number | null>(null);
 
@@ -173,12 +172,44 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     contractId
   });
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setSecondCounter(prev => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(intervalId);
+  const hasMeaningfulContent = useCallback((info: JobProjectInfo, id?: string) => {
+    return Boolean(id && (
+      info.projectName ||
+      info.contractNumber ||
+      info.customerName ||
+      info.customerJobNumber ||
+      info.projectOwner ||
+      info.etcJobNumber ||
+      info.etcBranch ||
+      info.county ||
+      info.customerPM ||
+      info.customerPMEmail ||
+      info.customerPMPhone ||
+      info.certifiedPayrollContact ||
+      info.certifiedPayrollEmail ||
+      info.certifiedPayrollPhone ||
+      info.customerBillingContact ||
+      info.customerBillingEmail ||
+      info.customerBillingPhone ||
+      info.etcProjectManager ||
+      info.etcBillingManager ||
+      info.etcProjectManagerEmail ||
+      info.etcBillingManagerEmail ||
+      info.projectStartDate ||
+      info.projectEndDate ||
+      info.otherNotes ||
+      info.isCertifiedPayroll !== "none" ||
+      info.shopRate ||
+      info.stateMptBaseRate ||
+      info.stateMptFringeRate ||
+      info.stateFlaggingBaseRate ||
+      info.stateFlaggingFringeRate ||
+      info.federalMptBaseRate ||
+      info.federalMptFringeRate ||
+      info.federalFlaggingBaseRate ||
+      info.federalFlaggingFringeRate ||
+      info.extensionDate
+    ));
   }, []);
 
   // Cleanup timeout on unmount
@@ -380,46 +411,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
 
       saveTimeoutRef.current = window.setTimeout(async () => {
-        // Check if we have a contractId and some meaningful content to save
-        const hasContent = contractId && (
-          projectInfo.projectName ||
-          projectInfo.contractNumber ||
-          projectInfo.customerName ||
-          projectInfo.customerJobNumber ||
-          projectInfo.projectOwner ||
-          projectInfo.etcJobNumber ||
-          projectInfo.etcBranch ||
-          projectInfo.county ||
-          projectInfo.customerPM ||
-          projectInfo.customerPMEmail ||
-          projectInfo.customerPMPhone ||
-          projectInfo.certifiedPayrollContact ||
-          projectInfo.certifiedPayrollEmail ||
-          projectInfo.certifiedPayrollPhone ||
-          projectInfo.customerBillingContact ||
-          projectInfo.customerBillingEmail ||
-          projectInfo.customerBillingPhone ||
-          projectInfo.etcProjectManager ||
-          projectInfo.etcBillingManager ||
-          projectInfo.etcProjectManagerEmail ||
-          projectInfo.etcBillingManagerEmail ||
-          projectInfo.projectStartDate ||
-          projectInfo.projectEndDate ||
-          projectInfo.otherNotes ||
-          projectInfo.isCertifiedPayroll !== "none" ||
-          projectInfo.shopRate ||
-          projectInfo.stateMptBaseRate ||
-          projectInfo.stateMptFringeRate ||
-          projectInfo.stateFlaggingBaseRate ||
-          projectInfo.stateFlaggingFringeRate ||
-          projectInfo.federalMptBaseRate ||
-          projectInfo.federalMptFringeRate ||
-          projectInfo.federalFlaggingBaseRate ||
-          projectInfo.federalFlaggingFringeRate ||
-          projectInfo.extensionDate
-        );
-
-        if (hasContent) {
+        if (hasMeaningfulContent(projectInfo, contractId)) {
           try {
             setIsSaving(true);
             const contractData = {
@@ -432,7 +424,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setContractRow(result);
             setLastSavedAt(new Date());
             setFirstSave(true);
-            setSecondCounter(1); // Reset counter to 1 like sign order page
           } catch (error) {
             console.error('Autosave failed:', error);
             toast.error('Failed to save contract');
@@ -442,9 +433,46 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         }
       }, 5000); // Autosave every 5 seconds like sign orders
     }
-  }, [projectInfo, contractId, isViewMode]);
+  }, [projectInfo, contractId, isViewMode, hasMeaningfulContent, contractRow]);
+
+  useEffect(() => {
+    if (isViewMode) return;
+
+    const handlePageLeave = () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const shouldSend =
+        hasMeaningfulContent(projectInfo, contractId) ||
+        (!contractId && Boolean(projectInfo.projectName?.trim()));
+
+      if (!shouldSend) return;
+
+      const payload = {
+        contractId,
+        data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
+      };
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      navigator.sendBeacon("/api/l/contracts", blob);
+    };
+
+    window.addEventListener("beforeunload", handlePageLeave);
+    window.addEventListener("pagehide", handlePageLeave);
+
+    return () => {
+      window.removeEventListener("beforeunload", handlePageLeave);
+      window.removeEventListener("pagehide", handlePageLeave);
+    };
+  }, [isViewMode, hasMeaningfulContent, projectInfo, contractId, contractRow]);
 
   const manualSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
     let currentContractId = contractId;
 
     if (!currentContractId) {
@@ -467,16 +495,13 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setLastSavedAt(new Date());
       setFirstSave(true);
       toast.success('Contract saved successfully');
-
-      // Route to view page after successful save
-      router.push(`/l/contracts/view/${currentContractId}`);
     } catch (error) {
       console.error('Manual save failed:', error);
       toast.error('Failed to save contract');
     } finally {
       setIsSaving(false);
     }
-  }, [contractId, projectInfo, ensureContractExists, contractRow, router]);
+  }, [contractId, projectInfo, ensureContractExists, contractRow]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {

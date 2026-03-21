@@ -204,6 +204,9 @@ const ContractManager = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.code === "MISSING_REQUIREMENTS" && Array.isArray(errorData.missing)) {
+          showMissingReqs("Cannot advance contract", errorData.missing);
+        }
         throw new Error(errorData.error || 'Failed to update contract status');
       }
 
@@ -293,6 +296,9 @@ const ContractManager = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.code === "MISSING_REQUIREMENTS" && Array.isArray(errorData.missing)) {
+          showMissingReqs("Cannot sign contract", errorData.missing);
+        }
         throw new Error(errorData.error || 'Failed to update contract status');
       }
 

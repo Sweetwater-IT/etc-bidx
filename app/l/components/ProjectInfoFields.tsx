@@ -51,6 +51,8 @@ const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "certifiedPayrollEmail", "isCertifiedPayroll",
 ];
 
+const PROJECT_OWNER_OPTIONS = ["PENNDOT", "Turnpike", "SEPTA", "Private"] as const;
+
 // Stable RateField — defined OUTSIDE parent components to prevent remounting on every keystroke
 const RateField = ({
   id,
@@ -290,7 +292,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           display_name: contractor.name,
           company_name: contractor.name
         }));
-        setCustomers(transformedCustomers);
+        setCustomers(
+          transformedCustomers.sort((a: DBCustomer, b: DBCustomer) =>
+            a.display_name.localeCompare(b.display_name)
+          )
+        );
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -303,9 +309,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const filteredCustomers = useMemo(
     () =>
-      customers.filter((c) =>
-        c.display_name.toLowerCase().includes(customerSearch.toLowerCase())
-      ),
+      [...customers]
+        .filter((c) =>
+          c.display_name.toLowerCase().includes(customerSearch.toLowerCase())
+        )
+        .sort((a, b) => a.display_name.localeCompare(b.display_name)),
     [customers, customerSearch]
   );
 
@@ -346,7 +354,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         company_name: result.customer.name
       };
 
-      setCustomers((prev) => [...prev, newCustomer]);
+      setCustomers((prev) =>
+        [...prev, newCustomer].sort((a, b) => a.display_name.localeCompare(b.display_name))
+      );
       update("customerName", newCustomer.display_name);
       setCustomerSearch("");
       setCustomerOpen(false);
@@ -397,6 +407,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const customerLocked = readOnly || contractSigned;
   const jobNumberLocked = true;
+  const projectOwnerSelection = useMemo(() => {
+    const owner = (projectInfo.projectOwner || "").trim();
+    if (!owner) return "";
+    return PROJECT_OWNER_OPTIONS.includes(owner as typeof PROJECT_OWNER_OPTIONS[number]) ? owner : "Other";
+  }, [projectInfo.projectOwner]);
 
   const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
 
@@ -425,21 +440,42 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           <div className="sm:col-span-2">
             <Label htmlFor="projectOwner" className="text-xs">Project Owner<RequiredMark /></Label>
             <Select
-              value={projectInfo.projectOwner || undefined}
-              onValueChange={(val) => update("projectOwner", val)}
+              value={projectOwnerSelection || undefined}
+              onValueChange={(val) => {
+                if (val === "Other") {
+                  const currentOwner = (projectInfo.projectOwner || "").trim();
+                  const nextOwner = PROJECT_OWNER_OPTIONS.includes(currentOwner as typeof PROJECT_OWNER_OPTIONS[number])
+                    ? ""
+                    : currentOwner;
+                  update("projectOwner", nextOwner);
+                  return;
+                }
+                update("projectOwner", val);
+              }}
             >
               <SelectTrigger id="projectOwner" className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}>
                 <SelectValue placeholder="Select owner…" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENNDOT">PENNDOT</SelectItem>
-                <SelectItem value="Turnpike">Turnpike</SelectItem>
-                <SelectItem value="SEPTA">SEPTA</SelectItem>
-                <SelectItem value="Private">Private</SelectItem>
+                {PROJECT_OWNER_OPTIONS.map((owner) => (
+                  <SelectItem key={owner} value={owner}>{owner}</SelectItem>
+                ))}
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {projectOwnerSelection === "Other" && (
+            <div className="sm:col-span-2">
+              <Label htmlFor="projectOwnerOther" className="text-xs">Specific Project Owner<RequiredMark /></Label>
+              <Input
+                id="projectOwnerOther"
+                className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}
+                placeholder="Enter project owner"
+                value={projectInfo.projectOwner || ""}
+                onChange={(e) => update("projectOwner", e.target.value)}
+              />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <Label htmlFor="projectName" className="text-xs">Job Name<RequiredMark /></Label>
             <Input
