@@ -107,7 +107,8 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 function getFirstNonNullUom(master: SovMasterItem): string {
-  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+  const firstUom = master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+  return normalizeUom(firstUom);
 }
 
 function normalizeUom(uom: string): string {
@@ -232,6 +233,40 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       return next;
     });
   }, [items]);
+
+  useEffect(() => {
+    if (readOnly || sovProducts.length === 0) return;
+
+    const nextUomById = new Map<string, string>();
+
+    items.forEach((item) => {
+      if (!item.itemNumber) return;
+      const masterItem = sovProducts.find((p) => p.item_number === item.itemNumber);
+      if (!masterItem) return;
+
+      const availableUoms = getAvailableUoms(masterItem);
+      if (availableUoms.length === 0) return;
+
+      const normalizedCurrent = item.uom ? normalizeUom(item.uom) : '';
+
+      if (!normalizedCurrent || !availableUoms.includes(normalizedCurrent) || availableUoms.length === 1) {
+        const nextUom = availableUoms.length === 1 ? availableUoms[0] : (normalizedCurrent || availableUoms[0]);
+        if (normalizedCurrent !== nextUom) {
+          nextUomById.set(item.id, nextUom);
+        }
+      }
+    });
+
+    if (nextUomById.size === 0) return;
+
+    updateItems((prevItems) =>
+      prevItems.map((item) =>
+        nextUomById.has(item.id)
+          ? { ...item, uom: nextUomById.get(item.id)! }
+          : item
+      )
+    );
+  }, [items, readOnly, sovProducts, updateItems]);
 
   const filteredItems = useMemo(() => {
     if (!selectorSearch.trim()) return sovProducts;
@@ -630,7 +665,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               <TableRow>
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[200px] text-xs">UOM</TableHead>
+                <TableHead className="w-[200px] text-xs whitespace-nowrap">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
                 {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>}
                 {showPricingColumns && <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>}
@@ -742,7 +777,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                       >
                                         <Check className="mr-2 h-4 w-4 opacity-0" />
                                         <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
-                                        <span className="truncate">Delivery</span>
+                                        <span className="truncate max-w-[35ch]">Delivery</span>
                                       </CommandItem>
                                     );
                                   }
@@ -757,7 +792,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                       >
                                         <Check className="mr-2 h-4 w-4 opacity-0" />
                                         <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
-                                        <span className="truncate">Service</span>
+                                        <span className="truncate max-w-[35ch]">Service</span>
                                       </CommandItem>
                                     );
                                   }
@@ -772,7 +807,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                       >
                                         <Check className="mr-2 h-4 w-4 opacity-0" />
                                         <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
-                                        <span className="truncate">Custom Item Number</span>
+                                        <span className="truncate max-w-[35ch]">Custom Item Number</span>
                                       </CommandItem>
                                     );
                                   }
@@ -800,8 +835,10 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                                 item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
                                               )}
                                             />
-                                            <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                            <span className="truncate">{p.display_name}</span>
+                                            <span className="font-mono mr-2 text-muted-foreground whitespace-nowrap">{p.item_number}</span>
+                                            <span className="truncate max-w-[35ch]" title={p.display_name}>
+                                              {p.display_name}
+                                            </span>
                                           </CommandItem>
                                         ))}
                                       </CommandGroup>
@@ -830,11 +867,13 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <span className="text-xs px-1 truncate block">{item.description}</span>
+                    <span className="text-xs px-1 truncate block max-w-[35ch]" title={item.description}>
+                      {item.description}
+                    </span>
                   </TableCell>
                   <TableCell className="p-1.5">
                     {readOnly ? (
-                      <span className="text-xs px-1">{item.uom}</span>
+                      <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
                     ) : (
                       (() => {
                         const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
@@ -843,22 +882,22 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         // Always show select if we have UOM options, otherwise show as text
                         return availableUoms.length > 0 ? (
                           <Select
-                            value={item.uom}
+                            value={item.uom ? normalizeUom(item.uom) : undefined}
                             onValueChange={(value) => updateRow(item.id, 'uom', value)}
                           >
-                            <SelectTrigger className="w-full h-7 text-xs bg-transparent">
+                            <SelectTrigger className="w-full h-7 text-xs bg-transparent whitespace-nowrap">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {availableUoms.map((uom) => (
-                                <SelectItem key={uom} value={uom} className="text-xs">
+                                <SelectItem key={uom} value={uom} className="text-xs whitespace-nowrap">
                                   {uom}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className="text-xs px-1">{item.uom}</span>
+                          <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
                         );
                       })()
                     )}
