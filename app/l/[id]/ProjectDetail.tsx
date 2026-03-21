@@ -345,10 +345,18 @@ const ProjectDetail = () => {
     Overdue: "bg-destructive/15 text-destructive",
   }[jobStatus];
 
+  const notesEmptyState = (
+    <div className="text-xs italic text-muted-foreground">
+      No notes yet. Use &quot;Add Note&quot; to get started.
+    </div>
+  );
+
+  const notesButtonClassName = "bg-[#16335A] text-white hover:bg-[#122947]";
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
           {/* ─── TOP HEADER BAR ─── */}
           <header className="border-b bg-card shrink-0">
         <div className="w-full px-4 py-2">
@@ -666,6 +674,9 @@ const ProjectDetail = () => {
               onSave={handleAddProjectNote}
               onEdit={handleEditProjectNote}
               onDelete={handleDeleteProjectNote}
+              emptyState={notesEmptyState}
+              addButtonClassName={notesButtonClassName}
+              submitButtonClassName={notesButtonClassName}
             />
           </div>
         </div>
@@ -745,6 +756,9 @@ const ProjectDetail = () => {
                 onSave={handleAddProjectNote}
                 onEdit={handleEditProjectNote}
                 onDelete={handleDeleteProjectNote}
+                emptyState={notesEmptyState}
+                addButtonClassName={notesButtonClassName}
+                submitButtonClassName={notesButtonClassName}
               />
             </TabsContent>
 

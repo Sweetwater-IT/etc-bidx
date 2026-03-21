@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -30,6 +30,9 @@ interface QuoteNotesProps {
   activities?: { type: string; date: string; icon?: React.ReactNode }[]
   showNoActivities?: boolean;
   showBorder?: boolean;
+  emptyState?: ReactNode;
+  addButtonClassName?: string;
+  submitButtonClassName?: string;
 }
 
 function formatDateTime(ts: number) {
@@ -83,7 +86,10 @@ export function QuoteNotes({
   canEdit = true,
   activities,
   showNoActivities = true,
-  showBorder = true
+  showBorder = true,
+  emptyState,
+  addButtonClassName,
+  submitButtonClassName
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -163,9 +169,13 @@ export function QuoteNotes({
             Loading activity...
           </div>
         ) : (notes.length === 0 && !isAdding && showNoActivities) ? (
-          <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
-            No {title}
-          </div>
+          emptyState ? (
+            <>{emptyState}</>
+          ) : (
+            <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
+              No {title}
+            </div>
+          )
         ) : null}
         {notes.length > 0 && !loading && (
           <div className='relative'>
@@ -262,7 +272,11 @@ export function QuoteNotes({
               autoFocus
             />
             <div className='flex gap-2'>
-              <Button onClick={handleSaveNote} disabled={newNote.trim() === ''}>
+              <Button
+                onClick={handleSaveNote}
+                disabled={newNote.trim() === ''}
+                className={submitButtonClassName}
+              >
                 Add note
               </Button>
               <Button
@@ -275,7 +289,11 @@ export function QuoteNotes({
             </div>
           </div>
         ) : canEdit && (
-          <Button variant='outline' onClick={handleAddNote}>
+          <Button
+            variant={addButtonClassName ? 'default' : 'outline'}
+            className={addButtonClassName}
+            onClick={handleAddNote}
+          >
             + Add note
           </Button>
         )}
