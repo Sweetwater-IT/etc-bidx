@@ -185,7 +185,18 @@ const SOVTableComponent = ({
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
+  const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>({});
   const showPricingColumns = forceShowPricing || !readOnly;
+
+  useEffect(() => {
+    setUnitPriceDrafts((prev) => {
+      const next: Record<string, string> = {};
+      items.forEach((item) => {
+        next[item.id] = prev[item.id] ?? Math.round(item.unitPrice * 100).toFixed(0);
+      });
+      return next;
+    });
+  }, [items]);
 
   const filteredItems = useMemo(() => {
     if (!selectorSearch.trim()) return sovProducts;
@@ -263,6 +274,11 @@ const SOVTableComponent = ({
         return updated;
       })
     );
+  };
+
+  const updateUnitPrice = (id: string, digits: string) => {
+    setUnitPriceDrafts((prev) => ({ ...prev, [id]: digits }));
+    updateRow(id, 'unitPrice', parseInt(digits || '0', 10) / 100);
   };
 
   const updateRetainage = (
@@ -857,8 +873,8 @@ const SOVTableComponent = ({
                           <div className="flex items-center h-7 border rounded-md bg-background">
                             <span className="px-2 text-xs text-muted-foreground border-r">$</span>
                             <CurrencyInput
-                              value={Math.round(item.unitPrice * 100).toFixed(0)}
-                              onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
+                              value={unitPriceDrafts[item.id] ?? Math.round(item.unitPrice * 100).toFixed(0)}
+                              onChange={(digits) => updateUnitPrice(item.id, digits)}
                               className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
                             />
                           </div>

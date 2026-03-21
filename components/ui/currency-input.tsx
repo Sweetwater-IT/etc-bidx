@@ -18,6 +18,8 @@ export function CurrencyInput({
   className = '',
   disabled = false
 }: CurrencyInputProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
   const normalizeDigits = React.useCallback((raw: string) => {
     const digitsOnly = raw.replace(/\D/g, '').slice(0, 8);
     return digitsOnly === '' ? '0' : digitsOnly;
@@ -73,11 +75,6 @@ export function CurrencyInput({
     e.preventDefault();
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (disabled) return;
-    onChange(normalizeDigits(e.target.value));
-  };
-
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     if (disabled) return;
     e.preventDefault();
@@ -85,16 +82,28 @@ export function CurrencyInput({
     onChange(normalizeDigits(pasted));
   };
 
+  const moveCaretToEnd = React.useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
+    });
+  }, []);
+
   return (
     <Input
+      ref={inputRef}
       type="text"
       className={className}
       placeholder={placeholder}
       value={formatDecimal(value)}
       inputMode="numeric"
+      readOnly
       onKeyDown={handleKeyDown}
-      onChange={handleChange}
       onPaste={handlePaste}
+      onFocus={moveCaretToEnd}
+      onClick={moveCaretToEnd}
       disabled={disabled}
     />
   );
