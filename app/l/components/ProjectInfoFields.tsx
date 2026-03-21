@@ -45,6 +45,7 @@ interface ProjectInfoFieldsProps {
   onProjectNameBlur?: () => void | Promise<void>;
   onSaveNotes?: (notes: string) => Promise<void>;
   notesSaving?: boolean;
+  hideNotesSection?: boolean;
 }
 
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
@@ -193,7 +194,7 @@ const CertifiedPayrollSection = ({
   );
 };
 
-export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur, onSaveNotes, notesSaving = false }: ProjectInfoFieldsProps) => {
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur, onSaveNotes, notesSaving = false, hideNotesSection = false }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [projectStartOpen, setProjectStartOpen] = useState(false);
   const [projectEndOpen, setProjectEndOpen] = useState(false);
@@ -973,7 +974,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
 
       {/* Additional Notes */}
-      <div className="rounded-xl border bg-white p-4 shadow-sm">
+      {!hideNotesSection && <div className="rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3 gap-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-md bg-violet-500/10">
@@ -1044,7 +1045,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Input } from '@/components/ui/input';
 
 interface CurrencyInputProps {
@@ -17,6 +18,11 @@ export function CurrencyInput({
   className = '',
   disabled = false
 }: CurrencyInputProps) {
+  const normalizeDigits = React.useCallback((raw: string) => {
+    const digitsOnly = raw.replace(/\D/g, '').slice(0, 8);
+    return digitsOnly === '' ? '0' : digitsOnly;
+  }, []);
+
   const formatDecimal = (digits: string): string => {
     if (!digits || digits === "0") return "0.00";
     const parsed = parseInt(digits, 10);
@@ -28,27 +34,55 @@ export function CurrencyInput({
     });
   };
 
-  const handleNextDigits = (current: string, inputType: string, data: string): string => {
-    let digits = current;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
 
-    if (inputType === "insertText" && /\d/.test(data)) {
-      const candidate = current + data;
-      if (candidate.length <= 8) digits = candidate; // Max 8 digits for $999,999.99
-    } else if (inputType === "deleteContentBackward") {
-      digits = current.slice(0, -1);
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      onChange(normalizeDigits(`${value}${e.key}`));
+      return;
     }
 
-    return digits.padStart(1, "0");
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      onChange(normalizeDigits(value.slice(0, -1)));
+      return;
+    }
+
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      onChange('0');
+      return;
+    }
+
+    if ([
+      'Tab',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+      'Enter',
+    ].includes(e.key)) {
+      return;
+    }
+
+    e.preventDefault();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
-    const ev = (e as any).nativeEvent;
-    const { inputType } = ev;
-    const data = (ev.data || "").replace(/,/g, "");
+    onChange(normalizeDigits(e.target.value));
+  };
 
-    const nextDigits = handleNextDigits(value, inputType, data);
-    onChange(nextDigits);
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text');
+    onChange(normalizeDigits(pasted));
   };
 
   return (
@@ -57,7 +91,10 @@ export function CurrencyInput({
       className={className}
       placeholder={placeholder}
       value={formatDecimal(value)}
+      inputMode="numeric"
+      onKeyDown={handleKeyDown}
       onChange={handleChange}
+      onPaste={handlePaste}
       disabled={disabled}
     />
   );

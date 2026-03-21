@@ -12,16 +12,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Lock, Pencil } from "lucide-react";
+import { Lock, Pencil, StickyNote } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable } from "@/components/SOVTable";
+import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 import { saveContract } from "@/lib/api-client";
 import isEqual from "lodash/isEqual";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
+import { useAuth } from "@/contexts/auth-context";
 
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
@@ -122,6 +124,7 @@ const getContractStatus = (contractRow: any) =>
 
 const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useParams();
   const routeId = params?.id as string;
   const isNew = !routeId || routeId === "new";
@@ -148,6 +151,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [contractNotes, setContractNotes] = useState<Note[]>([]);
+  const [contractNotesLoading, setContractNotesLoading] = useState(false);
   const handleSovEditAttempt = useCallback(() => {
     setShowChangeOrderDialog(true);
   }, []);
@@ -337,6 +342,30 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     fetchContract();
   }, [isNew, contractId]);
 
+  useEffect(() => {
+    if (!contractId) {
+      setContractNotes([]);
+      return;
+    }
+
+    const fetchContractNotes = async () => {
+      setContractNotesLoading(true);
+      try {
+        const response = await fetch(`/api/l/contracts/${contractId}/notes`);
+        if (!response.ok) throw new Error("Failed to fetch notes");
+        const notes = await response.json();
+        setContractNotes(Array.isArray(notes) ? notes : []);
+      } catch (error) {
+        console.error("Error fetching contract notes:", error);
+        setContractNotes([]);
+      } finally {
+        setContractNotesLoading(false);
+      }
+    };
+
+    fetchContractNotes();
+  }, [contractId]);
+
   const ensureContractExists = useCallback(async (info: JobProjectInfo) => {
     if (contractId) return contractId;
     if (creatingRef.current) return creatingRef.current;
@@ -516,41 +545,93 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   }, [contractId, projectInfo, ensureContractExists, contractRow]);
 
-  const handleSaveNotes = useCallback(async (notes: string) => {
+  const handleAddContractNote = useCallback(async (note: Note) => {
     let currentContractId = contractId;
-    const nextProjectInfo = { ...projectInfo, otherNotes: notes };
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-
-    setProjectInfo(nextProjectInfo);
 
     if (!currentContractId) {
-      const hasProjectName = Boolean(nextProjectInfo.projectName?.trim());
+      const hasProjectName = Boolean(projectInfo.projectName?.trim());
       if (!hasProjectName) return;
-      currentContractId = await ensureContractExists(nextProjectInfo);
+      currentContractId = await ensureContractExists(projectInfo);
       if (!currentContractId) return;
     }
 
     try {
       setIsSavingNotes(true);
-      const result = await saveContract({
-        contractId: currentContractId,
-        data: mapProjectInfoToContractData(nextProjectInfo, getContractStatus(contractRow)),
+      const response = await fetch(`/api/l/contracts/${currentContractId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: {
+            ...note,
+            user_email: user?.email || note.user_email,
+          },
+        }),
       });
-      setContractRow(result);
-      setLastSavedAt(new Date());
-      setFirstSave(true);
-      toast.success("Notes saved");
+
+      if (!response.ok) {
+        throw new Error("Failed to save note");
+      }
+
+      const savedNote = await response.json();
+      setContractNotes((prev) => [...prev, savedNote]);
+      toast.success("Note added");
     } catch (error) {
-      console.error("Notes save failed:", error);
-      toast.error("Failed to save notes");
+      console.error("Error adding contract note:", error);
+      toast.error("Failed to add note");
     } finally {
       setIsSavingNotes(false);
     }
-  }, [contractId, projectInfo, ensureContractExists, contractRow]);
+  }, [contractId, projectInfo, ensureContractExists, user?.email]);
+
+  const handleEditContractNote = useCallback(async (index: number, updatedNote: Note) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setIsSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: contractNotes[index].id,
+          text: updatedNote.text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      const savedNote = await response.json();
+      setContractNotes((prev) => prev.map((note, noteIndex) => (noteIndex === index ? savedNote : note)));
+      toast.success("Note updated");
+    } catch (error) {
+      console.error("Error updating contract note:", error);
+      toast.error("Failed to update note");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [contractId, contractNotes]);
+
+  const handleDeleteContractNote = useCallback(async (index: number) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setIsSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes?id=${encodeURIComponent(String(contractNotes[index].id))}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      setContractNotes((prev) => prev.filter((_, noteIndex) => noteIndex !== index));
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting contract note:", error);
+      toast.error("Failed to delete note");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [contractId, contractNotes]);
 
   const handleDone = useCallback(async () => {
     const savedContractId = await manualSave();
@@ -771,12 +852,44 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
           onProjectNameBlur={handleProjectNameBlur}
-          onSaveNotes={handleSaveNotes}
-          notesSaving={isSavingNotes}
           contractSigned={isSigned}
           showValidation={showValidation}
           readOnly={isReadOnly}
           contractRow={contractRow}
+          hideNotesSection
+        />
+
+        <QuoteNotes
+          title="Additional Notes"
+          notes={contractNotes}
+          loading={contractNotesLoading}
+          onSave={handleAddContractNote}
+          onEdit={handleEditContractNote}
+          onDelete={handleDeleteContractNote}
+          submitLabel="Save"
+          updateLabel="Save"
+          actionAlignment="right"
+          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
+          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
+          containerClassName="bg-card"
+          addButtonInHeader
+          headerContent={
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-violet-500/10 p-1.5">
+                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Additional Notes
+                </span>
+              </div>
+            </div>
+          }
+          emptyState={
+            <div className="text-xs italic text-muted-foreground">
+              No notes yet. Use &quot;Add Note&quot; to get started.
+            </div>
+          }
         />
 
         {/* Schedule of Values */}

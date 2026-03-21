@@ -3,14 +3,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Pencil, ChevronRight, StickyNote, Save, X } from "lucide-react";
+import { Pencil, ChevronRight, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { SOVTable } from "@/components/SOVTable";
+import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import type { JobProjectInfo } from "@/types/job";
+import { useAuth } from "@/contexts/auth-context";
 
 type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
@@ -28,6 +29,7 @@ interface ContractDocument {
 
 export default function ContractViewContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useParams();
   const contractId = params?.id as string;
 
@@ -35,8 +37,8 @@ export default function ContractViewContent() {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesDraft, setNotesDraft] = useState("");
+  const [contractNotes, setContractNotes] = useState<Note[]>([]);
+  const [contractNotesLoading, setContractNotesLoading] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
@@ -89,8 +91,6 @@ export default function ContractViewContent() {
           extensionDate: contractData.extension_date || "",
         };
         setProjectInfo(transformedProjectInfo);
-        setNotesDraft(transformedProjectInfo.otherNotes || "");
-
         // Load documents
         const docsResponse = await fetch(`/api/l/contracts/${contractId}/documents`);
         if (docsResponse.ok) {
@@ -121,29 +121,105 @@ export default function ContractViewContent() {
     }
   }, [contractId]);
 
+  useEffect(() => {
+    if (!contractId) return;
+
+    const fetchContractNotes = async () => {
+      setContractNotesLoading(true);
+      try {
+        const response = await fetch(`/api/l/contracts/${contractId}/notes`);
+        if (!response.ok) throw new Error("Failed to fetch notes");
+        const notes = await response.json();
+        setContractNotes(Array.isArray(notes) ? notes : []);
+      } catch (error) {
+        console.error("Error fetching contract notes:", error);
+        setContractNotes([]);
+      } finally {
+        setContractNotesLoading(false);
+      }
+    };
+
+    fetchContractNotes();
+  }, [contractId]);
+
   const handleEdit = () => {
     router.push(`/l/contracts/edit/${contractId}`);
   };
 
-  const handleSaveNotes = async () => {
+  const handleAddContractNote = async (note: Note) => {
     try {
       setSavingNotes(true);
-      const response = await fetch(`/api/l/contracts/${contractId}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/l/contracts/${contractId}/notes`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otherNotes: notesDraft }),
+        body: JSON.stringify({
+          note: {
+            ...note,
+            user_email: user?.email || note.user_email,
+          },
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save notes: ${response.status}`);
+        throw new Error("Failed to save note");
       }
 
-      setProjectInfo((prev) => (prev ? { ...prev, otherNotes: notesDraft } : prev));
-      setEditingNotes(false);
-      toast.success("Notes saved");
+      const savedNote = await response.json();
+      setContractNotes((prev) => [...prev, savedNote]);
+      toast.success("Note added");
     } catch (error) {
       console.error("Error saving contract notes:", error);
-      toast.error("Failed to save notes");
+      toast.error("Failed to add note");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleEditContractNote = async (index: number, updatedNote: Note) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: contractNotes[index].id,
+          text: updatedNote.text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      const savedNote = await response.json();
+      setContractNotes((prev) => prev.map((note, noteIndex) => (noteIndex === index ? savedNote : note)));
+      toast.success("Note updated");
+    } catch (error) {
+      console.error("Error updating contract note:", error);
+      toast.error("Failed to update note");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleDeleteContractNote = async (index: number) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes?id=${encodeURIComponent(String(contractNotes[index].id))}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      setContractNotes((prev) => prev.filter((_, noteIndex) => noteIndex !== index));
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting contract note:", error);
+      toast.error("Failed to delete note");
     } finally {
       setSavingNotes(false);
     }
@@ -410,70 +486,38 @@ export default function ContractViewContent() {
         )}
 
         {/* Additional Notes */}
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-violet-500/10">
-                <StickyNote className="h-3.5 w-3.5 text-violet-600" />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Additional Notes
-              </span>
-            </div>
-            {editingNotes ? (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    setNotesDraft(projectInfo.otherNotes || "");
-                    setEditingNotes(false);
-                  }}
-                  disabled={savingNotes}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handleSaveNotes}
-                  disabled={savingNotes}
-                >
-                  <Save className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                className="h-7 gap-1.5 text-xs bg-[#16335A] text-white hover:bg-[#122947]"
-                onClick={() => setEditingNotes(true)}
-              >
-                <StickyNote className="h-3 w-3" />
-                {projectInfo.otherNotes?.trim() ? "Edit Note" : "Add Note"}
-              </Button>
-            )}
-          </div>
-          {editingNotes ? (
-            <Textarea
-              placeholder="Enter any additional notes, comments, or special instructions…"
-              className="min-h-[120px] text-sm resize-none"
-              value={notesDraft}
-              onChange={(e) => setNotesDraft(e.target.value)}
-              autoFocus
-            />
-          ) : (
-            <div className="min-h-[72px] text-sm text-foreground whitespace-pre-wrap">
-              {projectInfo.otherNotes?.trim() ? (
-                projectInfo.otherNotes
-              ) : (
-                <span className="text-muted-foreground italic text-xs">
-                  No notes yet. Use &quot;Add Note&quot; to get started.
+        <QuoteNotes
+          title="Additional Notes"
+          notes={contractNotes}
+          loading={contractNotesLoading}
+          onSave={handleAddContractNote}
+          onEdit={handleEditContractNote}
+          onDelete={handleDeleteContractNote}
+          submitLabel="Save"
+          updateLabel="Save"
+          actionAlignment="right"
+          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
+          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
+          containerClassName="bg-card"
+          addButtonInHeader
+          headerContent={
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-violet-500/10 p-1.5">
+                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Additional Notes
                 </span>
-              )}
+              </div>
             </div>
-          )}
-        </div>
+          }
+          emptyState={
+            <div className="text-xs italic text-muted-foreground">
+              No notes yet. Use &quot;Add Note&quot; to get started.
+            </div>
+          }
+        />
 
         {/* Schedule of Values */}
         <div>

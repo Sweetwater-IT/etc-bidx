@@ -36,6 +36,9 @@ interface QuoteNotesProps {
   containerClassName?: string;
   addButtonInHeader?: boolean;
   headerContent?: ReactNode;
+  submitLabel?: string;
+  updateLabel?: string;
+  actionAlignment?: 'left' | 'right';
 }
 
 function formatDateTime(ts: number) {
@@ -95,7 +98,10 @@ export function QuoteNotes({
   submitButtonClassName,
   containerClassName,
   addButtonInHeader = false,
-  headerContent
+  headerContent,
+  submitLabel = 'Add note',
+  updateLabel = 'Update note',
+  actionAlignment = 'left',
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -104,6 +110,7 @@ export function QuoteNotes({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const { user } = useAuth();
+  const actionRowClassName = actionAlignment === 'right' ? 'flex justify-end gap-2' : 'flex gap-2'
 
   const handleAddNote = () => {
     setIsAdding(true)
@@ -227,19 +234,19 @@ export function QuoteNotes({
                           className='min-h-[80px]'
                           autoFocus
                         />
-                        <div className='flex gap-2'>
-                          <Button
-                            onClick={handleUpdateNote}
-                            disabled={editValue.trim() === ''}
-                          >
-                            Update note
-                          </Button>
+                        <div className={actionRowClassName}>
                           <Button
                             variant='outline'
                             onClick={() => setEditIndex(null)}
                             type='button'
                           >
                             Cancel
+                          </Button>
+                          <Button
+                            onClick={handleUpdateNote}
+                            disabled={editValue.trim() === ''}
+                          >
+                            {updateLabel}
                           </Button>
                         </div>
                       </div>
@@ -297,20 +304,20 @@ export function QuoteNotes({
               onChange={e => setNewNote(e.target.value)}
               autoFocus
             />
-            <div className='flex gap-2'>
-              <Button
-                onClick={handleSaveNote}
-                disabled={newNote.trim() === ''}
-                className={submitButtonClassName}
-              >
-                Add note
-              </Button>
+            <div className={actionRowClassName}>
               <Button
                 variant='outline'
                 onClick={() => setIsAdding(false)}
                 type='button'
               >
                 Cancel
+              </Button>
+              <Button
+                onClick={handleSaveNote}
+                disabled={newNote.trim() === ''}
+                className={submitButtonClassName}
+              >
+                {submitLabel}
               </Button>
             </div>
           </div>
