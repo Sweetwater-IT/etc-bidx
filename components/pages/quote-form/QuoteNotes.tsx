@@ -35,6 +35,7 @@ interface QuoteNotesProps {
   submitButtonClassName?: string;
   containerClassName?: string;
   addButtonInHeader?: boolean;
+  headerContent?: ReactNode;
 }
 
 function formatDateTime(ts: number) {
@@ -93,7 +94,8 @@ export function QuoteNotes({
   addButtonClassName,
   submitButtonClassName,
   containerClassName,
-  addButtonInHeader = false
+  addButtonInHeader = false,
+  headerContent
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -161,10 +163,17 @@ export function QuoteNotes({
 
   return (
     <div className={`rounded-lg ${showBorder ? 'border' : ''} p-6 ${containerClassName || ''}`}>
-      <div className='mb-4 flex items-center justify-between gap-3'>
-        <h2 className='text-lg font-semibold'>{title}</h2>
-        {addButtonInHeader ? addButton : null}
-      </div>
+      {headerContent ? (
+        <div className='mb-4 flex items-center justify-between gap-3'>
+          <div className='min-w-0 flex-1'>{headerContent}</div>
+          {addButtonInHeader ? addButton : null}
+        </div>
+      ) : (
+        <div className='mb-4 flex items-center justify-between gap-3'>
+          <h2 className='text-lg font-semibold'>{title}</h2>
+          {addButtonInHeader ? addButton : null}
+        </div>
+      )}
       {activities?.length ? (
         <div className="mb-4 space-y-1 text-sm text-muted-foreground">
           {activities.map((activity, i) => (

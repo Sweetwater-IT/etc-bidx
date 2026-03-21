@@ -351,7 +351,7 @@ const ProjectDetail = () => {
     </div>
   );
 
-  const notesButtonClassName = "bg-[#16335A] text-white hover:bg-[#122947]";
+  const notesButtonClassName = "h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]";
 
   return (
     <div className="flex flex-1 flex-col">
@@ -679,6 +679,18 @@ const ProjectDetail = () => {
               submitButtonClassName={notesButtonClassName}
               containerClassName="bg-card"
               addButtonInHeader
+              headerContent={
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-md bg-violet-500/10 p-1.5">
+                      <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Project Notes
+                    </span>
+                  </div>
+                </div>
+              }
             />
           </div>
         </div>
