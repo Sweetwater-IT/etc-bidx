@@ -1039,7 +1039,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               projectInfo.otherNotes
             ) : (
               <span className="text-muted-foreground italic text-xs">
-                No notes yet. Use "Add Note" to get started.
+                No notes yet. Use &quot;Add Note&quot; to get started.
               </span>
             )}
           </div>
