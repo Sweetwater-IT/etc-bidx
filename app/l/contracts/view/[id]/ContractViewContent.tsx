@@ -346,7 +346,7 @@ export default function ContractViewContent() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Customer Admin Information</h2>
           </div>
           <div className="p-5">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5 text-xs">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-5 text-xs md:grid-cols-3">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Name</span>
                 <span className="text-sm font-medium">{projectInfo.customerName || "—"}</span>
@@ -355,6 +355,7 @@ export default function ContractViewContent() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job Number</span>
                 <span className="text-sm font-medium">{projectInfo.customerJobNumber || "—"}</span>
               </div>
+              <div className="hidden md:block" />
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Project Manager</span>
                 <span className="text-sm font-medium">{projectInfo.customerPM || "—"}</span>
