@@ -197,7 +197,7 @@ export async function GET(
     }
 
     // Process work order items
-    const woItems: WOItem[] = (woItemsRes.data || []) as WOItem[];
+    const woItems: WOItem[] = ((woItemsRes.data || []) as WOItem[]).filter((item: any) => Boolean(item.sov_item_id));
 
     // Process SOV items
     let sovItems: { id: string; item_number: string; description: string; quantity: number; uom: string }[] = [];

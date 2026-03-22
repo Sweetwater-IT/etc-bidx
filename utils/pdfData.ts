@@ -28,8 +28,13 @@ const hasValue = (value: unknown) => {
 
 const getAdditionalItemName = (item: Record<string, any> | null | undefined) => {
   const rawName = typeof item?.name === 'string' ? item.name.trim() : '';
+  const rawCustomName = typeof item?.customName === 'string' ? item.customName.trim() : '';
   const rawDescription = typeof item?.description === 'string' ? item.description.trim() : '';
   const genericNames = new Set(['', 'additional item', 'additional items', '__custom']);
+
+  if (rawCustomName) {
+    return rawCustomName;
+  }
 
   if (!genericNames.has(rawName.toLowerCase())) {
     return rawName;
@@ -190,7 +195,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     items.push({
       product_name: getAdditionalItemName(item),
       category: 'Additional Items',
-      unit: 'EA',
+      unit: item?.unit || 'EA',
       quantity: Number(item?.quantity || 0),
       notes: JSON.stringify({
         ...item,
@@ -324,7 +329,8 @@ export async function getBillingPacketData(workOrderId: string) {
   const { data: woItems, error: itemsError } = await supabase
     .from('work_order_items_l')
     .select('*')
-    .eq('work_order_id', workOrderId);
+    .eq('work_order_id', workOrderId)
+    .not('sov_item_id', 'is', null);
 
   if (itemsError) {
     console.warn('Error fetching work order items:', itemsError);

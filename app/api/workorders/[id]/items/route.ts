@@ -43,6 +43,7 @@ export async function GET(
       .from('work_order_items_l')
       .select('*')
       .eq('work_order_id', id)
+      .not('sov_item_id', 'is', null)
       .order('sort_order', { ascending: true });
 
     if (error) {

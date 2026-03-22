@@ -52,6 +52,17 @@ interface Props {
   pageDescription?: string;
 }
 
+type AdditionalItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  description: string;
+  customName?: string;
+  unit?: string;
+  generated?: boolean;
+  source?: string;
+};
+
 const WORK_TYPES = [
   { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
   { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
@@ -133,6 +144,39 @@ const getSandbagsForRow = (sectionKey: string, structureType: string, quantity: 
     return structureType === "Loose" ? 0 : 12 * quantity;
   }
   return 0;
+};
+
+const buildGeneratedAdditionalItems = (
+  activeSections: string[],
+  signRows: Record<string, MPTSignRow[]>
+): AdditionalItem[] => {
+  const trailblazerSandbags = activeSections.reduce((total, sectionKey) => {
+    const rows = signRows[sectionKey] || [];
+    return total + rows.reduce((rowTotal, row) => rowTotal + getSandbagsForRow(sectionKey, row.structureType, row.quantity), 0);
+  }, 0);
+
+  if (trailblazerSandbags <= 0) return [];
+
+  return [
+    {
+      id: "generated-trailblazer-sandbags",
+      name: "SAND BAGS",
+      quantity: trailblazerSandbags,
+      description: "Auto-calculated from trailblazer structure types",
+      unit: "EA",
+      generated: true,
+      source: "trailblazer_sandbags",
+    },
+  ];
+};
+
+const buildEffectiveAdditionalItems = (
+  manualItems: AdditionalItem[],
+  activeSections: string[],
+  signRows: Record<string, MPTSignRow[]>
+): AdditionalItem[] => {
+  const sanitizedManualItems = manualItems.filter((item) => !item.generated && item.source !== "trailblazer_sandbags");
+  return [...sanitizedManualItems, ...buildGeneratedAdditionalItems(activeSections, signRows)];
 };
 
 const FLAGGING_VEHICLE_OPTIONS = [
@@ -288,7 +332,7 @@ export const CreateTakeoffForm = ({
   }[]>([]);
 
   // Additional Items State
-  const [additionalItems, setAdditionalItems] = useState<{ id: string; name: string; quantity: number; description: string; customName?: string }[]>([]);
+  const [additionalItems, setAdditionalItems] = useState<AdditionalItem[]>([]);
 
   const isPermanentSigns = workType === "PERMANENT_SIGNS";
   const showsSignConfiguration = workType === "FLAGGING" || workType === "LANE_CLOSURE";
@@ -306,6 +350,7 @@ export const CreateTakeoffForm = ({
   const pickupDateValue = parseDateString(pickupDate);
   const neededByDateValue = parseDateString(neededByDate);
   const endDateValue = parseDateString(endDate);
+  const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -350,7 +395,7 @@ export const CreateTakeoffForm = ({
           // Include flagging/lane closure data
           vehicleItems,
           rollingStockItems,
-          additionalItems,
+          additionalItems: effectiveAdditionalItems,
           // Include takeoffId for updates
           takeoffId: savedTakeoffId,
         }),
@@ -384,7 +429,7 @@ export const CreateTakeoffForm = ({
     installDate, pickupDate, neededByDate, isMultiDayJob, endDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
     activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
     permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
-    additionalItems, savedTakeoffId, router
+    effectiveAdditionalItems, savedTakeoffId, router
   ]);
 
   // Debounced auto-save effect
@@ -465,13 +510,15 @@ export const CreateTakeoffForm = ({
       );
       setRollingStockItems(draftTakeoff.rolling_stock_items || []);
       setAdditionalItems(
-        (draftTakeoff.additional_items || []).map((item: any) => ({
+        (draftTakeoff.additional_items || [])
+          .filter((item: any) => item?.source !== "trailblazer_sandbags" && !item?.generated)
+          .map((item: any) => ({
           id: item.id || crypto.randomUUID(),
           name: item.name || "",
           quantity: Number(item.quantity || 1),
           description: item.description || "",
           customName: item.customName || (item.name === "__custom" ? item.description || "" : ""),
-        }))
+          }))
       );
       setSavedTakeoffId(draftTakeoff.id);
       setTakeoffSaved(true);
@@ -519,7 +566,7 @@ export const CreateTakeoffForm = ({
       workType,
       optionsCount: MPT_ADDITIONAL_ITEM_OPTIONS.length,
       optionsPreview: MPT_ADDITIONAL_ITEM_OPTIONS.slice(0, 5),
-      additionalItems,
+      additionalItems: effectiveAdditionalItems,
     });
   }, [workType, additionalItems]);
 
@@ -809,7 +856,7 @@ export const CreateTakeoffForm = ({
           // Include flagging/lane closure data
           vehicleItems,
           rollingStockItems,
-          additionalItems,
+          additionalItems: effectiveAdditionalItems,
           // Include takeoffId for updates
           takeoffId: savedTakeoffId,
         }),
@@ -1634,7 +1681,7 @@ export const CreateTakeoffForm = ({
             </Button>
           </div>
 
-          {additionalItems.length === 0 ? (
+          {effectiveAdditionalItems.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground py-4">No additional items.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -1648,19 +1695,25 @@ export const CreateTakeoffForm = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {additionalItems.map((item) => (
+                  {effectiveAdditionalItems.map((item) => (
                     <tr key={item.id} className="hover:bg-muted/10">
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
+                          {item.generated ? (
+                            <div className="h-8 px-3 rounded-md border bg-muted/30 text-xs flex items-center flex-1">
+                              {item.name}
+                            </div>
+                          ) : (
                             <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                            <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
-                            <SelectContent>
-                              {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
-                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                              ))}
-                              <SelectItem value="__custom">Custom…</SelectItem>
-                            </SelectContent>
-                          </Select>
+                              <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                              <SelectContent>
+                                {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                                <SelectItem value="__custom">Custom…</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                           {item.name === "__custom" && (
                             <Input
                               className="h-8 text-xs w-32"
@@ -1675,6 +1728,7 @@ export const CreateTakeoffForm = ({
                         <QuantityInput
                           value={item.quantity || 1}
                           min={1}
+                          disabled={item.generated}
                           onChange={(value) =>
                             setAdditionalItems((prev) =>
                               prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
@@ -1686,14 +1740,19 @@ export const CreateTakeoffForm = ({
                         <Input
                           className="h-8 text-xs w-full"
                           value={item.description}
+                          disabled={item.generated}
                           onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
                           placeholder="Notes (optional)"
                         />
                       </td>
                       <td className="px-4 py-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
+                        {item.generated ? (
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Auto</span>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

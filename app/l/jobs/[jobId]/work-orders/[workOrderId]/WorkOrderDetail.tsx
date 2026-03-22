@@ -162,6 +162,17 @@ const formatQuantityValue = (value: number | string | null | undefined) => {
   return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
+const buildPermanentSignSqftTotals = (takeoffItems: any[]) => {
+  const totals = new Map<string, number>();
+  for (const item of takeoffItems || []) {
+    const itemNumber = String(item?.product_name || "").trim();
+    if (!itemNumber) continue;
+    const totalSqft = Number(item?.total_sqft || 0);
+    totals.set(itemNumber, (totals.get(itemNumber) || 0) + totalSqft);
+  }
+  return totals;
+};
+
 const WorkOrderDetail = ({
   workOrderId,
   takeoffId,
@@ -274,21 +285,13 @@ const WorkOrderDetail = ({
   );
 
   const primaryWorkOrderItems = useMemo(
-    () =>
-      woItems.filter((item) => {
-        if (item.sov_item_id) return true;
-        return Boolean(String(item.description || '').trim());
-      }),
+    () => woItems.filter((item) => Boolean(item.sov_item_id)),
     [woItems]
   );
 
-  const additionalWorkOrderItems = useMemo(
-    () =>
-      woItems.filter((item) => {
-        if (item.sov_item_id) return false;
-        return !String(item.description || "").trim();
-      }),
-    [woItems]
+  const additionalWorkOrderItems = useMemo<WOItem[]>(
+    () => [],
+    []
   );
 
   // Blocking modal
@@ -1389,25 +1392,6 @@ const WorkOrderDetail = ({
                                     })}
                                   </CommandGroup>
                                   )}
-                                  <CommandGroup heading="Custom">
-                                    <CommandItem
-                                      value="__custom_item__"
-                                      onSelect={() => {
-                                        setCustomItemRowId(item.id);
-                                        setCustomItemNumber("");
-                                        setCustomItemDescription("");
-                                        setCustomItemUom("EA");
-                                        setCustomItemQty(1);
-                                        setShowCustomItemDialog(true);
-                                        setOpenItemPickerRow(null);
-                                        setItemPickerSearch("");
-                                      }}
-                                      className="text-xs"
-                                    >
-                                      <Plus className="mr-1.5 h-3 w-3" />
-                                      <span>Enter custom item…</span>
-                                    </CommandItem>
-                                  </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
@@ -1664,25 +1648,6 @@ const WorkOrderDetail = ({
                                     })}
                                   </CommandGroup>
                                   )}
-                                  <CommandGroup heading="Custom">
-                                    <CommandItem
-                                      value="__custom_item__"
-                                      onSelect={() => {
-                                        setCustomItemRowId(item.id);
-                                        setCustomItemNumber("");
-                                        setCustomItemDescription("");
-                                        setCustomItemUom("EA");
-                                        setCustomItemQty(1);
-                                        setShowCustomItemDialog(true);
-                                        setOpenItemPickerRow(null);
-                                        setItemPickerSearch("");
-                                      }}
-                                      className="text-xs"
-                                    >
-                                      <Plus className="mr-1.5 h-3 w-3" />
-                                      <span>Enter custom item…</span>
-                                    </CommandItem>
-                                  </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
@@ -2187,15 +2152,23 @@ const WorkOrderDetail = ({
                             if (response.ok) {
                               const data = await response.json();
                               if (data.takeoff?.items) {
-                                const newItems = data.takeoff.items.map((item: any, index: number) => ({
-                                  id: `temp-${Date.now()}-${index}`,
-                                  item_number: item.item_number || "",
-                                  description: item.description || "",
-                                  contract_quantity: item.quantity || 1,
-                                  work_order_quantity: item.quantity || 1,
-                                  uom: item.uom || "EA",
-                                  sort_order: woItems.length + index,
-                                }));
+                                const isPermanentSigns = data.takeoff?.work_type === "PERMANENT_SIGNS";
+                                const permanentSqftTotals = isPermanentSigns ? buildPermanentSignSqftTotals(data.takeoffItems || []) : null;
+                                const newItems = data.takeoff.items.map((item: any, index: number) => {
+                                  const itemNumber = item.item_number || item.product_name || "";
+                                  const quantity = isPermanentSigns
+                                    ? permanentSqftTotals?.get(String(itemNumber).trim()) || Number(item.quantity || 1)
+                                    : Number(item.quantity || 1);
+                                  return {
+                                    id: `temp-${Date.now()}-${index}`,
+                                    item_number: itemNumber,
+                                    description: item.description || item.notes || "",
+                                    contract_quantity: quantity,
+                                    work_order_quantity: quantity,
+                                    uom: isPermanentSigns ? "SF" : (item.uom || item.unit || "EA"),
+                                    sort_order: woItems.length + index,
+                                  };
+                                });
                                 setWoItems(prev => [...prev, ...newItems]);
                               }
                             }
@@ -2236,7 +2209,42 @@ const WorkOrderDetail = ({
                             const takeoffDataResponse = await fetch(`/api/l/takeoffs/${takeoff.id}/data`);
                             if (takeoffDataResponse.ok) {
                               const takeoffData = await takeoffDataResponse.json();
-                              if (takeoffData.takeoff?.sign_rows) {
+                              if (takeoff.work_type === "PERMANENT_SIGNS" && takeoffData.takeoffItems) {
+                                const sqftTotals = buildPermanentSignSqftTotals(takeoffData.takeoffItems || []);
+
+                                for (const [itemNumber, totalSqft] of sqftTotals.entries()) {
+                                  const matchingSovItem = woItems.find(item =>
+                                    item.sov_item_id &&
+                                    String(item.item_number || "").trim().toUpperCase() === itemNumber.toUpperCase()
+                                  );
+
+                                  if (!matchingSovItem) continue;
+
+                                  const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      action: 'update',
+                                      itemData: {
+                                        itemId: matchingSovItem.id,
+                                        updates: {
+                                          contract_quantity: totalSqft,
+                                          work_order_quantity: totalSqft,
+                                          uom: 'SF',
+                                        },
+                                      },
+                                    }),
+                                  });
+
+                                  if (response.ok) {
+                                    setWoItems(prev => prev.map(item =>
+                                      item.id === matchingSovItem.id
+                                        ? { ...item, contract_quantity: totalSqft, work_order_quantity: totalSqft, uom: 'SF' }
+                                        : item
+                                    ));
+                                  }
+                                }
+                              } else if (takeoffData.takeoff?.sign_rows) {
                                 const signRowsData = takeoffData.takeoff.sign_rows || {};
 
                                 // Count total signs by work type category
