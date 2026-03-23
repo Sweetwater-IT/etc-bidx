@@ -431,6 +431,37 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   }, [isReadOnly, contractId, projectInfo, ensureContractExists]);
 
+  useEffect(() => {
+    if (isReadOnly || isViewMode || contractId) return;
+    if (!projectInfo.projectName?.trim() || !hasAssignedProjectManager) return;
+
+    let cancelled = false;
+
+    const ensureDraftAfterPmAssignment = async () => {
+      try {
+        setIsSaving(true);
+        await ensureContractExists(projectInfo);
+      } finally {
+        if (!cancelled) {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    ensureDraftAfterPmAssignment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isReadOnly,
+    isViewMode,
+    contractId,
+    projectInfo,
+    hasAssignedProjectManager,
+    ensureContractExists,
+  ]);
+
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {
       setProjectInfo(newInfo);

@@ -214,6 +214,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
   const [selectorSearch, setSelectorSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [pendingCustomRowId, setPendingCustomRowId] = useState<string | null>(null);
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
 
   // Bulk retainage controls
@@ -243,6 +245,27 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       return next;
     });
   }, [items]);
+
+  useEffect(() => {
+    if (!pendingCustomRowId) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      openCustomDialog(pendingCustomRowId);
+      setPendingCustomRowId(null);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [pendingCustomRowId]);
+
+  useEffect(() => {
+    if (customDialogOpen) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      document.body.style.pointerEvents = "";
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [customDialogOpen]);
 
   useEffect(() => {
     if (readOnly || sovProducts.length === 0) return;
@@ -559,8 +582,26 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         workType: '',
       });
     }
+    setCustomDialogOpen(true);
     setSelectorOpen(null);
     setSelectorSearch('');
+  };
+
+  const closeCustomDialog = (discardUnsavedRow: boolean) => {
+    if (discardUnsavedRow && customDraft) {
+      updateItems((prevItems) => {
+        const row = prevItems.find((item) => item.id === customDraft.rowId);
+        if (row && !row.itemNumber) {
+          return prevItems.filter((item) => item.id !== customDraft.rowId);
+        }
+        return prevItems;
+      });
+    }
+
+    setCustomDialogOpen(false);
+    window.setTimeout(() => {
+      setCustomDraft(null);
+    }, 0);
   };
 
   const saveCustomItem = () => {
@@ -590,7 +631,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           : item
       )
     );
-    setCustomDraft(null);
+    closeCustomDialog(false);
   };
 
   const applyBulkRetainage = () => {
@@ -693,7 +734,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         value={item.itemNumber || undefined}
                         onValueChange={(value) => {
                           if (value === "custom") {
-                            openCustomDialog(item.id);
+                            setPendingCustomRowId(item.id);
                             return;
                           }
                           if (value === "delivery") {
@@ -1130,14 +1171,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       )}
 
       {/* Custom Item Dialog */}
-      <Dialog open={!!customDraft} onOpenChange={(open) => {
-        if (!open && customDraft) {
-          // Remove row if it was a new custom item with no data saved
-          const row = items.find(i => i.id === customDraft.rowId);
-          if (row && !row.itemNumber) {
-            updateItems(items.filter(i => i.id !== customDraft.rowId));
-          }
-          setCustomDraft(null);
+      <Dialog modal={false} open={customDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          closeCustomDialog(true);
         }
       }}>
         <DialogContent className="sm:max-w-[420px]">
@@ -1190,15 +1226,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              if (customDraft) {
-                const row = items.find(i => i.id === customDraft.rowId);
-                if (row && !row.itemNumber) {
-                  updateItems(items.filter(i => i.id !== customDraft.rowId));
-                }
-              }
-              setCustomDraft(null);
-            }}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => closeCustomDialog(true)}>Cancel</Button>
             <Button
               size="sm"
               disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim() || !customDraft?.workType}
