@@ -80,11 +80,6 @@ interface CustomItemDraft {
   itemNumber: string;
   description: string;
   workType: string;
-  uom: string;
-  quantity: number;
-  unitPrice: number;
-  retainageType: 'percent' | 'dollar';
-  retainageValue: number;
 }
 
 const CUSTOM_WORK_TYPE_OPTIONS = [
@@ -131,6 +126,21 @@ function getAvailableUoms(master: SovMasterItem): string[] {
         .map(normalizeUom)
     )
   );
+}
+
+function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string): string[] {
+  if (!workType.trim()) return ["EA"];
+
+  const matchingProducts = products.filter((product) => {
+    const syntheticType = getSyntheticWorkType(product);
+    const normalizedType = syntheticType || product.work_type?.trim().toUpperCase();
+    return normalizedType === workType.trim().toUpperCase();
+  });
+
+  const uoms = matchingProducts.flatMap((product) => getAvailableUoms(product));
+  const deduped = Array.from(new Set(uoms.map(normalizeUom)));
+
+  return deduped.length > 0 ? deduped : ["EA"];
 }
 
 function getSyntheticWorkType(item: SovMasterItem): 'SERVICE' | 'DELIVERY' | null {
@@ -522,11 +532,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           itemNumber: existing.itemNumber,
           description: existing.description,
           workType: existing.work_type || '',
-          uom: existing.uom,
-          quantity: existing.quantity,
-          unitPrice: existing.unitPrice,
-          retainageType: existing.retainageType,
-          retainageValue: existing.retainageValue,
         });
       }
     } else {
@@ -537,7 +542,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         itemNumber: '',
         description: '',
         work_type: '',
-        uom: customUomOptions[0] || 'EA',
+        uom: '',
         quantity: 0,
         unitPrice: 0,
         extendedPrice: 0,
@@ -552,11 +557,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         itemNumber: '',
         description: '',
         workType: '',
-        uom: customUomOptions[0] || 'EA',
-        quantity: 0,
-        unitPrice: 0,
-        retainageType: 'dollar',
-        retainageValue: 0,
       });
     }
     setSelectorOpen(null);
@@ -565,8 +565,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   const saveCustomItem = () => {
     if (!customDraft || !customDraft.itemNumber.trim() || !customDraft.description.trim()) return;
-    const extendedPrice = Math.round(customDraft.quantity * customDraft.unitPrice * 100) / 100;
-    const retainageAmount = calcRetainageAmount(extendedPrice, customDraft.retainageType, customDraft.retainageValue);
+    const customUoms = getAvailableUomsForWorkType(sovProducts, customDraft.workType);
+    const nextUom = customUoms[0] || 'EA';
     updateItems((prevItems) =>
       prevItems.map((item) =>
         item.id === customDraft.rowId
@@ -575,13 +575,17 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               itemNumber: customDraft.itemNumber.trim(),
               description: customDraft.description.trim(),
               work_type: customDraft.workType,
-              uom: customDraft.uom.trim() || 'EA',
-              quantity: customDraft.quantity,
-              unitPrice: customDraft.unitPrice,
-              extendedPrice,
-              retainageType: customDraft.retainageType,
-              retainageValue: customDraft.retainageValue,
-              retainageAmount,
+              uom: nextUom,
+              quantity: item.quantity || 1,
+              unitPrice: item.unitPrice || 0,
+              extendedPrice: Math.round((item.quantity || 1) * (item.unitPrice || 0) * 100) / 100,
+              retainageType: item.retainageType || 'dollar',
+              retainageValue: item.retainageValue || 0,
+              retainageAmount: calcRetainageAmount(
+                Math.round((item.quantity || 1) * (item.unitPrice || 0) * 100) / 100,
+                item.retainageType || 'dollar',
+                item.retainageValue || 0
+              ),
             }
           : item
       )
@@ -607,10 +611,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   const totalExtended = items.reduce((sum, i) => sum + i.extendedPrice, 0);
   const totalRetainage = items.reduce((sum, i) => sum + i.retainageAmount, 0);
-
-  const customExtended = customDraft
-    ? Math.round(customDraft.quantity * customDraft.unitPrice * 100) / 100
-    : 0;
 
   if (sovLoading) {
     return (
@@ -669,7 +669,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 <TableHead className="text-xs">Description</TableHead>
                 <TableHead className="w-[200px] text-xs whitespace-nowrap">UOM</TableHead>
                 <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
-                {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>}
+                {showPricingColumns && <TableHead className="w-[150px] text-xs text-right">Unit Price</TableHead>}
                 {showPricingColumns && <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>}
                 {showPricingColumns && <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>}
                 {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>}
@@ -879,7 +879,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     ) : (
                       (() => {
                         const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
-                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [];
+                        const availableUoms = masterItem
+                          ? getAvailableUoms(masterItem)
+                          : getAvailableUomsForWorkType(sovProducts, item.work_type || '');
 
                         // Always show select if we have UOM options, otherwise show as text
                         return availableUoms.length > 0 ? (
@@ -959,7 +961,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                               onChange={(digits) => updateUnitPrice(item.id, digits)}
                               onFocus={() => setActivePriceInputId(item.id)}
                               onBlur={() => setActivePriceInputId((current) => (current === item.id ? null : current))}
-                              className="h-7 text-xs text-right w-[100px] border-0 bg-transparent focus-visible:ring-0 cursor-text"
+                              className="h-7 text-xs text-right w-[140px] min-w-[140px] border-0 bg-transparent focus-visible:ring-0 cursor-text"
                             />
                           </div>
                           )}
@@ -1157,7 +1159,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 <label className="text-xs">Description</label>
                 <Input
                   className="h-8 text-sm"
-                  placeholder="Item description"
+                  placeholder="Display name"
                   value={customDraft.description}
                   onChange={(e) => setCustomDraft({ ...customDraft, description: e.target.value })}
                 />
@@ -1180,64 +1182,10 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="grid gap-1.5">
-                  <label className="text-xs">UOM</label>
-                  <Select
-                    value={customDraft.uom}
-                    onValueChange={(value) => setCustomDraft({ ...customDraft, uom: value })}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customUomOptions.map((uom) => (
-                        <SelectItem key={uom} value={uom}>
-                          {uom}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs">Qty</label>
-                  <Input
-                    className="h-8 text-sm text-right"
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={customDraft.quantity || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, quantity: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs">Unit Price</label>
-                  <Input
-                    className="h-8 text-sm text-right"
-                    type="number"
-                    step="0.01"
-                    value={customDraft.unitPrice || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, unitPrice: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-muted/50 border border-border/50">
-                <span className="text-xs font-medium text-foreground">Extended Price</span>
-                <span className="text-sm font-semibold">${customExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="grid gap-1.5">
-                <label className="text-xs">Retainage Value</label>
-                <div className="flex items-center h-8 border rounded-md bg-background">
-                  <span className="px-2 text-xs text-muted-foreground border-r">$</span>
-                  <Input
-                    className="h-8 text-sm text-right border-0 focus-visible:ring-0"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={customDraft.retainageValue || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, retainageType: 'dollar', retainageValue: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
+              <div className="rounded-md border bg-muted/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">
+                  UOM, quantity, unit price, retainage, and notes will be filled out after this row is added to the table.
+                </p>
               </div>
             </div>
           )}

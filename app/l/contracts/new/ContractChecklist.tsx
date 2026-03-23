@@ -164,6 +164,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const handleSovEditAttempt = useCallback(() => {
     setShowChangeOrderDialog(true);
   }, []);
+  const hasAssignedProjectManager = Boolean(projectInfo.etcProjectManager?.trim());
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
@@ -379,7 +380,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     if (creatingRef.current) return creatingRef.current;
 
     const trimmedProjectName = info.projectName?.trim();
-    if (!trimmedProjectName) return undefined;
+    const trimmedProjectManager = info.etcProjectManager?.trim();
+    if (!trimmedProjectName || !trimmedProjectManager) return undefined;
 
     const promise = (async () => {
       try {
@@ -460,7 +462,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
 
       saveTimeoutRef.current = window.setTimeout(async () => {
-        if (hasMeaningfulContent(projectInfo, contractId)) {
+        if (hasMeaningfulContent(projectInfo, contractId) && hasAssignedProjectManager) {
           try {
             setIsSaving(true);
             const contractData = {
@@ -482,7 +484,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         }
       }, 5000); // Autosave every 5 seconds like sign orders
     }
-  }, [projectInfo, contractId, isViewMode, hasMeaningfulContent, contractRow]);
+  }, [projectInfo, contractId, isViewMode, hasMeaningfulContent, contractRow, hasAssignedProjectManager, buildContractData]);
 
   useEffect(() => {
     if (isViewMode) return;
@@ -494,8 +496,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
 
       const shouldSend =
-        hasMeaningfulContent(projectInfo, contractId) ||
-        (!contractId && Boolean(projectInfo.projectName?.trim()));
+        hasAssignedProjectManager && (
+          hasMeaningfulContent(projectInfo, contractId) ||
+          (!contractId && Boolean(projectInfo.projectName?.trim()))
+        );
 
       if (!shouldSend) return;
 
@@ -525,6 +529,12 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     await sovTableRef.current?.flushPendingSave();
 
     let currentContractId = contractId;
+
+    if (!projectInfo.etcProjectManager?.trim()) {
+      setShowValidation(true);
+      toast.error('Assign an ETC Project Manager before saving this contract');
+      return null;
+    }
 
     if (!currentContractId) {
       const hasProjectName = Boolean(projectInfo.projectName?.trim());
@@ -833,6 +843,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         hasUnsavedChanges={!lastSavedAt && firstSave}
         firstSave={firstSave}
         doneButtonClassName={CONTRACT_ACTION_BUTTON_CLASS}
+        doneDisabled={!hasAssignedProjectManager}
         additionalButtons={
           isViewMode ? (
             <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className={`gap-2 ${CONTRACT_ACTION_BUTTON_CLASS}`}>

@@ -18,6 +18,7 @@ interface NewRecordStickyPageHeaderProps {
   hasUnsavedChanges?: boolean;
   firstSave?: boolean;
   doneButtonClassName?: string;
+  doneDisabled?: boolean;
 }
 
 export function NewRecordStickyPageHeader({
@@ -33,6 +34,7 @@ export function NewRecordStickyPageHeader({
   hasUnsavedChanges = false,
   firstSave = false,
   doneButtonClassName,
+  doneDisabled = false,
 }: NewRecordStickyPageHeaderProps) {
   const [secondCounter, setSecondCounter] = useState(0);
 
@@ -98,6 +100,7 @@ export function NewRecordStickyPageHeader({
           <Button
             onClick={onDone}
             className={`gap-2 h-8 ${doneButtonClassName || ""}`}
+            disabled={doneDisabled}
           >
             {doneLabel}
           </Button>

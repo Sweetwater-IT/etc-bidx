@@ -14,6 +14,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -76,6 +83,7 @@ type VisiblePipelineStage =
   | "CONTRACT_SIGNED";
 
 type ViewMode = "kanban" | "list";
+type ContractSortKey = "createdAt" | "customerName" | "county" | "etcProjectManager";
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
   CONTRACT_RECEIPT: ["RETURNED_TO_CUSTOMER"],
@@ -125,6 +133,10 @@ const ContractManager = () => {
   // Fetch contracts
   const [jobs, setJobs] = useState<ContractListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const [countyFilter, setCountyFilter] = useState<string>("all");
+  const [pmFilter, setPmFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<ContractSortKey>("createdAt");
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -148,10 +160,40 @@ const ContractManager = () => {
   }, []);
 
   const pipelineJobs = useMemo(() => jobs.filter((j) => !j.archived), [jobs]);
+  const customerOptions = useMemo(
+    () =>
+      Array.from(new Set(pipelineJobs.map((j) => (j.customerName || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [pipelineJobs]
+  );
+  const countyOptions = useMemo(
+    () =>
+      Array.from(new Set(pipelineJobs.map((j) => (j.county || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [pipelineJobs]
+  );
+  const pmOptions = useMemo(
+    () =>
+      Array.from(new Set(pipelineJobs.map((j) => (j.etcProjectManager || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [pipelineJobs]
+  );
+  const displayedPipelineJobs = useMemo(() => {
+    const filtered = pipelineJobs.filter((job) => {
+      if (customerFilter !== "all" && (job.customerName || "") !== customerFilter) return false;
+      if (countyFilter !== "all" && (job.county || "") !== countyFilter) return false;
+      if (pmFilter !== "all" && (job.etcProjectManager || "") !== pmFilter) return false;
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "createdAt") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      const aValue = (a[sortBy] || "").toString();
+      const bValue = (b[sortBy] || "").toString();
+      return aValue.localeCompare(bValue, undefined, { sensitivity: "base" });
+    });
+  }, [pipelineJobs, customerFilter, countyFilter, pmFilter, sortBy]);
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     PIPELINE_STAGES.forEach((s) => { map[s.id] = []; });
-    pipelineJobs.forEach((j) => {
+    displayedPipelineJobs.forEach((j) => {
       const displayStage = mapToDisplayStage(j.contractStatus || "CONTRACT_RECEIPT");
       if (map[displayStage]) {
         map[displayStage].push(j);
@@ -160,7 +202,7 @@ const ContractManager = () => {
       }
     });
     return map as Record<ContractPipelineStatus, ContractListItem[]>;
-  }, [pipelineJobs]);
+  }, [displayedPipelineJobs]);
 
   const showMissingReqs = (title: string, items: string[]) => {
     setMissingReqsTitle(title);
@@ -243,6 +285,26 @@ const ContractManager = () => {
 
     // This will need to be implemented with your API
     toast.success("Contract deleted");
+  };
+  const archiveContract = async (job: ContractListItem) => {
+    try {
+      const response = await fetch(`/api/l/contracts/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to archive contract');
+      }
+
+      setJobs((prev) => prev.map((item) => (item.id === job.id ? { ...item, archived: true } : item)));
+      toast.success('Contract archived');
+    } catch (error) {
+      console.error('Error archiving contract:', error);
+      toast.error('Failed to archive contract');
+    }
   };
 
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -423,6 +485,52 @@ const ContractManager = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2">
+              <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <SelectValue placeholder="Filter customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {customerOptions.map((customer) => (
+                    <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={countyFilter} onValueChange={setCountyFilter}>
+                <SelectTrigger className="h-9 w-[160px] text-xs">
+                  <SelectValue placeholder="Filter county" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Counties</SelectItem>
+                  {countyOptions.map((county) => (
+                    <SelectItem key={county} value={county}>{county}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={pmFilter} onValueChange={setPmFilter}>
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <SelectValue placeholder="Filter PM" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All PMs</SelectItem>
+                  {pmOptions.map((pm) => (
+                    <SelectItem key={pm} value={pm}>{pm}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(value: ContractSortKey) => setSortBy(value)}>
+                <SelectTrigger className="h-9 w-[160px] text-xs">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">Newest Created</SelectItem>
+                  <SelectItem value="customerName">Customer A-Z</SelectItem>
+                  <SelectItem value="county">County A-Z</SelectItem>
+                  <SelectItem value="etcProjectManager">PM A-Z</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
               <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
                 <LayoutGrid className="h-4 w-4" />
@@ -480,16 +588,18 @@ const ContractManager = () => {
             jobsByStage={jobsByStage}
             moveContract={moveContract}
             openDeleteDialog={openDeleteDialog}
+            archiveContract={archiveContract}
             getStageIndex={getStageIndex}
             formatDate={formatDate}
             router={router}
           />
         ) : (
           <ListView
-            pipelineJobs={pipelineJobs}
+            filteredJobs={displayedPipelineJobs}
             getStatusBadge={getStatusBadge}
             moveContract={moveContract}
             openDeleteDialog={openDeleteDialog}
+            archiveContract={archiveContract}
             formatDate={formatDate}
             router={router}
             stages={PIPELINE_STAGES}
@@ -652,12 +762,13 @@ const ContractManager = () => {
 
 /* ─── Kanban View ─── */
 const KanbanView = ({
-  stages, jobsByStage, moveContract, openDeleteDialog, getStageIndex, formatDate, router,
+  stages, jobsByStage, moveContract, openDeleteDialog, archiveContract, getStageIndex, formatDate, router,
 }: {
   stages: typeof PIPELINE_STAGES;
   jobsByStage: Record<ContractPipelineStatus, ContractListItem[]>;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   getStageIndex: (s: ContractPipelineStatus) => number;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
@@ -808,6 +919,7 @@ const KanbanView = ({
                     <KanbanCard
                       key={job.id} job={job} stage={stage} stages={stages}
                       moveContract={moveContract} openDeleteDialog={openDeleteDialog}
+                      archiveContract={archiveContract}
                       getStageIndex={getStageIndex} formatDate={formatDate}
                       router={router}
                       setDragSourceStage={setDragSourceStage}
@@ -826,6 +938,7 @@ const KanbanView = ({
 
 const KanbanCard = ({
   job, stage, stages, moveContract, openDeleteDialog, getStageIndex, formatDate, router,
+  archiveContract,
   setDragSourceStage, onDragEnd,
 }: {
   job: ContractListItem;
@@ -833,6 +946,7 @@ const KanbanCard = ({
   stages: typeof PIPELINE_STAGES;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   getStageIndex: (s: ContractPipelineStatus) => number;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
@@ -921,6 +1035,15 @@ const KanbanCard = ({
                   </DropdownMenuItem>
                 </>
               )}
+              {isSigned && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => archiveContract(job)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                    Archive Contract
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -990,12 +1113,13 @@ const DottedRow = ({ label, value, highlight }: { label: string; value: string; 
 
 /* ─── List View ─── */
 const ListView = ({
-  pipelineJobs, getStatusBadge, moveContract, openDeleteDialog, formatDate, router, stages,
+  getStatusBadge, moveContract, openDeleteDialog, formatDate, router, stages, filteredJobs, archiveContract,
 }: {
-  pipelineJobs: ContractListItem[];
+  filteredJobs: ContractListItem[];
   getStatusBadge: (s: ContractPipelineStatus) => React.ReactNode;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
   stages: typeof PIPELINE_STAGES;
@@ -1003,7 +1127,7 @@ const ListView = ({
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     stages.forEach((s) => { map[s.id] = []; });
-    pipelineJobs.forEach((j) => {
+    filteredJobs.forEach((j) => {
       const displayStage = mapToDisplayStage(j.contractStatus || "CONTRACT_RECEIPT");
       if (map[displayStage]) {
         map[displayStage].push(j);
@@ -1012,7 +1136,7 @@ const ListView = ({
       }
     });
     return map as Record<ContractPipelineStatus, ContractListItem[]>;
-  }, [pipelineJobs, stages]);
+  }, [filteredJobs, stages]);
 
   const ContractTable = ({ stage, jobs }: { stage: typeof PIPELINE_STAGES[0]; jobs: ContractListItem[] }) => (
     <div className="rounded-lg border bg-card overflow-hidden mb-6">
@@ -1096,6 +1220,15 @@ const ListView = ({
                             </DropdownMenuItem>
                           </>
                         )}
+                        {isSigned && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => archiveContract(job)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Archive Contract
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -1108,12 +1241,12 @@ const ListView = ({
     </div>
   );
 
-  if (pipelineJobs.length === 0) {
+  if (filteredJobs.length === 0) {
     return (
       <div className="rounded-lg border bg-card/90 p-16 text-center shadow-sm">
         <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-        <p className="text-muted-foreground font-medium">No contracts in pipeline</p>
-        <p className="text-sm text-muted-foreground mt-1">Create a new contract to get started.</p>
+        <p className="text-muted-foreground font-medium">No contracts match the current filters</p>
+        <p className="text-sm text-muted-foreground mt-1">Adjust the filters or create a new contract to get started.</p>
       </div>
     );
   }
