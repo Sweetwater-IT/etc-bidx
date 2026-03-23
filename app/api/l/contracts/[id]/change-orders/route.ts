@@ -10,7 +10,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from("change_orders")
-      .select("id, status, approved_date, submitted_date")
+      .select("id, job_id, co_number, description, status, amount, submitted_date, approved_date, created_at")
       .eq("job_id", jobId)
       .order("approved_date", { ascending: false, nullsFirst: false })
       .order("submitted_date", { ascending: false, nullsFirst: false });
@@ -68,7 +68,7 @@ export async function POST(
 
     const { id: jobId } = await params;
 
-    const coData: Record<string, unknown> = {
+    const coData = {
       job_id: jobId,
       co_number: coNumber || `CO-AUTO-${Date.now()}`,
       description: description || "SOV modification on signed contract",
@@ -76,9 +76,10 @@ export async function POST(
       status: status || "approved",
       submitted_date: submittedDate || new Date().toISOString().split("T")[0],
       approved_date: approvedDate || new Date().toISOString().split("T")[0],
+      created_at: new Date().toISOString(),
     };
 
-    const { error: coErr } = await supabase.from("change_orders").insert(coData as any);
+    const { error: coErr } = await supabase.from("change_orders").insert(coData);
     if (coErr) {
       console.error('Error creating change order:', coErr);
       return NextResponse.json({ error: `Failed to record change order: ${coErr.message}` }, { status: 500 });
