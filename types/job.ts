@@ -56,12 +56,18 @@ export interface Job {
   etc_project_manager_email: string | null;
   etc_billing_manager_email: string | null;
   customer_pm: string | null;
+  customer_pm_first_name: string | null;
+  customer_pm_last_name: string | null;
   customer_pm_email: string | null;
   customer_pm_phone: string | null;
   certified_payroll_contact: string | null;
+  certified_payroll_contact_first_name: string | null;
+  certified_payroll_contact_last_name: string | null;
   certified_payroll_email: string | null;
   certified_payroll_phone: string | null;
   customer_billing_contact: string | null;
+  customer_billing_contact_first_name: string | null;
+  customer_billing_contact_last_name: string | null;
   customer_billing_email: string | null;
   customer_billing_phone: string | null;
   sov_items: ScheduleOfValuesItem[] | null;
@@ -84,7 +90,10 @@ export interface JobProjectInfo {
   etcBranch?: string | null;
   customerName: string | null;
   customerJobNumber: string | null;
+  stateRoute?: string | null;
   customerPM: string | null;
+  customerPMFirstName?: string | null;
+  customerPMLastName?: string | null;
   customerPMEmail: string | null;
   customerPMPhone: string | null;
   projectOwner: string | null;
@@ -109,9 +118,13 @@ export interface JobProjectInfo {
   etcProjectManagerEmail: string | null;
   etcBillingManagerEmail: string | null;
   certifiedPayrollContact: string | null;
+  certifiedPayrollContactFirstName?: string | null;
+  certifiedPayrollContactLastName?: string | null;
   certifiedPayrollEmail: string | null;
   certifiedPayrollPhone: string | null;
   customerBillingContact: string | null;
+  customerBillingContactFirstName?: string | null;
+  customerBillingContactLastName?: string | null;
   customerBillingEmail: string | null;
   customerBillingPhone: string | null;
 }

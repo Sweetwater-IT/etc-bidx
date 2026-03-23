@@ -59,7 +59,7 @@ interface ProjectInfoFieldsProps {
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
   "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
-  "customerJobNumber", "customerPM", "customerPMEmail", "certifiedPayrollContact",
+  "customerJobNumber", "customerPMFirstName", "customerPMLastName", "customerPMEmail", "certifiedPayrollContactFirstName", "certifiedPayrollContactLastName",
   "certifiedPayrollEmail", "isCertifiedPayroll",
 ];
 
@@ -292,6 +292,27 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       return;
     }
     onChange(updated);
+  };
+
+  const updateSplitName = (
+    firstField: keyof JobProjectInfo,
+    lastField: keyof JobProjectInfo,
+    legacyField: keyof JobProjectInfo,
+    part: "first" | "last",
+    value: string
+  ) => {
+    if (readOnly) return;
+
+    const nextFirstName = (part === "first" ? value : projectInfo[firstField]) || "";
+    const nextLastName = (part === "last" ? value : projectInfo[lastField]) || "";
+    const combinedName = [nextFirstName, nextLastName].filter(Boolean).join(" ").trim();
+
+    onChange({
+      ...projectInfo,
+      [firstField]: nextFirstName,
+      [lastField]: nextLastName,
+      [legacyField]: combinedName,
+    });
   };
 
   const isInvalid = (field: keyof JobProjectInfo) =>
@@ -587,6 +608,17 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
 
           <div className="sm:col-span-2">
+            <Label htmlFor="stateRoute" className="text-xs">State Route</Label>
+            <Input
+              id="stateRoute"
+              className="h-8 text-sm"
+              placeholder="e.g. SR 0196"
+              value={projectInfo.stateRoute || ""}
+              onChange={(e) => update("stateRoute", e.target.value)}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
             <Label htmlFor="etcBranch" className="text-xs">ETC Branch<RequiredMark /></Label>
             <Select
               value={projectInfo.etcBranch || ""}
@@ -868,13 +900,23 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
           {/* Row 2: Customer PM */}
           <div>
-            <Label htmlFor="customerPM" className="text-xs">Customer Project Manager<RequiredMark /></Label>
+            <Label htmlFor="customerPMFirstName" className="text-xs">Customer PM First Name<RequiredMark /></Label>
             <Input
-              id="customerPM"
-              className={cn("h-8 text-sm", isInvalid("customerPM") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="Full name"
-              value={projectInfo.customerPM || ""}
-              onChange={(e) => update("customerPM", e.target.value)}
+              id="customerPMFirstName"
+              className={cn("h-8 text-sm", isInvalid("customerPMFirstName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="First name"
+              value={projectInfo.customerPMFirstName || ""}
+              onChange={(e) => updateSplitName("customerPMFirstName", "customerPMLastName", "customerPM", "first", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMLastName" className="text-xs">Customer PM Last Name<RequiredMark /></Label>
+            <Input
+              id="customerPMLastName"
+              className={cn("h-8 text-sm", isInvalid("customerPMLastName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Last name"
+              value={projectInfo.customerPMLastName || ""}
+              onChange={(e) => updateSplitName("customerPMFirstName", "customerPMLastName", "customerPM", "last", e.target.value)}
             />
           </div>
           <div>
@@ -906,13 +948,39 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
           {/* Certified Payroll */}
           <div>
-            <Label htmlFor="certPayroll" className="text-xs">Certified Payroll Contact<RequiredMark /></Label>
+            <Label htmlFor="certPayrollFirstName" className="text-xs">Payroll Contact First Name<RequiredMark /></Label>
             <Input
-              id="certPayroll"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContact") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="Full name"
-              value={projectInfo.certifiedPayrollContact || ""}
-              onChange={(e) => update("certifiedPayrollContact", e.target.value)}
+              id="certPayrollFirstName"
+              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="First name"
+              value={projectInfo.certifiedPayrollContactFirstName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "certifiedPayrollContactFirstName",
+                  "certifiedPayrollContactLastName",
+                  "certifiedPayrollContact",
+                  "first",
+                  e.target.value
+                )
+              }
+            />
+          </div>
+          <div>
+            <Label htmlFor="certPayrollLastName" className="text-xs">Payroll Contact Last Name<RequiredMark /></Label>
+            <Input
+              id="certPayrollLastName"
+              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactLastName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Last name"
+              value={projectInfo.certifiedPayrollContactLastName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "certifiedPayrollContactFirstName",
+                  "certifiedPayrollContactLastName",
+                  "certifiedPayrollContact",
+                  "last",
+                  e.target.value
+                )
+              }
             />
           </div>
           <div>
@@ -944,13 +1012,39 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
           {/* Customer Billing */}
           <div>
-            <Label htmlFor="custBillingContact" className="text-xs">Billing Contact Name</Label>
+            <Label htmlFor="custBillingFirstName" className="text-xs">Billing Contact First Name</Label>
             <Input
-              id="custBillingContact"
+              id="custBillingFirstName"
               className="h-8 text-sm"
-              placeholder="Full name"
-              value={projectInfo.customerBillingContact || ""}
-              onChange={(e) => update("customerBillingContact", e.target.value)}
+              placeholder="First name"
+              value={projectInfo.customerBillingContactFirstName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "customerBillingContactFirstName",
+                  "customerBillingContactLastName",
+                  "customerBillingContact",
+                  "first",
+                  e.target.value
+                )
+              }
+            />
+          </div>
+          <div>
+            <Label htmlFor="custBillingLastName" className="text-xs">Billing Contact Last Name</Label>
+            <Input
+              id="custBillingLastName"
+              className="h-8 text-sm"
+              placeholder="Last name"
+              value={projectInfo.customerBillingContactLastName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "customerBillingContactFirstName",
+                  "customerBillingContactLastName",
+                  "customerBillingContact",
+                  "last",
+                  e.target.value
+                )
+              }
             />
           </div>
           <div>

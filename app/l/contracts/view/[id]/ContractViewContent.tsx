@@ -27,6 +27,13 @@ interface ContractDocument {
   filePath: string;
 }
 
+const splitNameParts = (fullName?: string | null) => {
+  const trimmed = fullName?.trim() || "";
+  if (!trimmed) return { firstName: "", lastName: "" };
+  const [firstName, ...rest] = trimmed.split(/\s+/);
+  return { firstName, lastName: rest.join(" ") };
+};
+
 export default function ContractViewContent() {
   const router = useRouter();
   const { user } = useAuth();
@@ -62,13 +69,20 @@ export default function ContractViewContent() {
           etcJobNumber: contractData.etc_job_number || null,
           etcBranch: contractData.etc_branch || "",
           county: contractData.county || "",
+          stateRoute: contractData.state_route || "",
           customerPM: contractData.customer_pm || "",
+          customerPMFirstName: contractData.customer_pm_first_name || splitNameParts(contractData.customer_pm).firstName,
+          customerPMLastName: contractData.customer_pm_last_name || splitNameParts(contractData.customer_pm).lastName,
           customerPMEmail: contractData.customer_pm_email || "",
           customerPMPhone: contractData.customer_pm_phone || "",
           certifiedPayrollContact: contractData.certified_payroll_contact || "",
+          certifiedPayrollContactFirstName: contractData.certified_payroll_contact_first_name || splitNameParts(contractData.certified_payroll_contact).firstName,
+          certifiedPayrollContactLastName: contractData.certified_payroll_contact_last_name || splitNameParts(contractData.certified_payroll_contact).lastName,
           certifiedPayrollEmail: contractData.certified_payroll_email || "",
           certifiedPayrollPhone: contractData.certified_payroll_phone || "",
           customerBillingContact: contractData.customer_billing_contact || "",
+          customerBillingContactFirstName: contractData.customer_billing_contact_first_name || splitNameParts(contractData.customer_billing_contact).firstName,
+          customerBillingContactLastName: contractData.customer_billing_contact_last_name || splitNameParts(contractData.customer_billing_contact).lastName,
           customerBillingEmail: contractData.customer_billing_email || "",
           customerBillingPhone: contractData.customer_billing_phone || "",
           etcProjectManager: contractData.etc_project_manager || "",
@@ -315,6 +329,10 @@ export default function ContractViewContent() {
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
                 <span className="text-sm font-medium">{projectInfo.county || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">State Route</span>
+                <span className="text-sm font-medium">{projectInfo.stateRoute || "—"}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Branch</span>

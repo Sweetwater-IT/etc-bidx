@@ -40,6 +40,18 @@ interface ContractDocument {
   filePath: string;
 }
 
+const composeName = (firstName?: string | null, lastName?: string | null, fallback?: string | null) => {
+  const combined = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ").trim();
+  return combined || fallback || "";
+};
+
+const splitNameParts = (fullName?: string | null) => {
+  const trimmed = fullName?.trim() || "";
+  if (!trimmed) return { firstName: "", lastName: "" };
+  const [firstName, ...rest] = trimmed.split(/\s+/);
+  return { firstName, lastName: rest.join(" ") };
+};
+
 const emptyProjectInfo: JobProjectInfo = {
   projectName: "",
   contractNumber: "",
@@ -49,13 +61,20 @@ const emptyProjectInfo: JobProjectInfo = {
   etcJobNumber: null,
   etcBranch: "",
   county: "",
+  stateRoute: "",
   customerPM: "",
+  customerPMFirstName: "",
+  customerPMLastName: "",
   customerPMEmail: "",
   customerPMPhone: "",
   certifiedPayrollContact: "",
+  certifiedPayrollContactFirstName: "",
+  certifiedPayrollContactLastName: "",
   certifiedPayrollEmail: "",
   certifiedPayrollPhone: "",
   customerBillingContact: "",
+  customerBillingContactFirstName: "",
+  customerBillingContactLastName: "",
   customerBillingEmail: "",
   customerBillingPhone: "",
   etcProjectManager: "",
@@ -92,13 +111,28 @@ const mapProjectInfoToContractData = (projectInfo: JobProjectInfo, contractStatu
   etc_job_number: projectInfo.etcJobNumber,
   etc_branch: projectInfo.etcBranch,
   county: projectInfo.county,
-  customer_pm: projectInfo.customerPM,
+  state_route: projectInfo.stateRoute,
+  customer_pm: composeName(projectInfo.customerPMFirstName, projectInfo.customerPMLastName, projectInfo.customerPM),
+  customer_pm_first_name: projectInfo.customerPMFirstName,
+  customer_pm_last_name: projectInfo.customerPMLastName,
   customer_pm_email: projectInfo.customerPMEmail,
   customer_pm_phone: projectInfo.customerPMPhone,
-  certified_payroll_contact: projectInfo.certifiedPayrollContact,
+  certified_payroll_contact: composeName(
+    projectInfo.certifiedPayrollContactFirstName,
+    projectInfo.certifiedPayrollContactLastName,
+    projectInfo.certifiedPayrollContact
+  ),
+  certified_payroll_contact_first_name: projectInfo.certifiedPayrollContactFirstName,
+  certified_payroll_contact_last_name: projectInfo.certifiedPayrollContactLastName,
   certified_payroll_email: projectInfo.certifiedPayrollEmail,
   certified_payroll_phone: projectInfo.certifiedPayrollPhone,
-  customer_billing_contact: projectInfo.customerBillingContact,
+  customer_billing_contact: composeName(
+    projectInfo.customerBillingContactFirstName,
+    projectInfo.customerBillingContactLastName,
+    projectInfo.customerBillingContact
+  ),
+  customer_billing_contact_first_name: projectInfo.customerBillingContactFirstName,
+  customer_billing_contact_last_name: projectInfo.customerBillingContactLastName,
   customer_billing_email: projectInfo.customerBillingEmail,
   customer_billing_phone: projectInfo.customerBillingPhone,
   etc_project_manager: projectInfo.etcProjectManager,
@@ -291,13 +325,20 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             etcJobNumber: contract.etc_job_number || null,
             etcBranch: contract.etc_branch || "",
             county: contract.county || "",
+            stateRoute: contract.state_route || "",
             customerPM: contract.customer_pm || "",
+            customerPMFirstName: contract.customer_pm_first_name || splitNameParts(contract.customer_pm).firstName,
+            customerPMLastName: contract.customer_pm_last_name || splitNameParts(contract.customer_pm).lastName,
             customerPMEmail: contract.customer_pm_email || "",
             customerPMPhone: contract.customer_pm_phone || "",
             certifiedPayrollContact: contract.certified_payroll_contact || "",
+            certifiedPayrollContactFirstName: contract.certified_payroll_contact_first_name || splitNameParts(contract.certified_payroll_contact).firstName,
+            certifiedPayrollContactLastName: contract.certified_payroll_contact_last_name || splitNameParts(contract.certified_payroll_contact).lastName,
             certifiedPayrollEmail: contract.certified_payroll_email || "",
             certifiedPayrollPhone: contract.certified_payroll_phone || "",
             customerBillingContact: contract.customer_billing_contact || "",
+            customerBillingContactFirstName: contract.customer_billing_contact_first_name || splitNameParts(contract.customer_billing_contact).firstName,
+            customerBillingContactLastName: contract.customer_billing_contact_last_name || splitNameParts(contract.customer_billing_contact).lastName,
             customerBillingEmail: contract.customer_billing_email || "",
             customerBillingPhone: contract.customer_billing_phone || "",
             etcProjectManager: contract.etc_project_manager || "",
@@ -863,7 +904,9 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
           }
-          if (!isViewMode) await manualSave();
+          if (!isViewMode && hasAssignedProjectManager && hasMeaningfulContent(projectInfo, contractId)) {
+            await manualSave();
+          }
           router.push("/l/contracts");
         }}
         onDone={handleDone}
