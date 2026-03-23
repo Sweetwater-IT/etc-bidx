@@ -267,6 +267,8 @@ const ContractManager = () => {
       ),
     [pmOptions, pmSearch]
   );
+  const hasActiveFilters =
+    customerFilter !== "all" || countyFilter !== "all" || pmFilter !== "all";
 
   const displayedPipelineJobs = useMemo(() => {
     return pipelineJobs.filter((job) => {
@@ -575,8 +577,27 @@ const ContractManager = () => {
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={customerOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
-                    {customerFilter === "all" ? "All Customers" : customerFilter}
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                    <span className={customerFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {customerFilter === "all" ? "All Customers" : customerFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {customerFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear customer filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCustomerFilter("all");
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[260px] p-0" align="start">
@@ -618,8 +639,27 @@ const ContractManager = () => {
               <Popover open={countyOpen} onOpenChange={setCountyOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={countyOpen} className="h-9 w-[180px] justify-between text-xs font-normal">
-                    {countyFilter === "all" ? "All Counties" : countyFilter}
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                    <span className={countyFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {countyFilter === "all" ? "All Counties" : countyFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {countyFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear county filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCountyFilter("all");
+                            setCountySearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[220px] p-0" align="start">
@@ -661,8 +701,27 @@ const ContractManager = () => {
               <Popover open={pmOpen} onOpenChange={setPmOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={pmOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
-                    {pmFilter === "all" ? "All PMs" : pmFilter}
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                    <span className={pmFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {pmFilter === "all" ? "All PMs" : pmFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {pmFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear PM filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPmFilter("all");
+                            setPmSearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[240px] p-0" align="start">
@@ -701,6 +760,23 @@ const ContractManager = () => {
                   </Command>
                 </PopoverContent>
               </Popover>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setCustomerFilter("all");
+                    setCountyFilter("all");
+                    setPmFilter("all");
+                    setCustomerSearch("");
+                    setCountySearch("");
+                    setPmSearch("");
+                  }}
+                >
+                  Clear all
+                </Button>
+              )}
             </div>
             <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
               <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
