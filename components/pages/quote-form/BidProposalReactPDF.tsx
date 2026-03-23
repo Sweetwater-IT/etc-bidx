@@ -304,7 +304,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   <Text style={styles.centerText}>
                     Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
                   </Text>
-                  <Text style={styles.centerText}>{quoteData?.quote_number || ""}</Text>
+                  <Text style={styles.centerText}>
+                    {quoteData?.quote_number ? `Quote Number: ${quoteData.quote_number}` : ""}
+                  </Text>
                 </View>
               }
               <Text style={[styles.centerText]}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>

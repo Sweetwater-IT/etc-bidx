@@ -230,7 +230,7 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
                   <p>
                     Quote Expiration: {new Date(quoteDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US')}
                   </p>
-                  <p>{quoteData?.quote_number || ""}</p>
+                  <p>{quoteData?.quote_number ? `Quote Number: ${quoteData.quote_number}` : ""}</p>
                 </div>
               }
               <p>THIS IS NOT A BILL/INVOICE DO NOT PAY</p>
