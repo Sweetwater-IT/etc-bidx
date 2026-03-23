@@ -226,6 +226,9 @@ export function CustomerContactForm({
                 <SelectContent>
                   <SelectItem value="ESTIMATOR">ESTIMATOR</SelectItem>
                   <SelectItem value="PROJECT MANAGER">PROJECT MANAGER</SelectItem>
+                  <SelectItem value="PUBLIC WORKS DIRECTOR">PUBLIC WORKS DIRECTOR</SelectItem>
+                  <SelectItem value="ROADMASTER">ROADMASTER</SelectItem>
+                  <SelectItem value="TOWNSHIP MANAGER">TOWNSHIP MANAGER</SelectItem>
                   <SelectItem value="ADMIN">ADMIN</SelectItem>
                   <SelectItem value="FIELD / SUPERVISOR">FIELD / SUPERVISOR</SelectItem>
                   <SelectItem value="OTHER">OTHER</SelectItem>

@@ -171,6 +171,15 @@ export default function QuotesPage() {
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={QUOTES_COLUMNS}
+                enableSearch
+                searchPlaceholder="Search by customer, contact, quote #, type, or created by..."
+                searchableColumns={[
+                  "customer_name",
+                  "point_of_contact",
+                  "quote_number",
+                  "type",
+                  "created_by_name",
+                ]}
                 segments={SEGMENTS}
                 segmentValue={activeFilter}
                 segmentCounts={quoteCounts}

@@ -2,6 +2,7 @@ export interface QuoteGridView {
   id: number;
   quote_number: string;
   status: 'Not Sent' | 'Sent' | 'Accepted';
+  type?: string;
   date_sent: string;
   customer_name: string;
   point_of_contact: string;
@@ -13,6 +14,7 @@ export interface QuoteGridView {
   has_attachments: boolean;
   estimate_contract_number?: string;
   job_number?: string;
+  created_by_name?: string;
   estimate_id?: number | null;              
   job_id?: number | null;
 }

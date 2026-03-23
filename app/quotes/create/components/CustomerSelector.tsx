@@ -269,6 +269,9 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                 options: [
                                     'ESTIMATOR',
                                     'PROJECT MANAGER',
+                                    'PUBLIC WORKS DIRECTOR',
+                                    'ROADMASTER',
+                                    'TOWNSHIP MANAGER',
                                     'ADMIN',
                                     'FIELD / SUPERVISOR',
                                     'OTHER'
