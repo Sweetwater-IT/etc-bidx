@@ -419,8 +419,8 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
-              <div className="flex flex-row w-full gap-4">
-                <div className="bg-[#F4F5F7] w-3/5 p-6 rounded-lg sticky">
+              <div className="flex flex-col w-full gap-4">
+                <div className="bg-[#F4F5F7] w-full p-6 rounded-lg">
                   <h2 className="font-bold text-2xl mb-4">Preview</h2>
                   <div className="flex gap-4 border-b border-gray-300 mb-4">
                     <button
@@ -468,7 +468,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   </div>
                 </div>
 
-                <div className="w-2/5">
+                <div className="w-full">
                   <div className="flex flex-col gap-y-2">
                     <QuoteNotes
                       notes={quote?.notes}

@@ -176,6 +176,9 @@ export interface DataTableProps<TData extends object> {
   enableSearch?: boolean
   searchPlaceholder?: string
   searchableColumns?: string[]
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  serverSideSearch?: boolean
 
 }
 
@@ -448,7 +451,10 @@ export function DataTable<TData extends object>({
   onDeleteItem,
   enableSearch,
   searchPlaceholder,
-  searchableColumns, 
+  searchableColumns,
+  searchValue,
+  onSearchChange,
+  serverSideSearch,
 }: DataTableProps<TData>) {
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
@@ -924,15 +930,15 @@ export function DataTable<TData extends object>({
       manualPagination: true,
       manualSorting: true,
       enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
-      globalFilterFn: enableSearch ? customGlobalFilterFn : "auto",
+      globalFilterFn: enableSearch && !serverSideSearch ? customGlobalFilterFn : "auto",
       state: {
-        globalFilter: enableSearch ? globalFilter : "",
+        globalFilter: enableSearch && !serverSideSearch ? globalFilter : "",
         pagination: {
           pageIndex,
           pageSize,
         },
       },
-      onGlobalFilterChange: enableSearch ? setGlobalFilter : undefined,
+      onGlobalFilterChange: enableSearch && !serverSideSearch ? setGlobalFilter : undefined,
     })
   
     React.useImperativeHandle(
@@ -963,8 +969,14 @@ export function DataTable<TData extends object>({
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
-                  value={globalFilter ?? ""}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  value={serverSideSearch ? (searchValue ?? "") : (globalFilter ?? "")}
+                  onChange={(e) => {
+                    if (serverSideSearch) {
+                      onSearchChange?.(e.target.value)
+                    } else {
+                      setGlobalFilter(e.target.value)
+                    }
+                  }}
                   className="pl-9 w-full"
                 />
               </div>

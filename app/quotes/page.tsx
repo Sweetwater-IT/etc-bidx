@@ -53,8 +53,18 @@ export default function QuotesPage() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [isTableLoading, setIsTableLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  const fetchQuotes = async (filter = "all", page = 1, limit = 25) => {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const fetchQuotes = async (filter = "all", page = 1, limit = 25, search = "") => {
     setIsTableLoading(true);
 
     try {
@@ -67,6 +77,9 @@ export default function QuotesPage() {
       params.append("orderBy", "created_at");
       params.append("ascending", "false");
       params.append("detailed", "false");
+      if (search) {
+        params.append("search", search);
+      }
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
@@ -121,24 +134,24 @@ export default function QuotesPage() {
   const handleFilterChange = (value: string) => {
     setActiveFilter(value);
     setPageIndex(0);
-    fetchQuotes(value, 1, pageSize);
   };
 
   const handlePageChange = (newPage: number) => {
     setPageIndex(newPage);
-    fetchQuotes(activeFilter, newPage + 1, pageSize);
   };
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPageIndex(0);
-    fetchQuotes(activeFilter, 1, newSize);
   };
 
   useEffect(() => {
     fetchQuoteCounts();
-    fetchQuotes(activeFilter, pageIndex + 1, pageSize);
-  }, [activeFilter, pageIndex, pageSize]);
+  }, []);
+
+  useEffect(() => {
+    fetchQuotes(activeFilter, pageIndex + 1, pageSize, debouncedSearchTerm);
+  }, [activeFilter, pageIndex, pageSize, debouncedSearchTerm]);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
@@ -172,6 +185,12 @@ export default function QuotesPage() {
                 data={quotes}
                 columns={QUOTES_COLUMNS}
                 enableSearch
+                serverSideSearch
+                searchValue={searchTerm}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setPageIndex(0);
+                }}
                 searchPlaceholder="Search by customer, contact, quote #, type, or created by..."
                 searchableColumns={[
                   "customer_name",

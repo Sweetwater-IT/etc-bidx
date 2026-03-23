@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
     const created_by = searchParams.get("created_by");
+    const search = searchParams.get("search")?.trim() || "";
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
     const page = searchParams.get("page") ? parseInt(searchParams.get("page")!) : 1;
     let orderBy = searchParams.get("orderBy") || "date_sent";
@@ -125,8 +126,7 @@ export async function GET(request: NextRequest) {
         ),
         quote_recipients ( email, point_of_contact )
       `)
-      .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1);
+      .order(orderBy, { ascending });
 
     if (status && status !== "all") {
       query = query.eq("status", status);
@@ -137,6 +137,10 @@ export async function GET(request: NextRequest) {
       if (creator) {
         query = query.eq('user_created', creator.email);
       }
+    }
+
+    if (!search) {
+      query = query.range(offset, offset + limit - 1);
     }
 
     const { data: rawData, error } = await query;
@@ -213,6 +217,34 @@ export async function GET(request: NextRequest) {
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
       transformedData.push(transformedRow);
+    }
+
+    if (search) {
+      const normalizedSearch = search.toLowerCase();
+      const filteredData = transformedData.filter((row) =>
+        [
+          row.customer_name,
+          row.point_of_contact,
+          row.quote_number,
+          row.type,
+          row.created_by_name,
+        ].some((value) =>
+          String(value || "").toLowerCase().includes(normalizedSearch)
+        )
+      );
+
+      const paginatedData = filteredData.slice(offset, offset + limit);
+
+      return NextResponse.json({
+        success: true,
+        data: paginatedData,
+        pagination: {
+          page,
+          pageSize: limit,
+          pageCount: Math.ceil(filteredData.length / limit),
+          totalCount: filteredData.length,
+        },
+      });
     }
 
     let countQuery = supabase
