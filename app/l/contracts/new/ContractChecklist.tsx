@@ -856,6 +856,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           const error = await response.json();
           throw new Error(`Failed to create change order: ${error.error}`);
         }
+
+        const result = await response.json();
+        if (result.document) {
+          setDocuments((prev) => {
+            const exists = prev.some((doc) => doc.id === result.document.id);
+            return exists ? prev : [...prev, result.document];
+          });
+        }
       } else {
         // Admin approval - just create the record
         const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {

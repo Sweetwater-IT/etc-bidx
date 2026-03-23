@@ -489,6 +489,57 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
     updateItems((prev) => prev.filter(item => item.id !== id));
   }, [updateItems]);
 
+  const removeItemWithReason = useCallback(async (itemId: string, reason: string) => {
+    const currentItem = itemsRef.current.find((item) => item.id === itemId);
+    if (!currentItem) return;
+
+    const isTemporaryItem = typeof currentItem.id === 'string' && currentItem.id.startsWith('temp-');
+    const existsInOriginalItems = originalItemsRef.current.some((item) => item.id === itemId);
+
+    if (!isContract || isTemporaryItem || !existsInOriginalItems) {
+      updateItems((prev) => prev.filter((item) => item.id !== itemId));
+      return;
+    }
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    await saveItems(itemsRef.current);
+
+    setSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const response = await fetch(`/api/l/contracts/${id}/sov-items/${currentItem.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to delete SOV item');
+      }
+
+      setItems((prev) => {
+        const next = prev.filter((item) => item.id !== currentItem.id);
+        itemsRef.current = next;
+        originalItemsRef.current = originalItemsRef.current.filter((item) => item.id !== currentItem.id);
+        return next;
+      });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus((prev) => prev === 'saved' ? 'idle' : prev), 2000);
+    } catch (err: any) {
+      setSaveStatus('error');
+      toast.error(`Failed to delete SOV item: ${err.message}`);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [id, isContract, saveItems, updateItems]);
+
   // Save immediately
   const saveNow = useCallback(async () => {
     if (debounceRef.current) {
@@ -524,6 +575,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
     addItem,
     updateItem,
     removeItem,
+    removeItemWithReason,
     saveNow,
     hasPendingChanges,
   };

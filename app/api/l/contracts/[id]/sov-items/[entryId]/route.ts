@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
 
 const selectEntryFields = `
   id,
@@ -164,6 +165,79 @@ export async function DELETE(
   try {
     const { id: contractId, entryId } = await params;
     const jobId = await resolveJobIdFromContractId(contractId);
+    let reason = '';
+
+    try {
+      const rawBody = await request.text();
+      if (rawBody) {
+        const body = JSON.parse(rawBody);
+        reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      }
+    } catch {
+      reason = '';
+    }
+
+    const { data: entry, error: entryError } = await supabase
+      .from('sov_entries')
+      .select('id, job_id, sov_item_id')
+      .eq('id', entryId)
+      .eq('job_id', jobId)
+      .single();
+
+    if (entryError || !entry) {
+      return NextResponse.json({ error: 'Failed to find SOV entry', details: entryError }, { status: 404 });
+    }
+
+    if (reason) {
+      const [{ data: masterItem }, { data: jobRow, error: jobError }] = await Promise.all([
+        supabase
+          .from('sov_items')
+          .select('item_number, display_item_number, description, display_name')
+          .eq('id', entry.sov_item_id)
+          .single(),
+        supabase
+          .from('jobs_l')
+          .select('additional_notes')
+          .eq('id', jobId)
+          .single(),
+      ]);
+
+      if (jobError) {
+        return NextResponse.json({ error: 'Failed to load contract notes for deletion audit', details: jobError }, { status: 500 });
+      }
+
+      const itemNumber =
+        masterItem?.display_item_number ||
+        masterItem?.item_number ||
+        'custom item';
+      const itemLabel =
+        masterItem?.display_name ||
+        masterItem?.description ||
+        itemNumber;
+
+      const noteText = `Removed SOV item ${itemNumber}${itemLabel && itemLabel !== itemNumber ? ` - ${itemLabel}` : ''}. Reason: ${reason}`;
+      const parsedNotes = parseJobNotes(jobRow?.additional_notes);
+      const projectLog = [
+        ...parsedNotes.projectLog,
+        {
+          id: crypto.randomUUID(),
+          text: noteText,
+          timestamp: Date.now(),
+        },
+      ];
+
+      const { error: noteUpdateError } = await supabase
+        .from('jobs_l')
+        .update({
+          additional_notes: stringifyJobNotes(parsedNotes.contractNotes, projectLog),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+
+      if (noteUpdateError) {
+        return NextResponse.json({ error: 'Failed to log SOV removal reason', details: noteUpdateError }, { status: 500 });
+      }
+    }
 
     const { error } = await supabase
       .from('sov_entries')

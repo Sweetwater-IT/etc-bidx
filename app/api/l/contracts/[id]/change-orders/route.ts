@@ -85,6 +85,16 @@ export async function POST(
       return NextResponse.json({ error: `Failed to record change order: ${coErr.message}` }, { status: 500 });
     }
 
+    let uploadedDocument: {
+      id: string;
+      name: string;
+      size: number;
+      type: string;
+      category: "change_order";
+      uploadedAt: string;
+      filePath: string;
+    } | null = null;
+
     // Handle document upload if provided
     if (documentFile instanceof File) {
       const filePath = `contracts/${jobId}/change-orders/${Date.now()}-${documentFile.name}`;
@@ -97,18 +107,32 @@ export async function POST(
         return NextResponse.json({ error: 'Change order recorded but document upload failed' }, { status: 500 });
       }
 
-      // Insert document record
-      await supabase.from("documents_l").insert({
+      // Save the uploaded change order into the contract documents list
+      const { data: documentRow, error: documentError } = await supabase.from("documents_l").insert({
         job_id: jobId,
         file_name: documentFile.name,
         file_path: filePath,
-        file_type: documentFile.type,
+        file_type: "change_order",
         file_size: documentFile.size,
-        category: "other",
-      });
+      }).select("id, uploaded_at").single();
+
+      if (documentError) {
+        console.error('Error creating change order document record:', documentError);
+        return NextResponse.json({ error: 'Change order recorded but document record creation failed' }, { status: 500 });
+      }
+
+      uploadedDocument = {
+        id: documentRow.id,
+        name: documentFile.name,
+        size: documentFile.size,
+        type: "change_order",
+        category: "change_order",
+        uploadedAt: documentRow.uploaded_at || new Date().toISOString(),
+        filePath,
+      };
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, document: uploadedDocument });
   } catch (error) {
     console.error('Error in change orders API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

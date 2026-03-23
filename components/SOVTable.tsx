@@ -2,6 +2,7 @@
 
 import { Fragment, forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useSovItems } from '@/hooks/useSovItems';
@@ -44,6 +45,7 @@ import {
 import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
+import { toast } from 'sonner';
 interface SovMasterItem {
   id: number;
   item_number: string;
@@ -80,6 +82,11 @@ interface CustomItemDraft {
   itemNumber: string;
   description: string;
   workType: string;
+}
+
+interface PendingDeleteState {
+  rowId: string;
+  reason: string;
 }
 
 const CUSTOM_WORK_TYPE_OPTIONS = [
@@ -182,7 +189,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
   // Use contractId if available, otherwise use jobId for the hook
   const effectiveId = contractId || jobId;
-  const { items, loading: sovLoading, saving, updateItems, saveNow } = useSovItems(effectiveId, !!contractId);
+  const { items, loading: sovLoading, saving, updateItems, saveNow, removeItemWithReason } = useSovItems(effectiveId, !!contractId);
 
   console.log('[SOVTable] useSovItems hook returned:', { items: items.length, loading: sovLoading, saving });
 
@@ -215,7 +222,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [selectorSearch, setSelectorSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
-  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null);
 
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('dollar');
@@ -340,10 +347,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     // Open selector immediately to reduce one extra click
     setSelectorOpen(newItem.id);
     setSelectorSearch('');
-  };
-
-  const removeRow = (id: string) => {
-    updateItems((prev) => prev.filter((i) => i.id !== id));
   };
 
   const updateRow = (id: string, field: keyof ScheduleOfValuesItem, value: string | number) => {
@@ -1088,7 +1091,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => setPendingDeleteRowId(item.id)}
+                          onClick={() => setPendingDelete({ rowId: item.id, reason: '' })}
                         >
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
@@ -1206,25 +1209,45 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!pendingDeleteRowId} onOpenChange={(open) => {
-        if (!open) setPendingDeleteRowId(null);
+      <Dialog open={!!pendingDelete} onOpenChange={(open) => {
+        if (!open) setPendingDelete(null);
       }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete SOV Item?</DialogTitle>
+            <DialogTitle>Why are you removing this item?</DialogTitle>
             <DialogDescription>
-              This will remove the selected schedule of values row.
+              We do not currently have a standard removal-reason dropdown for contract SOV items, so this reason will be saved as freeform text in the contract log.
             </DialogDescription>
           </DialogHeader>
+          <div className="grid gap-2">
+            <label className="text-xs font-medium text-foreground">
+              Reason for removal <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              className="min-h-[90px] text-sm"
+              placeholder="Explain why this item is being removed..."
+              value={pendingDelete?.reason ?? ''}
+              onChange={(e) => setPendingDelete((prev) => (
+                prev ? { ...prev, reason: e.target.value } : prev
+              ))}
+            />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDeleteRowId(null)}>
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (pendingDeleteRowId) removeRow(pendingDeleteRowId);
-                setPendingDeleteRowId(null);
+              disabled={!pendingDelete?.reason.trim()}
+              onClick={async () => {
+                if (!pendingDelete?.rowId || !pendingDelete.reason.trim()) return;
+                try {
+                  await removeItemWithReason(pendingDelete.rowId, pendingDelete.reason.trim());
+                  toast.success('SOV item removed');
+                  setPendingDelete(null);
+                } catch (error) {
+                  console.error('Failed to remove SOV item:', error);
+                }
               }}
             >
               Confirm Delete
