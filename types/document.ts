@@ -3,7 +3,7 @@ export type DocumentCategory =
   | "addendum"
   | "permit"
   | "insurance"
-  | "bond"
+  | "change_order"
   | "plan"
   | "specification"
   | "correspondence"

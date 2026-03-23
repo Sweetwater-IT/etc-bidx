@@ -13,7 +13,7 @@ import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import type { JobProjectInfo } from "@/types/job";
 import { useAuth } from "@/contexts/auth-context";
 
-type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
+type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "change_order" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
 interface ContractDocument {
   id: string;

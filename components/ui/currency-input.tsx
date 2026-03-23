@@ -26,7 +26,7 @@ export function CurrencyInput({
   const [isFocused, setIsFocused] = React.useState(false);
 
   const normalizeDigits = React.useCallback((raw: string) => {
-    const digitsOnly = raw.replace(/\D/g, '').slice(0, 8);
+    const digitsOnly = raw.replace(/\D/g, '').slice(0, 11);
     return digitsOnly === '' ? '0' : digitsOnly;
   }, []);
 

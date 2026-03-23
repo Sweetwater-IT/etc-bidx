@@ -40,7 +40,7 @@ export function DollarPercentCurrencyInputField({
   const inputWidth = size === 'sm' ? 'w-[160px]' : 'flex-1';
 
   return (
-    <div className={cn('flex items-center border rounded-md bg-background overflow-hidden', heightClass, className)}>
+    <div className={cn('flex items-center border rounded-md bg-background overflow-hidden transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]', heightClass, className)}>
       {fixedType ? (
         <div
           className={cn(

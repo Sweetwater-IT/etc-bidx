@@ -99,7 +99,7 @@ const CUSTOM_WORK_TYPE_OPTIONS = [
 
 function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', value: number): number {
   if (type === 'percent') return Math.round(extendedPrice * (value / 100) * 100) / 100;
-  return Math.round(value * 100) / 100;
+  return Math.round(Math.min(value, extendedPrice) * 100) / 100;
 }
 
 function clampNumber(value: number, min: number, max: number) {
@@ -356,9 +356,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     nextType: 'percent' | 'dollar',
     rawValue: number
   ) => {
+    const currentItem = items.find((item) => item.id === id);
+    const maxDollarRetainage = currentItem?.extendedPrice ?? Number.MAX_SAFE_INTEGER;
     let nextValue = Number.isFinite(rawValue) ? rawValue : 0;
     if (nextType === 'percent') nextValue = clampNumber(nextValue, 0, 100);
-    else nextValue = clampNumber(nextValue, 0, Number.MAX_SAFE_INTEGER);
+    else nextValue = clampNumber(nextValue, 0, maxDollarRetainage);
     nextValue = Math.round(nextValue * 100) / 100;
 
     updateItems(

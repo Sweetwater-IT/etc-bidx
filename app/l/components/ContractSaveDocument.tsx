@@ -30,7 +30,7 @@ const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   addendum: "Addendum",
   permit: "Permit",
   insurance: "Insurance",
-  bond: "Bond",
+  change_order: "Change Order",
   plan: "Plan",
   specification: "Specification",
   correspondence: "Correspondence",
@@ -106,7 +106,7 @@ export const ContractSaveDocument = ({
             </p>
           </div>
           {!readOnly && (
-            <Button onClick={() => inputRef.current?.click()} className="gap-2">
+            <Button onClick={() => inputRef.current?.click()} className="gap-2 bg-[#16335A] text-white hover:bg-[#122947]">
               <Upload className="h-4 w-4" />
               Upload Document
             </Button>

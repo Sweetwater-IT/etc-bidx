@@ -26,7 +26,7 @@ import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPag
 import { useAuth } from "@/contexts/auth-context";
 
 
-type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
+type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "change_order" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
 interface ContractDocument {
   id: string;
@@ -77,6 +77,8 @@ const emptyProjectInfo: JobProjectInfo = {
   federalFlaggingFringeRate: "",
   extensionDate: "",
 };
+
+const CONTRACT_ACTION_BUTTON_CLASS = "bg-[#16335A] text-white hover:bg-[#122947]";
 
 const SIGNED_STATUSES = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
 
@@ -154,6 +156,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [contractNotes, setContractNotes] = useState<Note[]>([]);
   const [contractNotesLoading, setContractNotesLoading] = useState(false);
+  const buildContractData = useCallback((info: JobProjectInfo) => {
+    const nextData = mapProjectInfoToContractData(info, getContractStatus(contractRow));
+    delete (nextData as { additional_notes?: string }).additional_notes;
+    return nextData;
+  }, [contractRow]);
   const handleSovEditAttempt = useCallback(() => {
     setShowChangeOrderDialog(true);
   }, []);
@@ -383,6 +390,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             projectName: trimmedProjectName,
           }, getContractStatus(contractRow)),
         };
+        delete (contractData.data as { additional_notes?: string }).additional_notes;
         const result = await saveContract(contractData);
         const newId = result.id;
         setContractId(newId);
@@ -457,7 +465,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setIsSaving(true);
             const contractData = {
               contractId,
-              data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
+              data: buildContractData(projectInfo),
             };
             console.log('Autosave: sending contract data:', contractData);
             const result = await saveContract(contractData);
@@ -493,7 +501,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
       const payload = {
         contractId,
-        data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
+        data: buildContractData(projectInfo),
       };
       const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
       navigator.sendBeacon("/api/l/contracts", blob);
@@ -529,7 +537,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setIsSaving(true);
       const contractData = {
         contractId: currentContractId,
-        data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
+        data: buildContractData(projectInfo),
       };
       console.log('Manual save: sending contract data:', contractData);
       const result = await saveContract(contractData);
@@ -546,7 +554,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     } finally {
       setIsSaving(false);
     }
-  }, [contractId, projectInfo, ensureContractExists, contractRow]);
+  }, [contractId, projectInfo, ensureContractExists, buildContractData]);
 
   const handleAddContractNote = useCallback(async (note: Note) => {
     let currentContractId = contractId;
@@ -728,7 +736,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     description?: string;
     amount?: number;
     documentFile?: File;
-    approverUserId?: string;
     approverName?: string;
   }): Promise<boolean> => {
     if (!contractId) {
@@ -825,9 +832,10 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         lastSavedAt={lastSavedAt}
         hasUnsavedChanges={!lastSavedAt && firstSave}
         firstSave={firstSave}
+        doneButtonClassName={CONTRACT_ACTION_BUTTON_CLASS}
         additionalButtons={
           isViewMode ? (
-            <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
+            <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className={`gap-2 ${CONTRACT_ACTION_BUTTON_CLASS}`}>
               <Pencil className="h-4 w-4" />
               Edit Contract
             </Button>

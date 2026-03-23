@@ -117,7 +117,13 @@ export async function POST(
         quantity: Number(item.quantity ?? 0),
         unit_price: Number(item.unit_price ?? 0),
         retainage_type: item.retainage_type ?? 'percent',
-        retainage_value: Number(item.retainage_value ?? 0),
+        retainage_value:
+          (item.retainage_type ?? 'percent') === 'percent'
+            ? Math.min(Math.max(Number(item.retainage_value ?? 0), 0), 100)
+            : Math.min(
+                Math.max(Number(item.retainage_value ?? 0), 0),
+                Number(item.quantity ?? 0) * Number(item.unit_price ?? 0)
+              ),
         notes: item.notes ?? null,
         sort_order: item.sort_order ?? null,
       };

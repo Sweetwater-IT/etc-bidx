@@ -48,10 +48,14 @@ export async function PUT(
     const normalizedRetainageType = retainage_type ?? 'percent';
 
     const extended_price = normalizedQuantity * normalizedUnitPrice;
+    const safeRetainageValue =
+      normalizedRetainageType === 'percent'
+        ? Math.min(Math.max(normalizedRetainageValue, 0), 100)
+        : Math.min(Math.max(normalizedRetainageValue, 0), extended_price);
     const retainage_amount =
       normalizedRetainageType === 'percent'
-        ? extended_price * (normalizedRetainageValue / 100)
-        : normalizedRetainageValue;
+        ? extended_price * (safeRetainageValue / 100)
+        : safeRetainageValue;
 
     const { data: entryData, error: entryError } = await supabase
       .from('sov_entries')
@@ -93,7 +97,7 @@ export async function PUT(
       unit_price: normalizedUnitPrice,
       extended_price,
       retainage_type: normalizedRetainageType,
-      retainage_value: normalizedRetainageValue,
+      retainage_value: safeRetainageValue,
       retainage_amount,
       notes: notes ?? null,
       sort_order: sort_order ?? null,
