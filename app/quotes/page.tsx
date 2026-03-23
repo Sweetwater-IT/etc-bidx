@@ -5,10 +5,12 @@ import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { CardActions } from "@/components/card-actions";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { toast } from "sonner";
+import { Search } from "lucide-react";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -55,16 +57,30 @@ export default function QuotesPage() {
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
+      console.log("[QuotesPage] debounced search term", {
+        raw: searchTerm,
+        trimmed: searchTerm.trim(),
+      });
       setDebouncedSearchTerm(searchTerm.trim());
     }, 250);
 
     return () => window.clearTimeout(timeout);
   }, [searchTerm]);
 
+  useEffect(() => {
+    return () => {
+      fetchAbortRef.current?.abort();
+    };
+  }, []);
+
   const fetchQuotes = async (filter = "all", page = 1, limit = 25, search = "") => {
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
     setIsTableLoading(true);
 
     try {
@@ -81,10 +97,31 @@ export default function QuotesPage() {
         params.append("search", search);
       }
 
-      const response = await fetch(`/api/quotes?${params.toString()}`);
+      const requestUrl = `/api/quotes?${params.toString()}`;
+      console.log("[QuotesPage] fetching quotes", {
+        filter,
+        page,
+        limit,
+        search,
+        requestUrl,
+      });
+
+      const response = await fetch(requestUrl, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
       const data = await response.json();
 
       if (data.success) {
+        console.log("[QuotesPage] fetched quotes result", {
+          search,
+          returnedRows: data.data?.length ?? 0,
+          totalCount: data.pagination?.totalCount ?? 0,
+          pageCount: data.pagination?.pageCount ?? 0,
+          quoteNumbers: Array.isArray(data.data)
+            ? data.data.map((row: QuoteGridView) => row.quote_number)
+            : [],
+        });
         setQuotes(data.data);
         setPageCount(data.pagination.pageCount);
         setTotalCount(data.pagination.totalCount);
@@ -92,9 +129,15 @@ export default function QuotesPage() {
         console.error("Failed to fetch quotes:", data.error);
       }
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("[QuotesPage] fetch aborted", { search, page, limit });
+        return;
+      }
       console.error("Error fetching quotes:", error);
     } finally {
-      setIsTableLoading(false);
+      if (fetchAbortRef.current === controller) {
+        setIsTableLoading(false);
+      }
     }
   };
 
@@ -181,17 +224,27 @@ export default function QuotesPage() {
                 />
               </div>
 
+              <div className="px-6 -mb-2">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by customer, contact, quote #, type, or created by..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      console.log("[QuotesPage] search input change", {
+                        value: e.target.value,
+                      });
+                      setSearchTerm(e.target.value);
+                      setPageIndex(0);
+                    }}
+                    className="pl-9 w-full"
+                  />
+                </div>
+              </div>
+
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={QUOTES_COLUMNS}
-                enableSearch
-                serverSideSearch
-                searchValue={searchTerm}
-                onSearchChange={(value) => {
-                  setSearchTerm(value);
-                  setPageIndex(0);
-                }}
-                searchPlaceholder="Search by customer, contact, quote #, type, or created by..."
                 searchableColumns={[
                   "customer_name",
                   "point_of_contact",

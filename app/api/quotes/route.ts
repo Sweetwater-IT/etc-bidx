@@ -20,7 +20,23 @@ export async function GET(request: NextRequest) {
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
 
+    console.log("[GET /api/quotes] request", {
+      status,
+      created_by,
+      search,
+      limit,
+      page,
+      orderBy,
+      ascending,
+      counts,
+      nextNumber,
+      detailed,
+    });
+
     if (orderBy === "quote_created_at") orderBy = "created_at";
+
+    const normalizedSearch = search.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+    const searchPattern = `%${normalizedSearch}%`;
 
     // 📊 Counts
     if (counts) {
@@ -115,16 +131,10 @@ export async function GET(request: NextRequest) {
         county,
         created_at,
         updated_at,
-        estimate_id,
         etc_job_number,
         job_id,
         user_created,
-        quote_items ( id ),
-        files ( id ),
-        quotes_customers (
-          contractors ( id, name )
-        ),
-        quote_recipients ( email, point_of_contact )
+        created_by_name
       `)
       .order(orderBy, { ascending });
 
@@ -139,9 +149,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!search) {
-      query = query.range(offset, offset + limit - 1);
+    if (normalizedSearch) {
+      query = query.or(
+        [
+          `quote_number.ilike.${searchPattern}`,
+          `customer_name.ilike.${searchPattern}`,
+          `customer_contact.ilike.${searchPattern}`,
+          `type_quote.ilike.${searchPattern}`,
+          `created_by_name.ilike.${searchPattern}`,
+        ].join(",")
+      );
     }
+
+    query = query.range(offset, offset + limit - 1);
 
     const { data: rawData, error } = await query;
 
@@ -152,99 +172,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log("🪵 [GET /quotes] Raw data:", JSON.stringify(rawData, null, 2));
-
-    // Fetch all users for creator name mapping
-    const { data: allUsers, error: usersError } = await supabase
-      .from("users")
-      .select("email, name");
-
-    if (usersError) {
-      return NextResponse.json(
-        { success: false, message: "Failed to fetch users", error: usersError },
-        { status: 500 }
-      );
-    }
-
-    const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
-
     const transformedData: any[] = [];
 
     for (const row of rawData) {
-      let adminData: any = null;
-
-      if (row.estimate_id) {
-        const { data } = await supabase
-          .from("admin_data_entries")
-          .select("*")
-          .eq("bid_estimate_id", row.estimate_id)
-          .maybeSingle();
-        adminData = data;
-      } else if (row.job_id) {
-        const { data } = await supabase
-          .from("admin_data_entries")
-          .select("*")
-          .eq("job_id", row.job_id)
-          .maybeSingle();
-        adminData = data;
-      }
-
-      const contractor = row.quotes_customers?.[0]?.contractors;
-      const customerName =
-        contractor && "name" in contractor ? contractor.name : "Unknown Customer";
-
       const transformedRow: any = {
         id: row.id,
         quote_number: row.quote_number,
         status: row.status,
         type: row.type_quote,
         date_sent: row.date_sent,
-        estimate_id: row.estimate_id ?? null,
         job_id: row.job_id ?? null,
         customer_name: row.customer_name,
         point_of_contact: row.customer_contact,
-        point_of_contact_email: row.quote_recipients?.[0]?.email || "",
-        total_items: row.quote_items?.length || 0,
+        point_of_contact_email: "",
+        total_items: 0,
         county: row.county,
         updated_at: row.updated_at,
         created_at: row.created_at,
-        has_attachments: (row.files?.length || 0) > 0,
-        estimate_contract_number: adminData?.contract_number ?? null,
+        has_attachments: false,
+        estimate_contract_number: null,
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
-        created_by_name: emailToName[row.user_created] || '-',
+        created_by_name: row.created_by_name || '-',
       };
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
       transformedData.push(transformedRow);
-    }
-
-    if (search) {
-      const normalizedSearch = search.toLowerCase();
-      const filteredData = transformedData.filter((row) =>
-        [
-          row.customer_name,
-          row.point_of_contact,
-          row.quote_number,
-          row.type,
-          row.created_by_name,
-        ].some((value) =>
-          String(value || "").toLowerCase().includes(normalizedSearch)
-        )
-      );
-
-      const paginatedData = filteredData.slice(offset, offset + limit);
-
-      return NextResponse.json({
-        success: true,
-        data: paginatedData,
-        pagination: {
-          page,
-          pageSize: limit,
-          pageCount: Math.ceil(filteredData.length / limit),
-          totalCount: filteredData.length,
-        },
-      });
     }
 
     let countQuery = supabase
@@ -262,7 +215,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (normalizedSearch) {
+      countQuery = countQuery.or(
+        [
+          `quote_number.ilike.${searchPattern}`,
+          `customer_name.ilike.${searchPattern}`,
+          `customer_contact.ilike.${searchPattern}`,
+          `type_quote.ilike.${searchPattern}`,
+          `created_by_name.ilike.${searchPattern}`,
+        ].join(",")
+      );
+    }
+
     const { count } = await countQuery;
+
+    if (normalizedSearch) {
+      console.log("[GET /api/quotes] search results", {
+        search,
+        normalizedSearch,
+        returnedRows: transformedData.length,
+        totalCount: count || 0,
+        returnedQuoteNumbers: transformedData.map((row) => row.quote_number),
+      });
+    }
 
     return NextResponse.json({
       success: true,
