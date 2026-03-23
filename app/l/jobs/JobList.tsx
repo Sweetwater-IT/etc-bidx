@@ -59,6 +59,15 @@ type SortDir = "asc" | "desc";
 
 const SIGNED_STATUSES = ["CONTRACT_SIGNED"];
 
+interface ContractorOption {
+  id: string;
+  display_name: string;
+}
+
+interface ProjectOwnerOption {
+  name: string;
+}
+
 const JobList = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("my-jobs");
@@ -66,6 +75,8 @@ const JobList = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [currentPM, setCurrentPM] = useState<string>("");
   const [pmOptions, setPmOptions] = useState<string[]>([]);
+  const [ownerOptions, setOwnerOptions] = useState<ProjectOwnerOption[]>([]);
+  const [customerOptions, setCustomerOptions] = useState<ContractorOption[]>([]);
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [customerPmFilter, setCustomerPmFilter] = useState<string>("all");
@@ -83,23 +94,51 @@ const JobList = () => {
   const { jobs, isLoading } = useJobsList();
 
   useEffect(() => {
-    const fetchProjectManagers = async () => {
+    const fetchFilterSources = async () => {
       try {
-        const response = await fetch('/api/l/project-managers');
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          const names = result.data
+        const [projectManagersResponse, ownersResponse, contractorsResponse] = await Promise.all([
+          fetch('/api/l/project-managers'),
+          fetch('/api/l/project-owners'),
+          fetch('/api/contractors?limit=1000'),
+        ]);
+
+        const projectManagersResult = await projectManagersResponse.json();
+        if (projectManagersResult.success && Array.isArray(projectManagersResult.data)) {
+          const names = projectManagersResult.data
             .map((pm: any) => pm.full_name)
             .filter((name: string) => !!name)
             .sort((a: string, b: string) => a.localeCompare(b));
           setPmOptions(names);
         }
+
+        const ownersResult = await ownersResponse.json();
+        if (ownersResult.success && Array.isArray(ownersResult.data)) {
+          setOwnerOptions(
+            ownersResult.data
+              .map((owner: { name: string }) => ({ name: owner.name }))
+              .filter((owner: ProjectOwnerOption) => !!owner.name)
+          );
+        }
+
+        const contractorsResult = await contractorsResponse.json();
+        if (contractorsResult.success && Array.isArray(contractorsResult.data)) {
+          setCustomerOptions(
+            contractorsResult.data
+              .map((contractor: { id: number | string; name: string }) => ({
+                id: String(contractor.id),
+                display_name: contractor.name,
+              }))
+              .sort((a: ContractorOption, b: ContractorOption) =>
+                a.display_name.localeCompare(b.display_name)
+              )
+          );
+        }
       } catch (error) {
-        console.error('Error loading project managers:', error);
+        console.error('Error loading jobs filter sources:', error);
       }
     };
 
-    fetchProjectManagers();
+    fetchFilterSources();
   }, []);
 
   // Derive unique branches for tabs
@@ -196,20 +235,6 @@ const JobList = () => {
     })),
   ];
 
-  const ownerOptions = useMemo(
-    () =>
-      Array.from(new Set(signedJobs.map((job) => job.projectOwner).filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b)),
-    [signedJobs]
-  );
-
-  const customerOptions = useMemo(
-    () =>
-      Array.from(new Set(signedJobs.map((job) => job.customerName).filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b)),
-    [signedJobs]
-  );
-
   const customerPmOptions = useMemo(
     () =>
       Array.from(new Set(signedJobs.map((job) => job.customerPM).filter(Boolean)))
@@ -225,12 +250,12 @@ const JobList = () => {
   );
 
   const filteredOwnerOptions = useMemo(
-    () => ownerOptions.filter((owner) => owner.toLowerCase().includes(ownerSearch.toLowerCase())),
+    () => ownerOptions.filter((owner) => owner.name.toLowerCase().includes(ownerSearch.toLowerCase())),
     [ownerOptions, ownerSearch]
   );
 
   const filteredCustomerOptions = useMemo(
-    () => customerOptions.filter((customer) => customer.toLowerCase().includes(customerSearch.toLowerCase())),
+    () => customerOptions.filter((customer) => customer.display_name.toLowerCase().includes(customerSearch.toLowerCase())),
     [customerOptions, customerSearch]
   );
 
@@ -392,16 +417,16 @@ const JobList = () => {
                         </CommandItem>
                         {filteredOwnerOptions.map((owner) => (
                           <CommandItem
-                            key={owner}
-                            value={owner}
+                            key={owner.name}
+                            value={owner.name}
                             onSelect={() => {
-                              setOwnerFilter(owner);
+                              setOwnerFilter(owner.name);
                               setOwnerOpen(false);
                               setOwnerSearch("");
                             }}
                           >
-                            <Check className={ownerFilter === owner ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
-                            {owner}
+                            <Check className={ownerFilter === owner.name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {owner.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -456,16 +481,16 @@ const JobList = () => {
                         </CommandItem>
                         {filteredCustomerOptions.map((customer) => (
                           <CommandItem
-                            key={customer}
-                            value={customer}
+                            key={customer.id}
+                            value={customer.display_name}
                             onSelect={() => {
-                              setCustomerFilter(customer);
+                              setCustomerFilter(customer.display_name);
                               setCustomerOpen(false);
                               setCustomerSearch("");
                             }}
                           >
-                            <Check className={customerFilter === customer ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
-                            {customer}
+                            <Check className={customerFilter === customer.display_name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {customer.display_name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
