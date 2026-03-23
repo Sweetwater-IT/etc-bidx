@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const ascending = sortOrder === 'asc';
     const offset = (page - 1) * limit;
+    const search = searchParams.get('search')?.trim() || '';
+    const normalizedSearch = search.toLowerCase();
 
     const tableName = 'available_jobs';
     const status = searchParams.get('status');
@@ -64,7 +66,6 @@ export async function GET(request: NextRequest) {
       .from(tableName)
       .select('*')
       .order(orderBy, { ascending })
-      .range(offset, offset + limit - 1)
       .not('contract_number', 'in', `(${existingBidContracts.join(',')})`);
 
     // Default: Exclude archived jobs unless explicitly requested
@@ -162,9 +163,10 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('status', dbStatus);
     }
 
-    // Execute main queries
     const countResult = await countQuery;
-    const dataResult = await dataQuery;
+    const dataResult = search
+      ? await dataQuery
+      : await dataQuery.range(offset, offset + limit - 1);
 
     if (countResult.error || dataResult.error) {
       const error = countResult.error || dataResult.error;
@@ -174,11 +176,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const totalCount = countResult.count || 0;
-    const pageCount = Math.ceil(totalCount / limit);
+    let processedData = dataResult.data || [];
+    let totalCount = countResult.count || 0;
 
-    // Process alreadyBid information
-    const processedData = dataResult.data || [];
+    if (normalizedSearch) {
+      processedData = processedData.filter((job: any) =>
+        [
+          job.contract_number,
+          job.requestor,
+          job.status,
+          job.owner,
+          job.county,
+          job.letting_date,
+          job.due_date,
+        ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch))
+      );
+      totalCount = processedData.length;
+      processedData = processedData.slice(offset, offset + limit);
+    }
+
+    const pageCount = Math.ceil(totalCount / limit);
 
     const response: any = {
       success: true,
@@ -359,4 +376,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

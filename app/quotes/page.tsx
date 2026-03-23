@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { CardActions } from "@/components/card-actions";
 import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ const SEGMENTS = [
 
 export default function QuotesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
   const [activeFilter, setActiveFilter] = useState("all");
   const [quoteCounts, setQuoteCounts] = useState({
@@ -58,6 +59,12 @@ export default function QuotesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const fetchAbortRef = useRef<AbortController | null>(null);
+  const externalSearch = searchParams.get("search") || "";
+
+  useEffect(() => {
+    setSearchTerm(externalSearch);
+    setPageIndex(0);
+  }, [externalSearch]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

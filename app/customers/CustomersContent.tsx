@@ -6,6 +6,7 @@ import { DataTable } from '../../components/data-table'
 import { CustomerDrawer } from '../../components/customer-drawer'
 import { Customer } from '../../types/Customer'
 import { useCustomersSWR } from '../../hooks/use-customers-swr'
+import { useSearchParams } from 'next/navigation'
 
 interface Column {
   key: keyof Customer,
@@ -36,6 +37,7 @@ const SEGMENTS = [
 const ITEMS_PER_PAGE = 25;
 
 const CustomersContent = () => {
+  const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(0); // DataTable uses 0-indexed pages
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [selectedSegment, setSelectedSegment] = useState('all');
@@ -45,6 +47,8 @@ const CustomersContent = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [searchTerm, setSearchTerm] = useState("");
+  const externalSearch = searchParams.get("search") || "";
+  const externalCustomerId = searchParams.get("customerId");
 
   const { customers, totalCount, isLoading, error, mutate } = useCustomersSWR({
     page: currentPage + 1,
@@ -58,6 +62,11 @@ const CustomersContent = () => {
       toast.error(error);
     }
   }, [error]);
+
+  useEffect(() => {
+    setSearchTerm(externalSearch);
+    setCurrentPage(0);
+  }, [externalSearch]);
 
   const handleViewCustomer = useCallback((customer: Customer) => {
     setSelectedCustomer(customer);
@@ -134,6 +143,18 @@ const CustomersContent = () => {
 
   // Calculate total pages for DataTable based on current page size
   const pageCount = Math.ceil(totalCount / pageSize);
+
+  useEffect(() => {
+    if (!externalCustomerId || !customers.length) return;
+    const matchingCustomer = customers.find(
+      (customer) => customer.id?.toString() === externalCustomerId
+    );
+    if (!matchingCustomer) return;
+    setSelectedCustomer(matchingCustomer);
+    setSelectedIndex(customers.findIndex((customer) => customer.id === matchingCustomer.id));
+    setIsViewMode(true);
+    setDrawerOpen(true);
+  }, [customers, externalCustomerId]);
 
   return (
     <div className="flex flex-col items-center justify-between">

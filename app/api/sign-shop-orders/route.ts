@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const branch = searchParams.get('branch');
     const filtersJson = searchParams.get('filters');
     const statusParam = searchParams.get('status');
+    const search = searchParams.get('search')?.trim() || '';
+    const normalizedSearch = search.toLowerCase();
 
     // Handle archived parameter like in active-bids
     const archived = searchParams.get('archived');
@@ -625,9 +627,11 @@ if (counts) {
       query = query.order(actualOrderBy, { ascending });
     }
 
-    // Apply pagination
+    // Apply pagination unless search is active
     const startIndex = (page - 1) * limit;
-    query = query.range(startIndex, startIndex + limit - 1);
+    if (!normalizedSearch) {
+      query = query.range(startIndex, startIndex + limit - 1);
+    }
 
     const { data: orders, error: ordersError } = await query;
 
@@ -707,16 +711,35 @@ if (counts) {
       });
     }
 
+    let finalOrders = processedOrders;
+    let finalTotalCount = totalCount || 0;
+
+    if (normalizedSearch) {
+      finalOrders = processedOrders.filter((order: any) =>
+        [
+          order.customer,
+          order.order_number,
+          order.contract_number,
+          order.job_number,
+          order.requestor,
+          order.assigned_to,
+          order.shop_status,
+        ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch))
+      );
+      finalTotalCount = finalOrders.length;
+      finalOrders = finalOrders.slice(startIndex, startIndex + limit);
+    }
+
     // Calculate total pages for pagination
-    const pages = Math.ceil((totalCount || 0) / limit);
+    const pages = Math.ceil(finalTotalCount / limit);
 
     return NextResponse.json({
       success: true,
-      orders: processedOrders,
+      orders: finalOrders,
       pagination: {
         page,
         limit,
-        total: totalCount,
+        total: finalTotalCount,
         pages
       }
     });

@@ -10,7 +10,7 @@ import { availableJobsColumns, AvailableJobServices } from "../../../data/availa
 import { FilterOption } from "../../../components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
 import { type ActiveJob } from "../../../data/active-jobs";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
@@ -53,6 +53,7 @@ export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function JobPageContent({ job }: JobPageContentProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { customers, getCustomers } = useCustomers();
 
     if (!["available", "active-bids", "active-jobs"].includes(job)) {
@@ -92,6 +93,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     // Filtering state for available jobs
     const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+    const [availableJobsSearchTerm, setAvailableJobsSearchTerm] = useState("");
+    const [activeBidSearchTerm, setActiveBidSearchTerm] = useState("");
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
@@ -116,10 +119,22 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     // Define filter options for the Available Jobs table
     const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
+    const externalSearch = searchParams.get("search") || "";
 
     useEffect(() => {
         getCustomers();
     }, [getCustomers])
+
+    useEffect(() => {
+        if (isAvailableJobs) {
+            setAvailableJobsSearchTerm(externalSearch);
+            setAvailableJobsPageIndex(0);
+            return;
+        }
+        if (!isActiveBids) return;
+        setActiveBidSearchTerm(externalSearch);
+        setActiveBidsPageIndex(0);
+    }, [externalSearch, isActiveBids, isAvailableJobs]);
 
     // Fetch reference data for filters
     useEffect(() => {
@@ -409,6 +424,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
             }
 
+            if (availableJobsSearchTerm) {
+                options.search = availableJobsSearchTerm;
+                console.log(`Adding available jobs search: ${availableJobsSearchTerm}`);
+            }
+
             // Correctly handle archived segment
             if (activeSegment === "archived") {
                 options.archived = true; // Filter for archived jobs
@@ -516,7 +536,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters, availableJobsSearchTerm]);
 
     // Load active bids data
     const handleJobNavigation = (direction: 'up' | 'down') => {
@@ -547,6 +567,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 detailed: true
             }
 
+            if (activeBidSearchTerm) {
+                ops.search = activeBidSearchTerm;
+            }
+
             if (sortBy) {
                 ops.sortBy = sortBy
                 ops.sortOrder = sortOrder
@@ -565,6 +589,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
                 detailed: true
             };
+
+            if (activeBidSearchTerm) {
+                options.search = activeBidSearchTerm;
+            }
 
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
@@ -672,7 +700,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             stopLoading();
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder, activeBidSearchTerm, activeBidsTotalCount]);
 
     const loadActiveJobs = useCallback(async () => {        
         try {
@@ -2129,6 +2157,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     onDeleteSelected={initiateDeleteJobs}
                                     tableRef={availableJobsTableRef}                           
                                     enableSearch={true}  
+                                    serverSideSearch={true}
+                                    searchValue={availableJobsSearchTerm}
+                                    onSearchChange={(value) => {
+                                        setAvailableJobsSearchTerm(value);
+                                        setAvailableJobsPageIndex(0);
+                                    }}
                                     searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
                                     searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
                                     onViewDetails={handleViewDetails}
@@ -2192,6 +2226,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     data={data as ActiveBid[]}
                                     columns={columns}
                                     enableSearch={true}
+                                    serverSideSearch={true}
+                                    searchValue={activeBidSearchTerm}
+                                    onSearchChange={(value) => {
+                                        setActiveBidSearchTerm(value);
+                                        setActiveBidsPageIndex(0);
+                                    }}
                                     searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
                                     searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
                                     segments={segments}

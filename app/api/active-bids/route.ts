@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
     const filters = searchParams.get('filters');
     const sortBy = searchParams.get('sortBy');
     const sortOrder = searchParams.get('sortOrder');
+    const search = searchParams.get('search')?.trim() || '';
+    const normalizedSearch = search.toLowerCase();
 
     // NEW: Handle archived parameter
     const archived = searchParams.get('archived');
@@ -390,7 +392,11 @@ export async function GET(request: NextRequest) {
       fetchOffset = Math.max(0, offset - limit); // Start a bit earlier
     }
 
-    const { data, error } = await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
+    const queryResult = search
+      ? await query
+      : await query.range(fetchOffset, fetchOffset + fetchLimit - 1);
+
+    const { data, error } = queryResult as { data: any[] | null; error: any };
 
     if (error || !data) {
       return NextResponse.json(
@@ -456,10 +462,33 @@ export async function GET(request: NextRequest) {
       transformedData = transformedData.filter(bid => bid.status === targetStatus);
     }
 
+    if (normalizedSearch) {
+      transformedData = transformedData.filter((bid: any) =>
+        [
+          bid.contractNumber,
+          bid.contract_number,
+          bid.contractor_name,
+          bid.contractor,
+          bid.subcontractor_name,
+          bid.subcontractor,
+          bid.owner,
+          bid.estimator,
+          bid.county,
+          bid.admin_data?.owner,
+          bid.admin_data?.estimator,
+          bid.admin_data?.county?.name,
+          bid.status,
+        ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch))
+      );
+      actualTotalCount = transformedData.length;
+    }
+
     // Apply proper pagination to the filtered results
-    const startIndex = status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')
-      ? Math.max(0, offset - fetchOffset)
-      : 0;
+    const startIndex = normalizedSearch
+      ? offset
+      : status && (status.toLowerCase() === 'won' || status.toLowerCase() === 'won-pending')
+        ? Math.max(0, offset - fetchOffset)
+        : 0;
     const endIndex = startIndex + limit;
     const paginatedData = transformedData.slice(startIndex, endIndex);
 

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import React from "react";
+import { GlobalSearchModal } from "@/components/global-search-modal";
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -35,6 +36,8 @@ interface SiteHeaderProps {
 export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTop= 16 }: SiteHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [globalSearchOpen, setGlobalSearchOpen] = React.useState(false);
+  const [initialGlobalQuery, setInitialGlobalQuery] = React.useState("");
 
   const handleNewItem = (route: string) => {
     router.push(route);
@@ -63,6 +66,19 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
     const foundTitle = findTitle(allItems);
     return foundTitle || (pathname === "/" ? "Dashboard" : "");
   };
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setInitialGlobalQuery("");
+        setGlobalSearchOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Novo componente para o menu de criação
   function DropdownNewMenu({
@@ -100,7 +116,29 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1 max-w-xl">
             <div className="relative">
-              <Input placeholder="Search..." className="pl-10 pr-16" />
+              <Input
+                placeholder="Search..."
+                className="pl-10 pr-16 cursor-text"
+                readOnly
+                onClick={() => {
+                  setInitialGlobalQuery("");
+                  setGlobalSearchOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+                    event.preventDefault();
+                    setInitialGlobalQuery("");
+                    setGlobalSearchOpen(true);
+                    return;
+                  }
+
+                  if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+                    event.preventDefault();
+                    setInitialGlobalQuery(event.key);
+                    setGlobalSearchOpen(true);
+                  }
+                }}
+              />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 <svg
                   width="18"
@@ -137,6 +175,11 @@ export function SiteHeader({ customTitle, children, marginBottom = 12, paddingTo
           <h1 className="text-3xl font-bold mt-2 ml-0">{getCurrentTitle()}</h1>
         )}
       </div>
+      <GlobalSearchModal
+        open={globalSearchOpen}
+        onOpenChange={setGlobalSearchOpen}
+        initialQuery={initialGlobalQuery}
+      />
     </header>
   );
 }

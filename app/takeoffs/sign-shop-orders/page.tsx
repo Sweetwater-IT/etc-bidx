@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
@@ -44,6 +44,7 @@ const SEGMENTS = [
 
 export default function SignOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<SignOrderView[]>([]);
   const [activeSegment, setActiveSegment] = useState("all");
   const [segmentCounts, setSegmentCounts] = useState({
@@ -66,6 +67,7 @@ export default function SignOrderPage() {
 
   // Filtering state
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Selected rows state
   const [selectedRows, setSelectedRows] = useState<SignOrderView[]>([]);
@@ -94,8 +96,14 @@ export default function SignOrderPage() {
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
 
   const { startLoading, stopLoading, isLoading } = useLoading();
+  const externalSearch = searchParams.get("search") || "";
 
   const { customers, getCustomers } = useCustomers();
+
+  useEffect(() => {
+    setSearchTerm(externalSearch);
+    setPageIndex(0);
+  }, [externalSearch]);
 
   useEffect(() => {
     getCustomers();
@@ -215,6 +223,10 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
 
+      if (searchTerm) {
+        params.append("search", searchTerm);
+      }
+
       // Add shop_status segment filter
       if (activeSegment === "archived") {
         params.append("archived", "true");
@@ -258,7 +270,7 @@ export default function SignOrderPage() {
     } finally {
       stopLoading();
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, startLoading, stopLoading, searchTerm]);
 
   // Fetch counts for each segment (shop_status)
   const fetchCounts = useCallback(async () => {
@@ -549,6 +561,14 @@ export default function SignOrderPage() {
               <DataTable<SignOrderView>
                 data={quotes}
                 columns={SIGN_ORDER_COLUMNS}
+                enableSearch
+                serverSideSearch
+                searchValue={searchTerm}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  setPageIndex(0);
+                }}
+                searchPlaceholder="Search by customer, order number, contract number, job number, or requestor..."
                 segments={SEGMENTS}
                 segmentValue={activeSegment}
                 segmentCounts={segmentCounts}
