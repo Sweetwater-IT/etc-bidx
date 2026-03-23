@@ -805,9 +805,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           <User className="h-4 w-4 text-muted-foreground" />
           Customer Admin Information
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {/* Customer Name — searchable dropdown */}
-          <div>
+          <div className="sm:col-span-2">
             <Label className="text-xs">Customer Name<RequiredMark /></Label>
             <Popover open={customerLocked ? false : customerOpen} onOpenChange={(open) => {
               if (!customerLocked) setCustomerOpen(open);
@@ -886,7 +886,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             </Popover>
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <Label htmlFor="customerJobNumber" className="text-xs">Customer Job Number<RequiredMark /></Label>
             <Input
               id="customerJobNumber"
@@ -896,7 +896,6 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               onChange={(e) => update("customerJobNumber", e.target.value)}
             />
           </div>
-          <div className="hidden sm:block" /> {/* spacer to push PM to row 2 */}
 
           {/* Row 2: Customer PM */}
           <div>
@@ -920,19 +919,6 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             />
           </div>
           <div>
-            <Label htmlFor="customerPMEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> PM Email<RequiredMark />
-            </Label>
-            <Input
-              id="customerPMEmail"
-              type="email"
-              className={cn("h-8 text-sm", isInvalid("customerPMEmail") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="pm@customer.com"
-              value={projectInfo.customerPMEmail || ""}
-              onChange={(e) => update("customerPMEmail", e.target.value)}
-            />
-          </div>
-          <div>
             <Label htmlFor="customerPMPhone" className="flex items-center gap-1 text-xs">
               <Phone className="h-3 w-3" /> PM Phone
             </Label>
@@ -943,6 +929,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               placeholder="(555) 555-5555"
               value={projectInfo.customerPMPhone || ""}
               onChange={(e) => update("customerPMPhone", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> PM Email<RequiredMark />
+            </Label>
+            <Input
+              id="customerPMEmail"
+              type="email"
+              className={cn("h-8 text-sm", isInvalid("customerPMEmail") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="pm@customer.com"
+              value={projectInfo.customerPMEmail || ""}
+              onChange={(e) => update("customerPMEmail", e.target.value)}
             />
           </div>
 
@@ -984,19 +983,6 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             />
           </div>
           <div>
-            <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
-            </Label>
-            <Input
-              id="certPayrollEmail"
-              type="email"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="payroll@customer.com"
-              value={projectInfo.certifiedPayrollEmail || ""}
-              onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
-            />
-          </div>
-          <div>
             <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
               <Phone className="h-3 w-3" /> Payroll Phone
             </Label>
@@ -1007,6 +993,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               placeholder="(555) 555-5555"
               value={projectInfo.certifiedPayrollPhone || ""}
               onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
+            </Label>
+            <Input
+              id="certPayrollEmail"
+              type="email"
+              className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="payroll@customer.com"
+              value={projectInfo.certifiedPayrollEmail || ""}
+              onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
             />
           </div>
 
