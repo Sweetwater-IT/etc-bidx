@@ -215,7 +215,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [selectorSearch, setSelectorSearch] = useState('');
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
-  const [pendingCustomRowId, setPendingCustomRowId] = useState<string | null>(null);
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
 
   // Bulk retainage controls
@@ -245,17 +244,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       return next;
     });
   }, [items]);
-
-  useEffect(() => {
-    if (!pendingCustomRowId) return;
-
-    const frameId = window.requestAnimationFrame(() => {
-      openCustomDialog(pendingCustomRowId);
-      setPendingCustomRowId(null);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [pendingCustomRowId]);
 
   useEffect(() => {
     if (customDialogOpen) return;
@@ -733,10 +721,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <Select
                         value={item.itemNumber || undefined}
                         onValueChange={(value) => {
-                          if (value === "custom") {
-                            setPendingCustomRowId(item.id);
-                            return;
-                          }
                           if (value === "delivery") {
                             handleQuickAdd(item.id, 'delivery');
                             return;
@@ -776,12 +760,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                 }, {});
 
                                 // Always show these three categories at the top when no search
-                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
+                                const alwaysShowCategories = ['SERVICE', 'DELIVERY'];
 
-                                // Add synthetic groups for Delivery, Service, and Custom
+                                // Add synthetic groups for Delivery and Service
                                 if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
                                 if (!grouped['SERVICE']) grouped['SERVICE'] = [];
-                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
 
                                 let allWorkTypes: string[];
 
@@ -809,7 +792,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                 return allWorkTypes.map((workType) => {
                                   const groupItems = grouped[workType] || [];
 
-                                  // For synthetic sections (Delivery, Service, Custom), show items without category headers
+                                  // For synthetic sections (Delivery, Service), show items without category headers
                                   if (workType === 'DELIVERY' && groupItems.length === 0) {
                                     return (
                                       <CommandItem
@@ -836,21 +819,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                         <Check className="mr-2 h-4 w-4 opacity-0" />
                                         <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
                                         <span className="truncate max-w-[35ch]">Service</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  if (workType === 'CUSTOM' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="custom-item"
-                                        value="custom"
-                                        onSelect={() => openCustomDialog(item.id)}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
-                                        <span className="truncate max-w-[35ch]">Custom Item Number</span>
                                       </CommandItem>
                                     );
                                   }

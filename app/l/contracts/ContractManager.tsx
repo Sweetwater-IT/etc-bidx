@@ -596,7 +596,9 @@ const ContractManager = () => {
                           <X className="h-3 w-3" />
                         </span>
                       )}
-                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      {customerFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
                     </span>
                   </Button>
                 </PopoverTrigger>
@@ -658,7 +660,9 @@ const ContractManager = () => {
                           <X className="h-3 w-3" />
                         </span>
                       )}
-                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      {countyFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
                     </span>
                   </Button>
                 </PopoverTrigger>
@@ -720,7 +724,9 @@ const ContractManager = () => {
                           <X className="h-3 w-3" />
                         </span>
                       )}
-                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      {pmFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
                     </span>
                   </Button>
                 </PopoverTrigger>
