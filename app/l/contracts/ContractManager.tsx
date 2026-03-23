@@ -14,19 +14,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, LayoutGrid, List, ArrowUpDown, MoreHorizontal, FileText, Clock,
   RotateCcw, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft,
-  Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2,
+  Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2, Check, ChevronsUpDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -83,7 +89,21 @@ type VisiblePipelineStage =
   | "CONTRACT_SIGNED";
 
 type ViewMode = "kanban" | "list";
-type ContractSortKey = "createdAt" | "customerName" | "county" | "etcProjectManager";
+
+interface ContractorOption {
+  id: string;
+  display_name: string;
+}
+
+interface CountyOption {
+  name: string;
+  branch: string | null;
+}
+
+interface ProjectManagerOption {
+  id: string;
+  full_name: string;
+}
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
   CONTRACT_RECEIPT: ["RETURNED_TO_CUSTOMER"],
@@ -136,7 +156,15 @@ const ContractManager = () => {
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [pmFilter, setPmFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<ContractSortKey>("createdAt");
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [countyOpen, setCountyOpen] = useState(false);
+  const [pmOpen, setPmOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [countySearch, setCountySearch] = useState("");
+  const [pmSearch, setPmSearch] = useState("");
+  const [customerOptions, setCustomerOptions] = useState<ContractorOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<CountyOption[]>([]);
+  const [pmOptions, setPmOptions] = useState<ProjectManagerOption[]>([]);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -160,36 +188,94 @@ const ContractManager = () => {
   }, []);
 
   const pipelineJobs = useMemo(() => jobs.filter((j) => !j.archived), [jobs]);
-  const customerOptions = useMemo(
+  useEffect(() => {
+    const fetchFilterSources = async () => {
+      try {
+        const [contractorsResponse, countiesResponse, pmsResponse] = await Promise.all([
+          fetch("/api/contractors?limit=1000"),
+          fetch("/api/counties?limit=1000"),
+          fetch("/api/l/project-managers"),
+        ]);
+
+        const contractorsResult = await contractorsResponse.json();
+        if (contractorsResult.success && contractorsResult.data) {
+          setCustomerOptions(
+            contractorsResult.data
+              .map((contractor: { id: number | string; name: string }) => ({
+                id: String(contractor.id),
+                display_name: contractor.name,
+              }))
+              .sort((a: ContractorOption, b: ContractorOption) =>
+                a.display_name.localeCompare(b.display_name)
+              )
+          );
+        }
+
+        const countiesResult = await countiesResponse.json();
+        if (countiesResult.success && countiesResult.data) {
+          setCountyOptions(
+            countiesResult.data
+              .map((county: { name: string; branch: string | null }) => ({
+                name: county.name,
+                branch: county.branch,
+              }))
+              .sort((a: CountyOption, b: CountyOption) => a.name.localeCompare(b.name))
+          );
+        }
+
+        const pmResult = await pmsResponse.json();
+        if (pmResult.success && pmResult.data) {
+          setPmOptions(
+            pmResult.data
+              .map((pm: { id: string; full_name: string }) => ({
+                id: pm.id,
+                full_name: pm.full_name,
+              }))
+              .sort((a: ProjectManagerOption, b: ProjectManagerOption) =>
+                a.full_name.localeCompare(b.full_name)
+              )
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching contract filter sources:", error);
+      }
+    };
+
+    fetchFilterSources();
+  }, []);
+
+  const filteredCustomerOptions = useMemo(
     () =>
-      Array.from(new Set(pipelineJobs.map((j) => (j.customerName || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [pipelineJobs]
+      customerOptions.filter((customer) =>
+        customer.display_name.toLowerCase().includes(customerSearch.toLowerCase())
+      ),
+    [customerOptions, customerSearch]
   );
-  const countyOptions = useMemo(
+
+  const filteredCountyOptions = useMemo(
     () =>
-      Array.from(new Set(pipelineJobs.map((j) => (j.county || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [pipelineJobs]
+      countyOptions.filter((county) =>
+        county.name.toLowerCase().includes(countySearch.toLowerCase())
+      ),
+    [countyOptions, countySearch]
   );
-  const pmOptions = useMemo(
+
+  const filteredPmOptions = useMemo(
     () =>
-      Array.from(new Set(pipelineJobs.map((j) => (j.etcProjectManager || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [pipelineJobs]
+      pmOptions.filter((pm) =>
+        pm.full_name.toLowerCase().includes(pmSearch.toLowerCase())
+      ),
+    [pmOptions, pmSearch]
   );
+
   const displayedPipelineJobs = useMemo(() => {
-    const filtered = pipelineJobs.filter((job) => {
+    return pipelineJobs.filter((job) => {
       if (customerFilter !== "all" && (job.customerName || "") !== customerFilter) return false;
       if (countyFilter !== "all" && (job.county || "") !== countyFilter) return false;
       if (pmFilter !== "all" && (job.etcProjectManager || "") !== pmFilter) return false;
       return true;
     });
-
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "createdAt") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      const aValue = (a[sortBy] || "").toString();
-      const bValue = (b[sortBy] || "").toString();
-      return aValue.localeCompare(bValue, undefined, { sensitivity: "base" });
-    });
-  }, [pipelineJobs, customerFilter, countyFilter, pmFilter, sortBy]);
+  }, [pipelineJobs, customerFilter, countyFilter, pmFilter]);
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     PIPELINE_STAGES.forEach((s) => { map[s.id] = []; });
@@ -486,50 +572,135 @@ const ContractManager = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden lg:flex items-center gap-2">
-              <Select value={customerFilter} onValueChange={setCustomerFilter}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <SelectValue placeholder="Filter customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
-                  {customerOptions.map((customer) => (
-                    <SelectItem key={customer} value={customer}>{customer}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={countyFilter} onValueChange={setCountyFilter}>
-                <SelectTrigger className="h-9 w-[160px] text-xs">
-                  <SelectValue placeholder="Filter county" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Counties</SelectItem>
-                  {countyOptions.map((county) => (
-                    <SelectItem key={county} value={county}>{county}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={pmFilter} onValueChange={setPmFilter}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <SelectValue placeholder="Filter PM" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All PMs</SelectItem>
-                  {pmOptions.map((pm) => (
-                    <SelectItem key={pm} value={pm}>{pm}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={(value: ContractSortKey) => setSortBy(value)}>
-                <SelectTrigger className="h-9 w-[160px] text-xs">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt">Newest Created</SelectItem>
-                  <SelectItem value="customerName">Customer A-Z</SelectItem>
-                  <SelectItem value="county">County A-Z</SelectItem>
-                  <SelectItem value="etcProjectManager">PM A-Z</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={customerOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
+                    {customerFilter === "all" ? "All Customers" : customerFilter}
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[260px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search customer…" value={customerSearch} onValueChange={setCustomerSearch} />
+                    <CommandList>
+                      <CommandEmpty>No customer found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-customers"
+                          onSelect={() => {
+                            setCustomerFilter("all");
+                            setCustomerOpen(false);
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <Check className={customerFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Customers
+                        </CommandItem>
+                        {filteredCustomerOptions.map((customer) => (
+                          <CommandItem
+                            key={customer.id}
+                            value={customer.display_name}
+                            onSelect={() => {
+                              setCustomerFilter(customer.display_name);
+                              setCustomerOpen(false);
+                              setCustomerSearch("");
+                            }}
+                          >
+                            <Check className={customerFilter === customer.display_name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {customer.display_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <Popover open={countyOpen} onOpenChange={setCountyOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={countyOpen} className="h-9 w-[180px] justify-between text-xs font-normal">
+                    {countyFilter === "all" ? "All Counties" : countyFilter}
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[220px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search county…" value={countySearch} onValueChange={setCountySearch} />
+                    <CommandList>
+                      <CommandEmpty>No county found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-counties"
+                          onSelect={() => {
+                            setCountyFilter("all");
+                            setCountyOpen(false);
+                            setCountySearch("");
+                          }}
+                        >
+                          <Check className={countyFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Counties
+                        </CommandItem>
+                        {filteredCountyOptions.map((county) => (
+                          <CommandItem
+                            key={county.name}
+                            value={county.name}
+                            onSelect={() => {
+                              setCountyFilter(county.name);
+                              setCountyOpen(false);
+                              setCountySearch("");
+                            }}
+                          >
+                            <Check className={countyFilter === county.name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {county.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <Popover open={pmOpen} onOpenChange={setPmOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={pmOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
+                    {pmFilter === "all" ? "All PMs" : pmFilter}
+                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[240px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search PM…" value={pmSearch} onValueChange={setPmSearch} />
+                    <CommandList>
+                      <CommandEmpty>No PM found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-pms"
+                          onSelect={() => {
+                            setPmFilter("all");
+                            setPmOpen(false);
+                            setPmSearch("");
+                          }}
+                        >
+                          <Check className={pmFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All PMs
+                        </CommandItem>
+                        {filteredPmOptions.map((pm) => (
+                          <CommandItem
+                            key={pm.id}
+                            value={pm.full_name}
+                            onSelect={() => {
+                              setPmFilter(pm.full_name);
+                              setPmOpen(false);
+                              setPmSearch("");
+                            }}
+                          >
+                            <Check className={pmFilter === pm.full_name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {pm.full_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
               <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
