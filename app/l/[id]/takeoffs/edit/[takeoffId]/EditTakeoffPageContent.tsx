@@ -84,7 +84,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-48px)] px-4 py-8 space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
