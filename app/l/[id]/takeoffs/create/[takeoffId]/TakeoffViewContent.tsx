@@ -53,7 +53,7 @@ const formatVehicleType = (vehicleType?: string | null) => {
 const formatSqft = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)]";
 
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
@@ -368,7 +368,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   })();
 
   return (
-    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-48px)] px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
       {/* Pickup Takeoff Banner */}
       {takeoff.is_pickup && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">

@@ -189,7 +189,7 @@ export const PermanentSignConfiguration = ({
   }
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] flex flex-col">
+    <div className="w-full rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)] flex flex-col">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Permanent Signs Configuration</h2>
       </div>

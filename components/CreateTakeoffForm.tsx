@@ -235,7 +235,7 @@ const clampNeededByDate = (date?: Date, installDateStr?: string) => {
   return toDateString(nextDate);
 };
 
-const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)]";
 
 export const CreateTakeoffForm = ({
   jobId,
@@ -912,7 +912,7 @@ export const CreateTakeoffForm = ({
         additionalButtons={undefined}
       />
 
-      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-48px)] px-4 py-8 space-y-6">
+      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
       <PageTitleBlock title={resolvedPageTitle} description={resolvedPageDescription} />
 
       {/* Project Info */}
