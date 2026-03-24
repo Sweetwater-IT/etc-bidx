@@ -61,7 +61,7 @@ export async function GET(
     // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, is_pickup, takeoff_id, parent_work_order_id')
+      .select('job_id, is_pickup, takeoff_id, parent_work_order_id, status, wo_number')
       .eq('id', id)
       .single();
 
@@ -187,6 +187,8 @@ export async function GET(
     }
 
     return NextResponse.json({
+      status: workOrder.status || null,
+      woNumber: workOrder.wo_number || null,
       job,
       takeoffs,
       woItems,
