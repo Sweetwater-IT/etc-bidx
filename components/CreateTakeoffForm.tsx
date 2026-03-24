@@ -219,6 +219,22 @@ const toDateString = (value?: Date) => {
   return format(value, "yyyy-MM-dd");
 };
 
+const clampNeededByDate = (date?: Date, installDateStr?: string) => {
+  if (!date) return "";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let nextDate = date > today ? today : date;
+  const install = parseDateString(installDateStr);
+
+  if (install && nextDate >= install) {
+    nextDate = subDays(install, 1);
+  }
+
+  return toDateString(nextDate);
+};
+
 const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
 
 export const CreateTakeoffForm = ({
@@ -666,9 +682,7 @@ export const CreateTakeoffForm = ({
       return;
     }
 
-    const baseInstall = parseDateString(installDate);
-    const normalized = baseInstall && date >= baseInstall ? subDays(baseInstall, 1) : date;
-    setNeededByDate(toDateString(normalized));
+    setNeededByDate(clampNeededByDate(date, installDate));
   };
 
   const handleToggleSection = (key: string) => {
@@ -1209,12 +1223,18 @@ export const CreateTakeoffForm = ({
                   <Calendar
                     mode="single"
                     selected={neededByDateValue}
-                    onSelect={(date) => setNeededByDate(toDateString(date))}
+                    onSelect={(date) => setNeededByDate(clampNeededByDate(date, installDate))}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      if (date > today) return true;
+                      return Boolean(installDateValue && date >= installDateValue);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <span className="text-[9px] text-muted-foreground mt-1 block">Internal suspense date for build/sign shop prioritization</span>
+              <span className="text-[9px] text-muted-foreground mt-1 block">Must be before the job start date and cannot be in the future.</span>
             </div>
             {workType === "PERMANENT_SIGNS" ? (
               <div>
@@ -1429,7 +1449,7 @@ export const CreateTakeoffForm = ({
                           )
                         }
                       >
-                        <SelectTrigger className="h-8 text-xs w-[220px]">
+                        <SelectTrigger className="h-8 text-xs w-[220px] shrink-0">
                           <SelectValue placeholder="Select vehicle type…" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1440,7 +1460,7 @@ export const CreateTakeoffForm = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      <div className="flex flex-col items-start gap-0.5">
+                      <div className="flex flex-col items-start gap-0.5 shrink-0">
                         <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
                         <QuantityInput
                           value={item.quantity || 1}
@@ -1456,10 +1476,10 @@ export const CreateTakeoffForm = ({
                           }
                         />
                       </div>
-                      <div className="flex flex-col items-start gap-0.5 min-w-[220px]">
+                      <div className="flex flex-col items-start gap-0.5 w-[260px] shrink-0">
                         <span className="text-[10px] text-muted-foreground font-medium">Notes</span>
                         <Input
-                          className="h-8 text-xs w-[240px]"
+                          className="h-8 text-xs w-full"
                           value={item.description}
                           onChange={(e) =>
                             setVehicleItems((prev) =>
@@ -1476,7 +1496,7 @@ export const CreateTakeoffForm = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 ml-auto"
+                        className="h-8 w-8 shrink-0"
                         onClick={() => setPendingDeleteAction({ type: "vehicle", id: item.id })}
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
@@ -1668,96 +1688,84 @@ export const CreateTakeoffForm = ({
 
       {/* Additional Items */}
       <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
-        <div className="px-5 py-3 border-b bg-muted/30">
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
+          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), name: "", quantity: 1, description: "", customName: "" },
+          ])}>
+            <Plus className="h-3 w-3" /> Add Item
+          </Button>
         </div>
         <div className="p-5">
-          <div className="flex items-center justify-end mb-3">
-            <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
-              ...prev,
-              { id: crypto.randomUUID(), name: "", quantity: 1, description: "", customName: "" },
-            ])}>
-              <Plus className="h-3 w-3" /> Add Item
-            </Button>
-          </div>
-
           {effectiveAdditionalItems.length === 0 ? (
             <div className="text-center text-xs text-muted-foreground py-4">No additional items.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px]">
-                <thead className="bg-muted/20">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/3">Item</th>
-                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/6">Quantity</th>
-                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-1/2">Notes</th>
-                    <th className="px-4 py-2 w-12"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {effectiveAdditionalItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-muted/10">
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          {item.generated ? (
-                            <div className="h-8 px-3 rounded-md border bg-muted/30 text-xs flex items-center flex-1">
-                              {item.name}
-                            </div>
-                          ) : (
-                            <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                              <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Select item…" /></SelectTrigger>
-                              <SelectContent>
-                                {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                ))}
-                                <SelectItem value="__custom">Custom…</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                          {item.name === "__custom" && (
-                            <Input
-                              className="h-8 text-xs w-32"
-                              value={item.customName || ""}
-                              onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, customName: e.target.value } : i)))}
-                              placeholder="Custom name"
-                            />
-                          )}
+            <div className="space-y-2">
+              {effectiveAdditionalItems.map((item) => (
+                <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background">
+                  <div className="w-[320px] shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Item</div>
+                    <div className="flex items-center gap-2">
+                      {item.generated ? (
+                        <div className="h-8 px-3 rounded-md border bg-muted/30 text-xs flex items-center w-full">
+                          {item.name}
                         </div>
-                      </td>
-                      <td className="px-4 py-2">
-                        <QuantityInput
-                          value={item.quantity || 1}
-                          min={1}
-                          disabled={item.generated}
-                          onChange={(value) =>
-                            setAdditionalItems((prev) =>
-                              prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-2">
+                      ) : (
+                        <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                          <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                          <SelectContent>
+                            {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                            <SelectItem value="__custom">Custom…</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {item.name === "__custom" && (
                         <Input
-                          className="h-8 text-xs w-full"
-                          value={item.description}
-                          disabled={item.generated}
-                          onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
-                          placeholder="Notes (optional)"
+                          className="h-8 text-xs w-[140px] shrink-0"
+                          value={item.customName || ""}
+                          onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, customName: e.target.value } : i)))}
+                          placeholder="Custom name"
                         />
-                      </td>
-                      <td className="px-4 py-2">
-                        {item.generated ? (
-                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Auto</span>
-                        ) : (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Qty</div>
+                    <QuantityInput
+                      value={item.quantity || 1}
+                      min={1}
+                      disabled={item.generated}
+                      onChange={(value) =>
+                        setAdditionalItems((prev) =>
+                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="w-[280px] shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Notes</div>
+                    <Input
+                      className="h-8 text-xs w-full"
+                      value={item.description}
+                      disabled={item.generated}
+                      onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
+                      placeholder="Notes (optional)"
+                    />
+                  </div>
+                  <div className="pt-[18px] shrink-0">
+                    {item.generated ? (
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Auto</span>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

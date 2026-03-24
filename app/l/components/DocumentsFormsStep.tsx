@@ -1,5 +1,4 @@
-import { useRef, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,50 +7,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Upload,
-  Paperclip,
   Trash2,
   Download,
   FileText,
-  ExternalLink,
   Plus,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
 import type { JobProjectInfo } from "@/types/job";
-
-const CATEGORY_LABELS: Record<DocumentCategory, string> = {
-  contract: "Contract",
-  addendum: "Addendum",
-  permit: "Permit",
-  insurance: "Insurance",
-  change_order: "Change Order",
-  plan: "Plan",
-  specification: "Specification",
-  correspondence: "Correspondence",
-  photo: "Photo",
-  other: "Other",
-};
-
-interface FinalWorkOrder {
-  id: string;
-  wo_number: string;
-  title: string;
-  status: string;
-  updated_at: string;
-}
 
 interface DocumentsFormsStepProps {
   documents: ContractDocument[];
@@ -101,17 +69,15 @@ const formatDate = (date: Date | string) => {
 
 export const DocumentsFormsStep = ({
   documents,
-  projectInfo,
+  projectInfo: _projectInfo,
   jobId,
   onAddDocuments,
   onRemoveDocument,
   onUpdateCategory,
   readOnly = false
 }: DocumentsFormsStepProps) => {
-  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>("other");
   const [isDragOver, setIsDragOver] = useState(false);
-  const [finalWOs, setFinalWOs] = useState<FinalWorkOrder[]>([]);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || readOnly) return;
@@ -137,36 +103,6 @@ export const DocumentsFormsStep = ({
     }
   };
 
-  useEffect(() => {
-    if (!jobId) return;
-    const fetchWorkOrders = async () => {
-      try {
-        const response = await fetch(`/api/l/jobs/${jobId}/work-orders`);
-        if (response.ok) {
-          const data = await response.json();
-          setFinalWOs(data);
-        } else {
-          console.error('Failed to fetch work orders');
-        }
-      } catch (error) {
-        console.error('Error fetching work orders:', error);
-      }
-    };
-    fetchWorkOrders();
-  }, [jobId]);
-
-  const documentsByCategory = documents.reduce((acc, doc) => {
-    if (!acc[doc.category]) acc[doc.category] = [];
-    acc[doc.category].push(doc);
-    return acc;
-  }, {} as Record<DocumentCategory, ContractDocument[]>);
-
-  const STATUS_STYLE: Record<string, string> = {
-    completed: "bg-success/10 text-success border-success/30",
-    ready: "bg-primary/10 text-primary border-primary/30",
-    scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/30",
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -184,9 +120,6 @@ export const DocumentsFormsStep = ({
       {/* Upload Section */}
       {!readOnly && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Upload Documents</CardTitle>
-          </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="flex-1">
@@ -241,100 +174,94 @@ export const DocumentsFormsStep = ({
         </Card>
       )}
 
-      {/* Documents by Category */}
-      <div className="space-y-4">
-        {DOCUMENT_CATEGORIES.map((category) => {
-          const categoryDocs = documentsByCategory[category.value] || [];
-          if (categoryDocs.length === 0) return null;
-
-          return (
-            <Card key={category.value}>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    {category.label}
-                    <Badge variant="secondary" className="text-xs">
-                      {categoryDocs.length}
-                    </Badge>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {category.description}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {categoryDocs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {getFileIcon(doc.type)}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(doc.size)} • Uploaded {formatDate(doc.uploadedAt)}
-                          </p>
-                          {doc.associatedItemLabel && (
-                            <p className="text-xs text-primary">
-                              Associated with: {doc.associatedItemLabel}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {!readOnly && (
-                          <Select
-                            value={doc.category}
-                            onValueChange={(value: DocumentCategory) => onUpdateCategory(doc.id, value)}
-                          >
-                            <SelectTrigger className="w-[120px] h-7 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DOCUMENT_CATEGORIES.map((cat) => (
-                                <SelectItem key={cat.value} value={cat.value} className="text-xs">
-                                  {cat.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => {
-                            // Download functionality would go here
-                            console.log('Download', doc);
-                          }}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
-
-                        {!readOnly && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                            onClick={() => onRemoveDocument(doc.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+      {documents.length > 0 && (
+        <div className="rounded-md border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Document</TableHead>
+                <TableHead className="w-[160px] text-xs">Type</TableHead>
+                <TableHead className="w-[180px] text-xs">Upload Date</TableHead>
+                <TableHead className="w-[120px] text-xs text-right">Size</TableHead>
+                <TableHead className="w-[96px] text-xs text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documents.map((doc) => (
+                <TableRow key={doc.id}>
+                  <TableCell className="text-sm">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {getFileIcon(doc.type)}
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{doc.name}</div>
+                        {doc.associatedItemLabel && (
+                          <div className="text-xs text-muted-foreground truncate">{doc.associatedItemLabel}</div>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  </TableCell>
+                  <TableCell>
+                    {readOnly ? (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {DOCUMENT_CATEGORIES.find((cat) => cat.value === doc.category)?.label || doc.category}
+                      </Badge>
+                    ) : (
+                      <Select
+                        value={doc.category}
+                        onValueChange={(value: DocumentCategory) => onUpdateCategory(doc.id, value)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOCUMENT_CATEGORIES.map((cat) => (
+                            <SelectItem key={cat.value} value={cat.value} className="text-xs">
+                              {cat.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDate(doc.uploadedAt)}</TableCell>
+                  <TableCell className="text-xs text-right text-muted-foreground">{formatFileSize(doc.size)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      {jobId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={async () => {
+                            const response = await fetch(`/api/documents/${doc.id}/signed-url`);
+                            if (!response.ok) return;
+                            const data = await response.json();
+                            if (data?.signedUrl) {
+                              window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                            }
+                          }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          onClick={() => onRemoveDocument(doc.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Empty State */}
       {documents.length === 0 && (
@@ -357,7 +284,6 @@ export const DocumentsFormsStep = ({
         </Card>
       )}
 
-      {/* Work Orders Ready for Billing section removed on contract new page */}
     </div>
   );
 };

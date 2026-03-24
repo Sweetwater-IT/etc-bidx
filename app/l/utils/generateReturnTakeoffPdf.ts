@@ -80,6 +80,43 @@ function addField(doc: jsPDF, label: string, value: string, x: number, y: number
   doc.text(value || "—", x, y + 4);
 }
 
+function drawProjectFooter(
+  doc: jsPDF,
+  items: Array<{ label: string; value?: string | null }>,
+  pageW: number,
+  pageH: number
+) {
+  const footerX = 14;
+  const footerY = pageH - 16;
+  const footerW = pageW - 28;
+  const footerH = 5.5;
+  const footerItems = items.slice(0, 8);
+  const colW = footerW / footerItems.length;
+  const fitInline = (label: string, value?: string | null) => {
+    const [line] = doc.splitTextToSize(`${label}: ${(value || "—").toString()}`, colW - 2);
+    return line || `${label}: —`;
+  };
+
+  doc.setDrawColor(210);
+  doc.setLineWidth(0.2);
+  doc.rect(footerX, footerY, footerW, footerH, "S");
+
+  for (let i = 1; i < footerItems.length; i++) {
+    const x = footerX + colW * i;
+    doc.line(x, footerY, x, footerY + footerH);
+  }
+
+  footerItems.forEach((item, index) => {
+    const x = footerX + colW * index + 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(80);
+    doc.text(fitInline(item.label, item.value), x, footerY + 3.6);
+  });
+
+  doc.setTextColor(0);
+}
+
 /** Get structure label from item metadata */
 function getStructureLabel(item: ReturnPdfItem): string {
   const name = item.product_name.toUpperCase();
@@ -443,6 +480,31 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
         y += 12;
       }
     }
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  const footerItems = [
+    { label: "Job Name", value: data.projectName },
+    { label: "Project Owner", value: data.projectOwner },
+    { label: "Owner Job #", value: data.customerJobNumber },
+    { label: "County", value: data.county },
+    { label: "ETC PM", value: data.etcProjectManager },
+    { label: "ETC Job #", value: data.etcJobNumber },
+    { label: "Customer", value: data.customerName },
+    { label: "Customer Job #", value: data.customerJobNumber },
+  ];
+
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const pageLabel = `Page ${i} of ${totalPages}`;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140);
+    drawProjectFooter(doc, footerItems, pw, ph);
+    doc.text(pageLabel, pw / 2, ph - 18.5, { align: "center" });
+    doc.setTextColor(0);
   }
 
   doc.save(`Return_Inventory_${data.etcJobNumber || "report"}.pdf`);

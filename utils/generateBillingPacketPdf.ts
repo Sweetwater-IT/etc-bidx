@@ -436,14 +436,12 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    // Page number at bottom center
     const label = `Page ${i} of ${totalPages}`;
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(140);
-    doc.text(label, pw - ml, 10, { align: "right" });
     drawProjectFooter(doc, footerItems, pw, ph);
-    doc.text(label, pw / 2, ph - 5, { align: "center" });
+    doc.text(label, pw / 2, ph - 18.5, { align: "center" });
     doc.setTextColor(0);
 
     // Signature block only on last page

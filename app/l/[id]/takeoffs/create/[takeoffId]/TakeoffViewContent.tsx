@@ -442,7 +442,17 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
             {formattedWorkOrderNumber ? (
-              <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
+              <button
+                type="button"
+                className="text-sm font-medium font-mono text-primary underline underline-offset-2 hover:text-primary/80"
+                onClick={() => {
+                  if (takeoff.work_order_id) {
+                    router.push(`/l/jobs/${jobId}/work-orders/view/${takeoff.work_order_id}`);
+                  }
+                }}
+              >
+                {formattedWorkOrderNumber}
+              </button>
             ) : (
               <span className="text-sm text-muted-foreground">Not assigned</span>
             )}

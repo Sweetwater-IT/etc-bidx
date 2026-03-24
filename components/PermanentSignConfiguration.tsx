@@ -10,6 +10,7 @@ import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMa
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { PrimarySign } from "@/types/MPTEquipment";
 import { createClient } from '@supabase/supabase-js';
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -481,40 +482,13 @@ const PermanentSignTable = ({
                       </Select>
                     </td>
                     <td className="px-2 py-1 border-r w-32">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
-                          disabled={disabled || row.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={row.quantity || 1}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const cleaned = raw.replace(/\D/g, '');
-                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                            updateRow(row.id, { quantity: num });
-                          }}
-                          disabled={disabled}
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
-                          disabled={disabled}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <QuantityInput
+                        value={row.quantity || 1}
+                        min={1}
+                        onChange={(value) => updateRow(row.id, { quantity: Math.max(1, value) })}
+                        disabled={disabled}
+                        inputClassName="text-xs tabular-nums"
+                      />
                     </td>
                     <td className="px-2 py-1 border-r w-24">
                       <Select value={row.postSize} onValueChange={(v) => updateRow(row.id, { postSize: v })} disabled={disabled}>

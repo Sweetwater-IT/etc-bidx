@@ -160,10 +160,10 @@ const MPT_COLS_ORDERED = [
   { label: "SHEET", x: 144, w: 16 },
   { label: "QTY", x: 160, w: 10 },
   { label: "STRUCTURE", x: 170, w: 42 },
-  { label: "LIGHTS", x: 212, w: 12 },
-  { label: "SQ FT", x: 224, w: 18 },
-  { label: "MATL", x: 242, w: 12 },
-  { label: "COVER", x: 266, w: 17 },
+  { label: "LIGHTS", x: 212, w: 10 },
+  { label: "SQ FT", x: 226, w: 16 },
+  { label: "MATL", x: 246, w: 10 },
+  { label: "COVER", x: 260, w: 23 },
 ];
 
 const MPT_COLS = [
@@ -173,10 +173,10 @@ const MPT_COLS = [
   { label: "SHEET", x: 154, w: 16 },
   { label: "QTY", x: 170, w: 12 },
   { label: "STRUCTURE", x: 182, w: 42 },
-  { label: "LIGHTS", x: 224, w: 12 },
-  { label: "SQ FT", x: 236, w: 18 },
-  { label: "MATL", x: 254, w: 12 },
-  { label: "COVER", x: 266, w: 17 },
+  { label: "LIGHTS", x: 224, w: 10 },
+  { label: "SQ FT", x: 238, w: 16 },
+  { label: "MATL", x: 258, w: 10 },
+  { label: "COVER", x: 270, w: 13 },
 ];
 
 const PERM_COLS = [
@@ -1027,11 +1027,8 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(140);
-    // Header — top right
-    doc.text(pageLabel, pw - 14, 10, { align: "right" });
     drawProjectFooter(doc, footerItems, pw, ph);
-    // Footer — bottom center
-    doc.text(pageLabel, pw / 2, ph - 8, { align: "center" });
+    doc.text(pageLabel, pw / 2, ph - 18.5, { align: "center" });
     doc.setTextColor(0);
   }
 

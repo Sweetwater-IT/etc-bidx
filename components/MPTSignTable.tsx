@@ -28,6 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useEffect, useState, useRef } from 'react';
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,7 +78,7 @@ interface MPTSignTableProps {
   defaultMaterial: SignMaterial;
 }
 
-const SHEETING_OPTIONS = ["HI", "ENG", "FL", "DG", "EG"];
+const SHEETING_OPTIONS = ["HI", "DG", "Type 11", "FYG"];
 const B_LIGHT_OPTIONS = [
   { value: 'none', label: 'None' },
   { value: '1y', label: '1 Yellow' },
@@ -88,8 +89,13 @@ const B_LIGHT_OPTIONS = [
   { value: '2w', label: '2 White' },
 ];
 
-const TYPE_III_STRUCTURE_SQFT = 8.01;
 const roundToTwo = (value: number) => Math.round(value * 100) / 100;
+
+const getTypeIIIStructureSqft = (structureType?: string) => {
+  const normalized = String(structureType || "").toUpperCase();
+  if (!normalized || normalized === "LOOSE") return 0;
+  return normalized.includes("6FT") ? 12 : 8.01;
+};
 
 // Sortable table row component
 const SortableRow = ({
@@ -207,7 +213,7 @@ export const MPTSignTable = ({
     const signSqft = Number(row.sqft || 0) * quantity;
     const structureSqft =
       isTypeIIISection && row.structureType && row.structureType !== "Loose"
-        ? TYPE_III_STRUCTURE_SQFT * quantity
+        ? getTypeIIIStructureSqft(row.structureType) * quantity
         : 0;
     return roundToTwo(signSqft + structureSqft);
   };
@@ -699,51 +705,24 @@ export const MPTSignTable = ({
       case 'qty':
         if (isTypeIIISection) {
           return (
-            <Input
-              type="text"
-              readOnly
-              aria-readonly="true"
-              className="h-8 text-xs text-center w-12 tabular-nums bg-muted/40"
+            <QuantityInput
               value={1}
-              disabled={disabled}
+              min={1}
+              max={1}
+              disabled
+              className="opacity-80"
+              inputClassName="text-xs tabular-nums"
             />
           );
         }
         return (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
-              disabled={disabled || row.quantity <= 1}
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-            <Input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              value={row.quantity || 1}
-              onChange={(e) => {
-                const raw = e.target.value;
-                const cleaned = raw.replace(/\D/g, '');
-                const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                updateRow(row.id, { quantity: num });
-              }}
-              disabled={disabled}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
-              disabled={disabled}
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
-          </div>
+          <QuantityInput
+            value={row.quantity || 1}
+            min={1}
+            onChange={(value) => updateRow(row.id, { quantity: Math.max(1, value) })}
+            disabled={disabled}
+            inputClassName="text-xs tabular-nums"
+          />
         );
       case 'structure':
         return (
@@ -843,12 +822,18 @@ export const MPTSignTable = ({
       if (!row.signDesignation) return acc;
 
       const rowQty = row.quantity || 0;
+      const quantity = isTypeIIISection ? 1 : rowQty;
+      const structureSqft = isTypeIIISection ? getTypeIIIStructureSqft(row.structureType) * quantity : 0;
+      const primarySignSqft = Number(row.sqft || 0) * quantity;
       const primarySqft = Number(row.totalSqft || 0) || getPrimaryTotalSqft(row);
-      const sqftTotal = primarySqft + (row.secondarySigns || []).reduce((secTotal, sec) => {
+      const secondarySqft = (row.secondarySigns || []).reduce((secTotal, sec) => {
         const secSqft = sec.sqft || 0;
         return secTotal + Math.round(secSqft * rowQty * 100) / 100;
       }, 0);
-      acc.totalSqft = Math.round((acc.totalSqft + sqftTotal) * 100) / 100;
+      const signSqft = primarySignSqft + secondarySqft;
+      acc.signSqft = Math.round((acc.signSqft + signSqft) * 100) / 100;
+      acc.structureSqft = Math.round((acc.structureSqft + structureSqft) * 100) / 100;
+      acc.totalSqft = Math.round((acc.totalSqft + primarySqft + secondarySqft) * 100) / 100;
       acc.uniqueSigns += 1;
       acc.totalStructures += row.structureType && row.structureType !== 'Loose' ? rowQty : 0;
       const bLightsValue = row.bLights || 'none';
@@ -859,7 +844,7 @@ export const MPTSignTable = ({
       }
       return acc;
     },
-    { totalSqft: 0, uniqueSigns: 0, totalStructures: 0, totalBLights: 0 }
+    { totalSqft: 0, signSqft: 0, structureSqft: 0, uniqueSigns: 0, totalStructures: 0, totalBLights: 0 }
   );
 
   return (
@@ -1087,6 +1072,18 @@ export const MPTSignTable = ({
             <span className="text-muted-foreground font-medium">Total Sq Ft: </span>
             <span className="font-bold tabular-nums">{summary.totalSqft.toFixed(2)}</span>
           </div>
+          {isTypeIIISection && (
+            <>
+              <div>
+                <span className="text-muted-foreground font-medium">Sign Sq Ft: </span>
+                <span className="font-bold tabular-nums">{summary.signSqft.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground font-medium">Structure Sq Ft: </span>
+                <span className="font-bold tabular-nums">{summary.structureSqft.toFixed(2)}</span>
+              </div>
+            </>
+          )}
           <div>
             <span className="text-muted-foreground font-medium">Unique Signs: </span>
             <span className="font-bold tabular-nums">{summary.uniqueSigns}</span>

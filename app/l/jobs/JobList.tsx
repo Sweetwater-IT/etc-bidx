@@ -53,6 +53,7 @@ type SortField =
   | "projectStartDate"
   | "projectEndDate"
   | "projectStatus"
+  | "createdAt"
   | "actionItems";
 
 type SortDir = "asc" | "desc";
@@ -296,6 +297,14 @@ const JobList = () => {
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), "dd-MM-yyyy");
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "dd-MM-yyyy h:mm a");
     } catch {
       return dateStr;
     }
@@ -682,6 +691,7 @@ const JobList = () => {
                       </TableHead>
                       <SortableHead label="Customer" field="customerName" />
                       <SortableHead label="Customer PM" field="customerPM" />
+                      <SortableHead label="Created At" field="createdAt" />
                       <SortableHead label="Job Status" field="projectStatus" />
                       <SortableHead label="Start Date" field="projectStartDate" />
                       <SortableHead label="End Date" field="projectEndDate" />
@@ -712,6 +722,9 @@ const JobList = () => {
                         </TableCell>
                         <TableCell className="py-3 text-xs">
                           {job.customerPM || "—"}
+                        </TableCell>
+                        <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
+                          {job.createdAt ? formatDateTime(job.createdAt) : "—"}
                         </TableCell>
                         <TableCell className="py-3">
                           <StatusBadge status={job.projectStatus} />

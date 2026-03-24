@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { SOVTable } from "@/components/SOVTable";
 import { EquipmentSummary } from "@/app/l/components/EquipmentSummary";
 import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
+import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
+import type { ContractDocument, DocumentCategory } from "@/types/document";
 
 import {
   Sheet,
@@ -110,6 +112,8 @@ const ProjectDetail = () => {
   const [editJobSaving, setEditJobSaving] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [takeoffsCount, setTakeoffsCount] = useState(0);
+  const [documents, setDocuments] = useState<ContractDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
 
   const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
     if (workOrderNumber === null || workOrderNumber === undefined) return "—";
@@ -205,6 +209,39 @@ const ProjectDetail = () => {
   useEffect(() => {
     if (!id) return;
 
+    const fetchDocuments = async () => {
+      setDocumentsLoading(true);
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/documents`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch documents");
+        }
+
+        const data = await response.json();
+        const mapped: ContractDocument[] = (data || []).map((doc: any) => ({
+          id: doc.id,
+          name: doc.file_name || "Document",
+          size: Number(doc.file_size || 0),
+          type: doc.mime_type || doc.file_type || "application/octet-stream",
+          category: (doc.file_type || "other") as DocumentCategory,
+          uploadedAt: doc.uploaded_at || doc.created_at || new Date().toISOString(),
+          filePath: doc.file_path || undefined,
+        }));
+        setDocuments(mapped);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        setDocuments([]);
+      } finally {
+        setDocumentsLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
     const fetchProjectNotes = async () => {
       setProjectNotesLoading(true);
       try {
@@ -295,6 +332,79 @@ const ProjectDetail = () => {
     } catch (error) {
       console.error("Error deleting project note:", error);
       toast.error("Failed to delete note");
+    }
+  };
+
+  const handleAddDocuments = async (
+    files: File[],
+    associatedItemId?: string,
+    _associatedItemLabel?: string,
+    category?: DocumentCategory
+  ) => {
+    if (!id) return;
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    formData.append("associatedItemId", associatedItemId || "");
+    formData.append("category", category || "other");
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload documents");
+      }
+
+      const result = await response.json();
+      setDocuments((prev) => [...result.documents, ...prev]);
+      toast.success(`${files.length} document(s) uploaded`);
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      toast.error("Failed to upload documents");
+    }
+  };
+
+  const handleRemoveDocument = async (documentId: string) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents?documentId=${documentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete document");
+      }
+
+      setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+      toast.success("Document deleted");
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Failed to delete document");
+    }
+  };
+
+  const handleUpdateDocumentCategory = async (documentId: string, category: DocumentCategory) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId, category }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update document type");
+      }
+
+      setDocuments((prev) => prev.map((doc) => (doc.id === documentId ? { ...doc, category } : doc)));
+    } catch (error) {
+      console.error("Error updating document category:", error);
+      toast.error("Failed to update document type");
     }
   };
 
@@ -777,12 +887,20 @@ const ProjectDetail = () => {
             </TabsContent>
 
             <TabsContent value="documents" className="m-0 p-4">
-              <TabPlaceholder
-                icon={FileText}
-                title="Documents"
-                description="Project documents, contracts, and supporting files."
-                columns={["Document", "Type", "Uploaded", "Size"]}
-              />
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <DocumentsFormsStep
+                  documents={documents}
+                  projectInfo={dbJob.projectInfo}
+                  jobId={id || ""}
+                  onAddDocuments={handleAddDocuments}
+                  onRemoveDocument={handleRemoveDocument}
+                  onUpdateCategory={handleUpdateDocumentCategory}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="purchase-orders" className="m-0 p-4">
@@ -1019,9 +1137,6 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                 <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                   Work Type
                 </th>
-                <th className="px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Items
-                </th>
                 <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                   Need By
                 </th>
@@ -1052,7 +1167,6 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                     )}
                   </td>
                   <td className="px-3 py-1.5">{formatWorkType(takeoff.work_type)}</td>
-                  <td className="px-3 py-1.5 text-center">{takeoff.items_count || '—'}</td>
                   <td className="px-3 py-1.5">
                     {takeoff.needed_by_date
                       ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
