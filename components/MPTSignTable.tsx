@@ -709,6 +709,7 @@ export const MPTSignTable = ({
               value={1}
               min={1}
               max={1}
+              onChange={() => {}}
               disabled
               className="opacity-80"
               inputClassName="text-xs tabular-nums"
