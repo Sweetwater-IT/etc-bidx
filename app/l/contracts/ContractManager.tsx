@@ -100,9 +100,9 @@ interface CountyOption {
   branch: string | null;
 }
 
-interface ProjectManagerOption {
+interface BranchOption {
   id: string;
-  full_name: string;
+  name: string;
 }
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
@@ -155,16 +155,16 @@ const ContractManager = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [countyFilter, setCountyFilter] = useState<string>("all");
-  const [pmFilter, setPmFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
   const [customerOpen, setCustomerOpen] = useState(false);
   const [countyOpen, setCountyOpen] = useState(false);
-  const [pmOpen, setPmOpen] = useState(false);
+  const [branchOpen, setBranchOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [countySearch, setCountySearch] = useState("");
-  const [pmSearch, setPmSearch] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
   const [customerOptions, setCustomerOptions] = useState<ContractorOption[]>([]);
   const [countyOptions, setCountyOptions] = useState<CountyOption[]>([]);
-  const [pmOptions, setPmOptions] = useState<ProjectManagerOption[]>([]);
+  const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -191,10 +191,10 @@ const ContractManager = () => {
   useEffect(() => {
     const fetchFilterSources = async () => {
       try {
-        const [contractorsResponse, countiesResponse, pmsResponse] = await Promise.all([
+        const [contractorsResponse, countiesResponse, branchesResponse] = await Promise.all([
           fetch("/api/contractors?limit=1000"),
           fetch("/api/counties?limit=1000"),
-          fetch("/api/l/project-managers"),
+          fetch("/api/branches?limit=1000"),
         ]);
 
         const contractorsResult = await contractorsResponse.json();
@@ -223,16 +223,17 @@ const ContractManager = () => {
           );
         }
 
-        const pmResult = await pmsResponse.json();
-        if (pmResult.success && pmResult.data) {
-          setPmOptions(
-            pmResult.data
-              .map((pm: { id: string; full_name: string }) => ({
-                id: pm.id,
-                full_name: pm.full_name,
+        const branchesResult = await branchesResponse.json();
+        if (Array.isArray(branchesResult.data)) {
+          setBranchOptions(
+            branchesResult.data
+              .map((branch: { id: number | string; name: string | null }) => ({
+                id: String(branch.id),
+                name: branch.name || "",
               }))
-              .sort((a: ProjectManagerOption, b: ProjectManagerOption) =>
-                a.full_name.localeCompare(b.full_name)
+              .filter((branch: BranchOption) => branch.name.length > 0)
+              .sort((a: BranchOption, b: BranchOption) =>
+                a.name.localeCompare(b.name)
               )
           );
         }
@@ -260,24 +261,24 @@ const ContractManager = () => {
     [countyOptions, countySearch]
   );
 
-  const filteredPmOptions = useMemo(
+  const filteredBranchOptions = useMemo(
     () =>
-      pmOptions.filter((pm) =>
-        pm.full_name.toLowerCase().includes(pmSearch.toLowerCase())
+      branchOptions.filter((branch) =>
+        branch.name.toLowerCase().includes(branchSearch.toLowerCase())
       ),
-    [pmOptions, pmSearch]
+    [branchOptions, branchSearch]
   );
   const hasActiveFilters =
-    customerFilter !== "all" || countyFilter !== "all" || pmFilter !== "all";
+    customerFilter !== "all" || countyFilter !== "all" || branchFilter !== "all";
 
   const displayedPipelineJobs = useMemo(() => {
     return pipelineJobs.filter((job) => {
       if (customerFilter !== "all" && (job.customerName || "") !== customerFilter) return false;
       if (countyFilter !== "all" && (job.county || "") !== countyFilter) return false;
-      if (pmFilter !== "all" && (job.etcProjectManager || "") !== pmFilter) return false;
+      if (branchFilter !== "all" && (job.etcBranch || "") !== branchFilter) return false;
       return true;
     });
-  }, [pipelineJobs, customerFilter, countyFilter, pmFilter]);
+  }, [pipelineJobs, customerFilter, countyFilter, branchFilter]);
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     PIPELINE_STAGES.forEach((s) => { map[s.id] = []; });
@@ -702,29 +703,29 @@ const ContractManager = () => {
                   </Command>
                 </PopoverContent>
               </Popover>
-              <Popover open={pmOpen} onOpenChange={setPmOpen}>
+              <Popover open={branchOpen} onOpenChange={setBranchOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={pmOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
-                    <span className={pmFilter === "all" ? "text-muted-foreground" : "truncate"}>
-                      {pmFilter === "all" ? "All PMs" : pmFilter}
+                  <Button variant="outline" role="combobox" aria-expanded={branchOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
+                    <span className={branchFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {branchFilter === "all" ? "All Branches" : branchFilter}
                     </span>
                     <span className="ml-2 flex items-center gap-1 shrink-0">
-                      {pmFilter !== "all" && (
+                      {branchFilter !== "all" && (
                         <span
                           role="button"
-                          aria-label="Clear PM filter"
+                          aria-label="Clear branch filter"
                           className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setPmFilter("all");
-                            setPmSearch("");
+                            setBranchFilter("all");
+                            setBranchSearch("");
                           }}
                         >
                           <X className="h-3 w-3" />
                         </span>
                       )}
-                      {pmFilter === "all" && (
+                      {branchFilter === "all" && (
                         <ChevronsUpDown className="h-3 w-3 opacity-50" />
                       )}
                     </span>
@@ -732,33 +733,33 @@ const ContractManager = () => {
                 </PopoverTrigger>
                 <PopoverContent className="w-[240px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search PM…" value={pmSearch} onValueChange={setPmSearch} />
+                    <CommandInput placeholder="Search branch…" value={branchSearch} onValueChange={setBranchSearch} />
                     <CommandList>
-                      <CommandEmpty>No PM found.</CommandEmpty>
+                      <CommandEmpty>No branch found.</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
-                          value="all-pms"
+                          value="all-branches"
                           onSelect={() => {
-                            setPmFilter("all");
-                            setPmOpen(false);
-                            setPmSearch("");
+                            setBranchFilter("all");
+                            setBranchOpen(false);
+                            setBranchSearch("");
                           }}
                         >
-                          <Check className={pmFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
-                          All PMs
+                          <Check className={branchFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Branches
                         </CommandItem>
-                        {filteredPmOptions.map((pm) => (
+                        {filteredBranchOptions.map((branch) => (
                           <CommandItem
-                            key={pm.id}
-                            value={pm.full_name}
+                            key={branch.id}
+                            value={branch.name}
                             onSelect={() => {
-                              setPmFilter(pm.full_name);
-                              setPmOpen(false);
-                              setPmSearch("");
+                              setBranchFilter(branch.name);
+                              setBranchOpen(false);
+                              setBranchSearch("");
                             }}
                           >
-                            <Check className={pmFilter === pm.full_name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
-                            {pm.full_name}
+                            <Check className={branchFilter === branch.name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {branch.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -774,10 +775,10 @@ const ContractManager = () => {
                   onClick={() => {
                     setCustomerFilter("all");
                     setCountyFilter("all");
-                    setPmFilter("all");
+                    setBranchFilter("all");
                     setCustomerSearch("");
                     setCountySearch("");
-                    setPmSearch("");
+                    setBranchSearch("");
                   }}
                 >
                   Clear all
