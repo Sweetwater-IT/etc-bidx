@@ -364,7 +364,9 @@ const ContractManager = () => {
       return;
     }
     setContractToDelete({ id: job.id, name: job.projectName || "Untitled" });
-    setDeleteDialogOpen(true);
+    window.setTimeout(() => {
+      setDeleteDialogOpen(true);
+    }, 0);
   };
 
   const deleteJob = async () => {
@@ -1292,7 +1294,7 @@ const KanbanCard = ({
           <p className="text-sm font-bold text-foreground uppercase leading-tight pr-2">
             {job.projectName || "Untitled Project"}
           </p>
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5 -mr-1 shrink-0">
                 <MoreHorizontal className="h-3 w-3" />
@@ -1316,19 +1318,19 @@ const KanbanCard = ({
               {!isSigned && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Contract
-                  </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => openDeleteDialog(job)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Delete Contract
+                    </DropdownMenuItem>
                 </>
               )}
               {isSigned && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => archiveContract(job)}>
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Archive Contract
-                  </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => archiveContract(job)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Archive Contract
+                    </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -1479,7 +1481,7 @@ const ListView = ({
                   <TableCell className="py-3 text-xs">{job.etcProjectManager || "—"}</TableCell>
                   <TableCell className="py-3 tabular-nums text-xs text-muted-foreground whitespace-nowrap">{formatDate(job.createdAt)}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
@@ -1501,7 +1503,7 @@ const ListView = ({
                         {!isSigned && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => openDeleteDialog(job)}>
                               <Trash2 className="h-3.5 w-3.5 mr-2" />
                               Delete Contract
                             </DropdownMenuItem>
@@ -1510,7 +1512,7 @@ const ListView = ({
                         {isSigned && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => archiveContract(job)}>
+                            <DropdownMenuItem onSelect={() => archiveContract(job)}>
                               <Trash2 className="h-3.5 w-3.5 mr-2" />
                               Archive Contract
                             </DropdownMenuItem>
