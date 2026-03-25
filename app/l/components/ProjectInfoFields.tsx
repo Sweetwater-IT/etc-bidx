@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/command";
 import { addDays, format } from "date-fns";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatPhoneNumber } from "@/lib/utils";
 import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
 
 import type { JobProjectInfo } from "@/types/job";
@@ -64,6 +64,11 @@ const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
 ];
 
 const PROJECT_OWNER_OPTIONS = ["PENNDOT", "Turnpike", "SEPTA", "Private"] as const;
+const PHONE_FIELDS: Array<keyof JobProjectInfo> = [
+  "customerPMPhone",
+  "certifiedPayrollPhone",
+  "customerBillingPhone",
+];
 
 // Stable RateField — defined OUTSIDE parent components to prevent remounting on every keystroke
 const RateField = ({
@@ -282,7 +287,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const update = (field: keyof JobProjectInfo, value: string) => {
     if (readOnly) return;
-    const updated = { ...projectInfo, [field]: value };
+    const nextValue = PHONE_FIELDS.includes(field) ? formatPhoneNumber(value) : value;
+    const updated = { ...projectInfo, [field]: nextValue };
     if (field === "projectStartDate" && updated.projectEndDate && value > updated.projectEndDate) {
       updated.projectEndDate = "";
       setDateWarning("End date was cleared — it was before the new start date");

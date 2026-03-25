@@ -138,6 +138,7 @@ const ContractManager = () => {
   const [signedFiles, setSignedFiles] = useState<File[]>([]);
   const [signedJobNumber, setSignedJobNumber] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [pendingSignedFileDeleteIndex, setPendingSignedFileDeleteIndex] = useState<number | null>(null);
   const signedFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -369,11 +370,28 @@ const ContractManager = () => {
   const deleteJob = async () => {
     if (!contractToDelete) return;
     const jobId = contractToDelete.id;
-    setDeleteDialogOpen(false);
-    setContractToDelete(null);
 
-    // This will need to be implemented with your API
-    toast.success("Contract deleted");
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/l/contracts/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to delete contract");
+      }
+
+      setJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setDeleteDialogOpen(false);
+      setContractToDelete(null);
+      toast.success("Contract deleted");
+    } catch (error) {
+      console.error("Error deleting contract:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete contract");
+    } finally {
+      setIsDeleting(false);
+    }
   };
   const archiveContract = async (job: ContractListItem) => {
     try {
@@ -988,8 +1006,19 @@ const ContractManager = () => {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          setDeleteDialogOpen(open);
+          if (!open) setContractToDelete(null);
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => { if (isDeleting) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isDeleting) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-destructive" />
@@ -1000,12 +1029,16 @@ const ContractManager = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setContractToDelete(null); }}>
+            <Button
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => { setDeleteDialogOpen(false); setContractToDelete(null); }}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteJob} className="gap-2">
-              <Trash2 className="h-4 w-4" />
-              Delete
+            <Button variant="destructive" onClick={deleteJob} className="gap-2" disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
