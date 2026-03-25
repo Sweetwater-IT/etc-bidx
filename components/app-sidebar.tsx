@@ -117,6 +117,10 @@ export const data = {
       url: "/takeoffs/sign-shop-orders",
     },
     {
+      title: "Build Shop",
+      url: "/l/build-shop",
+    },
+    {
       title: "Daily Tracker",
       url: "/daily-tracker",
     },

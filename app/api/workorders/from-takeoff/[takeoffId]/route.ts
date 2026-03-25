@@ -44,6 +44,13 @@ function getRelevantWorkTypes(workType: unknown): string[] {
 const normalize = (value: unknown): string => String(value || '').trim();
 const normalizeUpper = (value: unknown): string => normalize(value).toUpperCase();
 
+function resolveDestination(workType: unknown, destination: unknown): "build_shop" | "sign_shop" {
+  const explicit = normalizeUpper(destination);
+  if (explicit === "SIGN_SHOP") return "sign_shop";
+  if (explicit === "BUILD_SHOP") return "build_shop";
+  return normalizeUpper(workType) === "PERMANENT_SIGNS" ? "sign_shop" : "build_shop";
+}
+
 const VEHICLE_LABEL_BY_ID: Record<string, string> = {
   pickup_truck: 'Pick Up Truck',
   tma: 'TMA',
@@ -602,6 +609,149 @@ export async function POST(request: NextRequest) {
 
     console.log('Items insert error:', itemsError);
     console.log('Response itemCount:', workOrderItems.length);
+
+    const destination = resolveDestination(sourceTakeoff.work_type, sourceTakeoff.destination);
+
+    if (!isPickup && destination === 'build_shop') {
+      const { data: jobForBuildRequest, error: jobForBuildRequestError } = await supabase
+        .from('jobs_l')
+        .select('etc_branch')
+        .eq('id', sourceTakeoff.job_id)
+        .single();
+
+      if (jobForBuildRequestError) {
+        console.error('Error fetching job branch for build request:', jobForBuildRequestError);
+      }
+
+      const branch = sourceTakeoff.branch || jobForBuildRequest?.etc_branch || null;
+      const { data: existingBuildRequest, error: existingBuildRequestError } = await supabase
+        .from('build_requests_l')
+        .select('id')
+        .eq('takeoff_id', workingTakeoffId)
+        .is('archived_at', null)
+        .not('status', 'in', '("rejected","superseded")')
+        .maybeSingle();
+
+      if (existingBuildRequestError) {
+        console.error('Error looking up existing build request:', existingBuildRequestError);
+      }
+
+      const buildRequestPayload = {
+        job_id: sourceTakeoff.job_id,
+        takeoff_id: workingTakeoffId,
+        work_order_id: workOrder.id,
+        branch,
+        requested_at: new Date().toISOString(),
+        priority: sourceTakeoff.priority || 'standard',
+        status: 'new',
+        pm_notes: pmNotes || sourceTakeoff.pm_notes || null,
+        chain_root_takeoff_id: sourceTakeoff.chain_root_takeoff_id || workingTakeoffId,
+        revision_number: Number(sourceTakeoff.revision_number || 1),
+        last_snapshot_json: {
+          takeoffId: workingTakeoffId,
+          workOrderId: workOrder.id,
+          workOrderNumber,
+          takeoffStatus: 'sent_to_build_shop',
+          createdAt: new Date().toISOString(),
+        },
+      };
+
+      let buildRequestId: string | null = null;
+
+      if (existingBuildRequest?.id) {
+        const { data: updatedBuildRequest, error: updateBuildRequestError } = await supabase
+          .from('build_requests_l')
+          .update(buildRequestPayload)
+          .eq('id', existingBuildRequest.id)
+          .select('id')
+          .single();
+
+        if (updateBuildRequestError) {
+          console.error('Error updating build request:', updateBuildRequestError);
+        } else {
+          buildRequestId = updatedBuildRequest.id;
+        }
+      } else {
+        const { data: newBuildRequest, error: insertBuildRequestError } = await supabase
+          .from('build_requests_l')
+          .insert(buildRequestPayload)
+          .select('id')
+          .single();
+
+        if (insertBuildRequestError) {
+          console.error('Error creating build request:', insertBuildRequestError);
+        } else {
+          buildRequestId = newBuildRequest.id;
+        }
+      }
+
+      if (buildRequestId) {
+        const { data: takeoffItemsForBuildRequest, error: takeoffItemsForBuildRequestError } = await supabase
+          .from('takeoff_items_l')
+          .select('*')
+          .eq('takeoff_id', workingTakeoffId)
+          .is('deleted_at', null)
+          .order('load_order', { ascending: true });
+
+        if (takeoffItemsForBuildRequestError) {
+          console.error('Error fetching takeoff items for build request snapshot:', takeoffItemsForBuildRequestError);
+        } else {
+          const { error: clearBuildRequestItemsError } = await supabase
+            .from('build_request_items_l')
+            .delete()
+            .eq('build_request_id', buildRequestId);
+
+          if (clearBuildRequestItemsError) {
+            console.error('Error clearing existing build request items:', clearBuildRequestItemsError);
+          }
+
+          const buildRequestItems = (takeoffItemsForBuildRequest || []).map((item: any) => ({
+            build_request_id: buildRequestId,
+            takeoff_item_id: item.id,
+            product_name: item.product_name || 'Item',
+            category: item.category || 'additional',
+            quantity: Number(item.quantity || 0),
+            material: item.material || null,
+            structure_type:
+              item.sign_details?.structureType ||
+              item.sign_details?.structure ||
+              null,
+            order_type: item.requisition_type || 'none',
+            order_required: Number(item.to_order_qty || 0) > 0 || ['purchase_order', 'requisition', 'other'].includes(String(item.requisition_type || '')),
+            order_quantity: Number(item.to_order_qty || 0),
+            order_face_qty: Number(item.to_order_qty || 0),
+            order_full_qty: Number(item.to_order_qty || 0),
+            in_stock: Number(item.in_stock_qty || 0) > 0,
+            line_notes: item.notes || '',
+            notes_json: item.sign_details || [],
+            diff_status: 'unchanged',
+            diff_details: {},
+            material_override: null,
+            structure_override: null,
+            legend_override: item.sign_details?.signLegend || item.sign_description || null,
+          }));
+
+          if (buildRequestItems.length > 0) {
+            const { error: insertBuildRequestItemsError } = await supabase
+              .from('build_request_items_l')
+              .insert(buildRequestItems);
+
+            if (insertBuildRequestItemsError) {
+              console.error('Error inserting build request items:', insertBuildRequestItemsError);
+            }
+          }
+
+          const { error: updateTakeoffStatusError } = await supabase
+            .from('takeoffs_l')
+            .update({ status: 'sent_to_build_shop' })
+            .eq('id', workingTakeoffId);
+
+          if (updateTakeoffStatusError) {
+            console.error('Error updating takeoff status to sent_to_build_shop:', updateTakeoffStatusError);
+          }
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
