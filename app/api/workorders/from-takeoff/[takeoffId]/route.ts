@@ -1,6 +1,7 @@
 // app/api/workorders/from-takeoff/[takeoffId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster, type SovMasterItemRecord } from '@/lib/server/sov/masterItems';
 
 type SOVLookupItem = {
   id: number;
@@ -9,20 +10,6 @@ type SOVLookupItem = {
   work_type?: string | null;
   uom?: string | null;
   quantity?: number | null;
-};
-
-type SOVMasterItem = {
-  id: number;
-  item_number: string;
-  description: string | null;
-  display_name: string | null;
-  work_type?: string | null;
-  uom_1?: string | null;
-  uom_2?: string | null;
-  uom_3?: string | null;
-  uom_4?: string | null;
-  uom_5?: string | null;
-  uom_6?: string | null;
 };
 
 const WORK_TYPE_GROUPS: Record<string, string[]> = {
@@ -383,7 +370,7 @@ export async function POST(request: NextRequest) {
     // sov_entries.sov_item_id is not declared as a relational foreign key in Supabase.
     const { data: sovEntries, error: sovEntriesError } = await supabase
       .from('sov_entries')
-      .select('sov_item_id, quantity, sort_order')
+      .select('sov_item_id, custom_sov_item_id, quantity, sort_order')
       .eq('job_id', sourceTakeoff.job_id)
       .order('sort_order', { ascending: true });
 
@@ -392,29 +379,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch SOV entries' }, { status: 500 });
     }
 
-    const sovItemIds = Array.from(
-      new Set((sovEntries || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
-    );
-
-    const { data: masterItems, error: masterItemsError } = sovItemIds.length > 0
-      ? await supabase
-          .from('sov_items')
-          .select('id, item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
-          .in('id', sovItemIds)
-      : { data: [], error: null };
-
-    if (masterItemsError) {
+    let masterMaps;
+    try {
+      masterMaps = await fetchSovMastersForEntries(sovEntries || []);
+    } catch (masterItemsError) {
       console.error('[WO from takeoff] Failed to hydrate SOV master items', masterItemsError);
       return NextResponse.json({ error: 'Failed to fetch SOV master items' }, { status: 500 });
     }
 
-    const masterById = new Map<number, SOVMasterItem>(
-      ((masterItems || []) as SOVMasterItem[]).map((item) => [Number(item.id), item] as [number, SOVMasterItem])
-    );
-
-    const sovItems: SOVLookupItem[] = ((sovEntries || []) as Array<{ sov_item_id: number | null; quantity?: number | null; sort_order?: number | null }>)
+    const sovItems: SOVLookupItem[] = ((sovEntries || []) as Array<{ sov_item_id: number | null; custom_sov_item_id?: number | null; quantity?: number | null; sort_order?: number | null }>)
       .reduce<SOVLookupItem[]>((acc, entry) => {
-        const master = entry?.sov_item_id ? masterById.get(Number(entry.sov_item_id)) : undefined;
+        const master = resolveEntryMaster(entry, masterMaps) as SovMasterItemRecord | undefined;
         if (!master) return acc;
 
         acc.push({
@@ -422,14 +397,7 @@ export async function POST(request: NextRequest) {
           item_number: String(master.item_number || ''),
           description: String(master.display_name || master.description || ''),
           work_type: master.work_type ?? null,
-          uom:
-            master.uom_1 ??
-            master.uom_2 ??
-            master.uom_3 ??
-            master.uom_4 ??
-            master.uom_5 ??
-            master.uom_6 ??
-            null,
+          uom: getPrimaryUom(master),
           quantity: entry?.quantity ?? null,
         });
         return acc;

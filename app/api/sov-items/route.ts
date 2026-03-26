@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Transform the data to include a uom field using the first non-null uom from uom_1 to uom_6
+    // Transform the data to include a uom field using the first non-null uom from uom_1 to uom_7
     const transformedData = (data || []).map(item => ({
       ...item,
-      uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6
+      uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7
     }));
 
     return NextResponse.json({ data: transformedData });

@@ -1,4 +1,9 @@
 import { supabase } from '@/lib/supabase';
+import {
+  fetchSovMastersForEntries,
+  getPrimaryUom,
+  resolveEntryMaster,
+} from '@/lib/server/sov/masterItems';
 
 export class SovUpsertError extends Error {
   status: number;
@@ -15,6 +20,7 @@ export class SovUpsertError extends Error {
 export type UpsertSovEntryInput = {
   jobId: string;
   sov_item_id?: string | null;
+  custom_sov_item_id?: string | null;
   item_number?: string | null;
   description?: string | null;
   work_type?: string | null;
@@ -31,6 +37,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   const {
     jobId,
     sov_item_id,
+    custom_sov_item_id,
     item_number,
     description,
     work_type,
@@ -44,8 +51,9 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   } = input;
 
   let finalSovItemId = sov_item_id ?? null;
+  let finalCustomSovItemId = custom_sov_item_id ?? null;
 
-  if (!finalSovItemId && item_number) {
+  if (!finalSovItemId && !finalCustomSovItemId && item_number) {
     const { data: existingItem, error: findError } = await supabase
       .from('sov_items')
       .select('id')
@@ -60,8 +68,9 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
       finalSovItemId = existingItem.id;
     } else {
       const { data: newItem, error: createError } = await supabase
-        .from('sov_items')
+        .from('custom_sov_items')
         .insert({
+          job_id: jobId,
           item_number,
           display_item_number: item_number,
           description: description ?? '',
@@ -73,15 +82,15 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
         .single();
 
       if (createError) {
-        throw new SovUpsertError('Failed to create master SOV item', 500, createError);
+        throw new SovUpsertError('Failed to create custom SOV item', 500, createError);
       }
 
-      finalSovItemId = newItem.id;
+      finalCustomSovItemId = newItem.id;
     }
   }
 
-  if (!finalSovItemId) {
-    throw new SovUpsertError('Missing sov_item_id or item_number', 400);
+  if (!finalSovItemId && !finalCustomSovItemId) {
+    throw new SovUpsertError('Missing sov_item_id, custom_sov_item_id, or item_number', 400);
   }
 
   const normalizedQuantity = Number(quantity ?? 0);
@@ -114,6 +123,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   const writePayload = {
     job_id: jobId,
     sov_item_id: finalSovItemId,
+    custom_sov_item_id: finalCustomSovItemId,
     quantity: normalizedQuantity,
     unit_price: normalizedUnitPrice,
     extended_price,
@@ -128,6 +138,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     id,
     job_id,
     sov_item_id,
+    custom_sov_item_id,
     quantity,
     unit_price,
     extended_price,
@@ -141,39 +152,25 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   `;
 
   const hydrateResponse = async (entry: any) => {
-    const { data: masterItem, error: masterItemError } = await supabase
-      .from('sov_items')
-      .select(`
-        id,
-        item_number,
-        display_item_number,
-        description,
-        display_name,
-        work_type,
-        uom_1,
-        uom_2,
-        uom_3,
-        uom_4,
-        uom_5,
-        uom_6
-      `)
-      .eq('id', entry.sov_item_id)
-      .single();
+    const masterMaps = await fetchSovMastersForEntries([entry]);
+    const masterItem = resolveEntryMaster(entry, masterMaps);
 
-    if (masterItemError || !masterItem) {
-      throw new SovUpsertError('Failed to fetch SOV master item after save', 500, masterItemError);
+    if (!masterItem) {
+      throw new SovUpsertError('Failed to fetch SOV master item after save', 500);
     }
 
     return {
       id: entry.id,
       job_id: entry.job_id,
       sov_item_id: entry.sov_item_id,
+      custom_sov_item_id: entry.custom_sov_item_id,
       item_number: masterItem.item_number,
       display_item_number: masterItem.display_item_number,
       description: masterItem.description,
       display_name: masterItem.display_name,
       work_type: masterItem.work_type,
-      uom: masterItem.uom_1 || masterItem.uom_2 || masterItem.uom_3 || masterItem.uom_4 || masterItem.uom_5 || masterItem.uom_6,
+      uom: getPrimaryUom(masterItem),
+      is_custom: masterItem.source === 'custom',
       quantity: entry.quantity,
       unit_price: entry.unit_price,
       extended_price: entry.extended_price,
@@ -193,13 +190,23 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     .select(selectEntryFields)
     .single();
 
-  if (error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key')) {
+  const duplicateStandard = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key');
+  const duplicateCustom = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_custom_sov_item_id_key');
+
+  if (duplicateStandard || duplicateCustom) {
     const { sort_order: _ignoredSort, ...updatePayload } = writePayload;
-    const { data: updatedData, error: updateError } = await supabase
+    let updateQuery = supabase
       .from('sov_entries')
       .update(updatePayload)
-      .eq('job_id', jobId)
-      .eq('sov_item_id', finalSovItemId)
+      .eq('job_id', jobId);
+
+    if (finalCustomSovItemId) {
+      updateQuery = updateQuery.eq('custom_sov_item_id', finalCustomSovItemId);
+    } else {
+      updateQuery = updateQuery.eq('sov_item_id', finalSovItemId);
+    }
+
+    const { data: updatedData, error: updateError } = await updateQuery
       .select(selectEntryFields)
       .single();
 

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 import { SovUpsertError, upsertSovEntry } from '@/lib/server/sov/upsertSovEntry';
 
 const selectEntryFields = `
   id,
   job_id,
   sov_item_id,
+  custom_sov_item_id,
   quantity,
   unit_price,
   extended_price,
@@ -42,16 +44,10 @@ export async function GET(
     }
 
     // Transform the data to match expected format
-    const sovItemIds = Array.from(
-      new Set((data || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
-    );
-
-    const { data: masterItems, error: masterError } = await supabase
-      .from('sov_items')
-      .select('id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
-      .in('id', sovItemIds);
-
-    if (masterError) {
+    let masterMaps;
+    try {
+      masterMaps = await fetchSovMastersForEntries(data || []);
+    } catch (masterError) {
       console.error('Error hydrating SOV master items:', masterError);
       return NextResponse.json(
         { error: 'Failed to fetch SOV master items' },
@@ -59,20 +55,20 @@ export async function GET(
       );
     }
 
-    const masterById = new Map((masterItems || []).map((item: any) => [item.id, item]));
-
     const transformedData = (data || []).map((entry: any) => {
-      const master = masterById.get(entry.sov_item_id);
+      const master = resolveEntryMaster(entry, masterMaps);
       return {
         id: entry.id,
         job_id: entry.job_id,
         sov_item_id: entry.sov_item_id,
+        custom_sov_item_id: entry.custom_sov_item_id,
         item_number: master?.item_number,
         display_item_number: master?.display_item_number,
         description: master?.description,
         display_name: master?.display_name,
         work_type: master?.work_type,
-        uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6,
+        uom: getPrimaryUom(master),
+        is_custom: master?.source === 'custom',
         quantity: entry.quantity,
         unit_price: entry.unit_price,
         extended_price: entry.extended_price,

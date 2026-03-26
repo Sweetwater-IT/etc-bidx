@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 
 const selectEntryFields = `
   id,
   job_id,
   sov_item_id,
+  custom_sov_item_id,
   quantity,
   unit_price,
   extended_price,
@@ -60,12 +62,12 @@ export async function PUT(
 
     const { data: entryData, error: entryError } = await supabase
       .from('sov_entries')
-      .select('sov_item_id')
+      .select('sov_item_id, custom_sov_item_id')
       .eq('id', entryId)
       .eq('job_id', jobId)
       .single();
 
-    if (entryError || !entryData?.sov_item_id) {
+    if (entryError || (!entryData?.sov_item_id && !entryData?.custom_sov_item_id)) {
       return NextResponse.json(
         { error: 'Failed to resolve SOV master item', details: entryError },
         { status: 500 }
@@ -73,8 +75,10 @@ export async function PUT(
     }
 
     if (item_number || description || uom || work_type) {
+      const masterTable = entryData.custom_sov_item_id ? 'custom_sov_items' : 'sov_items';
+      const masterId = entryData.custom_sov_item_id ?? entryData.sov_item_id;
       const { error: masterUpdateError } = await supabase
-        .from('sov_items')
+        .from(masterTable)
         .update({
           item_number: item_number ?? undefined,
           display_item_number: item_number ?? undefined,
@@ -83,7 +87,7 @@ export async function PUT(
           work_type: work_type ?? undefined,
           uom_1: uom ?? undefined,
         })
-        .eq('id', entryData.sov_item_id);
+        .eq('id', masterId);
 
       if (masterUpdateError) {
         return NextResponse.json(
@@ -117,14 +121,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to update SOV entry', details: error }, { status: 500 });
     }
 
-    const { data: masterItem, error: masterError } = await supabase
-      .from('sov_items')
-      .select('id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6')
-      .eq('id', data.sov_item_id)
-      .single();
-
-    if (masterError || !masterItem) {
+    let masterMaps;
+    try {
+      masterMaps = await fetchSovMastersForEntries([data]);
+    } catch (masterError) {
       return NextResponse.json({ error: 'Failed to fetch SOV master item', details: masterError }, { status: 500 });
+    }
+    const masterItem = resolveEntryMaster(data, masterMaps);
+    if (!masterItem) {
+      return NextResponse.json({ error: 'Failed to fetch SOV master item' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -132,12 +137,14 @@ export async function PUT(
         id: data.id,
         job_id: data.job_id,
         sov_item_id: data.sov_item_id,
+        custom_sov_item_id: data.custom_sov_item_id,
         item_number: masterItem.item_number,
         display_item_number: masterItem.display_item_number,
         description: masterItem.description,
         display_name: masterItem.display_name,
         work_type: masterItem.work_type,
-        uom: masterItem.uom_1 || masterItem.uom_2 || masterItem.uom_3 || masterItem.uom_4 || masterItem.uom_5 || masterItem.uom_6,
+        uom: getPrimaryUom(masterItem),
+        is_custom: masterItem.source === 'custom',
         quantity: data.quantity,
         unit_price: data.unit_price,
         extended_price: data.extended_price,
@@ -179,7 +186,7 @@ export async function DELETE(
 
     const { data: entry, error: entryError } = await supabase
       .from('sov_entries')
-      .select('id, job_id, sov_item_id')
+      .select('id, job_id, sov_item_id, custom_sov_item_id')
       .eq('id', entryId)
       .eq('job_id', jobId)
       .single();
@@ -190,11 +197,17 @@ export async function DELETE(
 
     if (reason) {
       const [{ data: masterItem }, { data: jobRow, error: jobError }] = await Promise.all([
-        supabase
-          .from('sov_items')
-          .select('item_number, display_item_number, description, display_name')
-          .eq('id', entry.sov_item_id)
-          .single(),
+        entry.custom_sov_item_id
+          ? supabase
+              .from('custom_sov_items')
+              .select('item_number, display_item_number, description, display_name')
+              .eq('id', entry.custom_sov_item_id)
+              .single()
+          : supabase
+              .from('sov_items')
+              .select('item_number, display_item_number, description, display_name')
+              .eq('id', entry.sov_item_id)
+              .single(),
         supabase
           .from('jobs_l')
           .select('additional_notes')

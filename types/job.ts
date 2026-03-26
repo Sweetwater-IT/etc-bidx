@@ -12,6 +12,8 @@ export interface ScheduleOfValuesItem {
   notes?: string;
   noNotes?: boolean;
   sov_item_id?: number;
+  custom_sov_item_id?: number;
+  is_custom?: boolean;
   work_type?: string;
 }
 

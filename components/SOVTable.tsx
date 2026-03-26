@@ -59,6 +59,7 @@ interface SovMasterItem {
   uom_4: string | null;
   uom_5: string | null;
   uom_6: string | null;
+  uom_7: string | null;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -109,7 +110,7 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 function getFirstNonNullUom(master: SovMasterItem): string {
-  const firstUom = master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+  const firstUom = master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || master.uom_7 || "EA";
   return normalizeUom(firstUom);
 }
 
@@ -125,7 +126,7 @@ function normalizeUom(uom: string): string {
 }
 
 function getAvailableUoms(master: SovMasterItem): string[] {
-  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
+  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6, master.uom_7];
   return Array.from(
     new Set(
       uoms

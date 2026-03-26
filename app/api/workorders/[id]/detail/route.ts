@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes } from '@/lib/jobNotes';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 
 interface TakeoffSummary {
   id: string;
@@ -129,6 +130,7 @@ export async function GET(
           retainage_amount,
           notes,
           sov_item_id,
+          custom_sov_item_id,
           sort_order,
           created_at,
           updated_at
@@ -205,38 +207,32 @@ export async function GET(
     if (sovEntriesRes.error) {
       console.error('Error fetching SOV entries for work order detail:', sovEntriesRes.error);
     } else if (sovEntriesRes.data && sovEntriesRes.data.length > 0) {
-      const sovItemIds = Array.from(
-        new Set((sovEntriesRes.data || []).map((entry: any) => entry.sov_item_id).filter(Boolean))
-      );
-
-      const { data: masterItems, error: masterError } = await supabase
-        .from("sov_items")
-        .select("id, item_number, display_item_number, description, display_name, work_type, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6")
-        .in("id", sovItemIds);
-
-      if (masterError) {
+      let masterMaps;
+      try {
+        masterMaps = await fetchSovMastersForEntries(sovEntriesRes.data || []);
+      } catch (masterError) {
         console.error('Error hydrating SOV master items for work order detail:', masterError);
-      } else {
-        const masterById = new Map((masterItems || []).map((item: any) => [item.id, item]));
+      }
 
+      if (masterMaps) {
         sovItems = (sovEntriesRes.data || []).map((entry: any) => {
-          const master = masterById.get(entry.sov_item_id);
+          const master = resolveEntryMaster(entry, masterMaps);
           return {
-            id: String(entry.sov_item_id),
+            id: String(entry.custom_sov_item_id ?? entry.sov_item_id),
             item_number: master?.item_number || master?.display_item_number || "",
             description: master?.display_name || master?.description || "",
             quantity: Number(entry.quantity) || 0,
-            uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6 || "EA",
+            uom: getPrimaryUom(master),
           };
         });
 
         sovItemsFull = (sovEntriesRes.data || []).map((entry: any) => {
-          const master = masterById.get(entry.sov_item_id);
+          const master = resolveEntryMaster(entry, masterMaps);
           return {
-            id: String(entry.sov_item_id),
+            id: String(entry.custom_sov_item_id ?? entry.sov_item_id),
             itemNumber: master?.item_number || master?.display_item_number || "",
             description: master?.display_name || master?.description || "",
-            uom: master?.uom_1 || master?.uom_2 || master?.uom_3 || master?.uom_4 || master?.uom_5 || master?.uom_6 || "EA",
+            uom: getPrimaryUom(master),
             quantity: Number(entry.quantity) || 0,
             unitPrice: Number(entry.unit_price) || 0,
             extendedPrice: Number(entry.extended_price) || 0,

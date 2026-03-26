@@ -36,7 +36,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           id: item.id,
           itemNumber: item.item_number || '',
           description: item.description || '',
-          uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || '',
+          uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7 || '',
           quantity: item.quantity || 0,
           unitPrice: item.unit_price || 0,
           extendedPrice: item.extended_price || 0,
@@ -44,6 +44,9 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           retainageValue: item.retainage_value || 0,
           retainageAmount: item.retainage_amount || 0,
           notes: item.notes || '',
+          sov_item_id: item.sov_item_id ?? undefined,
+          custom_sov_item_id: item.custom_sov_item_id ?? undefined,
+          is_custom: Boolean(item.is_custom),
           work_type: item.work_type || '',
           // Store unit price in cents format for CurrencyInput compatibility
           _unitPriceCents: Math.round((item.unit_price || 0) * 100).toString(),
