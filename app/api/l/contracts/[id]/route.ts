@@ -21,11 +21,22 @@ const REQUIRED_CONTRACT_FIELDS: Array<{ key: string; label: string }> = [
 ];
 
 function getMissingContractRequirements(contractData: Record<string, unknown>) {
+  const certifiedPayrollType = typeof contractData.certified_payroll_type === 'string'
+    ? contractData.certified_payroll_type.trim()
+    : contractData.certified_payroll_type;
+
   return REQUIRED_CONTRACT_FIELDS.flatMap(({ key, label }) => {
     const value = contractData[key];
 
     if (key === 'certified_payroll_type') {
       return value === 'none' || value === 'state' || value === 'federal' ? [] : [label];
+    }
+
+    if (
+      (key === 'certified_payroll_contact' || key === 'certified_payroll_email') &&
+      certifiedPayrollType === 'none'
+    ) {
+      return [];
     }
 
     const normalized = typeof value === 'string' ? value.trim() : value;
