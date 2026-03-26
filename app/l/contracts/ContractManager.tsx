@@ -137,6 +137,8 @@ const ContractManager = () => {
   const [pendingSignedJobId, setPendingSignedJobId] = useState<string | null>(null);
   const [signedFiles, setSignedFiles] = useState<File[]>([]);
   const [signedJobNumber, setSignedJobNumber] = useState("");
+  const [existingSignedContractCount, setExistingSignedContractCount] = useState(0);
+  const [loadingSignedContractDocs, setLoadingSignedContractDocs] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [pendingSignedFileDeleteIndex, setPendingSignedFileDeleteIndex] = useState<number | null>(null);
@@ -189,6 +191,37 @@ const ContractManager = () => {
   }, []);
 
   const pipelineJobs = useMemo(() => jobs.filter((j) => !j.archived), [jobs]);
+
+  useEffect(() => {
+    const fetchExistingSignedContractDocs = async () => {
+      if (!signedDialogOpen || !pendingSignedJobId) {
+        setExistingSignedContractCount(0);
+        setLoadingSignedContractDocs(false);
+        return;
+      }
+
+      try {
+        setLoadingSignedContractDocs(true);
+        const response = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch existing documents");
+        }
+
+        const docs = await response.json();
+        const contractDocs = Array.isArray(docs)
+          ? docs.filter((doc) => doc?.file_type === "contract")
+          : [];
+        setExistingSignedContractCount(contractDocs.length);
+      } catch (error) {
+        console.error("Error fetching existing signed contract docs:", error);
+        setExistingSignedContractCount(0);
+      } finally {
+        setLoadingSignedContractDocs(false);
+      }
+    };
+
+    fetchExistingSignedContractDocs();
+  }, [signedDialogOpen, pendingSignedJobId]);
   useEffect(() => {
     const fetchFilterSources = async () => {
       try {
@@ -419,27 +452,38 @@ const ContractManager = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleConfirmSigned = async () => {
-    if (!pendingSignedJobId || signedFiles.length === 0 || !signedJobNumber.trim()) return;
+    if (!pendingSignedJobId || !signedJobNumber.trim()) return;
     const job = jobs.find((j) => j.id === pendingSignedJobId);
     if (!job) return;
+
+    const hasExistingContractDoc = existingSignedContractCount > 0;
+    const hasNewUpload = signedFiles.length > 0;
+    if (!hasExistingContractDoc && !hasNewUpload) {
+      toast.error("Upload a signed contract or use an existing attached contract document.");
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      // Upload files first
-      const formData = new FormData();
-      signedFiles.forEach(file => formData.append('files', file));
-      formData.append('contractId', pendingSignedJobId);
+      if (hasNewUpload) {
+        const formData = new FormData();
+        signedFiles.forEach(file => formData.append('files', file));
+        formData.append('contractId', pendingSignedJobId);
+        formData.append('category', 'contract');
 
-      const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
-        method: 'POST',
-        body: formData,
-      });
+        const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json();
-        throw new Error(errorData.error || 'Failed to upload files');
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'Failed to upload files');
+        }
+
+        setExistingSignedContractCount((prev) => prev + signedFiles.length);
       }
 
       setUploadProgress(100);
@@ -478,6 +522,7 @@ const ContractManager = () => {
       setPendingSignedJobId(null);
       setSignedFiles([]);
       setSignedJobNumber("");
+      setExistingSignedContractCount(0);
     } catch (err: any) {
       console.error('Error updating contract status:', err);
       toast.error("Sign Contract failed");
@@ -884,13 +929,13 @@ const ContractManager = () => {
       {/* Signed Contract Upload Dialog */}
       <Dialog open={signedDialogOpen} onOpenChange={(open) => {
         if (isUploading) return;
-        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); }
+        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); setExistingSignedContractCount(0); }
       }}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
+        <DialogContent className="w-[min(92vw,32rem)] sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Attach Signed Contract</DialogTitle>
             <DialogDescription>
-              Enter the ETC job number, then upload the signed contract document before moving this contract into signed status.
+              Enter the ETC job number, then confirm this contract has a signed contract document attached before moving it into signed status.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -904,6 +949,15 @@ const ContractManager = () => {
                 onChange={(e) => setSignedJobNumber(e.target.value)}
                 disabled={isUploading}
               />
+            </div>
+            <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+              <p className="text-xs font-medium text-foreground">
+                {loadingSignedContractDocs
+                  ? "Checking existing contract documents…"
+                  : existingSignedContractCount > 0
+                    ? `${existingSignedContractCount} existing contract document${existingSignedContractCount === 1 ? "" : "s"} already attached. Uploading another signed contract is optional.`
+                    : "No attached contract document found yet. Upload a signed contract to continue."}
+              </p>
             </div>
             <input ref={signedFileInputRef} type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleSignedFileChange} />
             {!isUploading && (
@@ -931,9 +985,9 @@ const ContractManager = () => {
             {signedFiles.length > 0 && (
               <div className="space-y-2">
                 {signedFiles.map((file, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
+                  <div key={i} className="flex min-w-0 items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
                     <File className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm text-foreground truncate flex-1">{file.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">{file.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
                     {!isUploading && (
                       <button onClick={() => setPendingSignedFileDeleteIndex(i)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
@@ -946,9 +1000,9 @@ const ContractManager = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); }}>Cancel</Button>
-            <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || !signedJobNumber.trim() || isUploading} className="gap-2">
-              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Upload</>}
+            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); setExistingSignedContractCount(0); }}>Cancel</Button>
+            <Button onClick={handleConfirmSigned} disabled={(!signedJobNumber.trim()) || isUploading || (loadingSignedContractDocs || (existingSignedContractCount === 0 && signedFiles.length === 0))} className="gap-2">
+              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="h-4 w-4" /> Confirm Signed</>}
             </Button>
           </DialogFooter>
         </DialogContent>
