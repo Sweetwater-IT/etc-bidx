@@ -60,6 +60,7 @@ interface SovMasterItem {
   uom_5: string | null;
   uom_6: string | null;
   uom_7: string | null;
+  is_custom?: boolean;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -199,7 +200,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     const fetchSovItems = async () => {
       setSovMasterLoading(true);
       try {
-        const response = await fetch('/api/sov-items');
+        const params = new URLSearchParams();
+        if (effectiveId) params.set('job_id', effectiveId);
+        const response = await fetch(`/api/sov-items${params.toString() ? `?${params.toString()}` : ''}`);
         console.log('[SOVTable] SOV master items API response:', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
@@ -217,7 +220,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     };
 
     fetchSovItems();
-  }, []);
+  }, [effectiveId]);
 
   const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
   const [selectorSearch, setSelectorSearch] = useState('');
@@ -437,9 +440,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     try {
       // Immediately create database record when item is selected
       const payload = {
-        sov_item_id: master.id,
+        sov_item_id: master.is_custom ? null : master.id,
+        custom_sov_item_id: master.is_custom ? master.id : null,
         item_number: master.item_number,
         description: master.display_name,
+        work_type: master.is_custom ? 'CUSTOM' : master.work_type,
         uom: getFirstNonNullUom(master),
         quantity: 1, // Default quantity
         unit_price: 0, // Default unit price
@@ -456,18 +461,18 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         ? `/api/l/contracts/${contractId}/sov-items`
         : `/api/l/jobs/${jobId}/sov-items`;
 
+      const requestBody = contractId ? { items: [payload] } : payload;
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [payload] // The contract endpoint expects an array of items
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[SOVTable] Failed to create SOV item record:', errorData);
-        throw new Error(`Failed to create SOV item: ${response.status} ${response.statusText}`);
+        throw new Error(errorData?.error || `Failed to create SOV item: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -503,7 +508,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       console.log('[SOVTable] Successfully replaced temp item with database record');
     } catch (error) {
       console.error('[SOVTable] Error selecting master item:', error);
-      // Could show a toast error here if needed
+      toast.error(error instanceof Error ? error.message : 'Failed to create SOV item');
     } finally {
       setSelectorOpen(null);
       setSelectorSearch('');
@@ -723,6 +728,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
                     ) : (
                       <Select
+                        open={selectorOpen === item.id}
+                        onOpenChange={(open) => {
+                          setSelectorOpen(open ? item.id : null);
+                          if (!open) setSelectorSearch('');
+                        }}
                         value={item.itemNumber || undefined}
                         onValueChange={(value) => {
                           if (value === "delivery") {
@@ -757,18 +767,19 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                 const searchTerm = selectorSearch.toLowerCase().trim();
                                 const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
                                   const syntheticType = getSyntheticWorkType(curr);
-                                  const key = syntheticType || curr.work_type?.trim().toUpperCase();
+                                  const key = curr.is_custom ? 'CUSTOM' : syntheticType || curr.work_type?.trim().toUpperCase();
                                   if (key && !acc[key]) acc[key] = [];
                                   if (key) acc[key].push(curr);
                                   return acc;
                                 }, {});
 
                                 // Always show these three categories at the top when no search
-                                const alwaysShowCategories = ['SERVICE', 'DELIVERY'];
+                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
 
                                 // Add synthetic groups for Delivery and Service
                                 if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
                                 if (!grouped['SERVICE']) grouped['SERVICE'] = [];
+                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
 
                                 let allWorkTypes: string[];
 

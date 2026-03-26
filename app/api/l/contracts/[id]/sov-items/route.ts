@@ -106,6 +106,7 @@ export async function POST(
       const item = items[index];
       const payload = {
         sov_item_id: item.sov_item_id ?? null,
+        custom_sov_item_id: item.custom_sov_item_id ?? null,
         item_number: item.item_number ?? null,
         description: item.description ?? '',
         work_type: item.work_type ?? null,

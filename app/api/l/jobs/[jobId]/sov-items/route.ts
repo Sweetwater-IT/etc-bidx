@@ -106,6 +106,7 @@ export async function POST(
 
     const {
       sov_item_id,
+      custom_sov_item_id,
       item_number,
       description,
       work_type,
@@ -120,6 +121,7 @@ export async function POST(
 
     console.log('[SOV API POST] Extracted fields:', {
       sov_item_id,
+      custom_sov_item_id,
       item_number,
       description,
       work_type,
@@ -135,6 +137,7 @@ export async function POST(
     const transformedData = await upsertSovEntry({
       jobId,
       sov_item_id,
+      custom_sov_item_id,
       item_number,
       description,
       work_type,
