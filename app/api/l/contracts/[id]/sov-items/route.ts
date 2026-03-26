@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { fetchSovMastersForEntries, getPrimaryUom, getVisibleSovItemNumber, isRepeatableCloneItemNumber, resolveEntryMaster } from '@/lib/server/sov/masterItems';
+import { fetchSovMastersForEntries, getPrimaryUom, isRepeatableCloneItemNumber, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 import { SovUpsertError, upsertSovEntry } from '@/lib/server/sov/upsertSovEntry';
 
 const selectEntryFields = `
@@ -53,7 +53,7 @@ export async function GET(
         job_id: entry.job_id,
         sov_item_id: entry.sov_item_id,
         custom_sov_item_id: entry.custom_sov_item_id,
-        item_number: getVisibleSovItemNumber(master),
+        item_number: master?.item_number,
         display_item_number: master?.display_item_number,
         description: master?.description,
         display_name: master?.display_name,

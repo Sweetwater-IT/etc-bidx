@@ -2,6 +2,7 @@ export interface ScheduleOfValuesItem {
   id: string;
   description: string;
   itemNumber: string;
+  displayItemNumber?: string;
   quantity: number;
   unitPrice: number;
   extendedPrice: number;

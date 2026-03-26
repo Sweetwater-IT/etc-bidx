@@ -34,7 +34,8 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const data = await response.json();
         const formattedItems: ScheduleOfValuesItem[] = data.data.map((item: any) => ({
           id: item.id,
-          itemNumber: item.display_item_number || item.item_number || '',
+          itemNumber: item.item_number || '',
+          displayItemNumber: item.display_item_number || item.item_number || '',
           description: item.description || '',
           uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7 || '',
           quantity: item.quantity || 0,

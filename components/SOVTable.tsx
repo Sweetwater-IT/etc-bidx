@@ -141,8 +141,7 @@ function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string
   if (!workType.trim()) return ["EA"];
 
   const matchingProducts = products.filter((product) => {
-    const syntheticType = getSyntheticWorkType(product);
-    const normalizedType = syntheticType || product.work_type?.trim().toUpperCase();
+    const normalizedType = product.work_type?.trim().toUpperCase();
     return normalizedType === workType.trim().toUpperCase();
   });
 
@@ -152,32 +151,12 @@ function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string
   return deduped.length > 0 ? deduped : ["EA"];
 }
 
-function getSyntheticWorkType(item: SovMasterItem): 'SERVICE' | 'DELIVERY' | null {
-  const normalizedItemNumber = item.item_number?.trim().toUpperCase();
-  const normalizedDisplayName = item.display_name?.trim().toUpperCase();
-  const normalizedDescription = item.description?.trim().toUpperCase();
-
-  if (
-    normalizedItemNumber === 'SERVICE' ||
-    normalizedDisplayName === 'SERVICE' ||
-    normalizedDescription === 'SERVICE'
-  ) {
-    return 'SERVICE';
-  }
-
-  if (
-    normalizedItemNumber === 'DELIVERY' ||
-    normalizedDisplayName === 'DELIVERY' ||
-    normalizedDescription === 'DELIVERY'
-  ) {
-    return 'DELIVERY';
-  }
-
-  return null;
-}
-
 function getMasterSelectValue(item: SovMasterItem): string {
   return `${item.is_custom ? 'custom' : 'standard'}:${item.id}`;
+}
+
+function getMasterDisplayItemNumber(item: Pick<SovMasterItem, 'display_item_number' | 'item_number'>): string {
+  return item.display_item_number?.trim() || item.item_number?.trim() || '';
 }
 
 const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
@@ -428,6 +407,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             ? {
                 ...item,
                 itemNumber: master.item_number,
+                displayItemNumber: getMasterDisplayItemNumber(master),
                 description: master.display_name,
                 work_type: master.work_type,
                 uom: getFirstNonNullUom(master),
@@ -500,6 +480,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 ...item,
                 id: createdItem.id, // Replace temp ID with real database ID
                 itemNumber: master.item_number,
+                displayItemNumber: createdItem.display_item_number || getMasterDisplayItemNumber(master),
                 description: master.display_name,
                 work_type: createdItem.work_type || master.work_type,
                 uom: createdItem.uom || getFirstNonNullUom(master),
@@ -799,7 +780,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   )}
                   <TableCell className="p-1.5">
                     {readOnly ? (
-                      <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
+                      <span className="text-xs font-mono truncate block px-1">{item.displayItemNumber || item.itemNumber}</span>
                     ) : (
                       <Select
                         open={selectorOpen === item.id}
@@ -815,27 +796,19 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                               : undefined
                         }
                         onValueChange={(value) => {
-                          if (value === "delivery") {
-                            handleQuickAdd(item.id, 'delivery');
-                            return;
-                          }
-                          if (value === "service") {
-                            handleQuickAdd(item.id, 'service');
-                            return;
-                          }
                           const selected = sovProducts.find((p) => getMasterSelectValue(p) === value);
                           if (selected) selectMasterItem(item.id, selected);
                         }}
                       >
                         <SelectTrigger className="w-full h-7 text-xs font-mono font-normal bg-transparent">
                           <SelectValue placeholder="Select item…">
-                            {item.itemNumber || "Select item…"}
+                            {item.displayItemNumber || item.itemNumber || "Select item…"}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
                           <Command shouldFilter={false}>
                             <CommandInput
-                              placeholder="Search by item #, name, or work type…"
+                              placeholder="Search by item #, display #, description, or work type…"
                               value={selectorSearch}
                               onValueChange={setSelectorSearch}
                               autoFocus
@@ -844,81 +817,24 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
                               {/* Items grouped by work type */}
                               {(() => {
-                                const searchTerm = selectorSearch.toLowerCase().trim();
                                 const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                  const syntheticType = getSyntheticWorkType(curr);
-                                  const key = curr.is_custom ? 'CUSTOM' : syntheticType || curr.work_type?.trim().toUpperCase();
+                                  const normalizedWorkType = curr.work_type?.trim().toUpperCase();
+                                  const key = curr.is_custom ? 'CUSTOM' : normalizedWorkType || 'OTHER';
                                   if (key && !acc[key]) acc[key] = [];
                                   if (key) acc[key].push(curr);
                                   return acc;
                                 }, {});
 
-                                // Always show these three categories at the top when no search
-                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
-
-                                // Add synthetic groups for Delivery and Service
-                                if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
-                                if (!grouped['SERVICE']) grouped['SERVICE'] = [];
-                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
-
-                                let allWorkTypes: string[];
-
-                                if (!searchTerm) {
-                                  // No search: show always-show categories first, then others with items
-                                  allWorkTypes = [
-                                    ...alwaysShowCategories,
-                                    ...Object.keys(grouped)
-                                      .filter(type => !alwaysShowCategories.includes(type) && grouped[type].length > 0)
-                                      .sort()
-                                  ];
-                                } else {
-                                  // With search: show categories that have items or match search
-                                  allWorkTypes = Object.keys(grouped)
-                                    .filter(type => {
-                                      if (alwaysShowCategories.includes(type)) {
-                                        // Always show these when searched
-                                        return true;
-                                      }
-                                      return grouped[type].length > 0;
-                                    })
-                                    .sort();
-                                }
+                                const allWorkTypes = Object.keys(grouped)
+                                  .filter((type) => grouped[type].length > 0)
+                                  .sort((a, b) => {
+                                    if (a === 'CUSTOM') return 1;
+                                    if (b === 'CUSTOM') return -1;
+                                    return a.localeCompare(b);
+                                  });
 
                                 return allWorkTypes.map((workType) => {
                                   const groupItems = grouped[workType] || [];
-
-                                  // For synthetic sections (Delivery, Service), show items without category headers
-                                  if (workType === 'DELIVERY' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="delivery-item"
-                                        value="delivery"
-                                        onSelect={() => handleQuickAdd(item.id, 'delivery')}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
-                                        <span className="truncate max-w-[35ch]">Delivery</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  if (workType === 'SERVICE' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="service-item"
-                                        value="service"
-                                        onSelect={() => handleQuickAdd(item.id, 'service')}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
-                                        <span className="truncate max-w-[35ch]">Service</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  // For work type groups with items, show them with category headers
                                   if (groupItems.length > 0) {
                                     return (
                                       <CommandGroup key={workType} heading={workType}>
@@ -939,8 +855,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                               )}
                                             />
                                             <span className="font-mono mr-2 text-muted-foreground whitespace-nowrap">{p.item_number}</span>
-                                            <span className="truncate max-w-[35ch]" title={p.display_name}>
-                                              {p.display_name}
+                                            <span className="truncate max-w-[20ch]" title={getMasterDisplayItemNumber(p)}>
+                                              {getMasterDisplayItemNumber(p)}
+                                            </span>
+                                            <span className="ml-2 truncate max-w-[28ch] text-muted-foreground" title={p.description}>
+                                              {p.description}
                                             </span>
                                           </CommandItem>
                                         ))}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
-import { fetchSovMastersForEntries, getPrimaryUom, getVisibleSovItemNumber, isRepeatableCloneItemNumber, isRepeatableSovItemNumber, resolveEntryMaster } from '@/lib/server/sov/masterItems';
+import { fetchSovMastersForEntries, getPrimaryUom, isRepeatableCloneItemNumber, isRepeatableSovItemNumber, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 
 const selectEntryFields = `
   id,
@@ -201,7 +201,7 @@ export async function PUT(
         job_id: data.job_id,
         sov_item_id: data.sov_item_id,
         custom_sov_item_id: data.custom_sov_item_id,
-        item_number: getVisibleSovItemNumber(masterItem),
+        item_number: masterItem.item_number,
         display_item_number: masterItem.display_item_number,
         description: masterItem.description,
         display_name: masterItem.display_name,

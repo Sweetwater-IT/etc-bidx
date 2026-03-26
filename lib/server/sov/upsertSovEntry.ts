@@ -207,7 +207,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
       job_id: entry.job_id,
       sov_item_id: entry.sov_item_id,
       custom_sov_item_id: entry.custom_sov_item_id,
-      item_number: getVisibleSovItemNumber(masterItem),
+      item_number: masterItem.item_number,
       display_item_number: masterItem.display_item_number,
       description: masterItem.description,
       display_name: masterItem.display_name,
