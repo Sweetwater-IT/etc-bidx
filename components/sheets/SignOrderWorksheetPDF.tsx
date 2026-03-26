@@ -146,7 +146,18 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontStyle: 'italic',
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  descriptionRow: {
+    borderTop: '1px solid black',
+    borderBottom: '1.5px solid black',
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+  },
+  descriptionRowText: {
+    fontSize: 7,
+    fontStyle: 'italic',
+    textAlign: 'left',
   },
   columnHeader: {
     fontWeight: 'bold',
@@ -390,18 +401,22 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               {/* Table Rows */}
               {
                 safeSignList.map((item, idx) => (
-                  <View style={styles.row} key={idx}>
-                    <View style={styles.designationCell}>
-                      <Text style={styles.designationText}>{item.designation}</Text>
-                      <Text style={styles.descriptionText}>{item.description || '-'}</Text>
+                  <View key={idx}>
+                    <View style={styles.row}>
+                      <View style={styles.designationCell}>
+                        <Text style={styles.designationText}>{item.designation}</Text>
+                      </View>
+                      <Text style={styles.cell}>{item.width} in.</Text>
+                      <Text style={styles.cell}>{item.height} in.</Text>
+                      <Text style={styles.cell}>{item.quantity}</Text>
+                      <Text style={styles.cell}>{item.sheeting}</Text>
+                      <Text style={styles.cell}>{item.displayStructure}</Text>
+                      <Text style={styles.cell}>{item.bLights}</Text>
+                      <Text style={styles.cell}>{item.cover ? 'Yes' : 'No'}</Text>
                     </View>
-                    <Text style={styles.cell}>{item.width} in.</Text>
-                    <Text style={styles.cell}>{item.height} in.</Text>
-                    <Text style={styles.cell}>{item.quantity}</Text>
-                    <Text style={styles.cell}>{item.sheeting}</Text>
-                    <Text style={styles.cell}>{item.displayStructure}</Text>
-                    <Text style={styles.cell}>{item.bLights}</Text>
-                    <Text style={styles.cell}>{item.cover ? 'Yes' : 'No'}</Text>
+                    <View style={styles.descriptionRow}>
+                      <Text style={styles.descriptionRowText}>{item.description || '-'}</Text>
+                    </View>
                   </View>
                 ))
               }
