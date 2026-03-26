@@ -931,14 +931,14 @@ const ContractManager = () => {
         if (isUploading) return;
         if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); setExistingSignedContractCount(0); }
       }}>
-        <DialogContent className="w-[min(92vw,32rem)] sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
+        <DialogContent className="w-[min(92vw,32rem)] max-w-[32rem] overflow-hidden sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Attach Signed Contract</DialogTitle>
             <DialogDescription>
               Enter the ETC job number, then confirm this contract has a signed contract document attached before moving it into signed status.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="min-w-0 space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="signed-etc-job-number" className="text-xs">ETC Job Number</Label>
               <Input
@@ -983,9 +983,9 @@ const ContractManager = () => {
               </div>
             )}
             {signedFiles.length > 0 && (
-              <div className="space-y-2">
+              <div className="min-w-0 max-h-40 space-y-2 overflow-y-auto pr-1">
                 {signedFiles.map((file, i) => (
-                  <div key={i} className="flex min-w-0 items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+                  <div key={i} className="flex w-full min-w-0 items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
                     <File className="h-4 w-4 text-primary shrink-0" />
                     <span className="min-w-0 flex-1 truncate text-sm text-foreground">{file.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
