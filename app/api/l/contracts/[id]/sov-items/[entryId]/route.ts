@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
-import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster } from '@/lib/server/sov/masterItems';
+import { fetchSovMastersForEntries, getPrimaryUom, getVisibleSovItemNumber, isRepeatableCloneItemNumber, isRepeatableSovItemNumber, resolveEntryMaster } from '@/lib/server/sov/masterItems';
 
 const selectEntryFields = `
   id,
@@ -68,7 +68,7 @@ export async function PUT(
       .eq('job_id', jobId)
       .single();
 
-    if ((entryError || !entryData) && item_number) {
+    if ((entryError || !entryData) && item_number && !isRepeatableSovItemNumber(item_number)) {
       const normalizedItemNumber = String(item_number).trim();
 
       const [{ data: standardMaster }, { data: customMaster }] = await Promise.all([
@@ -118,10 +118,26 @@ export async function PUT(
     if (item_number || description || uom || work_type) {
       const masterTable = entryData.custom_sov_item_id ? 'custom_sov_items' : 'sov_items';
       const masterId = entryData.custom_sov_item_id ?? entryData.sov_item_id;
+      let preserveInternalItemNumber = false;
+
+      if (entryData.custom_sov_item_id) {
+        const { data: currentCustomMaster } = await supabase
+          .from('custom_sov_items')
+          .select('item_number, display_item_number')
+          .eq('id', masterId)
+          .maybeSingle();
+
+        preserveInternalItemNumber = Boolean(
+          currentCustomMaster &&
+          isRepeatableCloneItemNumber(currentCustomMaster.item_number) &&
+          isRepeatableSovItemNumber(item_number ?? currentCustomMaster.display_item_number ?? currentCustomMaster.item_number)
+        );
+      }
+
       const { error: masterUpdateError } = await supabase
         .from(masterTable)
         .update({
-          item_number: item_number ?? undefined,
+          item_number: preserveInternalItemNumber ? undefined : item_number ?? undefined,
           display_item_number: item_number ?? undefined,
           description: description ?? undefined,
           display_name: description || item_number || undefined,
@@ -179,13 +195,13 @@ export async function PUT(
         job_id: data.job_id,
         sov_item_id: data.sov_item_id,
         custom_sov_item_id: data.custom_sov_item_id,
-        item_number: masterItem.item_number,
+        item_number: getVisibleSovItemNumber(masterItem),
         display_item_number: masterItem.display_item_number,
         description: masterItem.description,
         display_name: masterItem.display_name,
         work_type: masterItem.work_type,
         uom: getPrimaryUom(masterItem),
-        is_custom: masterItem.source === 'custom',
+        is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
         quantity: data.quantity,
         unit_price: data.unit_price,
         extended_price: data.extended_price,

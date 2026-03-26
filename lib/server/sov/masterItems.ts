@@ -17,6 +17,8 @@ export const SOV_MASTER_SELECT_FIELDS = `
 `;
 
 export type SovMasterSource = 'standard' | 'custom';
+export const REPEATABLE_SOV_ITEM_NUMBERS = ['SERVICE', 'DELIVERY'] as const;
+const REPEATABLE_CLONE_MARKER = '__ROW__';
 
 export interface SovMasterItemRecord {
   id: number;
@@ -33,6 +35,27 @@ export interface SovMasterItemRecord {
   uom_6: string | null;
   uom_7: string | null;
   source: SovMasterSource;
+}
+
+export function normalizeSovItemNumber(value: string | null | undefined): string {
+  return String(value || '').trim().toUpperCase();
+}
+
+export function isRepeatableSovItemNumber(value: string | null | undefined): boolean {
+  return REPEATABLE_SOV_ITEM_NUMBERS.includes(normalizeSovItemNumber(value) as (typeof REPEATABLE_SOV_ITEM_NUMBERS)[number]);
+}
+
+export function buildRepeatableCloneItemNumber(value: string | null | undefined): string {
+  const base = normalizeSovItemNumber(value);
+  return `${base}${REPEATABLE_CLONE_MARKER}${crypto.randomUUID()}`;
+}
+
+export function isRepeatableCloneItemNumber(value: string | null | undefined): boolean {
+  return normalizeSovItemNumber(value).includes(REPEATABLE_CLONE_MARKER);
+}
+
+export function getVisibleSovItemNumber(item: Partial<SovMasterItemRecord> | null | undefined): string {
+  return item?.display_item_number || item?.item_number || '';
 }
 
 type EntryWithMasterIds = {

@@ -42,7 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
+import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
 import { toast } from 'sonner';
@@ -238,7 +238,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const notesTimeoutRef = useRef<number | null>(null);
   const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>({});
   const [activePriceInputId, setActivePriceInputId] = useState<string | null>(null);
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const showPricingColumns = forceShowPricing || !readOnly;
+  const totalColumnCount = (readOnly ? 0 : 1) + 1 + 1 + 1 + 1 + (showPricingColumns ? 4 : 0) + 1 + 1;
+  const notesColSpan = totalColumnCount;
+  const totalLabelColSpan = (readOnly ? 0 : 1) + 4;
 
   useImperativeHandle(ref, () => ({
     flushPendingSave: async () => {
@@ -647,6 +652,22 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   };
 
+  const moveItem = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    updateItems((prevItems) => {
+      const fromIndex = prevItems.findIndex((item) => item.id === fromId);
+      const toIndex = prevItems.findIndex((item) => item.id === toId);
+
+      if (fromIndex === -1 || toIndex === -1) return prevItems;
+
+      const nextItems = [...prevItems];
+      const [movedItem] = nextItems.splice(fromIndex, 1);
+      nextItems.splice(toIndex, 0, movedItem);
+      return nextItems;
+    });
+  }, [updateItems]);
+
   const totalExtended = items.reduce((sum, i) => sum + i.extendedPrice, 0);
   const totalRetainage = items.reduce((sum, i) => sum + i.retainageAmount, 0);
 
@@ -703,6 +724,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           <Table className={cn("min-w-[800px]", readOnly && "min-w-[620px]")}>
             <TableHeader>
               <TableRow>
+                {!readOnly && <TableHead className="w-[36px]" />}
                 <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                 <TableHead className="text-xs">Description</TableHead>
                 <TableHead className="w-[200px] text-xs whitespace-nowrap">UOM</TableHead>
@@ -722,7 +744,55 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
                 return (
                 <Fragment key={item.id}>
-                <TableRow key={item.id}>
+                <TableRow
+                  key={item.id}
+                  className={cn(
+                    !readOnly && "transition-colors",
+                    dragOverItemId === item.id && draggedItemId !== item.id && "bg-primary/5"
+                  )}
+                  onDragOver={(e) => {
+                    if (readOnly || !draggedItemId || draggedItemId === item.id) return;
+                    e.preventDefault();
+                    setDragOverItemId(item.id);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverItemId === item.id) {
+                      setDragOverItemId(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (readOnly || !draggedItemId) return;
+                    e.preventDefault();
+                    moveItem(draggedItemId, item.id);
+                    setDraggedItemId(null);
+                    setDragOverItemId(null);
+                  }}
+                >
+                  {!readOnly && (
+                    <TableCell className="p-1.5 align-top">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        draggable
+                        className={cn(
+                          "h-7 w-7 cursor-grab text-muted-foreground hover:text-foreground",
+                          draggedItemId === item.id && "cursor-grabbing text-foreground"
+                        )}
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', String(item.id));
+                          setDraggedItemId(item.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedItemId(null);
+                          setDragOverItemId(null);
+                        }}
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5">
                     {readOnly ? (
                       <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
@@ -1119,7 +1189,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 </TableRow>
                 {hasNotes && (
                   <TableRow className="border-t-0">
-                    <TableCell colSpan={showPricingColumns ? 10 : 6} className="p-1.5 pt-0">
+                    <TableCell colSpan={notesColSpan} className="p-1.5 pt-0">
                       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
                         <div className="flex items-start gap-2">
                           <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-foreground/70 shrink-0" />
@@ -1138,7 +1208,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
               {showPricingColumns && (
                 <TableRow className="bg-muted/30 font-semibold">
-                  <TableCell colSpan={5} className="p-1.5 text-xs text-right">
+                  <TableCell colSpan={totalLabelColSpan} className="p-1.5 text-xs text-right">
                     Total
                   </TableCell>
                   <TableCell className="p-1.5 text-right text-xs">

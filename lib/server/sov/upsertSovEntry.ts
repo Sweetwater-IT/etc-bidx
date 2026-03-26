@@ -1,8 +1,13 @@
 import { supabase } from '@/lib/supabase';
 import {
+  buildRepeatableCloneItemNumber,
   fetchSovMastersForEntries,
   getPrimaryUom,
+  getVisibleSovItemNumber,
+  isRepeatableCloneItemNumber,
+  isRepeatableSovItemNumber,
   resolveEntryMaster,
+  SOV_MASTER_SELECT_FIELDS,
 } from '@/lib/server/sov/masterItems';
 
 export class SovUpsertError extends Error {
@@ -54,10 +59,11 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   let finalCustomSovItemId = custom_sov_item_id ?? null;
 
   if (!finalSovItemId && !finalCustomSovItemId && item_number) {
+    const normalizedItemNumber = String(item_number).trim();
     const { data: existingItem, error: findError } = await supabase
       .from('sov_items')
-      .select('id')
-      .eq('item_number', item_number)
+      .select(SOV_MASTER_SELECT_FIELDS)
+      .eq('item_number', normalizedItemNumber)
       .single();
 
     if (findError && findError.code !== 'PGRST116') {
@@ -65,16 +71,38 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     }
 
     if (existingItem) {
-      finalSovItemId = existingItem.id;
+      if (isRepeatableSovItemNumber(existingItem.display_item_number || existingItem.item_number)) {
+        const { data: repeatableClone, error: cloneError } = await supabase
+          .from('custom_sov_items')
+          .insert({
+            job_id: jobId,
+            item_number: buildRepeatableCloneItemNumber(existingItem.display_item_number || existingItem.item_number),
+            display_item_number: existingItem.display_item_number || existingItem.item_number,
+            description: description ?? existingItem.description ?? '',
+            display_name: description || existingItem.display_name || existingItem.display_item_number || existingItem.item_number,
+            work_type: work_type ?? existingItem.work_type ?? 'OTHER',
+            uom_1: uom ?? getPrimaryUom(existingItem),
+          })
+          .select('id')
+          .single();
+
+        if (cloneError) {
+          throw new SovUpsertError('Failed to create repeatable SOV item clone', 500, cloneError);
+        }
+
+        finalCustomSovItemId = repeatableClone.id;
+      } else {
+        finalSovItemId = existingItem.id;
+      }
     } else {
       const { data: newItem, error: createError } = await supabase
         .from('custom_sov_items')
         .insert({
           job_id: jobId,
-          item_number,
-          display_item_number: item_number,
+          item_number: normalizedItemNumber,
+          display_item_number: normalizedItemNumber,
           description: description ?? '',
-          display_name: description || item_number,
+          display_name: description || normalizedItemNumber,
           work_type: work_type ?? 'OTHER',
           uom_1: uom ?? 'UNKNOWN',
         })
@@ -164,13 +192,13 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
       job_id: entry.job_id,
       sov_item_id: entry.sov_item_id,
       custom_sov_item_id: entry.custom_sov_item_id,
-      item_number: masterItem.item_number,
+      item_number: getVisibleSovItemNumber(masterItem),
       display_item_number: masterItem.display_item_number,
       description: masterItem.description,
       display_name: masterItem.display_name,
       work_type: masterItem.work_type,
       uom: getPrimaryUom(masterItem),
-      is_custom: masterItem.source === 'custom',
+      is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
       quantity: entry.quantity,
       unit_price: entry.unit_price,
       extended_price: entry.extended_price,

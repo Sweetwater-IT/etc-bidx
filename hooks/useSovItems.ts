@@ -34,7 +34,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const data = await response.json();
         const formattedItems: ScheduleOfValuesItem[] = data.data.map((item: any) => ({
           id: item.id,
-          itemNumber: item.item_number || '',
+          itemNumber: item.display_item_number || item.item_number || '',
           description: item.description || '',
           uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7 || '',
           quantity: item.quantity || 0,
@@ -150,6 +150,9 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const itemsToUpdate = validItems.filter(currentItem => {
           const originalItem = originalItems.find(orig => orig.id === currentItem.id);
           if (!originalItem) return false;
+          const originalIndex = originalItems.findIndex((orig) => orig.id === currentItem.id);
+          const currentIndex = validItems.findIndex((item) => item.id === currentItem.id);
+          const sortOrderChanged = originalIndex !== currentIndex;
 
           // Check if any significant fields changed
           const hasChanged = (
@@ -161,7 +164,8 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
             originalItem.retainageType !== currentItem.retainageType ||
             originalItem.retainageValue !== currentItem.retainageValue ||
             originalItem.notes !== currentItem.notes ||
-            originalItem.work_type !== currentItem.work_type
+            originalItem.work_type !== currentItem.work_type ||
+            sortOrderChanged
           );
 
           if (hasChanged) {
@@ -178,6 +182,7 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
                 retainageValue: originalItem.retainageValue !== currentItem.retainageValue ? `${originalItem.retainageValue} -> ${currentItem.retainageValue}` : null,
                 notes: originalItem.notes !== currentItem.notes ? 'changed' : null,
                 workType: originalItem.work_type !== currentItem.work_type ? `${originalItem.work_type} -> ${currentItem.work_type}` : null,
+                sortOrder: sortOrderChanged ? `${originalIndex + 1} -> ${currentIndex + 1}` : null,
               }
             });
           }
