@@ -70,13 +70,17 @@ export async function PUT(
 
     if ((entryError || !entryData) && item_number && !isRepeatableSovItemNumber(item_number)) {
       const normalizedItemNumber = String(item_number).trim();
+      let standardMasterQuery = supabase
+        .from('sov_items')
+        .select('id')
+        .eq('item_number', normalizedItemNumber);
 
-      const [{ data: standardMaster }, { data: customMaster }] = await Promise.all([
-        supabase
-          .from('sov_items')
-          .select('id')
-          .eq('item_number', normalizedItemNumber)
-          .maybeSingle(),
+      if (work_type) {
+        standardMasterQuery = standardMasterQuery.eq('work_type', work_type);
+      }
+
+      const [{ data: standardMasterRows }, { data: customMaster }] = await Promise.all([
+        standardMasterQuery.limit(2),
         supabase
           .from('custom_sov_items')
           .select('id')
@@ -84,6 +88,8 @@ export async function PUT(
           .eq('item_number', normalizedItemNumber)
           .maybeSingle(),
       ]);
+
+      const standardMaster = standardMasterRows?.[0] ?? null;
 
       let fallbackQuery = supabase
         .from('sov_entries')

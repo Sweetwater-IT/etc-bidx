@@ -176,6 +176,10 @@ function getSyntheticWorkType(item: SovMasterItem): 'SERVICE' | 'DELIVERY' | nul
   return null;
 }
 
+function getMasterSelectValue(item: SovMasterItem): string {
+  return `${item.is_custom ? 'custom' : 'standard'}:${item.id}`;
+}
+
 const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   jobId,
   contractId,
@@ -803,7 +807,13 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                           setSelectorOpen(open ? item.id : null);
                           if (!open) setSelectorSearch('');
                         }}
-                        value={item.itemNumber || undefined}
+                        value={
+                          item.custom_sov_item_id != null
+                            ? `custom:${item.custom_sov_item_id}`
+                            : item.sov_item_id != null
+                              ? `standard:${item.sov_item_id}`
+                              : undefined
+                        }
                         onValueChange={(value) => {
                           if (value === "delivery") {
                             handleQuickAdd(item.id, 'delivery');
@@ -813,7 +823,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                             handleQuickAdd(item.id, 'service');
                             return;
                           }
-                          const selected = sovProducts.find(p => p.item_number === value);
+                          const selected = sovProducts.find((p) => getMasterSelectValue(p) === value);
                           if (selected) selectMasterItem(item.id, selected);
                         }}
                       >
@@ -915,20 +925,17 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                                         {groupItems.map((p) => (
                                           <CommandItem
                                             key={p.id}
-                                            value={[
-                                              p.item_number,
-                                              p.display_item_number,
-                                              p.display_name,
-                                              p.description,
-                                              p.work_type,
-                                            ].filter(Boolean).join(' ')}
+                                            value={getMasterSelectValue(p)}
                                             onSelect={() => selectMasterItem(item.id, p)}
                                             className="text-xs cursor-pointer"
                                           >
                                             <Check
                                               className={cn(
                                                 "mr-2 h-4 w-4",
-                                                item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
+                                                (
+                                                  (item.custom_sov_item_id != null && p.is_custom && item.custom_sov_item_id === p.id) ||
+                                                  (item.sov_item_id != null && !p.is_custom && item.sov_item_id === p.id)
+                                                ) ? "opacity-100" : "opacity-0"
                                               )}
                                             />
                                             <span className="font-mono mr-2 text-muted-foreground whitespace-nowrap">{p.item_number}</span>

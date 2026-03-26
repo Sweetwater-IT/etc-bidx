@@ -60,14 +60,29 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
 
   if (!finalSovItemId && !finalCustomSovItemId && item_number) {
     const normalizedItemNumber = String(item_number).trim();
-    const { data: existingItem, error: findError } = await supabase
+    let standardLookup = supabase
       .from('sov_items')
       .select(SOV_MASTER_SELECT_FIELDS)
-      .eq('item_number', normalizedItemNumber)
-      .single();
+      .eq('item_number', normalizedItemNumber);
+
+    if (work_type) {
+      standardLookup = standardLookup.eq('work_type', work_type);
+    }
+
+    const { data: standardMatches, error: findError } = await standardLookup.limit(2);
 
     if (findError && findError.code !== 'PGRST116') {
       throw new SovUpsertError('Failed to lookup master SOV item', 500, findError);
+    }
+
+    const existingItem = standardMatches?.[0] ?? null;
+
+    if ((standardMatches?.length || 0) > 1) {
+      throw new SovUpsertError(
+        'Found multiple standard SOV items for this item number. Please include work type when selecting the row.',
+        400,
+        { item_number: normalizedItemNumber, work_type }
+      );
     }
 
     if (existingItem) {

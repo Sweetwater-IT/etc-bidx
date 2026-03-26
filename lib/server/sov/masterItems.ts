@@ -55,7 +55,19 @@ export function isRepeatableCloneItemNumber(value: string | null | undefined): b
 }
 
 export function getVisibleSovItemNumber(item: Partial<SovMasterItemRecord> | null | undefined): string {
-  return item?.display_item_number || item?.item_number || '';
+  const rawItemNumber = String(item?.item_number || '').trim();
+  const rawDisplayItemNumber = String(item?.display_item_number || '').trim();
+  const normalizedWorkType = normalizeSovItemNumber(item?.work_type);
+
+  if (isRepeatableCloneItemNumber(rawItemNumber) && rawDisplayItemNumber) {
+    return rawDisplayItemNumber;
+  }
+
+  if (rawDisplayItemNumber && normalizeSovItemNumber(rawDisplayItemNumber) !== normalizedWorkType) {
+    return rawDisplayItemNumber;
+  }
+
+  return rawItemNumber || rawDisplayItemNumber;
 }
 
 type EntryWithMasterIds = {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { isRepeatableCloneItemNumber } from '@/lib/server/sov/masterItems';
+import { getVisibleSovItemNumber, isRepeatableCloneItemNumber } from '@/lib/server/sov/masterItems';
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         .filter((item) => !isRepeatableCloneItemNumber(item.item_number))
         .map((item) => ({
           ...item,
-          item_number: item.display_item_number || item.item_number,
+          item_number: getVisibleSovItemNumber(item),
           work_type: 'CUSTOM',
           is_custom: true,
           uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7,
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Transform the data to include a uom field using the first non-null uom from uom_1 to uom_7
     const transformedData = (data || []).map(item => ({
       ...item,
-      item_number: item.display_item_number || item.item_number,
+      item_number: getVisibleSovItemNumber(item),
       is_custom: false,
       uom: item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7
     }));
