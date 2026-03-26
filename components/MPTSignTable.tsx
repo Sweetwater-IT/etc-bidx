@@ -57,7 +57,7 @@ export type MPTSignRow = {
   signLegend: string;
   sheeting: string;
   structureType: string;
-  bLights: 'none' | 'yellow' | 'red' | 'white';
+  bLights: 'none' | '1Y' | '1R' | '1W' | '2Y' | '2R' | '2W';
   sqft: number;
   totalSqft: number;
   quantity: number;
@@ -81,12 +81,12 @@ interface MPTSignTableProps {
 const SHEETING_OPTIONS = ["HI", "DG", "Type 11", "FYG"];
 const B_LIGHT_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: '1y', label: '1 Yellow' },
-  { value: '1r', label: '1 Red' },
-  { value: '1w', label: '1 White' },
-  { value: '2y', label: '2 Yellow' },
-  { value: '2r', label: '2 Red' },
-  { value: '2w', label: '2 White' },
+  { value: '1Y', label: '1 Yellow' },
+  { value: '1R', label: '1 Red' },
+  { value: '1W', label: '1 White' },
+  { value: '2Y', label: '2 Yellow' },
+  { value: '2R', label: '2 Red' },
+  { value: '2W', label: '2 White' },
 ];
 
 const roundToTwo = (value: number) => Math.round(value * 100) / 100;
@@ -619,10 +619,10 @@ export const MPTSignTable = ({
         }),
         quantity: updatedSign.quantity,
         cover: updatedSign.cover,
-        // Map bLights from the searcher format to our format
-        bLights: !updatedSign.bLights || updatedSign.bLights === 'none' ? 'none' :
-                (updatedSign.bLightsColor === 'Yellow' ? 'yellow' :
-                 updatedSign.bLightsColor === 'Red' ? 'red' : 'white'),
+        // Map bLights from the searcher format to our table format (e.g. 2Y, 1R)
+        bLights: !updatedSign.bLights || updatedSign.bLights === 'none'
+          ? 'none'
+          : `${updatedSign.bLights}${updatedSign.bLightsColor === 'Yellow' ? 'Y' : updatedSign.bLightsColor === 'Red' ? 'R' : 'W'}` as MPTSignRow["bLights"],
       });
     }
 

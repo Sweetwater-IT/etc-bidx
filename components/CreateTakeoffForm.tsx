@@ -327,12 +327,12 @@ const normalizeImportedBLight = (value: unknown): MPTSignRow["bLights"] => {
   if (typeof value !== "string") return "none";
 
   const normalized = value.trim().toLowerCase();
-  if (normalized === "1y" || normalized === "1 yellow") return "1y";
-  if (normalized === "1r" || normalized === "1 red") return "1r";
-  if (normalized === "1w" || normalized === "1 white") return "1w";
-  if (normalized === "2y" || normalized === "2 yellow") return "2y";
-  if (normalized === "2r" || normalized === "2 red") return "2r";
-  if (normalized === "2w" || normalized === "2 white") return "2w";
+  if (normalized === "1y" || normalized === "1 yellow") return "1Y";
+  if (normalized === "1r" || normalized === "1 red") return "1R";
+  if (normalized === "1w" || normalized === "1 white") return "1W";
+  if (normalized === "2y" || normalized === "2 yellow") return "2Y";
+  if (normalized === "2r" || normalized === "2 red") return "2R";
+  if (normalized === "2w" || normalized === "2 white") return "2W";
   return "none";
 };
 
