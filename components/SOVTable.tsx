@@ -333,6 +333,21 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     });
   }, [filteredItems]);
 
+  const groupedSelectableItems = useMemo(() => {
+    return sortedSelectableItems.reduce<Array<{ heading: string; items: SovMasterItem[] }>>((acc, item) => {
+      const heading = (item.is_custom ? 'CUSTOM' : item.work_type || 'OTHER').trim().toUpperCase();
+      const lastGroup = acc[acc.length - 1];
+
+      if (!lastGroup || lastGroup.heading !== heading) {
+        acc.push({ heading, items: [item] });
+        return acc;
+      }
+
+      lastGroup.items.push(item);
+      return acc;
+    }, []);
+  }, [sortedSelectableItems]);
+
   const customUomOptions = useMemo(() => {
     const allUoms = sovProducts.flatMap((product) => getAvailableUoms(product));
     const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "").map(normalizeUom)));
@@ -1064,33 +1079,40 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Display #</TableHead>
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Description</TableHead>
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Display Name</TableHead>
-                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[140px]">Category</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedSelectableItems.map((p) => (
-                      <TableRow
-                        key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
-                        className="cursor-pointer"
-                        onClick={() => applyMasterToEditor(p)}
-                      >
-                        <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
-                        <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
-                        <TableCell className="text-xs">{p.description}</TableCell>
-                        <TableCell className="text-xs">{p.display_name}</TableCell>
-                        <TableCell className="text-xs font-medium">{p.is_custom ? 'CUSTOM' : (p.work_type || 'OTHER')}</TableCell>
-                      </TableRow>
+                    {groupedSelectableItems.map((group) => (
+                      <Fragment key={group.heading}>
+                        <TableRow className="hover:bg-transparent border-t bg-muted/40">
+                          <TableCell colSpan={4} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {group.heading}
+                          </TableCell>
+                        </TableRow>
+                        {group.items.map((p) => (
+                          <TableRow
+                            key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
+                            className="cursor-pointer"
+                            onClick={() => applyMasterToEditor(p)}
+                          >
+                            <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
+                            <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
+                            <TableCell className="text-xs">{p.description}</TableCell>
+                            <TableCell className="text-xs">{p.display_name}</TableCell>
+                          </TableRow>
+                        ))}
+                      </Fragment>
                     ))}
-                    {!sovMasterLoading && sortedSelectableItems.length === 0 && (
+                    {!sovMasterLoading && groupedSelectableItems.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={4} className="py-6 text-center text-xs text-muted-foreground">
                           No matching items found.
                         </TableCell>
                       </TableRow>
                     )}
                     {sovMasterLoading && (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={4} className="py-6 text-center text-xs text-muted-foreground">
                           Loading…
                         </TableCell>
                       </TableRow>
