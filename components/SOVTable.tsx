@@ -20,14 +20,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -91,6 +83,25 @@ interface PendingDeleteState {
   reason: string;
 }
 
+interface SovItemEditorDraft {
+  rowId: string;
+  isNew: boolean;
+  itemNumber: string;
+  displayItemNumber: string;
+  displayName: string;
+  sourceDescription: string;
+  workType: string;
+  uom: string;
+  quantity: number;
+  unitPrice: number;
+  retainageType: 'percent' | 'dollar';
+  retainageValue: number;
+  notes: string;
+  sov_item_id?: number;
+  custom_sov_item_id?: number;
+  isCustom?: boolean;
+}
+
 const CUSTOM_WORK_TYPE_OPTIONS = [
   { value: 'MPT', label: 'MPT' },
   { value: 'PERMANENT_SIGNS', label: 'Permanent Signs' },
@@ -151,10 +162,6 @@ function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string
   return deduped.length > 0 ? deduped : ["EA"];
 }
 
-function getMasterSelectValue(item: SovMasterItem): string {
-  return `${item.is_custom ? 'custom' : 'standard'}:${item.id}`;
-}
-
 function getMasterDisplayItemNumber(item: Pick<SovMasterItem, 'display_item_number' | 'item_number'>): string {
   return item.display_item_number?.trim() || item.item_number?.trim() || '';
 }
@@ -207,6 +214,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
   const [selectorSearch, setSelectorSearch] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorStep, setEditorStep] = useState<'pick' | 'configure'>('pick');
+  const [editorDraft, setEditorDraft] = useState<SovItemEditorDraft | null>(null);
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null);
@@ -308,11 +318,100 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     });
   }, [sovProducts, selectorSearch]);
 
+  const sortedSelectableItems = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      const aType = (a.is_custom ? 'CUSTOM' : a.work_type || 'OTHER').trim().toUpperCase();
+      const bType = (b.is_custom ? 'CUSTOM' : b.work_type || 'OTHER').trim().toUpperCase();
+
+      if (aType !== bType) {
+        if (aType === 'CUSTOM') return 1;
+        if (bType === 'CUSTOM') return -1;
+        return aType.localeCompare(bType);
+      }
+
+      return a.item_number.localeCompare(b.item_number, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [filteredItems]);
+
   const customUomOptions = useMemo(() => {
     const allUoms = sovProducts.flatMap((product) => getAvailableUoms(product));
     const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "").map(normalizeUom)));
     return deduped.length > 0 ? deduped : ["EA"];
   }, [sovProducts]);
+
+  const buildEditorDraftFromItem = useCallback((item: ScheduleOfValuesItem, options?: { isNew?: boolean }): SovItemEditorDraft => ({
+    rowId: item.id,
+    isNew: options?.isNew ?? false,
+    itemNumber: item.itemNumber || '',
+    displayItemNumber: item.displayItemNumber || item.itemNumber || '',
+    displayName: item.displayNameOverride || item.description || '',
+    sourceDescription: item.sourceDescription || item.description || '',
+    workType: item.work_type || '',
+    uom: item.uomOverride || item.uom || '',
+    quantity: item.quantity || 1,
+    unitPrice: item.unitPrice || 0,
+    retainageType: item.retainageType || 'dollar',
+    retainageValue: item.retainageValue || 0,
+    notes: item.notes || '',
+    sov_item_id: item.sov_item_id,
+    custom_sov_item_id: item.custom_sov_item_id,
+    isCustom: item.is_custom,
+  }), []);
+
+  const openEditorForNewItem = useCallback(() => {
+    const rowId = `temp-${crypto.randomUUID()}`;
+    setEditorDraft({
+      rowId,
+      isNew: true,
+      itemNumber: '',
+      displayItemNumber: '',
+      displayName: '',
+      sourceDescription: '',
+      workType: '',
+      uom: '',
+      quantity: 1,
+      unitPrice: 0,
+      retainageType: 'dollar',
+      retainageValue: 0,
+      notes: '',
+    });
+    setEditorStep('pick');
+    setSelectorSearch('');
+    setEditorOpen(true);
+  }, []);
+
+  const openEditorForExistingItem = useCallback((item: ScheduleOfValuesItem) => {
+    setEditorDraft(buildEditorDraftFromItem(item));
+    setEditorStep('configure');
+    setSelectorSearch('');
+    setEditorOpen(true);
+  }, [buildEditorDraftFromItem]);
+
+  const applyMasterToEditor = useCallback((master: SovMasterItem) => {
+    setEditorDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        itemNumber: master.item_number,
+        displayItemNumber: getMasterDisplayItemNumber(master),
+        displayName: master.display_name || master.description || getMasterDisplayItemNumber(master),
+        sourceDescription: master.description || '',
+        workType: master.work_type || '',
+        uom: getFirstNonNullUom(master),
+        sov_item_id: master.is_custom ? undefined : master.id,
+        custom_sov_item_id: master.is_custom ? master.id : undefined,
+        isCustom: master.is_custom,
+      };
+    });
+    setEditorStep('configure');
+  }, []);
+
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    setEditorStep('pick');
+    setEditorDraft(null);
+    setSelectorSearch('');
+  }, []);
 
   const addRow = () => {
     // Check if change order is required for signed contracts
@@ -320,25 +419,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       onEditAttempt();
       return;
     }
-
-    const newItem: ScheduleOfValuesItem = {
-      id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
-      itemNumber: '',
-      description: '',
-      uom: '',
-      quantity: 0,
-      unitPrice: 0,
-      extendedPrice: 0,
-      retainageType: 'dollar',
-      retainageValue: 0,
-      retainageAmount: 0,
-      notes: '',
-    };
-    // Add to items but don't trigger save yet (validation will prevent it)
-    updateItems((prev) => [...prev, newItem]);
-    // Open selector immediately to reduce one extra click
-    setSelectorOpen(newItem.id);
-    setSelectorSearch('');
+    openEditorForNewItem();
   };
 
   const updateRow = (id: string, field: keyof ScheduleOfValuesItem, value: string | number) => {
@@ -479,6 +560,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             ? {
                 ...item,
                 id: createdItem.id, // Replace temp ID with real database ID
+                sov_item_id: createdItem.sov_item_id ?? payload.sov_item_id ?? undefined,
+                custom_sov_item_id: createdItem.custom_sov_item_id ?? payload.custom_sov_item_id ?? undefined,
                 itemNumber: master.item_number,
                 displayItemNumber: createdItem.display_item_number || getMasterDisplayItemNumber(master),
                 description: master.display_name,
@@ -620,6 +703,46 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     );
     closeCustomDialog(false);
   };
+
+  const saveEditorDraft = useCallback(() => {
+    if (!editorDraft?.itemNumber.trim()) return;
+
+    const normalizedDisplayName = editorDraft.displayName.trim();
+    const normalizedUom = editorDraft.uom.trim();
+    const nextItem: ScheduleOfValuesItem = {
+      id: editorDraft.rowId,
+      itemNumber: editorDraft.itemNumber,
+      displayItemNumber: editorDraft.displayItemNumber || editorDraft.itemNumber,
+      description: normalizedDisplayName || editorDraft.sourceDescription || editorDraft.itemNumber,
+      sourceDescription: editorDraft.sourceDescription || '',
+      displayNameOverride: normalizedDisplayName || undefined,
+      quantity: Math.max(1, editorDraft.quantity || 1),
+      unitPrice: Math.max(0, editorDraft.unitPrice || 0),
+      extendedPrice: Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
+      retainageAmount: calcRetainageAmount(
+        Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
+        editorDraft.retainageType,
+        editorDraft.retainageValue || 0
+      ),
+      retainageType: editorDraft.retainageType,
+      retainageValue: editorDraft.retainageValue || 0,
+      uom: normalizedUom || 'EA',
+      uomOverride: normalizedUom || 'EA',
+      notes: editorDraft.notes || '',
+      work_type: editorDraft.workType,
+      sov_item_id: editorDraft.sov_item_id,
+      custom_sov_item_id: editorDraft.custom_sov_item_id,
+      is_custom: editorDraft.isCustom,
+    };
+
+    if (editorDraft.isNew) {
+      updateItems((prev) => [...prev, nextItem]);
+    } else {
+      updateItems((prev) => prev.map((item) => (item.id === editorDraft.rowId ? { ...item, ...nextItem } : item)));
+    }
+
+    closeEditor();
+  }, [closeEditor, editorDraft, updateItems]);
 
   const applyBulkRetainage = () => {
     let val = bulkValueDigits ? (parseInt(bulkValueDigits, 10) || 0) / 100 : 0;
@@ -782,110 +905,17 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     {readOnly ? (
                       <span className="text-xs font-mono truncate block px-1">{item.displayItemNumber || item.itemNumber}</span>
                     ) : (
-                      <Select
-                        open={selectorOpen === item.id}
-                        onOpenChange={(open) => {
-                          setSelectorOpen(open ? item.id : null);
-                          if (!open) setSelectorSearch('');
-                        }}
-                        value={
-                          item.custom_sov_item_id != null
-                            ? `custom:${item.custom_sov_item_id}`
-                            : item.sov_item_id != null
-                              ? `standard:${item.sov_item_id}`
-                              : undefined
-                        }
-                        onValueChange={(value) => {
-                          const selected = sovProducts.find((p) => getMasterSelectValue(p) === value);
-                          if (selected) selectMasterItem(item.id, selected);
-                        }}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 w-full justify-between overflow-hidden px-2 text-xs font-mono font-normal"
+                        onClick={() => openEditorForExistingItem(item)}
                       >
-                        <SelectTrigger className="w-full h-7 text-xs font-mono font-normal bg-transparent">
-                          <SelectValue placeholder="Select item…">
-                            {item.displayItemNumber || item.itemNumber || "Select item…"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder="Search by item #, display #, description, or work type…"
-                              value={selectorSearch}
-                              onValueChange={setSelectorSearch}
-                              autoFocus
-                            />
-                            <CommandList>
-
-                              {/* Items grouped by work type */}
-                              {(() => {
-                                const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                  const normalizedWorkType = curr.work_type?.trim().toUpperCase();
-                                  const key = curr.is_custom ? 'CUSTOM' : normalizedWorkType || 'OTHER';
-                                  if (key && !acc[key]) acc[key] = [];
-                                  if (key) acc[key].push(curr);
-                                  return acc;
-                                }, {});
-
-                                const allWorkTypes = Object.keys(grouped)
-                                  .filter((type) => grouped[type].length > 0)
-                                  .sort((a, b) => {
-                                    if (a === 'CUSTOM') return 1;
-                                    if (b === 'CUSTOM') return -1;
-                                    return a.localeCompare(b);
-                                  });
-
-                                return allWorkTypes.map((workType) => {
-                                  const groupItems = grouped[workType] || [];
-                                  if (groupItems.length > 0) {
-                                    return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        {groupItems.map((p) => (
-                                          <CommandItem
-                                            key={p.id}
-                                            value={getMasterSelectValue(p)}
-                                            onSelect={() => selectMasterItem(item.id, p)}
-                                            className="text-xs cursor-pointer"
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                (
-                                                  (item.custom_sov_item_id != null && p.is_custom && item.custom_sov_item_id === p.id) ||
-                                                  (item.sov_item_id != null && !p.is_custom && item.sov_item_id === p.id)
-                                                ) ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            <span className="font-mono mr-2 text-muted-foreground whitespace-nowrap">{p.item_number}</span>
-                                            <span className="truncate max-w-[20ch]" title={getMasterDisplayItemNumber(p)}>
-                                              {getMasterDisplayItemNumber(p)}
-                                            </span>
-                                            <span className="ml-2 truncate max-w-[28ch] text-muted-foreground" title={p.description}>
-                                              {p.description}
-                                            </span>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    );
-                                  }
-
-                                  return null;
-                                });
-                              })()}
-
-                              {filteredItems.length === 0 && !sovMasterLoading && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                  No matching items found.
-                                </div>
-                              )}
-
-                              {sovMasterLoading && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                  Loading...
-                                </div>
-                              )}
-                            </CommandList>
-                          </Command>
-                        </SelectContent>
-                      </Select>
+                        <span className="truncate">
+                          {item.displayItemNumber || item.itemNumber || 'Select item…'}
+                        </span>
+                        <Pencil className="ml-2 h-3.5 w-3.5 shrink-0 opacity-60" />
+                      </Button>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
@@ -894,103 +924,20 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         "text-xs px-1 block",
                         readOnly ? "whitespace-normal break-words" : "truncate max-w-[35ch]"
                       )}
-                      title={item.description}
+                      title={item.description || item.sourceDescription}
                     >
                       {item.description}
                     </span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
-                    ) : (
-                      (() => {
-                        const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
-                        const availableUoms = masterItem
-                          ? getAvailableUoms(masterItem)
-                          : getAvailableUomsForWorkType(sovProducts, item.work_type || '');
-
-                        // Always show select if we have UOM options, otherwise show as text
-                        return availableUoms.length > 0 ? (
-                          <Select
-                            value={item.uom ? normalizeUom(item.uom) : undefined}
-                            onValueChange={(value) => updateRow(item.id, 'uom', value)}
-                          >
-                            <SelectTrigger className="w-full h-7 text-xs bg-transparent whitespace-nowrap">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableUoms.map((uom) => (
-                                <SelectItem key={uom} value={uom} className="text-xs whitespace-nowrap">
-                                  {uom}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
-                        );
-                      })()
-                    )}
+                    <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
                   </TableCell>
                   <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">{item.quantity}</span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(item.id, 'quantity', Math.max(1, item.quantity - 1))}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={item.quantity || 1}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const cleaned = raw.replace(/\D/g, '');
-                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                            updateRow(item.id, 'quantity', num);
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(item.id, 'quantity', item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
+                    <span className="text-xs text-right block px-1">{item.quantity}</span>
                   </TableCell>
                   {showPricingColumns && (
                     <TableCell className="p-1.5">
-                      {readOnly ? (
-                        <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                          ) : (
-                          <div
-                            className={cn(
-                              "flex items-center h-7 border rounded-md bg-background transition-colors",
-                              activePriceInputId === item.id && "border-[#16335A]/25 bg-[#16335A]/5 shadow-[0_0_0_1px_rgba(22,51,90,0.15)]"
-                            )}
-                          >
-                            <span className="px-2 text-xs text-muted-foreground border-r">$</span>
-                            <CurrencyInput
-                              value={unitPriceDrafts[item.id] ?? Math.round(item.unitPrice * 100).toFixed(0)}
-                              onChange={(digits) => updateUnitPrice(item.id, digits)}
-                              onFocus={() => setActivePriceInputId(item.id)}
-                              onBlur={() => setActivePriceInputId((current) => (current === item.id ? null : current))}
-                              className="h-7 text-xs text-right w-[140px] min-w-[140px] border-0 bg-transparent focus-visible:ring-0 cursor-text"
-                            />
-                          </div>
-                          )}
+                      <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </TableCell>
                   )}
                   {showPricingColumns && (
@@ -1002,27 +949,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   )}
                   {showPricingColumns && (
                     <TableCell className="p-1.5">
-                      {readOnly ? (
-                        <span className="text-xs text-right block px-1">
-                          {item.retainageType === 'percent'
-                            ? `${item.retainageValue}%`
-                            : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-                        </span>
-                      ) : (
-                        <div className="flex justify-end">
-                          <DollarPercentCurrencyInputField
-                            type={item.retainageType}
-                            value={item.retainageValue}
-                            onTypeChange={(type) => {
-                              const currentValue = item.retainageValue;
-                              const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
-                              updateRetainage(item.id, type, newValue);
-                            }}
-                            onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
-                            size="sm"
-                          />
-                        </div>
-                      )}
+                      <span className="text-xs text-right block px-1">
+                        {item.retainageType === 'percent'
+                          ? `${item.retainageValue}%`
+                          : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                      </span>
                     </TableCell>
                   )}
                   {showPricingColumns && (
@@ -1031,76 +962,21 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     </TableCell>
                   )}
                   <TableCell className="p-1.5 text-center relative">
-                    {readOnly ? (
-                      <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </div>
-                    ) : (
-                      <Popover
-                        open={editingNotesId === item.id}
-                        onOpenChange={(open) => {
-                          if (open) {
-                            setEditingNotesId(item.id);
-                            setNotesDraft(item.notes || '');
-                          } else {
-                            setEditingNotesId(null);
-                            setNotesDraft('');
-                          }
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn('h-6 w-6 relative', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {item.notes && (
-                              <div className="absolute top-0.5 right-0.5 h-1.5 w-1.5 bg-red-500 rounded-full" />
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-3" align="end">
-                          <div className="space-y-3">
-                            <label className="text-xs font-semibold text-foreground">Scope Notes</label>
-                            <textarea
-                              className="text-xs min-h-[80px] resize-none w-full p-2 border rounded"
-                              placeholder="Add notes about scope, special instructions, etc."
-                              value={notesDraft}
-                              onChange={(e) => setNotesDraft(e.target.value)}
-                            />
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  updateRow(item.id, 'notes', notesDraft);
-                                  setEditingNotesId(null);
-                                  setNotesDraft('');
-                                }}
-                              >
-                                Save
-                              </Button>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                    <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </div>
                   </TableCell>
                   <TableCell className="p-1.5">
                     {!readOnly && (
                       <div className="flex items-center gap-0.5">
-                        {isCustom && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => openCustomDialog(item.id)}
-                          >
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => openEditorForExistingItem(item)}
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1154,6 +1030,209 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           </Table>
         </div>
       )}
+
+      <Dialog open={editorOpen} onOpenChange={(open) => {
+        if (!open) closeEditor();
+      }}>
+        <DialogContent className="sm:max-w-[1100px]">
+          <DialogHeader>
+            <DialogTitle className="text-sm">
+              {editorStep === 'pick' ? 'Choose SOV Item' : 'Configure SOV Item'}
+            </DialogTitle>
+            <DialogDescription>
+              {editorStep === 'pick'
+                ? 'Search the SOV master table and choose the line item you want to add.'
+                : 'Review the row values before saving them into the contract schedule of values.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editorStep === 'pick' && (
+            <div className="space-y-3">
+              <Input
+                placeholder="Search item #, display #, description, display name, or category…"
+                value={selectorSearch}
+                onChange={(e) => setSelectorSearch(e.target.value)}
+                autoFocus
+              />
+              <div className="max-h-[500px] overflow-auto rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="sticky top-0 bg-background text-[11px]">ID</TableHead>
+                      <TableHead className="sticky top-0 bg-background text-[11px]">Item #</TableHead>
+                      <TableHead className="sticky top-0 bg-background text-[11px]">Display #</TableHead>
+                      <TableHead className="sticky top-0 bg-background text-[11px]">Description</TableHead>
+                      <TableHead className="sticky top-0 bg-background text-[11px]">Display Name</TableHead>
+                      <TableHead className="sticky top-0 bg-background text-[11px]">Category</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedSelectableItems.map((p) => (
+                      <TableRow
+                        key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
+                        className="cursor-pointer"
+                        onClick={() => applyMasterToEditor(p)}
+                      >
+                        <TableCell className="text-xs font-mono">{p.id}</TableCell>
+                        <TableCell className="text-xs font-mono">{p.item_number}</TableCell>
+                        <TableCell className="text-xs font-mono">{getMasterDisplayItemNumber(p)}</TableCell>
+                        <TableCell className="text-xs">{p.description}</TableCell>
+                        <TableCell className="text-xs">{p.display_name}</TableCell>
+                        <TableCell className="text-xs font-medium">{p.is_custom ? 'CUSTOM' : (p.work_type || 'OTHER')}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!sovMasterLoading && sortedSelectableItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-6 text-center text-xs text-muted-foreground">
+                          No matching items found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {sovMasterLoading && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-6 text-center text-xs text-muted-foreground">
+                          Loading…
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {editorStep === 'configure' && editorDraft && (
+            <div className="space-y-4">
+              <div className="grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</p>
+                  <p className="text-sm font-mono">{editorDraft.itemNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Display Number</p>
+                  <p className="text-sm font-mono">{editorDraft.displayItemNumber || editorDraft.itemNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Category</p>
+                  <p className="text-sm">{editorDraft.workType || 'OTHER'}</p>
+                </div>
+                <div className="md:col-span-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Master Description</p>
+                  <p className="text-sm">{editorDraft.sourceDescription || '—'}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium">Display Name</label>
+                  <Input
+                    value={editorDraft.displayName}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, displayName: e.target.value } : prev)}
+                    placeholder="Display name shown in the SOV row"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium">UOM</label>
+                  <Select
+                    value={editorDraft.uom || undefined}
+                    onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, uom: value } : prev)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select UOM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(editorDraft.itemNumber
+                        ? (editorDraft.sov_item_id != null || editorDraft.custom_sov_item_id != null
+                            ? getAvailableUoms(
+                                sovProducts.find((product) =>
+                                  (editorDraft.custom_sov_item_id != null && product.is_custom && product.id === editorDraft.custom_sov_item_id) ||
+                                  (editorDraft.sov_item_id != null && !product.is_custom && product.id === editorDraft.sov_item_id)
+                                ) || {
+                                  id: 0,
+                                  item_number: '',
+                                  display_item_number: '',
+                                  description: '',
+                                  display_name: '',
+                                  work_type: '',
+                                  uom_1: editorDraft.uom || 'EA',
+                                  uom_2: null,
+                                  uom_3: null,
+                                  uom_4: null,
+                                  uom_5: null,
+                                  uom_6: null,
+                                  uom_7: null,
+                                } as SovMasterItem
+                              )
+                            : getAvailableUomsForWorkType(sovProducts, editorDraft.workType))
+                        : customUomOptions
+                      ).map((uom) => (
+                        <SelectItem key={uom} value={uom}>{uom}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium">Quantity</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editorDraft.quantity}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, quantity: Math.max(1, Number(e.target.value) || 1) } : prev)}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium">Unit Price</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={editorDraft.unitPrice}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, unitPrice: Math.max(0, Number(e.target.value) || 0) } : prev)}
+                  />
+                </div>
+                <div className="grid gap-1.5 md:col-span-2">
+                  <label className="text-xs font-medium">Retainage</label>
+                  <div className="flex justify-start">
+                    <DollarPercentCurrencyInputField
+                      type={editorDraft.retainageType}
+                      value={editorDraft.retainageValue}
+                      onTypeChange={(type) => setEditorDraft((prev) => prev ? { ...prev, retainageType: type } : prev)}
+                      onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, retainageValue: value } : prev)}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-1.5 md:col-span-2">
+                  <label className="text-xs font-medium">Notes</label>
+                  <Textarea
+                    className="min-h-[90px]"
+                    value={editorDraft.notes}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
+                    placeholder="Optional notes for this line item"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {editorStep === 'configure' && (
+              <Button variant="outline" onClick={() => setEditorStep('pick')}>
+                Back
+              </Button>
+            )}
+            <Button variant="outline" onClick={closeEditor}>Cancel</Button>
+            {editorStep === 'configure' && (
+              <Button
+                onClick={saveEditorDraft}
+                disabled={!editorDraft?.itemNumber.trim() || !editorDraft?.displayName.trim() || !editorDraft?.uom.trim()}
+              >
+                Save Item
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Custom Item Dialog */}
       <Dialog modal={false} open={customDialogOpen} onOpenChange={(open) => {

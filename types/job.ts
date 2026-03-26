@@ -3,6 +3,8 @@ export interface ScheduleOfValuesItem {
   description: string;
   itemNumber: string;
   displayItemNumber?: string;
+  sourceDescription?: string;
+  displayNameOverride?: string;
   quantity: number;
   unitPrice: number;
   extendedPrice: number;
@@ -10,6 +12,7 @@ export interface ScheduleOfValuesItem {
   retainageType: 'percent' | 'dollar';
   retainageValue: number;
   uom: string;
+  uomOverride?: string;
   notes?: string;
   noNotes?: boolean;
   sov_item_id?: number;

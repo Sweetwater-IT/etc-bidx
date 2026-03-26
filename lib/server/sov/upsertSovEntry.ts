@@ -28,8 +28,10 @@ export type UpsertSovEntryInput = {
   custom_sov_item_id?: string | null;
   item_number?: string | null;
   description?: string | null;
+  display_name_override?: string | null;
   work_type?: string | null;
   uom?: string | null;
+  uom_override?: string | null;
   quantity?: number | null;
   unit_price?: number | null;
   retainage_type?: string | null;
@@ -45,8 +47,10 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     custom_sov_item_id,
     item_number,
     description,
+    display_name_override,
     work_type,
     uom,
+    uom_override,
     quantity,
     unit_price,
     retainage_type,
@@ -167,6 +171,8 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     job_id: jobId,
     sov_item_id: finalSovItemId,
     custom_sov_item_id: finalCustomSovItemId,
+    display_name_override: display_name_override ?? null,
+    uom_override: uom_override ?? null,
     quantity: normalizedQuantity,
     unit_price: normalizedUnitPrice,
     extended_price,
@@ -182,6 +188,8 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     job_id,
     sov_item_id,
     custom_sov_item_id,
+    display_name_override,
+    uom_override,
     quantity,
     unit_price,
     extended_price,
@@ -207,12 +215,14 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
       job_id: entry.job_id,
       sov_item_id: entry.sov_item_id,
       custom_sov_item_id: entry.custom_sov_item_id,
+      display_name_override: entry.display_name_override,
+      uom_override: entry.uom_override,
       item_number: masterItem.item_number,
       display_item_number: masterItem.display_item_number,
       description: masterItem.description,
-      display_name: masterItem.display_name,
+      display_name: entry.display_name_override || masterItem.display_name,
       work_type: masterItem.work_type,
-      uom: getPrimaryUom(masterItem),
+      uom: entry.uom_override || getPrimaryUom(masterItem),
       is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
       quantity: entry.quantity,
       unit_price: entry.unit_price,

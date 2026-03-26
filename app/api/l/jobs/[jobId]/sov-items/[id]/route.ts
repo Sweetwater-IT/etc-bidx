@@ -7,6 +7,8 @@ const selectEntryFields = `
   job_id,
   sov_item_id,
   custom_sov_item_id,
+  display_name_override,
+  uom_override,
   quantity,
   unit_price,
   extended_price,
@@ -31,7 +33,7 @@ export async function PUT(
     const body = await request.json();
     console.log('[SOV API PUT] Request body:', JSON.stringify(body, null, 2));
 
-    const { item_number, description, uom, work_type, quantity, unit_price, retainage_type, retainage_value, notes, sort_order } = body;
+    const { item_number, description, uom, work_type, quantity, unit_price, retainage_type, retainage_value, notes, sort_order, display_name_override, uom_override } = body;
     console.log('[SOV API PUT] Extracted fields:', {
       quantity,
       unit_price,
@@ -157,6 +159,8 @@ export async function PUT(
     }
 
     const updateData = {
+      display_name_override: display_name_override ?? null,
+      uom_override: uom_override ?? null,
       quantity,
       unit_price,
       extended_price,
@@ -213,12 +217,14 @@ export async function PUT(
       job_id: data.job_id,
       sov_item_id: data.sov_item_id,
       custom_sov_item_id: data.custom_sov_item_id,
+      display_name_override: data.display_name_override,
+      uom_override: data.uom_override,
       item_number: masterItem.item_number,
       display_item_number: masterItem.display_item_number,
       description: masterItem.description,
-      display_name: masterItem.display_name,
+      display_name: data.display_name_override || masterItem.display_name,
       work_type: masterItem.work_type,
-      uom: getPrimaryUom(masterItem),
+      uom: data.uom_override || getPrimaryUom(masterItem),
       is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
       quantity: data.quantity,
       unit_price: data.unit_price,

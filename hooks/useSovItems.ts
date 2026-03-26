@@ -36,8 +36,11 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
           id: item.id,
           itemNumber: item.item_number || '',
           displayItemNumber: item.display_item_number || item.item_number || '',
-          description: item.description || '',
-          uom: item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7 || '',
+          sourceDescription: item.description || '',
+          description: item.display_name_override || item.display_name || item.description || '',
+          displayNameOverride: item.display_name_override || undefined,
+          uomOverride: item.uom_override || undefined,
+          uom: item.uom_override || item.uom || item.uom_1 || item.uom_2 || item.uom_3 || item.uom_4 || item.uom_5 || item.uom_6 || item.uom_7 || '',
           quantity: item.quantity || 0,
           unitPrice: item.unit_price || 0,
           extendedPrice: item.extended_price || 0,
@@ -143,23 +146,30 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         const itemsToDelete = originalItems.filter(item => !currentItemIds.has(item.id));
         console.log('[SOV save] Items to delete:', itemsToDelete.length, itemsToDelete.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
-        // Find items to create (in current valid items but not in original)
-        const itemsToCreate = validItems.filter(item => !originalItemIds.has(item.id));
+        // Find items to create (client-only rows that do not yet have a persisted entry id)
+        const itemsToCreate = validItems.filter((item) => {
+          const hasPersistedEntryId = typeof item.id === 'number';
+          return !originalItemIds.has(item.id) && !hasPersistedEntryId;
+        });
         console.log('[SOV save] Items to create:', itemsToCreate.length, itemsToCreate.map(i => ({ id: i.id, itemNumber: i.itemNumber })));
 
-        // Find items to update (in both valid lists, but potentially changed)
+        // Find items to update (persisted rows, including rows created outside the original snapshot)
         const itemsToUpdate = validItems.filter(currentItem => {
+          const isPersistedEntry = typeof currentItem.id === 'number';
           const originalItem = originalItems.find(orig => orig.id === currentItem.id);
-          if (!originalItem) return false;
+          if (!originalItem && !isPersistedEntry) return false;
           const originalIndex = originalItems.findIndex((orig) => orig.id === currentItem.id);
           const currentIndex = validItems.findIndex((item) => item.id === currentItem.id);
-          const sortOrderChanged = originalIndex !== currentIndex;
+          const sortOrderChanged = originalItem ? originalIndex !== currentIndex : false;
 
           // Check if any significant fields changed
           const hasChanged = (
+            !originalItem ||
             originalItem.itemNumber !== currentItem.itemNumber ||
             originalItem.description !== currentItem.description ||
             originalItem.uom !== currentItem.uom ||
+            originalItem.displayNameOverride !== currentItem.displayNameOverride ||
+            originalItem.uomOverride !== currentItem.uomOverride ||
             originalItem.quantity !== currentItem.quantity ||
             originalItem.unitPrice !== currentItem.unitPrice ||
             originalItem.retainageType !== currentItem.retainageType ||
@@ -174,15 +184,17 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
               id: currentItem.id,
               itemNumber: currentItem.itemNumber,
               changes: {
-                itemNumber: originalItem.itemNumber !== currentItem.itemNumber ? `${originalItem.itemNumber} -> ${currentItem.itemNumber}` : null,
-                description: originalItem.description !== currentItem.description ? 'changed' : null,
-                uom: originalItem.uom !== currentItem.uom ? `${originalItem.uom} -> ${currentItem.uom}` : null,
-                quantity: originalItem.quantity !== currentItem.quantity ? `${originalItem.quantity} -> ${currentItem.quantity}` : null,
-                unitPrice: originalItem.unitPrice !== currentItem.unitPrice ? `${originalItem.unitPrice} -> ${currentItem.unitPrice}` : null,
-                retainageType: originalItem.retainageType !== currentItem.retainageType ? `${originalItem.retainageType} -> ${currentItem.retainageType}` : null,
-                retainageValue: originalItem.retainageValue !== currentItem.retainageValue ? `${originalItem.retainageValue} -> ${currentItem.retainageValue}` : null,
-                notes: originalItem.notes !== currentItem.notes ? 'changed' : null,
-                workType: originalItem.work_type !== currentItem.work_type ? `${originalItem.work_type} -> ${currentItem.work_type}` : null,
+                itemNumber: !originalItem || originalItem.itemNumber !== currentItem.itemNumber ? `${originalItem?.itemNumber ?? 'new'} -> ${currentItem.itemNumber}` : null,
+                description: !originalItem || originalItem.description !== currentItem.description ? 'changed' : null,
+                uom: !originalItem || originalItem.uom !== currentItem.uom ? `${originalItem?.uom ?? 'new'} -> ${currentItem.uom}` : null,
+                displayNameOverride: !originalItem || originalItem.displayNameOverride !== currentItem.displayNameOverride ? 'changed' : null,
+                uomOverride: !originalItem || originalItem.uomOverride !== currentItem.uomOverride ? `${originalItem?.uomOverride ?? 'new'} -> ${currentItem.uomOverride}` : null,
+                quantity: !originalItem || originalItem.quantity !== currentItem.quantity ? `${originalItem?.quantity ?? 'new'} -> ${currentItem.quantity}` : null,
+                unitPrice: !originalItem || originalItem.unitPrice !== currentItem.unitPrice ? `${originalItem?.unitPrice ?? 'new'} -> ${currentItem.unitPrice}` : null,
+                retainageType: !originalItem || originalItem.retainageType !== currentItem.retainageType ? `${originalItem?.retainageType ?? 'new'} -> ${currentItem.retainageType}` : null,
+                retainageValue: !originalItem || originalItem.retainageValue !== currentItem.retainageValue ? `${originalItem?.retainageValue ?? 'new'} -> ${currentItem.retainageValue}` : null,
+                notes: !originalItem || originalItem.notes !== currentItem.notes ? 'changed' : null,
+                workType: !originalItem || originalItem.work_type !== currentItem.work_type ? `${originalItem?.work_type ?? 'new'} -> ${currentItem.work_type}` : null,
                 sortOrder: sortOrderChanged ? `${originalIndex + 1} -> ${currentIndex + 1}` : null,
               }
             });
@@ -228,10 +240,14 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         console.log('[SOV save] Starting create operations...');
         for (const item of itemsToCreate) {
           const payload = {
+            sov_item_id: item.sov_item_id ?? null,
+            custom_sov_item_id: item.custom_sov_item_id ?? null,
             item_number: item.itemNumber,
             description: item.description,
+            display_name_override: item.displayNameOverride ?? item.description,
             work_type: item.work_type,
             uom: item.uom,
+            uom_override: item.uomOverride ?? item.uom,
             quantity: item.quantity,
             unit_price: item.unitPrice,
             retainage_type: item.retainageType,
@@ -328,10 +344,8 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
         console.log('[SOV save] Starting update operations...');
         for (const item of itemsToUpdate) {
           const payload = {
-            item_number: item.itemNumber,
-            description: item.description,
-            work_type: item.work_type,
-            uom: item.uom,
+            display_name_override: item.displayNameOverride ?? item.description,
+            uom_override: item.uomOverride ?? item.uom,
             quantity: item.quantity,
             unit_price: item.unitPrice,
             retainage_type: item.retainageType,
@@ -446,8 +460,12 @@ export function useSovItems(id: string | undefined, isContract: boolean = false)
     const newItem: ScheduleOfValuesItem = {
       id: crypto.randomUUID(),
       itemNumber: itemData.itemNumber || '',
+      displayItemNumber: itemData.displayItemNumber,
+      sourceDescription: itemData.sourceDescription || itemData.description || '',
       description: itemData.description || '',
+      displayNameOverride: itemData.displayNameOverride,
       uom: itemData.uom || '',
+      uomOverride: itemData.uomOverride,
       quantity: itemData.quantity || 0,
       unitPrice: itemData.unitPrice || 0,
       extendedPrice: (itemData.quantity || 0) * (itemData.unitPrice || 0),

@@ -26,6 +26,9 @@ create table if not exists public.custom_sov_items (
 alter table if exists public.sov_entries
   add column if not exists custom_sov_item_id bigint null;
 
+alter table if exists public.sov_entries
+  alter column sov_item_id drop not null;
+
 do $$
 begin
   if not exists (
