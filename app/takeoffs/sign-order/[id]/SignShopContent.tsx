@@ -39,7 +39,6 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
 import { useRouter } from 'next/navigation'
 import '@/components/pages/active-bid/signs/no-spinner.css'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
@@ -52,6 +51,8 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover'
 import { FileMetadata } from '@/types/FileTypes'
+import { downloadSignOrderWorksheetPdf } from '@/lib/downloadSignOrderWorksheetPdf'
+import type { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 
 interface Props {
   id: number
@@ -99,13 +100,73 @@ const SignShopContent = ({ id }: Props) => {
 
   const handleExport = () => {
     if (!signOrder) return
-    exportSignOrderToExcel(
-      signOrder,
-      mptRental.phases[0].signs as (
-        | ExtendedPrimarySign
-        | ExtendedSecondarySign
-      )[]
-    )
+    const worksheetSigns: WorksheetSignItem[] = (mptRental?.phases?.[0]?.signs || []).map((sign: any) => ({
+      designation: sign.designation || '-',
+      description: sign.description || '-',
+      quantity: Number(sign.quantity) || 0,
+      width: Number(sign.width) || 0,
+      height: Number(sign.height) || 0,
+      sheeting: sign.sheeting || '-',
+      substrate: sign.substrate || '-',
+      stiffener: sign.stiffener ?? '',
+      inStock: sign.inStock ?? 0,
+      order: sign.order ?? 0,
+      make: sign.make ?? 0,
+      unitPrice: sign.unitPrice ?? 0,
+      totalPrice: sign.totalPrice ?? 0,
+      primarySignId: sign.primarySignId,
+      displayStructure: sign.displayStructure || sign.structure || '-',
+      bLights: Number(sign.bLights) || 0,
+      cover: Boolean(sign.cover || sign.covers > 0),
+      associated_structure: sign.associatedStructure || sign.associated_structure,
+    }))
+
+    void downloadSignOrderWorksheetPdf({
+      adminInfo: {
+        requestor: signOrder?.requestor
+          ? { name: signOrder.requestor, email: '', role: '' }
+          : null,
+        customer: signOrder?.contractors
+          ? {
+              id: signOrder.contractor_id,
+              name: signOrder.contractors.name || '',
+              displayName: signOrder.contractors.name || '',
+              emails: [],
+              address: '',
+              phones: [],
+              paymentTerms: '',
+              mainPhone: '',
+              zip: '',
+              roles: [],
+              names: [],
+              contactIds: [],
+              url: '',
+              created: '',
+              updated: '',
+              city: '',
+              state: '',
+              customerNumber: signOrder.contractor_id || 1,
+            }
+          : null,
+        orderDate: signOrder?.order_date ? new Date(signOrder.order_date) : new Date(),
+        needDate: signOrder?.need_date ? new Date(signOrder.need_date) : null,
+        orderType: [
+          signOrder?.sale ? 'sale' : null,
+          signOrder?.rental ? 'rental' : null,
+          signOrder?.perm_signs ? 'permanent signs' : null,
+        ].filter(Boolean) as ('sale' | 'rental' | 'permanent signs')[],
+        selectedBranch: signOrder?.branch || 'All',
+        jobNumber: signOrder?.job_number || '',
+        isSubmitting: false,
+        contractNumber: signOrder?.contract_number || '',
+        startDate: signOrder?.start_date ? new Date(signOrder.start_date) : undefined,
+        endDate: signOrder?.end_date ? new Date(signOrder.end_date) : undefined,
+      },
+      signList: worksheetSigns,
+      mptRental,
+      notes,
+      filename: `sign-order-${id}.pdf`,
+    })
   }
 
   const confirmSaveChanges = async () => {

@@ -129,6 +129,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 2
   },
+  designationCell: {
+    flex: 1,
+    fontSize: 8,
+    textAlign: 'center',
+    padding: 2,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  designationText: {
+    fontSize: 8,
+    textAlign: 'center',
+  },
+  descriptionText: {
+    fontSize: 7,
+    fontStyle: 'italic',
+    marginTop: 2,
+    textAlign: 'center',
+  },
   columnHeader: {
     fontWeight: 'bold',
     fontSize: 9,
@@ -372,7 +391,10 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               {
                 safeSignList.map((item, idx) => (
                   <View style={styles.row} key={idx}>
-                    <Text style={styles.cell}>{item.designation}</Text>
+                    <View style={styles.designationCell}>
+                      <Text style={styles.designationText}>{item.designation}</Text>
+                      <Text style={styles.descriptionText}>{item.description || '-'}</Text>
+                    </View>
                     <Text style={styles.cell}>{item.width} in.</Text>
                     <Text style={styles.cell}>{item.height} in.</Text>
                     <Text style={styles.cell}>{item.quantity}</Text>

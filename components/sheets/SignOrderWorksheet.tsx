@@ -108,7 +108,14 @@ const SignOrderWorksheet: React.FC<Props> = ({
           <tbody>
             {signList.map((item, idx) => (
               <tr key={idx} className="border-b-2 border-black">
-                <td className={cellClass + " w-1/10"}>{item.designation}</td>
+                <td className={cellClass + " w-1/10"}>
+                  <div className="flex flex-col items-center">
+                    <span>{item.designation}</span>
+                    <span className="italic text-[10px] leading-tight mt-0.5 px-1">
+                      {item.description || '-'}
+                    </span>
+                  </div>
+                </td>
                 <td className={cellClass + " w-1/10"}>{item.width} in.</td>
                 <td className={cellClass + " w-1/10"}>{item.height} in.</td>
                 <td className={cellClass + " w-1/10"}>{item.quantity}</td>
