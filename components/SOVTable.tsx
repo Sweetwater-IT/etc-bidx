@@ -1084,8 +1084,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   <TableBody>
                     {groupedSelectableItems.map((group) => (
                       <Fragment key={group.heading}>
-                        <TableRow className="hover:bg-transparent border-t bg-muted/40">
-                          <TableCell colSpan={4} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <TableRow className="hover:bg-transparent border-t bg-[#16335A]">
+                          <TableCell colSpan={4} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-white">
                             {group.heading}
                           </TableCell>
                         </TableRow>
@@ -1144,22 +1144,27 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="grid max-w-xl gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">Display Name</label>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display Name</p>
+                  </div>
                   <Input
+                    className="max-w-xl"
                     value={editorDraft.displayName}
                     onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, displayName: e.target.value } : prev)}
                     placeholder="Display name shown in the SOV row"
                   />
                 </div>
-                <div className="grid max-w-[220px] gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">UOM</label>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">UOM</p>
+                  </div>
                   <Select
                     value={editorDraft.uom || undefined}
                     onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, uom: value } : prev)}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full max-w-[220px]">
                       <SelectValue placeholder="Select UOM" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1193,9 +1198,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid max-w-[220px] gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">Quantity</label>
-                  <div className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quantity</p>
+                  </div>
+                  <div className="flex items-center gap-2 max-w-[220px]">
                     <Button
                       type="button"
                       variant="outline"
@@ -1229,9 +1236,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     </Button>
                   </div>
                 </div>
-                <div className="grid max-w-[260px] gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">Unit Price</label>
-                  <div className="flex items-center h-9 border rounded-md bg-background">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unit Price</p>
+                  </div>
+                  <div className="flex items-center h-9 max-w-[260px] border rounded-md bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
                     <span className="px-3 text-sm text-muted-foreground border-r">$</span>
                     <CurrencyInput
                       value={Math.round(editorDraft.unitPrice * 100).toString()}
@@ -1239,13 +1248,15 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         const nextUnitPrice = parseInt(digits || '0', 10) / 100;
                         setEditorDraft((prev) => prev ? { ...prev, unitPrice: nextUnitPrice } : prev);
                       }}
-                      className="h-9 w-full border-0 bg-transparent text-right pr-3 focus-visible:ring-0"
+                      className="h-9 w-full border-0 bg-transparent text-right pr-3 focus-visible:ring-0 cursor-text"
                     />
                   </div>
                 </div>
-                <div className="grid max-w-[320px] gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">Retainage</label>
-                  <div className="flex justify-start">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Retainage</p>
+                  </div>
+                  <div className="flex max-w-[320px] justify-start rounded-md border bg-background px-3 py-2 transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
                     <DollarPercentCurrencyInputField
                       type={editorDraft.retainageType}
                       value={editorDraft.retainageValue}
@@ -1255,10 +1266,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     />
                   </div>
                 </div>
-                <div className="grid max-w-2xl gap-1.5 ml-auto w-full">
-                  <label className="text-xs font-medium">Notes</label>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</p>
+                  </div>
                   <Textarea
-                    className="min-h-[90px]"
+                    className="min-h-[90px] max-w-2xl"
                     value={editorDraft.notes}
                     onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
                     placeholder="Optional notes for this line item"
