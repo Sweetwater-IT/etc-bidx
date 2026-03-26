@@ -1033,9 +1033,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       <Dialog open={editorOpen} onOpenChange={(open) => {
         if (!open) closeEditor();
       }}>
-        <DialogContent className="sm:max-w-[1100px] max-h-[85vh] overflow-hidden p-0">
-          <div className="flex h-full flex-col">
-          <div className="px-6 pt-6">
+        <DialogContent className="flex h-[85vh] max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[1100px]">
+          <div className="shrink-0 px-6 pt-6">
           <DialogHeader>
             <DialogTitle className="text-sm">
               {editorStep === 'pick' ? 'Choose SOV Item' : 'Configure SOV Item'}
@@ -1048,7 +1047,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           </DialogHeader>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           {editorStep === 'pick' && (
             <div className="space-y-3">
               <Input
@@ -1103,7 +1102,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           )}
 
           {editorStep === 'configure' && editorDraft && (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-2">
               <div className="grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-3">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</p>
@@ -1124,7 +1123,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
 
               <div className="grid gap-4">
-                <div className="grid gap-1.5">
+                <div className="grid max-w-xl gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">Display Name</label>
                   <Input
                     value={editorDraft.displayName}
@@ -1132,13 +1131,13 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     placeholder="Display name shown in the SOV row"
                   />
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid max-w-[220px] gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">UOM</label>
                   <Select
                     value={editorDraft.uom || undefined}
                     onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, uom: value } : prev)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select UOM" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1172,7 +1171,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid max-w-[220px] gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">Quantity</label>
                   <div className="flex items-center gap-2">
                     <Button
@@ -1208,7 +1207,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     </Button>
                   </div>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid max-w-[260px] gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">Unit Price</label>
                   <div className="flex items-center h-9 border rounded-md bg-background">
                     <span className="px-3 text-sm text-muted-foreground border-r">$</span>
@@ -1222,7 +1221,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     />
                   </div>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid max-w-[320px] gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">Retainage</label>
                   <div className="flex justify-start">
                     <DollarPercentCurrencyInputField
@@ -1234,7 +1233,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     />
                   </div>
                 </div>
-                <div className="grid gap-1.5">
+                <div className="grid max-w-2xl gap-1.5 ml-auto w-full">
                   <label className="text-xs font-medium">Notes</label>
                   <Textarea
                     className="min-h-[90px]"
@@ -1248,7 +1247,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           )}
           </div>
 
-          <DialogFooter className="border-t bg-background px-6 py-4">
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
             {editorStep === 'configure' && (
               <Button variant="outline" onClick={() => setEditorStep('pick')}>
                 Back
@@ -1264,7 +1263,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </Button>
             )}
           </DialogFooter>
-          </div>
         </DialogContent>
       </Dialog>
 
