@@ -42,6 +42,7 @@ export async function PUT(
     const { id: contractId, entryId } = await params;
     const jobId = await resolveJobIdFromContractId(contractId);
     const body = await request.json();
+    let targetEntryId = entryId;
 
     const { item_number, description, uom, work_type, quantity, unit_price, retainage_type, retainage_value, notes, sort_order } = body;
 
@@ -60,12 +61,52 @@ export async function PUT(
         ? extended_price * (safeRetainageValue / 100)
         : safeRetainageValue;
 
-    const { data: entryData, error: entryError } = await supabase
+    let { data: entryData, error: entryError } = await supabase
       .from('sov_entries')
       .select('sov_item_id, custom_sov_item_id')
       .eq('id', entryId)
       .eq('job_id', jobId)
       .single();
+
+    if ((entryError || !entryData) && item_number) {
+      const normalizedItemNumber = String(item_number).trim();
+
+      const [{ data: standardMaster }, { data: customMaster }] = await Promise.all([
+        supabase
+          .from('sov_items')
+          .select('id')
+          .eq('item_number', normalizedItemNumber)
+          .maybeSingle(),
+        supabase
+          .from('custom_sov_items')
+          .select('id')
+          .eq('job_id', jobId)
+          .eq('item_number', normalizedItemNumber)
+          .maybeSingle(),
+      ]);
+
+      let fallbackQuery = supabase
+        .from('sov_entries')
+        .select('id, sov_item_id, custom_sov_item_id')
+        .eq('job_id', jobId);
+
+      if (customMaster?.id) {
+        fallbackQuery = fallbackQuery.eq('custom_sov_item_id', customMaster.id);
+      } else if (standardMaster?.id) {
+        fallbackQuery = fallbackQuery.eq('sov_item_id', standardMaster.id);
+      }
+
+      const { data: fallbackEntry, error: fallbackError } = await fallbackQuery.maybeSingle();
+
+      if (!fallbackError && fallbackEntry) {
+        targetEntryId = String(fallbackEntry.id);
+        entryData = {
+          sov_item_id: fallbackEntry.sov_item_id,
+          custom_sov_item_id: fallbackEntry.custom_sov_item_id,
+        };
+        entryError = null;
+      }
+    }
 
     if (entryError || (!entryData?.sov_item_id && !entryData?.custom_sov_item_id)) {
       return NextResponse.json(
@@ -112,7 +153,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from('sov_entries')
       .update(updateData)
-      .eq('id', entryId)
+      .eq('id', targetEntryId)
       .eq('job_id', jobId)
       .select(selectEntryFields)
       .single();

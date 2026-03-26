@@ -747,6 +747,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     formData.append('category', docCategory);
 
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
         method: 'POST',
         body: formData,
@@ -770,6 +772,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   const handleRemoveDocument = async (id: string) => {
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents?documentId=${id}`, {
         method: 'DELETE',
       });
@@ -792,6 +796,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   const handleUpdateDocumentCategory = async (id: string, category: DocumentCategory) => {
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
