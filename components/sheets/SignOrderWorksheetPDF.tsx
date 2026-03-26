@@ -149,7 +149,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   descriptionRow: {
-    borderTop: '1px solid black',
     borderBottom: '1.5px solid black',
     paddingVertical: 3,
     paddingHorizontal: 6,

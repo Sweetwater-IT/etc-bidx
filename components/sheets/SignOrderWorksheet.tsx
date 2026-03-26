@@ -109,7 +109,7 @@ const SignOrderWorksheet: React.FC<Props> = ({
           <tbody>
             {signList.map((item, idx) => (
               <Fragment key={idx}>
-                <tr key={`${idx}-main`} className="border-b border-black">
+                <tr key={`${idx}-main`}>
                   <td className={cellClass + " w-1/10"}>{item.designation}</td>
                   <td className={cellClass + " w-1/10"}>{item.width} in.</td>
                   <td className={cellClass + " w-1/10"}>{item.height} in.</td>
