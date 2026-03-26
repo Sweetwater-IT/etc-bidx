@@ -219,17 +219,13 @@ const toDateString = (value?: Date) => {
   return format(value, "yyyy-MM-dd");
 };
 
-const clampNeededByDate = (date?: Date, installDateStr?: string) => {
+const clampNeededByDate = (date?: Date, referenceDateStr?: string) => {
   if (!date) return "";
+  let nextDate = date;
+  const referenceDate = parseDateString(referenceDateStr);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let nextDate = date > today ? today : date;
-  const install = parseDateString(installDateStr);
-
-  if (install && nextDate >= install) {
-    nextDate = subDays(install, 1);
+  if (referenceDate && nextDate >= referenceDate) {
+    nextDate = subDays(referenceDate, 1);
   }
 
   return toDateString(nextDate);
@@ -365,6 +361,10 @@ export const CreateTakeoffForm = ({
   const installDateValue = parseDateString(installDate);
   const pickupDateValue = parseDateString(pickupDate);
   const neededByDateValue = parseDateString(neededByDate);
+  const showsPickupDate = workType === "MPT";
+  const scheduleReferenceLabel = workType === "FLAGGING" || workType === "LANE_CLOSURE"
+    ? "job start date"
+    : "install date";
   const endDateValue = parseDateString(endDate);
   const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
 
@@ -646,22 +646,24 @@ export const CreateTakeoffForm = ({
     }
   }, [workType, installDate]);
 
-  // MPT Configuration Handlers
-  const handlePermanentInstallDateChange = (date?: Date) => {
-    const nextInstall = toDateString(date);
-    setInstallDate(nextInstall);
+  const handleScheduleReferenceDateChange = (date?: Date) => {
+    const nextReferenceDate = toDateString(date);
+    setInstallDate(nextReferenceDate);
 
-    if (!date) return;
-
-    const currentPickup = parseDateString(pickupDate);
-    const currentNeededBy = parseDateString(neededByDate);
-
-    if (!currentPickup || currentPickup <= date) {
-      setPickupDate(toDateString(addDays(date, 1)));
+    if (!date) {
+      return;
     }
 
+    const currentNeededBy = parseDateString(neededByDate);
     if (!currentNeededBy || currentNeededBy >= date) {
       setNeededByDate(toDateString(subDays(date, 1)));
+    }
+
+    if (showsPickupDate) {
+      const currentPickup = parseDateString(pickupDate);
+      if (!currentPickup || currentPickup <= date) {
+        setPickupDate(toDateString(addDays(date, 1)));
+      }
     }
   };
 
@@ -684,6 +686,12 @@ export const CreateTakeoffForm = ({
 
     setNeededByDate(clampNeededByDate(date, installDate));
   };
+
+  useEffect(() => {
+    if (!showsPickupDate && pickupDate) {
+      setPickupDate("");
+    }
+  }, [showsPickupDate, pickupDate]);
 
   const handleToggleSection = (key: string) => {
     if (activeSections.includes(key)) {
@@ -1070,7 +1078,7 @@ export const CreateTakeoffForm = ({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -1091,7 +1099,7 @@ export const CreateTakeoffForm = ({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={installDateValue} onSelect={handlePermanentInstallDateChange} initialFocus />
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -1112,7 +1120,7 @@ export const CreateTakeoffForm = ({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={installDateValue} onSelect={(date) => setInstallDate(toDateString(date))} initialFocus />
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -1155,7 +1163,7 @@ export const CreateTakeoffForm = ({
                   </div>
                 )}
               </div>
-            ) : isPermanentSigns ? (
+            ) : showsPickupDate ? (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
                 <Popover>
@@ -1182,28 +1190,7 @@ export const CreateTakeoffForm = ({
                   </PopoverContent>
                 </Popover>
               </div>
-            ) : (
-              <div>
-                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal text-sm",
-                        !pickupDateValue && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {pickupDateValue ? format(pickupDateValue, "PPP") : "Select pickup date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={pickupDateValue} onSelect={(date) => setPickupDate(toDateString(date))} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
+            ) : null}
             <div>
               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
               <Popover>
@@ -1223,18 +1210,15 @@ export const CreateTakeoffForm = ({
                   <Calendar
                     mode="single"
                     selected={neededByDateValue}
-                    onSelect={(date) => setNeededByDate(clampNeededByDate(date, installDate))}
-                    disabled={(date) => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      if (date > today) return true;
-                      return Boolean(installDateValue && date >= installDateValue);
-                    }}
+                    onSelect={handlePermanentNeededByDateChange}
+                    disabled={(date) => Boolean(installDateValue && date >= installDateValue)}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              <span className="text-[9px] text-muted-foreground mt-1 block">Must be before the job start date and cannot be in the future.</span>
+              <span className="text-[9px] text-muted-foreground mt-1 block">
+                Must be before the {scheduleReferenceLabel}.
+              </span>
             </div>
             {workType === "PERMANENT_SIGNS" ? (
               <div>

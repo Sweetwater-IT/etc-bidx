@@ -893,7 +893,13 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
-                    <span className="text-xs px-1 truncate block max-w-[35ch]" title={item.description}>
+                    <span
+                      className={cn(
+                        "text-xs px-1 block",
+                        readOnly ? "whitespace-normal break-words" : "truncate max-w-[35ch]"
+                      )}
+                      title={item.description}
+                    >
                       {item.description}
                     </span>
                   </TableCell>

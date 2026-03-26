@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       work_order_number: workOrderNumber || null,
       contracted_or_additional: contractedOrAdditional || 'contracted',
       install_date: installDate || null,
-      pickup_date: pickupDate || null,
+      pickup_date: workType === 'MPT' ? (pickupDate || null) : null,
       needed_by_date: neededByDate || null,
       priority: priority || 'standard',
       notes: notes?.trim() || null,
