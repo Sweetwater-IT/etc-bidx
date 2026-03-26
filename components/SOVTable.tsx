@@ -908,13 +908,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <Button
                         type="button"
                         variant="outline"
-                        className="h-7 w-full justify-between overflow-hidden px-2 text-xs font-mono font-normal"
+                        className="h-7 w-full justify-start overflow-hidden px-2 text-xs font-mono font-normal"
                         onClick={() => openEditorForExistingItem(item)}
                       >
                         <span className="truncate">
                           {item.displayItemNumber || item.itemNumber || 'Select item…'}
                         </span>
-                        <Pencil className="ml-2 h-3.5 w-3.5 shrink-0 opacity-60" />
                       </Button>
                     )}
                   </TableCell>
@@ -1034,7 +1033,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       <Dialog open={editorOpen} onOpenChange={(open) => {
         if (!open) closeEditor();
       }}>
-        <DialogContent className="sm:max-w-[1100px]">
+        <DialogContent className="sm:max-w-[1100px] max-h-[85vh] overflow-hidden p-0">
+          <div className="flex h-full flex-col">
+          <div className="px-6 pt-6">
           <DialogHeader>
             <DialogTitle className="text-sm">
               {editorStep === 'pick' ? 'Choose SOV Item' : 'Configure SOV Item'}
@@ -1045,7 +1046,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 : 'Review the row values before saving them into the contract schedule of values.'}
             </DialogDescription>
           </DialogHeader>
+          </div>
 
+          <div className="flex-1 overflow-y-auto px-6 py-4">
           {editorStep === 'pick' && (
             <div className="space-y-3">
               <Input
@@ -1056,14 +1059,13 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               />
               <div className="max-h-[500px] overflow-auto rounded-md border">
                 <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableHeader className="sticky top-0 z-10 bg-[#FAFAFA]">
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="sticky top-0 bg-background text-[11px]">ID</TableHead>
-                      <TableHead className="sticky top-0 bg-background text-[11px]">Item #</TableHead>
-                      <TableHead className="sticky top-0 bg-background text-[11px]">Display #</TableHead>
-                      <TableHead className="sticky top-0 bg-background text-[11px]">Description</TableHead>
-                      <TableHead className="sticky top-0 bg-background text-[11px]">Display Name</TableHead>
-                      <TableHead className="sticky top-0 bg-background text-[11px]">Category</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Item #</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Display #</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Description</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Display Name</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[140px]">Category</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1073,9 +1075,8 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         className="cursor-pointer"
                         onClick={() => applyMasterToEditor(p)}
                       >
-                        <TableCell className="text-xs font-mono">{p.id}</TableCell>
-                        <TableCell className="text-xs font-mono">{p.item_number}</TableCell>
-                        <TableCell className="text-xs font-mono">{getMasterDisplayItemNumber(p)}</TableCell>
+                        <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
+                        <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
                         <TableCell className="text-xs">{p.description}</TableCell>
                         <TableCell className="text-xs">{p.display_name}</TableCell>
                         <TableCell className="text-xs font-medium">{p.is_custom ? 'CUSTOM' : (p.work_type || 'OTHER')}</TableCell>
@@ -1083,14 +1084,14 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     ))}
                     {!sovMasterLoading && sortedSelectableItems.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
                           No matching items found.
                         </TableCell>
                       </TableRow>
                     )}
                     {sovMasterLoading && (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={5} className="py-6 text-center text-xs text-muted-foreground">
                           Loading…
                         </TableCell>
                       </TableRow>
@@ -1122,7 +1123,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4">
                 <div className="grid gap-1.5">
                   <label className="text-xs font-medium">Display Name</label>
                   <Input
@@ -1173,24 +1174,55 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 </div>
                 <div className="grid gap-1.5">
                   <label className="text-xs font-medium">Quantity</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={editorDraft.quantity}
-                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, quantity: Math.max(1, Number(e.target.value) || 1) } : prev)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setEditorDraft((prev) => prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : prev)}
+                      disabled={editorDraft.quantity <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="h-9 w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={editorDraft.quantity || 1}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, '');
+                        const quantity = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                        setEditorDraft((prev) => prev ? { ...prev, quantity } : prev);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setEditorDraft((prev) => prev ? { ...prev, quantity: prev.quantity + 1 } : prev)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-1.5">
                   <label className="text-xs font-medium">Unit Price</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={editorDraft.unitPrice}
-                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, unitPrice: Math.max(0, Number(e.target.value) || 0) } : prev)}
-                  />
+                  <div className="flex items-center h-9 border rounded-md bg-background">
+                    <span className="px-3 text-sm text-muted-foreground border-r">$</span>
+                    <CurrencyInput
+                      value={Math.round(editorDraft.unitPrice * 100).toString()}
+                      onChange={(digits) => {
+                        const nextUnitPrice = parseInt(digits || '0', 10) / 100;
+                        setEditorDraft((prev) => prev ? { ...prev, unitPrice: nextUnitPrice } : prev);
+                      }}
+                      className="h-9 w-full border-0 bg-transparent text-right pr-3 focus-visible:ring-0"
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-1.5 md:col-span-2">
+                <div className="grid gap-1.5">
                   <label className="text-xs font-medium">Retainage</label>
                   <div className="flex justify-start">
                     <DollarPercentCurrencyInputField
@@ -1202,7 +1234,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                     />
                   </div>
                 </div>
-                <div className="grid gap-1.5 md:col-span-2">
+                <div className="grid gap-1.5">
                   <label className="text-xs font-medium">Notes</label>
                   <Textarea
                     className="min-h-[90px]"
@@ -1214,8 +1246,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
             </div>
           )}
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t bg-background px-6 py-4">
             {editorStep === 'configure' && (
               <Button variant="outline" onClick={() => setEditorStep('pick')}>
                 Back
@@ -1231,6 +1264,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </Button>
             )}
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
