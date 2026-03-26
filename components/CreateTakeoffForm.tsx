@@ -22,7 +22,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { ClipboardList, Save, Download, Send, ArrowLeft, Check, Package, Plus, Minus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon } from "lucide-react";
+import { Check, Package, Plus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon, ExternalLink, Loader2 } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import {
   Dialog,
@@ -233,6 +233,123 @@ const clampNeededByDate = (date?: Date, referenceDateStr?: string) => {
 
 const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)]";
 
+type ImportStructureSectionKey = "type_iii" | "trailblazers" | "sign_stands";
+
+type SignOrderListItem = {
+  id: number;
+  order_number: string | null;
+  status: string | null;
+  submitted_date: string | null;
+  requestor: string | null;
+  contract_number: string | null;
+  order_date: string | null;
+  created_at: string | null;
+  customer_name: string | null;
+  item_count: number;
+};
+
+type SignOrderImportSign = {
+  id: string;
+  designation: string;
+  description: string;
+  quantity: number;
+  width: number;
+  height: number;
+  sheeting: string;
+  substrate: string;
+  cover: boolean;
+  bLights: MPTSignRow["bLights"];
+  structureSection: ImportStructureSectionKey | "";
+  existingStructure: string;
+};
+
+const IMPORT_STRUCTURE_OPTIONS: { value: ImportStructureSectionKey; label: string }[] = [
+  { value: "type_iii", label: "Type 3" },
+  { value: "trailblazers", label: "Trailblazer" },
+  { value: "sign_stands", label: "Sign Stands" },
+];
+
+const STRUCTURE_DEFAULTS: Record<ImportStructureSectionKey, string> = {
+  type_iii: "6FT RIGHT",
+  trailblazers: "Loose",
+  sign_stands: "Sign Stand",
+};
+
+const TYPE_III_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "type_iii")?.structures || []);
+const TRAILBLAZER_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "trailblazers")?.structures || []);
+const SIGN_STAND_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "sign_stands")?.structures || []);
+
+const formatDateTimeLabel = (value?: string | null) => {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString();
+};
+
+const normalizeImportStructureSection = (value?: string | null): ImportStructureSectionKey | "" => {
+  if (!value) return "";
+
+  const normalized = value.trim().toUpperCase();
+
+  if (
+    normalized === "TYPE 3" ||
+    normalized === "TYPE III" ||
+    normalized.includes("TYPE III") ||
+    normalized.includes("TYPE 3") ||
+    TYPE_III_STRUCTURES.has(normalized)
+  ) {
+    return "type_iii";
+  }
+
+  if (
+    normalized === "TRAILBLAZER" ||
+    normalized === "TRAILBLAZERS" ||
+    normalized.includes("TRAILBLAZER") ||
+    normalized.includes("H-STAND") ||
+    TRAILBLAZER_STRUCTURES.has(normalized)
+  ) {
+    return "trailblazers";
+  }
+
+  if (
+    normalized === "SIGN STAND" ||
+    normalized === "SIGN STANDS" ||
+    normalized.includes("SIGN STAND") ||
+    SIGN_STAND_STRUCTURES.has(normalized)
+  ) {
+    return "sign_stands";
+  }
+
+  return "";
+};
+
+const normalizeImportedBLight = (value: unknown): MPTSignRow["bLights"] => {
+  if (typeof value !== "string") return "none";
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "1y" || normalized === "1 yellow") return "1y";
+  if (normalized === "1r" || normalized === "1 red") return "1r";
+  if (normalized === "1w" || normalized === "1 white") return "1w";
+  if (normalized === "2y" || normalized === "2 yellow") return "2y";
+  if (normalized === "2r" || normalized === "2 red") return "2r";
+  if (normalized === "2w" || normalized === "2 white") return "2w";
+  return "none";
+};
+
+const getImportedTotalSqft = (
+  sectionKey: ImportStructureSectionKey,
+  structureType: string,
+  signSqft: number,
+  quantity: number
+) => {
+  if (sectionKey !== "type_iii" || structureType === "Loose") {
+    return Math.round(signSqft * quantity * 100) / 100;
+  }
+
+  const structureSqft = structureType.includes("6FT") ? 12 : 8.01;
+  return Math.round((signSqft + structureSqft) * quantity * 100) / 100;
+};
+
 export const CreateTakeoffForm = ({
   jobId,
   onBack,
@@ -312,6 +429,15 @@ export const CreateTakeoffForm = ({
   const [workTypeSelectedAt, setWorkTypeSelectedAt] = useState<Date | null>(null);
   const hasCreatedTakeoff = Boolean(savedTakeoffId);
   const isEditMode = mode === "edit";
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2>(1);
+  const [signOrders, setSignOrders] = useState<SignOrderListItem[]>([]);
+  const [selectedSignOrderId, setSelectedSignOrderId] = useState<number | null>(null);
+  const [selectedSignOrder, setSelectedSignOrder] = useState<SignOrderListItem | null>(null);
+  const [importableSigns, setImportableSigns] = useState<SignOrderImportSign[]>([]);
+  const [loadingSignOrders, setLoadingSignOrders] = useState(false);
+  const [loadingSelectedSignOrder, setLoadingSelectedSignOrder] = useState(false);
+  const [importingSigns, setImportingSigns] = useState(false);
 
   // Auto-save state
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -367,6 +493,15 @@ export const CreateTakeoffForm = ({
     : "install date";
   const endDateValue = parseDateString(endDate);
   const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
+
+  const resetImportDialog = useCallback(() => {
+    setImportStep(1);
+    setSelectedSignOrderId(null);
+    setSelectedSignOrder(null);
+    setImportableSigns([]);
+    setLoadingSelectedSignOrder(false);
+    setImportingSigns(false);
+  }, []);
 
   // Debugging refs
   const mptContainerRef = useRef<HTMLDivElement>(null);
@@ -445,7 +580,7 @@ export const CreateTakeoffForm = ({
     installDate, pickupDate, neededByDate, isMultiDayJob, endDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
     activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
     permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
-    effectiveAdditionalItems, savedTakeoffId, router
+    effectiveAdditionalItems, savedTakeoffId
   ]);
 
   // Debounced auto-save effect
@@ -584,7 +719,7 @@ export const CreateTakeoffForm = ({
       optionsPreview: MPT_ADDITIONAL_ITEM_OPTIONS.slice(0, 5),
       additionalItems: effectiveAdditionalItems,
     });
-  }, [workType, additionalItems]);
+  }, [workType, effectiveAdditionalItems]);
 
   // Fetch rental equipment - simplified to show all equipment as available
   useEffect(() => {
@@ -693,6 +828,96 @@ export const CreateTakeoffForm = ({
     }
   }, [showsPickupDate, pickupDate]);
 
+  useEffect(() => {
+    if (!importDialogOpen) {
+      resetImportDialog();
+      return;
+    }
+
+    const fetchSignOrders = async () => {
+      setLoadingSignOrders(true);
+      try {
+        const response = await fetch(`/api/l/sign-orders/job/${jobId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load sign orders");
+        }
+
+        setSignOrders(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching sign orders:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to load sign orders");
+        setSignOrders([]);
+      } finally {
+        setLoadingSignOrders(false);
+      }
+    };
+
+    fetchSignOrders();
+  }, [importDialogOpen, jobId, resetImportDialog]);
+
+  useEffect(() => {
+    if (!importDialogOpen || !selectedSignOrderId) return;
+
+    const currentOrder = signOrders.find((order) => order.id === selectedSignOrderId) || null;
+    setSelectedSignOrder(currentOrder);
+
+    const fetchSignOrderDetails = async () => {
+      setLoadingSelectedSignOrder(true);
+      try {
+        const response = await fetch(`/api/sign-orders/${selectedSignOrderId}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Failed to load sign order");
+        }
+
+        const signsSource = Array.isArray(data.data?.signs)
+          ? data.data.signs
+          : Object.values(data.data?.signs || {});
+
+        const mappedSigns = signsSource
+          .filter((sign): sign is Record<string, unknown> => Boolean(sign) && typeof sign === "object")
+          .map((sign, index) => {
+            const designation = String(sign.designation || sign.description || `Sign ${index + 1}`);
+            const description = String(sign.description || sign.designation || "");
+            const existingStructure = String(
+              sign.associated_structure ||
+              sign.associatedStructure ||
+              sign.displayStructure ||
+              ""
+            );
+
+            return {
+              id: String(sign.id || `${selectedSignOrderId}-${index}`),
+              designation,
+              description,
+              quantity: Math.max(1, Number(sign.quantity || 1)),
+              width: Number(sign.width || 0),
+              height: Number(sign.height || 0),
+              sheeting: String(sign.sheeting || "HI"),
+              substrate: String(sign.substrate || ""),
+              cover: Boolean(sign.cover),
+              bLights: normalizeImportedBLight(sign.bLights),
+              existingStructure,
+              structureSection: normalizeImportStructureSection(existingStructure),
+            } satisfies SignOrderImportSign;
+          });
+
+        setImportableSigns(mappedSigns);
+      } catch (error) {
+        console.error("Error fetching sign order details:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to load sign order");
+        setImportableSigns([]);
+      } finally {
+        setLoadingSelectedSignOrder(false);
+      }
+    };
+
+    fetchSignOrderDetails();
+  }, [importDialogOpen, selectedSignOrderId, signOrders]);
+
   const handleToggleSection = (key: string) => {
     if (activeSections.includes(key)) {
       setActiveSections((prev) => prev.filter((s) => s !== key));
@@ -738,6 +963,100 @@ export const CreateTakeoffForm = ({
     setSignRows(newSignRows);
     toast.success(`All signs set to ${defaultSignMaterial}`);
   };
+
+  const buildImportedSignRows = useCallback((signsToImport: SignOrderImportSign[]) => {
+    const nextRows: Record<string, MPTSignRow[]> = {};
+    const nextActiveSections = new Set(activeSections);
+
+    signsToImport.forEach((sign) => {
+      if (!sign.structureSection) return;
+
+      nextActiveSections.add(sign.structureSection);
+      const quantity = Math.max(1, Number(sign.quantity || 1));
+      const material: SignMaterial = sign.substrate.toUpperCase().includes("PLASTIC") ? "PLASTIC" : "ALUMINUM";
+      const sqft = Math.round(((Number(sign.width || 0) * Number(sign.height || 0)) / 144) * 100) / 100;
+      const structureType = STRUCTURE_DEFAULTS[sign.structureSection];
+      const baseRow: MPTSignRow = {
+        id: crypto.randomUUID(),
+        isCustom: false,
+        signDesignation: sign.designation,
+        signDescription: sign.description,
+        width: Number(sign.width || 0),
+        height: Number(sign.height || 0),
+        dimensionLabel: sign.width && sign.height ? `${sign.width} x ${sign.height}` : "",
+        signLegend: sign.description,
+        sheeting: sign.sheeting || "HI",
+        structureType,
+        bLights: sign.bLights,
+        sqft,
+        totalSqft: getImportedTotalSqft(sign.structureSection, structureType, sqft, sign.structureSection === "type_iii" ? 1 : quantity),
+        quantity: sign.structureSection === "type_iii" ? 1 : quantity,
+        needsOrder: false,
+        cover: Boolean(sign.cover),
+        loadOrder: 1,
+        material,
+        secondarySigns: [],
+      };
+
+      const rowsForSection = nextRows[sign.structureSection] || [];
+
+      if (sign.structureSection === "type_iii" && quantity > 1) {
+        for (let index = 0; index < quantity; index += 1) {
+          rowsForSection.push({
+            ...baseRow,
+            id: crypto.randomUUID(),
+            loadOrder: rowsForSection.length + 1,
+          });
+        }
+      } else {
+        rowsForSection.push({
+          ...baseRow,
+          loadOrder: rowsForSection.length + 1,
+        });
+      }
+
+      nextRows[sign.structureSection] = rowsForSection;
+    });
+
+    return {
+      nextRows,
+      nextActiveSections: Array.from(nextActiveSections),
+    };
+  }, [activeSections]);
+
+  const handleImportSignOrder = useCallback(() => {
+    const missingAssignment = importableSigns.some((sign) => !sign.structureSection);
+    if (missingAssignment) {
+      toast.error("Assign a structure type to each sign before importing");
+      return;
+    }
+
+    const { nextRows, nextActiveSections } = buildImportedSignRows(importableSigns);
+    const importedCount = importableSigns.reduce((total, sign) => total + Math.max(1, Number(sign.quantity || 1)), 0);
+
+    setImportingSigns(true);
+    setSignRows((prev) => {
+      const mergedRows = { ...prev };
+
+      Object.entries(nextRows).forEach(([sectionKey, rows]) => {
+        const existingRows = mergedRows[sectionKey] || [];
+        mergedRows[sectionKey] = [
+          ...existingRows,
+          ...rows.map((row, index) => ({
+            ...row,
+            loadOrder: sectionKey === "type_iii" ? existingRows.length + index + 1 : row.loadOrder,
+          })),
+        ];
+      });
+
+      return mergedRows;
+    });
+    setActiveSections(nextActiveSections);
+    setImportDialogOpen(false);
+    resetImportDialog();
+    setImportingSigns(false);
+    toast.success(`Imported ${importedCount} sign row${importedCount === 1 ? "" : "s"} from sign order`);
+  }, [buildImportedSignRows, importableSigns, resetImportDialog]);
 
   const handleCreateWorkOrder = async () => {
     if (!savedTakeoffId) {
@@ -902,6 +1221,23 @@ export const CreateTakeoffForm = ({
       setSaving(false);
     }
   };
+
+  const selectedSignOrderLink = selectedSignOrderId ? `/takeoffs/sign-order/view/${selectedSignOrderId}` : "";
+  const canOpenImportDialog = workType === "MPT" || showsSignConfiguration;
+  const importButton = canOpenImportDialog ? (
+    <>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Import Signs From Sign Order</span>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-[10px] gap-1.5"
+        onClick={() => setImportDialogOpen(true)}
+      >
+        <Package className="h-3 w-3" />
+        Import Signs
+      </Button>
+    </>
+  ) : null;
 
   if (isLoading) {
     return <div className="p-6">Loading...</div>;
@@ -1261,6 +1597,7 @@ export const CreateTakeoffForm = ({
             onSignRowsChange={handleSignRowsChange}
             onDefaultMaterialChange={setDefaultSignMaterial}
             onApplyMaterialToAll={handleApplyMaterialToAll}
+            importAction={importButton}
           />
         </div>
       )}
@@ -1306,6 +1643,7 @@ export const CreateTakeoffForm = ({
                 Sign Configuration
               </h2>
               <div className="flex items-center gap-3">
+                {importButton}
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Default Material:
                 </span>
@@ -1796,6 +2134,259 @@ export const CreateTakeoffForm = ({
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) {
+            resetImportDialog();
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Import Signs From Sign Order</DialogTitle>
+            <DialogDescription>
+              Step {importStep} of 2. Select a sign order for this contract, then assign each sign to Type 3, Trailblazer, or Sign Stands before importing.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importStep === 1 ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
+              <div className="rounded-lg border">
+                <div className="border-b px-4 py-3">
+                  <h3 className="text-sm font-semibold">Sign Orders</h3>
+                  <p className="text-xs text-muted-foreground">Orders already linked to this contract.</p>
+                </div>
+                <div className="max-h-[420px] overflow-y-auto">
+                  {loadingSignOrders ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading sign orders...
+                    </div>
+                  ) : signOrders.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      No sign orders were found for this contract.
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {signOrders.map((order) => {
+                        const isSelected = selectedSignOrderId === order.id;
+                        return (
+                          <button
+                            key={order.id}
+                            type="button"
+                            className={cn(
+                              "w-full px-4 py-3 text-left transition-colors hover:bg-muted/40",
+                              isSelected && "bg-muted"
+                            )}
+                            onClick={() => setSelectedSignOrderId(order.id)}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {order.order_number || `SO-${order.id}`}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {order.contract_number || "No contract number"} · {order.customer_name || "No customer"}
+                                </div>
+                              </div>
+                              <div className="text-right text-xs text-muted-foreground">
+                                <div>{order.item_count} item{order.item_count === 1 ? "" : "s"}</div>
+                                <div>{formatDateTimeLabel(order.order_date || order.created_at)}</div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border">
+                <div className="border-b px-4 py-3">
+                  <h3 className="text-sm font-semibold">Selected Sign Order</h3>
+                  <p className="text-xs text-muted-foreground">Review the order details before moving to sign assignment.</p>
+                </div>
+                <div className="space-y-4 px-4 py-4">
+                  {selectedSignOrder ? (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contract Number</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.contract_number || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SO Number</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.order_number || `SO-${selectedSignOrder.id}`}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Order By</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.requestor || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Customer</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.customer_name || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date Made</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {formatDateTimeLabel(selectedSignOrder.order_date || selectedSignOrder.created_at)}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.status || "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Link</Label>
+                        <div className="mt-1">
+                          <a
+                            href={selectedSignOrderLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+                          >
+                            Open sign order view page
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+                      Select a sign order on the left to review it here.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border">
+              <div className="border-b px-4 py-3">
+                <h3 className="text-sm font-semibold">Assign Structure Types</h3>
+                <p className="text-xs text-muted-foreground">
+                  Each imported sign needs a structure bucket before it can be added to this takeoff.
+                </p>
+              </div>
+              <div className="max-h-[460px] overflow-auto">
+                {loadingSelectedSignOrder ? (
+                  <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading sign order items...
+                  </div>
+                ) : importableSigns.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    This sign order does not have any importable signs.
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="border-b text-left">
+                        <th className="px-4 py-2 font-medium">Designation</th>
+                        <th className="px-4 py-2 font-medium">Description</th>
+                        <th className="px-4 py-2 font-medium">Qty</th>
+                        <th className="px-4 py-2 font-medium">Size</th>
+                        <th className="px-4 py-2 font-medium">Sheeting</th>
+                        <th className="px-4 py-2 font-medium">Structure Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importableSigns.map((sign) => (
+                        <tr key={sign.id} className="border-b align-top">
+                          <td className="px-4 py-3 font-medium">{sign.designation || "—"}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{sign.description || "—"}</td>
+                          <td className="px-4 py-3">{sign.quantity}</td>
+                          <td className="px-4 py-3">
+                            {sign.width > 0 && sign.height > 0 ? `${sign.width} x ${sign.height}` : "—"}
+                          </td>
+                          <td className="px-4 py-3">{sign.sheeting || "—"}</td>
+                          <td className="px-4 py-3 min-w-[220px]">
+                            <Select
+                              value={sign.structureSection}
+                              onValueChange={(value: ImportStructureSectionKey) =>
+                                setImportableSigns((prev) =>
+                                  prev.map((current) =>
+                                    current.id === sign.id
+                                      ? { ...current, structureSection: value }
+                                      : current
+                                  )
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Assign structure type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {IMPORT_STRUCTURE_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {sign.existingStructure ? (
+                              <div className="mt-1 text-[11px] text-muted-foreground">
+                                Existing value: {sign.existingStructure}
+                              </div>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (importStep === 2) {
+                  setImportStep(1);
+                  return;
+                }
+
+                setImportDialogOpen(false);
+                resetImportDialog();
+              }}
+            >
+              {importStep === 2 ? "Back" : "Cancel"}
+            </Button>
+            {importStep === 1 ? (
+              <Button
+                onClick={() => setImportStep(2)}
+                disabled={!selectedSignOrderId || loadingSelectedSignOrder}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={handleImportSignOrder}
+                disabled={loadingSelectedSignOrder || importableSigns.length === 0 || importingSigns}
+              >
+                {importingSigns ? "Importing..." : "Import Signs"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!pendingDeleteAction} onOpenChange={(open) => !open && setPendingDeleteAction(null)}>
         <DialogContent className="max-w-sm">

@@ -14,7 +14,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('sign_orders')
-      .select('id, order_number, status, submitted_date')
+      .select('id, order_number, status, submitted_date, requestor, contract_number, order_date, created_at, contractors(name)')
       .eq('job_id', id)
       .order('created_at', { ascending: false });
 
@@ -33,6 +33,7 @@ export async function GET(
 
         return {
           ...order,
+          customer_name: order.contractors?.name || '',
           item_count: count || 0
         };
       })
