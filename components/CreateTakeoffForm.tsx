@@ -837,8 +837,17 @@ export const CreateTakeoffForm = ({
     const fetchSignOrders = async () => {
       setLoadingSignOrders(true);
       try {
+        console.log('[CreateTakeoffForm] Fetching sign orders for import', { jobId });
         const response = await fetch(`/api/l/sign-orders/job/${jobId}`);
         const data = await response.json();
+
+        console.log('[CreateTakeoffForm] Sign order import response received', {
+          jobId,
+          status: response.status,
+          ok: response.ok,
+          orderCount: Array.isArray(data) ? data.length : undefined,
+          data,
+        });
 
         if (!response.ok) {
           throw new Error(data.error || "Failed to load sign orders");
@@ -866,8 +875,20 @@ export const CreateTakeoffForm = ({
     const fetchSignOrderDetails = async () => {
       setLoadingSelectedSignOrder(true);
       try {
+        console.log('[CreateTakeoffForm] Fetching selected sign order details', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+        });
         const response = await fetch(`/api/sign-orders/${selectedSignOrderId}`);
         const data = await response.json();
+
+        console.log('[CreateTakeoffForm] Sign order details response received', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+          status: response.status,
+          ok: response.ok,
+          success: data?.success,
+        });
 
         if (!response.ok || !data.success) {
           throw new Error(data.message || "Failed to load sign order");
@@ -906,6 +927,11 @@ export const CreateTakeoffForm = ({
           });
 
         setImportableSigns(mappedSigns);
+        console.log('[CreateTakeoffForm] Prepared importable signs', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+          signCount: mappedSigns.length,
+        });
       } catch (error) {
         console.error("Error fetching sign order details:", error);
         toast.error(error instanceof Error ? error.message : "Failed to load sign order");
@@ -916,7 +942,7 @@ export const CreateTakeoffForm = ({
     };
 
     fetchSignOrderDetails();
-  }, [importDialogOpen, selectedSignOrderId, signOrders]);
+  }, [importDialogOpen, selectedSignOrderId, signOrders, jobId]);
 
   const handleToggleSection = (key: string) => {
     if (activeSections.includes(key)) {
