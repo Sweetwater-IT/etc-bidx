@@ -82,6 +82,13 @@ type Job360Tab =
 
 const formatWorkType = (workType: string) => {
   const workTypeMap: Record<string, string> = {
+    MPT: "MPT",
+    PERMANENT_SIGNS: "Permanent Signs",
+    FLAGGING: "Flagging",
+    LANE_CLOSURE: "Lane Closure",
+    SERVICE: "Service",
+    DELIVERY: "Delivery",
+    RENTAL: "Rental",
     permanent_sign: "Permanent Sign",
     permanent_signs: "Permanent Sign",
     lane_closure: "Lane Closure",
@@ -90,6 +97,31 @@ const formatWorkType = (workType: string) => {
   };
   return workTypeMap[workType] || workType;
 };
+
+const TAKEOFF_WORK_TYPE_COLORS: Record<string, string> = {
+  MPT: "bg-blue-500/15 text-blue-700",
+  PERMANENT_SIGNS: "bg-purple-500/15 text-purple-700",
+  FLAGGING: "bg-amber-500/15 text-amber-700",
+  LANE_CLOSURE: "bg-amber-500/15 text-amber-700",
+  DELIVERY: "bg-emerald-500/15 text-emerald-700",
+  SERVICE: "bg-indigo-500/15 text-indigo-700",
+  RENTAL: "bg-red-500/15 text-red-700",
+};
+
+const TAKEOFF_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  sent_to_build_shop: "bg-blue-500/15 text-blue-700",
+  sent_to_sign_shop: "bg-purple-500/15 text-purple-700",
+  submitted: "bg-blue-500/15 text-blue-700",
+  in_progress: "bg-amber-500/15 text-amber-700",
+  ready: "bg-emerald-500/15 text-emerald-700",
+  complete: "bg-emerald-500/15 text-emerald-700",
+  completed: "bg-emerald-500/15 text-emerald-700",
+  canceled: "bg-destructive/15 text-destructive",
+  cancelled: "bg-destructive/15 text-destructive",
+};
+
+const formatTakeoffStatus = (status: string) => status.replace(/_/g, " ");
 
 const ProjectDetail = () => {
   const params = useParams();
@@ -1058,6 +1090,7 @@ interface TakeoffSummary {
   title: string;
   work_type: string;
   status: string;
+  is_pickup?: boolean | null;
   created_at: string;
   install_date: string | null;
   pickup_date: string | null;
@@ -1166,7 +1199,18 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                       <span className="italic text-muted-foreground">unassigned</span>
                     )}
                   </td>
-                  <td className="px-3 py-1.5">{formatWorkType(takeoff.work_type)}</td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${TAKEOFF_WORK_TYPE_COLORS[takeoff.work_type] || "bg-muted text-muted-foreground"}`}>
+                        {formatWorkType(takeoff.work_type)}
+                      </span>
+                      {takeoff.is_pickup && (
+                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700">
+                          Pickup
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-1.5">
                     {takeoff.needed_by_date
                       ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
@@ -1177,9 +1221,9 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                       : "—"}
                   </td>
                   <td className="px-3 py-1.5">
-                    <Badge variant="secondary" className="text-[9px]">
-                      {takeoff.status}
-                    </Badge>
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${TAKEOFF_STATUS_COLORS[takeoff.status] || "bg-muted text-muted-foreground"}`}>
+                      {formatTakeoffStatus(takeoff.status)}
+                    </span>
                   </td>
                   <td className="px-3 py-1.5">
                     {new Date(takeoff.created_at).toLocaleDateString("en-US", {
