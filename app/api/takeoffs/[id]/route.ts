@@ -205,7 +205,9 @@ export async function GET(
           if (parentItemsError) {
             console.error('API: Error fetching parent takeoff items:', parentItemsError);
           } else {
-            const parentItemsById = new Map((parentItems || []).map((item) => [item.id, item]));
+            const parentItemsById = new Map<string, any>(
+              (parentItems || []).map((item): [string, any] => [String(item.id), item])
+            );
 
             takeoffItems = (pickupItems || [])
               .map((item: any) => {

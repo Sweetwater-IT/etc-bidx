@@ -127,7 +127,9 @@ export async function GET(
         return NextResponse.json({ error: "Failed to fetch parent takeoff items" }, { status: 500 });
       }
 
-      const parentItemsById = new Map((parentItems || []).map((item) => [item.id, item]));
+      const parentItemsById = new Map<string, any>(
+        (parentItems || []).map((item): [string, any] => [String(item.id), item])
+      );
 
       // Transform the data to match the expected format
       takeoffItems = (pickupItems || [])
