@@ -239,13 +239,17 @@ type SignOrderListItem = {
   id: number;
   order_number: string | null;
   status: string | null;
-  submitted_date: string | null;
   requestor: string | null;
   contract_number: string | null;
   order_date: string | null;
+  need_date: string | null;
   created_at: string | null;
-  customer_name: string | null;
-  item_count: number;
+  customer: string | null;
+  branch: string | null;
+  assigned_to: string | null;
+  order_type: string | null;
+  shop_status: string | null;
+  job_number: string | null;
 };
 
 type SignOrderImportSign = {
@@ -438,6 +442,7 @@ export const CreateTakeoffForm = ({
   const [loadingSignOrders, setLoadingSignOrders] = useState(false);
   const [loadingSelectedSignOrder, setLoadingSelectedSignOrder] = useState(false);
   const [importingSigns, setImportingSigns] = useState(false);
+  const [signOrderSearch, setSignOrderSearch] = useState("");
 
   // Auto-save state
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -493,6 +498,18 @@ export const CreateTakeoffForm = ({
     : "install date";
   const endDateValue = parseDateString(endDate);
   const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
+  const signOrderCustomerFilter = info?.customerName || dbJob?.customer_name || "";
+  const normalizedSignOrderSearch = signOrderSearch.trim().toLowerCase();
+  const filteredSignOrders = signOrders.filter((order) => {
+    if (!normalizedSignOrderSearch) return true;
+
+    return [
+      order.order_number,
+      order.customer,
+      order.contract_number,
+      order.job_number,
+    ].some((value) => String(value || "").toLowerCase().includes(normalizedSignOrderSearch));
+  });
 
   const resetImportDialog = useCallback(() => {
     setImportStep(1);
@@ -501,6 +518,7 @@ export const CreateTakeoffForm = ({
     setImportableSigns([]);
     setLoadingSelectedSignOrder(false);
     setImportingSigns(false);
+    setSignOrderSearch("");
   }, []);
 
   // Debugging refs
@@ -837,23 +855,44 @@ export const CreateTakeoffForm = ({
     const fetchSignOrders = async () => {
       setLoadingSignOrders(true);
       try {
-        console.log('[CreateTakeoffForm] Fetching sign orders for import', { jobId });
-        const response = await fetch(`/api/l/sign-orders/job/${jobId}`);
+        const filters = signOrderCustomerFilter
+          ? { customer: [signOrderCustomerFilter] }
+          : {};
+        const params = new URLSearchParams({
+          page: "1",
+          limit: "250",
+          includeDrafts: "true",
+          orderBy: "created_at",
+          ascending: "false",
+        });
+
+        if (Object.keys(filters).length > 0) {
+          params.set("filters", JSON.stringify(filters));
+        }
+
+        console.log('[CreateTakeoffForm] Fetching sign orders for import', {
+          jobId,
+          customerFilter: signOrderCustomerFilter,
+          params: params.toString(),
+        });
+
+        const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
         const data = await response.json();
 
         console.log('[CreateTakeoffForm] Sign order import response received', {
           jobId,
+          customerFilter: signOrderCustomerFilter,
           status: response.status,
           ok: response.ok,
-          orderCount: Array.isArray(data) ? data.length : undefined,
+          orderCount: Array.isArray(data?.orders) ? data.orders.length : undefined,
           data,
         });
 
-        if (!response.ok) {
+        if (!response.ok || !data?.success) {
           throw new Error(data.error || "Failed to load sign orders");
         }
 
-        setSignOrders(Array.isArray(data) ? data : []);
+        setSignOrders(Array.isArray(data.orders) ? data.orders : []);
       } catch (error) {
         console.error("Error fetching sign orders:", error);
         toast.error(error instanceof Error ? error.message : "Failed to load sign orders");
@@ -864,7 +903,7 @@ export const CreateTakeoffForm = ({
     };
 
     fetchSignOrders();
-  }, [importDialogOpen, jobId, resetImportDialog]);
+  }, [importDialogOpen, jobId, resetImportDialog, signOrderCustomerFilter]);
 
   useEffect(() => {
     if (!importDialogOpen || !selectedSignOrderId) return;
@@ -2174,16 +2213,26 @@ export const CreateTakeoffForm = ({
           <DialogHeader>
             <DialogTitle>Import Signs From Sign Order</DialogTitle>
             <DialogDescription>
-              Step {importStep} of 2. Select a sign order for this contract, then assign each sign to Type 3, Trailblazer, or Sign Stands before importing.
+              Step {importStep} of 2. Select a sign order for this job&apos;s customer, then assign each sign to Type 3, Trailblazer, or Sign Stands before importing.
             </DialogDescription>
           </DialogHeader>
 
           {importStep === 1 ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
               <div className="rounded-lg border">
-                <div className="border-b px-4 py-3">
-                  <h3 className="text-sm font-semibold">Sign Orders</h3>
-                  <p className="text-xs text-muted-foreground">Orders already linked to this contract.</p>
+                <div className="border-b px-4 py-3 space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Sign Orders</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Showing sign orders for {signOrderCustomerFilter || "the current job customer"}.
+                    </p>
+                  </div>
+                  <Input
+                    value={signOrderSearch}
+                    onChange={(event) => setSignOrderSearch(event.target.value)}
+                    placeholder="Search by SO number, customer, contract, or job number"
+                    className="h-8 text-xs"
+                  />
                 </div>
                 <div className="max-h-[420px] overflow-y-auto">
                   {loadingSignOrders ? (
@@ -2193,36 +2242,60 @@ export const CreateTakeoffForm = ({
                     </div>
                   ) : signOrders.length === 0 ? (
                     <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                      No sign orders were found for this contract.
+                      No sign orders were found for this customer.
+                    </div>
+                  ) : filteredSignOrders.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      No sign orders match that search.
                     </div>
                   ) : (
-                    <div className="divide-y">
-                      {signOrders.map((order) => {
+                    <div className="min-w-[760px]">
+                      <div className="grid grid-cols-[120px_120px_160px_150px_130px_130px] gap-3 border-b bg-muted/30 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div>SO Number</div>
+                        <div>Requestor</div>
+                        <div>Customer</div>
+                        <div>Contract / Job</div>
+                        <div>Date Made</div>
+                        <div>Build Status</div>
+                      </div>
+                      {filteredSignOrders.map((order) => {
                         const isSelected = selectedSignOrderId === order.id;
                         return (
                           <button
                             key={order.id}
                             type="button"
                             className={cn(
-                              "w-full px-4 py-3 text-left transition-colors hover:bg-muted/40",
+                              "grid w-full grid-cols-[120px_120px_160px_150px_130px_130px] gap-3 border-b px-4 py-3 text-left text-xs transition-colors hover:bg-muted/40",
                               isSelected && "bg-muted"
                             )}
                             onClick={() => setSelectedSignOrderId(order.id)}
                           >
-                            <div className="flex items-center justify-between gap-3">
                               <div>
-                                <div className="text-sm font-medium">
-                                  {order.order_number || `SO-${order.id}`}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {order.contract_number || "No contract number"} · {order.customer_name || "No customer"}
-                                </div>
+                                <div className="font-medium">{order.order_number || `SO-${order.id}`}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.order_type || "—"}</div>
                               </div>
-                              <div className="text-right text-xs text-muted-foreground">
-                                <div>{order.item_count} item{order.item_count === 1 ? "" : "s"}</div>
+                              <div>
+                                <div>{order.requestor || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.branch || "—"}</div>
+                              </div>
+                              <div>
+                                <div>{order.customer || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.assigned_to || "Unassigned"}</div>
+                              </div>
+                              <div>
+                                <div className="truncate">{order.contract_number || "—"}</div>
+                                <div className="truncate text-[11px] text-muted-foreground">{order.job_number || "—"}</div>
+                              </div>
+                              <div>
                                 <div>{formatDateTimeLabel(order.order_date || order.created_at)}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  Need: {formatDateTimeLabel(order.need_date)}
+                                </div>
                               </div>
-                            </div>
+                              <div>
+                                <div>{order.shop_status || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.status || "—"}</div>
+                              </div>
                           </button>
                         );
                       })}
@@ -2261,7 +2334,7 @@ export const CreateTakeoffForm = ({
                         <div>
                           <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Customer</Label>
                           <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                            {selectedSignOrder.customer_name || "—"}
+                            {selectedSignOrder.customer || "—"}
                           </div>
                         </div>
                         <div>
