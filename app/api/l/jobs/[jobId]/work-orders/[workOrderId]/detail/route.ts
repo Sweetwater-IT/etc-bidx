@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { parseJobNotes } from '@/lib/jobNotes';
+import { normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
 interface TakeoffSummary {
   id: string;
@@ -183,11 +184,14 @@ export async function GET(
     // Process pickup work order
     let pickupWO: { id: string; wo_number: string | null; status: string } | null = null;
     if (pickupRes.data && pickupRes.data.length > 0) {
-      pickupWO = pickupRes.data[0] as any;
+      pickupWO = {
+        ...(pickupRes.data[0] as any),
+        status: normalizeWorkOrderStatusForUi((pickupRes.data[0] as any).status) || "",
+      };
     }
 
     return NextResponse.json({
-      status: workOrder.status || null,
+      status: normalizeWorkOrderStatusForUi(workOrder.status),
       woNumber: workOrder.wo_number || null,
       job,
       takeoffs,
@@ -195,7 +199,12 @@ export async function GET(
       sovItems,
       documents,
       pickupWO,
-      parentWO: parentWORes.data || null,
+      parentWO: parentWORes.data
+        ? {
+            ...(parentWORes.data as any),
+            status: normalizeWorkOrderStatusForUi((parentWORes.data as any).status) || "",
+          }
+        : null,
       isPickup,
     });
 

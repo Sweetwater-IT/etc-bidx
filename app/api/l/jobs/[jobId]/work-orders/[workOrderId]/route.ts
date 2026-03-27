@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { normalizeWorkOrderStatusForDb, normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,10 @@ export async function GET(
       return NextResponse.json({ error: 'Work order not found' }, { status: 404 });
     }
 
-    return NextResponse.json(workOrder);
+    return NextResponse.json({
+      ...workOrder,
+      status: normalizeWorkOrderStatusForUi(workOrder.status),
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -35,10 +39,16 @@ export async function PATCH(
     const resolvedParams = await context.params;
     const workOrderId = resolvedParams.id;
     const patch = await request.json();
+    const normalizedPatch = {
+      ...patch,
+      ...(Object.prototype.hasOwnProperty.call(patch, 'status')
+        ? { status: normalizeWorkOrderStatusForDb(patch.status) }
+        : {}),
+    };
 
     const { data: workOrder, error } = await supabase
       .from('work_orders_l')
-      .update(patch)
+      .update(normalizedPatch)
       .eq('id', workOrderId)
       .select()
       .single();
@@ -48,7 +58,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to update work order' }, { status: 500 });
     }
 
-    return NextResponse.json(workOrder);
+    return NextResponse.json({
+      ...workOrder,
+      status: normalizeWorkOrderStatusForUi(workOrder.status),
+    });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
