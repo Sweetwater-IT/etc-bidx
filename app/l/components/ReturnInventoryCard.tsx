@@ -152,10 +152,40 @@ const DamagePhotoUpload = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const displayUrl = localPreviewUrl || currentUrl;
+
+  const clearLocalPreview = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setLocalPreviewUrl(null);
+  }, []);
+
+  useEffect(() => {
+    setImageLoading(Boolean(displayUrl));
+    setImageFailed(false);
+  }, [displayUrl]);
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+  }, []);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    clearLocalPreview();
+    const objectUrl = URL.createObjectURL(file);
+    previewUrlRef.current = objectUrl;
+    setLocalPreviewUrl(objectUrl);
+    setImageLoading(true);
+    setImageFailed(false);
     setUploading(true);
 
     try {
@@ -174,9 +204,13 @@ const DamagePhotoUpload = ({
       }
 
       const data = await response.json();
+      setImageLoading(true);
+      setImageFailed(false);
+      clearLocalPreview();
       onPhotoUpdated(data.url);
       toast.success("Damage photo attached");
     } catch (error) {
+      clearLocalPreview();
       console.error('Error uploading photo:', error);
       toast.error("Failed to upload photo");
     } finally {
@@ -186,27 +220,60 @@ const DamagePhotoUpload = ({
   };
 
   const handleRemove = () => {
+    clearLocalPreview();
     onPhotoUpdated(null);
     toast.success("Photo removed");
   };
 
   return (
     <div className="mt-1">
-      {currentUrl ? (
-        <div className="relative inline-block">
-          <Image
-            src={currentUrl}
-            alt="Damage"
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded object-cover border cursor-pointer"
-            onClick={() => window.open(currentUrl, "_blank")}
-          />
+      {displayUrl ? (
+        <div className="relative inline-flex">
           <button
-            onClick={handleRemove}
-            className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-3.5 w-3.5 flex items-center justify-center"
+            type="button"
+            onClick={() => window.open(displayUrl, "_blank")}
+            className="group relative h-16 w-16 overflow-hidden rounded-md border border-border/70 bg-[linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%),linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%)] bg-[length:12px_12px] bg-[position:0_0,6px_6px] shadow-sm transition hover:border-primary/50 hover:shadow-md"
+            aria-label="Open damage photo"
           >
-            <X className="h-2 w-2" />
+            <Image
+              src={displayUrl}
+              alt="Damage"
+              fill
+              unoptimized
+              className={`object-cover transition ${imageLoading ? "opacity-0" : "opacity-100"}`}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageFailed(false);
+              }}
+              onError={() => {
+                setImageLoading(false);
+                setImageFailed(true);
+              }}
+            />
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {imageFailed && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-muted/90 px-1 text-center">
+                <Camera className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[9px] leading-none text-muted-foreground">Preview unavailable</span>
+              </div>
+            )}
+            {!imageLoading && !imageFailed && (
+              <div className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                View
+              </div>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-4.5 w-4.5 flex items-center justify-center shadow"
+            aria-label="Remove damage photo"
+          >
+            <X className="h-2.5 w-2.5" />
           </button>
         </div>
       ) : (
