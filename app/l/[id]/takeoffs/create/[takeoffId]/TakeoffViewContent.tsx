@@ -11,6 +11,7 @@ import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upl
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
+import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
 import type { SignMaterial } from "@/utils/signMaterial";
 
 interface Props {
@@ -109,7 +110,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     if (takeoffId) {
       loadTakeoff();
     }
-  }, [takeoffId]);
+  }, [takeoffId, jobId, isViewMode]);
 
 
 
@@ -480,10 +481,15 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       </TakeoffViewCard>
 
+      {takeoff.is_pickup && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <ReturnInventoryCard takeoffId={takeoffId} jobInfo={jobInfo} />
+        </div>
+      )}
 
 
       {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
-      {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+      {!takeoff.is_pickup && (takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
         <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
           <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
           {vehicleItems.length > 0 ? (
@@ -516,7 +522,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       )}
 
-      {(takeoff.work_type === "MPT" || takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+      {!takeoff.is_pickup && (takeoff.work_type === "MPT" || takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
         <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
           <MPTSignConfiguration
             activeSections={Array.isArray(takeoff.active_sections) ? takeoff.active_sections : []}
@@ -548,36 +554,38 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       )}
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
-      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-        <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
-        {additionalItems.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
-              <thead className="bg-muted/70">
-                <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {additionalItems.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
-                    <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                    <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
+      {!takeoff.is_pickup && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
+          {additionalItems.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
+                <thead className="bg-muted/70">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No additional items. Custom items added manually will appear here.
-          </div>
-        )}
-        </TakeoffViewCard>
-      </div>
+                </thead>
+                <tbody className="divide-y">
+                  {additionalItems.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No additional items. Custom items added manually will appear here.
+            </div>
+          )}
+          </TakeoffViewCard>
+        </div>
+      )}
 
       {/* Notes */}
       {(takeoff.notes || takeoff.crew_notes || takeoff.build_shop_notes || takeoff.pm_notes) && (
