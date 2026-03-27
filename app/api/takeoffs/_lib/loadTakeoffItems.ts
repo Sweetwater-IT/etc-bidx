@@ -4,6 +4,7 @@ type TakeoffRecord = {
   id: string;
   is_pickup?: boolean | null;
   parent_takeoff_id?: string | null;
+  job_id?: string | null;
 };
 
 const PICKUP_ITEM_SELECT = `
@@ -68,89 +69,128 @@ async function loadPickupTakeoffItems(takeoff: TakeoffRecord) {
     return [];
   }
 
-  const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
-    .from("pickup_takeoffs_l")
-    .select("id")
-    .eq("parent_takeoff_id", takeoff.parent_takeoff_id)
-    .maybeSingle();
-
-  if (pickupTakeoffEntryError) {
-    throw new Error(`Failed to fetch pickup takeoff entry: ${pickupTakeoffEntryError.message}`);
-  }
-
-  if (!pickupTakeoffEntry?.id) {
-    return [];
-  }
-
-  const { data: pickupItemsData, error: pickupItemsError } = await supabase
-    .from("pickup_takeoff_items_l")
-    .select(PICKUP_ITEM_SELECT)
-    .eq("pickup_takeoff_id", pickupTakeoffEntry.id)
-    .order("created_at", { ascending: true });
-
-  if (pickupItemsError) {
-    throw new Error(`Failed to fetch pickup takeoff items: ${pickupItemsError.message}`);
-  }
-
-  let pickupItems = pickupItemsData || [];
-
-  if ((pickupItems || []).length === 0) {
-    const { data: parentTakeoffItems, error: parentTakeoffItemsError } = await supabase
-      .from("takeoff_items_l")
-      .select("id")
-      .eq("takeoff_id", takeoff.parent_takeoff_id)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: true });
-
-    if (parentTakeoffItemsError) {
-      throw new Error(`Failed to fetch parent takeoff items: ${parentTakeoffItemsError.message}`);
-    }
-
-    if ((parentTakeoffItems || []).length > 0) {
-      const fallbackRows = parentTakeoffItems.map((item) => ({
-        pickup_takeoff_id: pickupTakeoffEntry.id,
-        parent_item_id: item.id,
-        sign_condition: null,
-        structure_condition: null,
-        light_condition: null,
-        pickup_images: {},
-        return_details: {},
-        notes: null,
-      }));
-
-      const { data: insertedPickupItems, error: insertedPickupItemsError } = await supabase
-        .from("pickup_takeoff_items_l")
-        .insert(fallbackRows)
-        .select(PICKUP_ITEM_SELECT);
-
-      if (insertedPickupItemsError) {
-        throw new Error(`Failed to create pickup takeoff items: ${insertedPickupItemsError.message}`);
-      }
-
-      pickupItems = insertedPickupItems || [];
-    }
-  }
-
-  const parentItemIds = Array.from(
-    new Set((pickupItems || []).map((item) => item.parent_item_id).filter(Boolean))
-  );
-
-  if (parentItemIds.length === 0) {
-    return [];
-  }
-
   const { data: parentItems, error: parentItemsError } = await supabase
     .from("takeoff_items_l")
     .select(PARENT_ITEM_SELECT)
-    .in("id", parentItemIds)
-    .is("deleted_at", null);
+    .eq("takeoff_id", takeoff.parent_takeoff_id)
+    .is("deleted_at", null)
+    .order("load_order", { ascending: true });
 
   if (parentItemsError) {
     throw new Error(`Failed to fetch parent takeoff items: ${parentItemsError.message}`);
   }
 
+  const currentParentItems = parentItems || [];
+  const currentParentItemIds = new Set(currentParentItems.map((item) => String(item.id)));
+
+  if (currentParentItems.length === 0) {
+    return [];
+  }
+
+  const { data: pickupTakeoffEntries, error: pickupTakeoffEntriesError } = await supabase
+    .from("pickup_takeoffs_l")
+    .select("id, created_at")
+    .eq("parent_takeoff_id", takeoff.parent_takeoff_id)
+    .order("created_at", { ascending: false });
+
+  if (pickupTakeoffEntriesError) {
+    throw new Error(`Failed to fetch pickup takeoff entries: ${pickupTakeoffEntriesError.message}`);
+  }
+
+  let selectedEntry = (pickupTakeoffEntries || [])[0] || null;
+  let pickupItems: any[] = [];
+
+  if ((pickupTakeoffEntries || []).length > 0) {
+    const entryIds = pickupTakeoffEntries!.map((entry) => entry.id);
+
+    const { data: allPickupItems, error: pickupItemsError } = await supabase
+      .from("pickup_takeoff_items_l")
+      .select(PICKUP_ITEM_SELECT)
+      .in("pickup_takeoff_id", entryIds)
+      .order("created_at", { ascending: true });
+
+    if (pickupItemsError) {
+      throw new Error(`Failed to fetch pickup takeoff items: ${pickupItemsError.message}`);
+    }
+
+    const rowsByEntryId = new Map<string, any[]>();
+    for (const row of allPickupItems || []) {
+      const entryRows = rowsByEntryId.get(row.pickup_takeoff_id) || [];
+      entryRows.push(row);
+      rowsByEntryId.set(row.pickup_takeoff_id, entryRows);
+    }
+
+    const rankedEntries = pickupTakeoffEntries!.map((entry) => {
+      const rows = rowsByEntryId.get(entry.id) || [];
+      const matchingRows = rows.filter((row) => currentParentItemIds.has(String(row.parent_item_id)));
+      return {
+        entry,
+        rows,
+        matchingRows,
+        overlapCount: matchingRows.length,
+      };
+    }).sort((a, b) => {
+      if (b.overlapCount !== a.overlapCount) return b.overlapCount - a.overlapCount;
+      if (b.matchingRows.length !== a.matchingRows.length) return b.matchingRows.length - a.matchingRows.length;
+      return String(b.entry.created_at || "").localeCompare(String(a.entry.created_at || ""));
+    });
+
+    if (rankedEntries.length > 0) {
+      selectedEntry = rankedEntries[0].entry;
+      pickupItems = rankedEntries[0].matchingRows;
+    }
+  }
+
+  if (!selectedEntry) {
+    if (!takeoff.job_id) {
+      return [];
+    }
+
+    const { data: createdEntry, error: createdEntryError } = await supabase
+      .from("pickup_takeoffs_l")
+      .insert({
+        parent_takeoff_id: takeoff.parent_takeoff_id,
+        job_id: takeoff.job_id,
+      })
+      .select("id, created_at")
+      .single();
+
+    if (createdEntryError || !createdEntry) {
+      throw new Error(`Failed to create pickup takeoff entry: ${createdEntryError?.message || "Unknown error"}`);
+    }
+
+    selectedEntry = createdEntry;
+  }
+
+  const selectedParentItemIds = new Set(pickupItems.map((item) => String(item.parent_item_id)));
+  const missingParentItems = currentParentItems.filter((item) => !selectedParentItemIds.has(String(item.id)));
+
+  if (missingParentItems.length > 0) {
+    const missingRows = missingParentItems.map((item) => ({
+      pickup_takeoff_id: selectedEntry.id,
+      parent_item_id: item.id,
+      sign_condition: null,
+      structure_condition: null,
+      light_condition: null,
+      pickup_images: {},
+      return_details: {},
+      notes: null,
+    }));
+
+    const { data: insertedPickupItems, error: insertedPickupItemsError } = await supabase
+      .from("pickup_takeoff_items_l")
+      .insert(missingRows)
+      .select(PICKUP_ITEM_SELECT);
+
+    if (insertedPickupItemsError) {
+      throw new Error(`Failed to create missing pickup takeoff items: ${insertedPickupItemsError.message}`);
+    }
+
+    pickupItems = [...pickupItems, ...(insertedPickupItems || [])];
+  }
+
   const parentItemsById = new Map<string, any>(
-    (parentItems || []).map((item): [string, any] => [String(item.id), item])
+    currentParentItems.map((item): [string, any] => [String(item.id), item])
   );
 
   return (pickupItems || [])
