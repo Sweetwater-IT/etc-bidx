@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
+const DAMAGE_PHOTO_KEY = "__damage_photos";
+
 type TakeoffRecord = {
   id: string;
   is_pickup?: boolean | null;
@@ -198,6 +200,18 @@ async function loadPickupTakeoffItems(takeoff: TakeoffRecord) {
       const parentItem = parentItemsById.get(String(item.parent_item_id));
       if (!parentItem) return null;
 
+      const rawReturnDetails =
+        item.return_details && typeof item.return_details === "object"
+          ? { ...(item.return_details as Record<string, unknown>) }
+          : {};
+      const groupedDamagePhotos =
+        rawReturnDetails[DAMAGE_PHOTO_KEY] &&
+        typeof rawReturnDetails[DAMAGE_PHOTO_KEY] === "object" &&
+        !Array.isArray(rawReturnDetails[DAMAGE_PHOTO_KEY])
+          ? (rawReturnDetails[DAMAGE_PHOTO_KEY] as Record<string, string>)
+          : {};
+      delete rawReturnDetails[DAMAGE_PHOTO_KEY];
+
       return {
         id: item.id,
         product_name: parentItem.product_name,
@@ -220,9 +234,9 @@ async function loadPickupTakeoffItems(takeoff: TakeoffRecord) {
         load_order: parentItem.load_order,
         cover: parentItem.cover,
         secondary_signs: parentItem.secondary_signs,
-        return_details: item.return_details || {},
+        return_details: rawReturnDetails,
         return_condition: null,
-        damage_photos: item.pickup_images || {},
+        damage_photos: groupedDamagePhotos,
         pickup_images: item.pickup_images || [],
         sign_condition: item.sign_condition,
         structure_condition: item.structure_condition,
