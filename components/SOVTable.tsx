@@ -4,6 +4,7 @@ import { Fragment, forwardRef, memo, useCallback, useEffect, useImperativeHandle
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useSovItems } from '@/hooks/useSovItems';
 import {
@@ -110,6 +111,7 @@ const CUSTOM_WORK_TYPE_OPTIONS = [
   { value: 'SERVICE', label: 'Service' },
   { value: 'DELIVERY', label: 'Delivery' },
   { value: 'RENTAL', label: 'Rental' },
+  { value: 'SALE', label: 'Sale' },
 ];
 
 function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', value: number): number {
@@ -164,6 +166,60 @@ function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string
 
 function getMasterDisplayItemNumber(item: Pick<SovMasterItem, 'display_item_number' | 'item_number'>): string {
   return item.display_item_number?.trim() || item.item_number?.trim() || '';
+}
+
+function formatWorkTypeLabel(workType: string): string {
+  const normalized = workType.trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PERMANENT_SIGNS':
+      return 'Permanent Signs';
+    case 'LANE_CLOSURE':
+      return 'Lane Closure';
+    case 'FLAGGING':
+      return 'Flagging';
+    case 'DELIVERY':
+      return 'Delivery';
+    case 'SERVICE':
+      return 'Service';
+    case 'RENTAL':
+      return 'Rental';
+    case 'SALE':
+      return 'Sale';
+    case 'MPT':
+      return 'MPT';
+    case 'CUSTOM':
+      return 'Custom';
+    default:
+      return workType || 'Other';
+  }
+}
+
+function getWorkTypeTone(workType: string): string {
+  const normalized = workType.trim().toUpperCase();
+
+  switch (normalized) {
+    case 'MPT':
+      return 'border-blue-900/15 bg-blue-950/5 text-blue-900';
+    case 'RENTAL':
+      return 'border-amber-500/20 bg-amber-500/5 text-amber-800';
+    case 'SALE':
+      return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-800';
+    case 'SERVICE':
+      return 'border-violet-500/20 bg-violet-500/5 text-violet-800';
+    case 'DELIVERY':
+      return 'border-cyan-500/20 bg-cyan-500/5 text-cyan-800';
+    case 'FLAGGING':
+      return 'border-orange-500/20 bg-orange-500/5 text-orange-800';
+    case 'LANE_CLOSURE':
+      return 'border-rose-500/20 bg-rose-500/5 text-rose-800';
+    case 'PERMANENT_SIGNS':
+      return 'border-slate-500/20 bg-slate-500/5 text-slate-800';
+    case 'CUSTOM':
+      return 'border-zinc-500/20 bg-zinc-500/5 text-zinc-800';
+    default:
+      return 'border-border bg-muted/40 text-foreground';
+  }
 }
 
 const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
@@ -234,9 +290,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const showPricingColumns = forceShowPricing || !readOnly;
-  const totalColumnCount = (readOnly ? 0 : 1) + 1 + 1 + 1 + 1 + (showPricingColumns ? 4 : 0) + 1 + 1;
+  const totalColumnCount = (readOnly ? 0 : 1) + 1 + 1 + 1 + 1 + 1 + (showPricingColumns ? 4 : 0) + 1 + 1;
   const notesColSpan = totalColumnCount;
-  const totalLabelColSpan = (readOnly ? 0 : 1) + 4;
+  const totalLabelColSpan = (readOnly ? 0 : 1) + 6;
 
   useImperativeHandle(ref, () => ({
     flushPendingSave: async () => {
@@ -409,7 +465,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         ...prev,
         itemNumber: master.item_number,
         displayItemNumber: getMasterDisplayItemNumber(master),
-        displayName: master.display_name || master.description || getMasterDisplayItemNumber(master),
+        displayName: master.description || master.display_name || getMasterDisplayItemNumber(master),
         sourceDescription: master.description || '',
         workType: master.work_type || '',
         uom: getFirstNonNullUom(master),
@@ -504,7 +560,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 ...item,
                 itemNumber: master.item_number,
                 displayItemNumber: getMasterDisplayItemNumber(master),
-                description: master.display_name,
+                description: master.description,
                 work_type: master.work_type,
                 uom: getFirstNonNullUom(master),
                 quantity: item.quantity || 1,
@@ -528,7 +584,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         sov_item_id: master.is_custom ? null : master.id,
         custom_sov_item_id: master.is_custom ? master.id : null,
         item_number: master.item_number,
-        description: master.display_name,
+        description: master.description,
         work_type: master.is_custom ? 'CUSTOM' : master.work_type,
         uom: getFirstNonNullUom(master),
         quantity: 1, // Default quantity
@@ -579,7 +635,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 custom_sov_item_id: createdItem.custom_sov_item_id ?? payload.custom_sov_item_id ?? undefined,
                 itemNumber: master.item_number,
                 displayItemNumber: createdItem.display_item_number || getMasterDisplayItemNumber(master),
-                description: master.display_name,
+                description: master.description,
                 work_type: createdItem.work_type || master.work_type,
                 uom: createdItem.uom || getFirstNonNullUom(master),
                 quantity: createdItem.quantity || payload.quantity,
@@ -722,15 +778,15 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const saveEditorDraft = useCallback(() => {
     if (!editorDraft?.itemNumber.trim()) return;
 
-    const normalizedDisplayName = editorDraft.displayName.trim();
     const normalizedUom = editorDraft.uom.trim();
+    const normalizedDescription = (editorDraft.sourceDescription || editorDraft.displayName || editorDraft.itemNumber).trim();
     const nextItem: ScheduleOfValuesItem = {
       id: editorDraft.rowId,
       itemNumber: editorDraft.itemNumber,
       displayItemNumber: editorDraft.displayItemNumber || editorDraft.itemNumber,
-      description: normalizedDisplayName || editorDraft.sourceDescription || editorDraft.itemNumber,
-      sourceDescription: editorDraft.sourceDescription || '',
-      displayNameOverride: normalizedDisplayName || undefined,
+      description: normalizedDescription,
+      sourceDescription: normalizedDescription,
+      displayNameOverride: undefined,
       quantity: Math.max(1, editorDraft.quantity || 1),
       unitPrice: Math.max(0, editorDraft.unitPrice || 0),
       extendedPrice: Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
@@ -796,34 +852,61 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   if (sovLoading) {
     return (
-      <div className="rounded-xl border bg-white p-4 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+        <div className="border-b border-border/60 bg-muted/30 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-foreground/70" />
+            <h2 className="text-sm font-semibold tracking-[0.08em] text-foreground uppercase">Schedule of Values</h2>
+          </div>
+        </div>
         <div className="text-center py-8 text-muted-foreground">Loading SOV items...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          Schedule of Values
-        </h2>
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
-              <Plus className="h-3 w-3" /> Add Line Item
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-7 text-xs gap-1">
-              <Plus className="h-3 w-3" /> Add Custom Item
-            </Button>
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="border-b border-border/60 bg-muted/30 px-5 py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-foreground/70" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-foreground">Schedule of Values</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
+                {items.length} {items.length === 1 ? 'Item' : 'Items'}
+              </Badge>
+              {showPricingColumns && (
+                <>
+                  <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
+                    Total ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </Badge>
+                  <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
+                    Retainage ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </Badge>
+                </>
+              )}
+            </div>
           </div>
-        )}
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={addRow} className="h-8 border-border/70 bg-background text-xs font-medium">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Line Item
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-8 border-border/70 bg-background text-xs font-medium">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Custom Item
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+
+      <div className="px-5 py-4">
 
       {/* Bulk retainage controls - only show when not read-only */}
       {items.length > 0 && !readOnly && (
-        <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-border/60 bg-muted/40 p-3">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
           <DollarPercentCurrencyInputField
             type={bulkType}
@@ -839,24 +922,26 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       )}
 
       {items.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-sm">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 py-10 text-center text-sm text-muted-foreground">
           No line items yet. Click Add Line Item to begin.
         </div>
       ) : (
-        <div className="max-w-full min-w-0 overflow-x-auto">
-          <Table className={cn("min-w-[800px]", readOnly && "min-w-[620px]")}>
+        <div className="max-w-full min-w-0 overflow-hidden rounded-xl border border-border/60">
+          <div className="overflow-x-auto">
+          <Table className={cn("min-w-[800px]", readOnly && "min-w-[600px]")}>
             <TableHeader>
-              <TableRow>
-                {!readOnly && <TableHead className="w-[36px]" />}
-                <TableHead className="w-[120px] text-xs">Item Number</TableHead>
-                <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[200px] text-xs whitespace-nowrap">UOM</TableHead>
-                <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
-                {showPricingColumns && <TableHead className="w-[150px] text-xs text-right">Unit Price</TableHead>}
-                {showPricingColumns && <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>}
-                {showPricingColumns && <TableHead className="w-[320px] text-xs text-right">Retainage</TableHead>}
-                {showPricingColumns && <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>}
-                <TableHead className="w-[40px] text-xs text-center">Notes</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                {!readOnly && <TableHead className="w-[36px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" />}
+                <TableHead className="w-[120px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</TableHead>
+                <TableHead className="min-w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Description</TableHead>
+                <TableHead className="w-[125px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">Work Type</TableHead>
+                <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">UOM</TableHead>
+                <TableHead className="w-[70px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Qty</TableHead>
+                {showPricingColumns && <TableHead className="w-[150px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Unit Price</TableHead>}
+                {showPricingColumns && <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Extended</TableHead>}
+                {showPricingColumns && <TableHead className="w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Retainage</TableHead>}
+                {showPricingColumns && <TableHead className="w-[100px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Ret. Amt</TableHead>}
+                <TableHead className="w-[40px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">Notes</TableHead>
                 <TableHead className="w-[40px]" />
               </TableRow>
             </TableHeader>
@@ -870,7 +955,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 <TableRow
                   key={item.id}
                   className={cn(
-                    !readOnly && "transition-colors",
+                    !readOnly && "transition-colors hover:bg-muted/20",
                     dragOverItemId === item.id && draggedItemId !== item.id && "bg-primary/5"
                   )}
                   onDragOver={(e) => {
@@ -935,13 +1020,18 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   <TableCell className="p-1.5">
                     <span
                       className={cn(
-                        "text-xs px-1 block",
+                        "block px-1 text-sm text-foreground",
                         readOnly ? "whitespace-normal break-words" : "truncate max-w-[35ch]"
                       )}
                       title={item.description || item.sourceDescription}
                     >
                       {item.description}
                     </span>
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    <Badge variant="secondary" className={cn("rounded-md border text-[10px] font-semibold uppercase tracking-wide", getWorkTypeTone(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER')))}>
+                      {formatWorkTypeLabel(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))}
+                    </Badge>
                   </TableCell>
                   <TableCell className="p-1.5">
                     <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
@@ -1004,7 +1094,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   </TableCell>
                 </TableRow>
                 {hasNotes && (
-                  <TableRow className="border-t-0">
+                  <TableRow className="border-t-0 bg-muted/10">
                     <TableCell colSpan={notesColSpan} className="p-1.5 pt-0">
                       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
                         <div className="flex items-start gap-2">
@@ -1042,8 +1132,10 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
+      </div>
 
       <Dialog open={editorOpen} onOpenChange={(open) => {
         if (!open) closeEditor();
@@ -1066,7 +1158,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           {editorStep === 'pick' && (
             <div className="space-y-3">
               <Input
-                placeholder="Search item #, display #, description, display name, or category…"
+                placeholder="Search item #, display #, description, or category…"
                 value={selectorSearch}
                 onChange={(e) => setSelectorSearch(e.target.value)}
                 autoFocus
@@ -1078,15 +1170,14 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Item #</TableHead>
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Display #</TableHead>
                       <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Description</TableHead>
-                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Display Name</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {groupedSelectableItems.map((group) => (
                       <Fragment key={group.heading}>
-                        <TableRow className="hover:bg-transparent border-t bg-[#16335A]">
-                          <TableCell colSpan={4} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-white">
-                            {group.heading}
+                        <TableRow className="border-t border-blue-900/20 bg-blue-950/5 hover:bg-blue-950/5">
+                          <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-blue-900">
+                            {formatWorkTypeLabel(group.heading)}
                           </TableCell>
                         </TableRow>
                         {group.items.map((p) => (
@@ -1098,21 +1189,20 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                             <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
                             <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
                             <TableCell className="text-xs">{p.description}</TableCell>
-                            <TableCell className="text-xs">{p.display_name}</TableCell>
                           </TableRow>
                         ))}
                       </Fragment>
                     ))}
                     {!sovMasterLoading && groupedSelectableItems.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground">
                           No matching items found.
                         </TableCell>
                       </TableRow>
                     )}
                     {sovMasterLoading && (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-6 text-center text-xs text-muted-foreground">
+                        <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground">
                           Loading…
                         </TableCell>
                       </TableRow>
@@ -1136,7 +1226,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Category</p>
-                  <p className="text-sm">{editorDraft.workType || 'OTHER'}</p>
+                  <p className="text-sm">{formatWorkTypeLabel(editorDraft.workType || 'OTHER')}</p>
                 </div>
                 <div className="md:col-span-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Master Description</p>
@@ -1145,17 +1235,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="border-b pb-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display Name</p>
-                  </div>
-                  <Input
-                    className="max-w-xl"
-                    value={editorDraft.displayName}
-                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, displayName: e.target.value } : prev)}
-                    placeholder="Display name shown in the SOV row"
-                  />
-                </div>
                 <div className="space-y-2">
                   <div className="border-b pb-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">UOM</p>
@@ -1290,12 +1369,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             )}
             <Button variant="outline" onClick={closeEditor}>Cancel</Button>
             {editorStep === 'configure' && (
-              <Button
-                onClick={saveEditorDraft}
-                disabled={!editorDraft?.itemNumber.trim() || !editorDraft?.displayName.trim() || !editorDraft?.uom.trim()}
-              >
-                Save Item
-              </Button>
+            <Button
+              onClick={saveEditorDraft}
+              disabled={!editorDraft?.itemNumber.trim() || !editorDraft?.uom.trim()}
+            >
+              Save Item
+            </Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -1326,7 +1405,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 <label className="text-xs">Description</label>
                 <Input
                   className="h-8 text-sm"
-                  placeholder="Display name"
+                  placeholder="Item description"
                   value={customDraft.description}
                   onChange={(e) => setCustomDraft({ ...customDraft, description: e.target.value })}
                 />
