@@ -77,6 +77,12 @@ interface CustomItemDraft {
   itemNumber: string;
   description: string;
   workType: string;
+  uom: string;
+  quantity: number;
+  unitPrice: number;
+  retainageType: 'percent' | 'dollar';
+  retainageValue: number;
+  notes: string;
 }
 
 interface PendingDeleteState {
@@ -696,6 +702,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           itemNumber: existing.itemNumber,
           description: existing.description,
           workType: existing.work_type || '',
+          uom: existing.uom || customUomOptions[0] || 'EA',
+          quantity: existing.quantity || 1,
+          unitPrice: existing.unitPrice || 0,
+          retainageType: existing.retainageType || 'dollar',
+          retainageValue: existing.retainageValue || 0,
+          notes: existing.notes || '',
         });
       }
     } else {
@@ -721,6 +733,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         itemNumber: '',
         description: '',
         workType: '',
+        uom: customUomOptions[0] || 'EA',
+        quantity: 1,
+        unitPrice: 0,
+        retainageType: 'dollar',
+        retainageValue: 0,
+        notes: '',
       });
     }
     setCustomDialogOpen(true);
@@ -747,8 +765,14 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
 
   const saveCustomItem = () => {
     if (!customDraft || !customDraft.itemNumber.trim() || !customDraft.description.trim()) return;
-    const customUoms = getAvailableUomsForWorkType(sovProducts, customDraft.workType);
-    const nextUom = customUoms[0] || 'EA';
+    const quantity = Math.max(1, customDraft.quantity || 1);
+    const unitPrice = Math.max(0, customDraft.unitPrice || 0);
+    const extendedPrice = Math.round(quantity * unitPrice * 100) / 100;
+    const retainageValue = customDraft.retainageType === 'percent'
+      ? clampNumber(customDraft.retainageValue || 0, 0, 100)
+      : clampNumber(customDraft.retainageValue || 0, 0, extendedPrice);
+    const nextUom = normalizeUom(customDraft.uom || customUomOptions[0] || 'EA');
+
     updateItems((prevItems) =>
       prevItems.map((item) =>
         item.id === customDraft.rowId
@@ -756,18 +780,22 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               ...item,
               itemNumber: customDraft.itemNumber.trim(),
               description: customDraft.description.trim(),
+              sourceDescription: customDraft.description.trim(),
               work_type: customDraft.workType,
               uom: nextUom,
-              quantity: item.quantity || 1,
-              unitPrice: item.unitPrice || 0,
-              extendedPrice: Math.round((item.quantity || 1) * (item.unitPrice || 0) * 100) / 100,
-              retainageType: item.retainageType || 'dollar',
-              retainageValue: item.retainageValue || 0,
+              uomOverride: nextUom,
+              quantity,
+              unitPrice,
+              extendedPrice,
+              retainageType: customDraft.retainageType,
+              retainageValue,
               retainageAmount: calcRetainageAmount(
-                Math.round((item.quantity || 1) * (item.unitPrice || 0) * 100) / 100,
-                item.retainageType || 'dollar',
-                item.retainageValue || 0
+                extendedPrice,
+                customDraft.retainageType,
+                retainageValue
               ),
+              notes: customDraft.notes || '',
+              is_custom: true,
             }
           : item
       )
@@ -893,9 +921,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={addRow} className="h-8 border-border/70 bg-background text-xs font-medium">
                 <Plus className="mr-1 h-3.5 w-3.5" /> Add Line Item
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-8 border-border/70 bg-background text-xs font-medium">
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add Custom Item
               </Button>
             </div>
           )}
@@ -1155,7 +1180,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          {editorStep === 'pick' && (
+      {editorStep === 'pick' && (
             <div className="space-y-3">
               <Input
                 placeholder="Search item #, display #, description, or category…"
@@ -1163,6 +1188,14 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 onChange={(e) => setSelectorSearch(e.target.value)}
                 autoFocus
               />
+              {!readOnly && (
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => openCustomDialog()}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Create Custom Item
+                  </Button>
+                </div>
+              )}
               <div className="max-h-[500px] overflow-auto rounded-md border">
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-[#FAFAFA]">
@@ -1386,9 +1419,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           closeCustomDialog(true);
         }
       }}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle className="text-sm">Add Custom Item Number</DialogTitle>
+            <DialogTitle className="text-sm">Create Custom Line Item</DialogTitle>
+            <DialogDescription>
+              Add the custom line item with its UOM and pricing details up front.
+            </DialogDescription>
           </DialogHeader>
           {customDraft && (
             <div className="grid gap-3 py-2">
@@ -1428,9 +1464,72 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">UOM <span className="text-destructive">*</span></label>
+                <Select
+                  value={customDraft.uom}
+                  onValueChange={(value) => setCustomDraft({ ...customDraft, uom: value })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select UOM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customUomOptions.map((uom) => (
+                      <SelectItem key={uom} value={uom}>
+                        {uom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <label className="text-xs">Quantity</label>
+                  <Input
+                    className="h-8 text-sm"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={customDraft.quantity}
+                    onChange={(e) => setCustomDraft({ ...customDraft, quantity: Math.max(1, parseInt(e.target.value || '1', 10)) })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs">Unit Price</label>
+                  <div className="flex items-center h-8 rounded-md border bg-background">
+                    <span className="border-r px-2 text-xs text-muted-foreground">$</span>
+                    <CurrencyInput
+                      value={Math.round(customDraft.unitPrice * 100).toString()}
+                      onChange={(digits) => setCustomDraft({ ...customDraft, unitPrice: parseInt(digits || '0', 10) / 100 })}
+                      className="h-8 w-full border-0 bg-transparent pr-2 text-right text-sm focus-visible:ring-0"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">Retainage</label>
+                <div className="flex rounded-md border bg-background px-3 py-2">
+                  <DollarPercentCurrencyInputField
+                    type={customDraft.retainageType}
+                    value={customDraft.retainageValue}
+                    onTypeChange={(type) => setCustomDraft({ ...customDraft, retainageType: type })}
+                    onValueChange={(value) => setCustomDraft({ ...customDraft, retainageValue: value })}
+                    size="sm"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">Notes</label>
+                <Textarea
+                  className="min-h-[88px] text-sm"
+                  placeholder="Optional notes for this custom item"
+                  value={customDraft.notes}
+                  onChange={(e) => setCustomDraft({ ...customDraft, notes: e.target.value })}
+                />
+              </div>
               <div className="rounded-md border bg-muted/30 px-3 py-2">
                 <p className="text-[11px] text-muted-foreground">
-                  UOM, quantity, unit price, retainage, and notes will be filled out after this row is added to the table.
+                  Extended amount: ${(Math.max(1, customDraft.quantity || 1) * Math.max(0, customDraft.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -1439,7 +1538,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             <Button variant="outline" size="sm" onClick={() => closeCustomDialog(true)}>Cancel</Button>
             <Button
               size="sm"
-              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim() || !customDraft?.workType}
+              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim() || !customDraft?.workType || !customDraft?.uom}
               onClick={saveCustomItem}
             >
               Add to Table

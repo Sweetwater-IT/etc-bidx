@@ -123,6 +123,13 @@ const TAKEOFF_STATUS_COLORS: Record<string, string> = {
 
 const formatTakeoffStatus = (status: string) => status.replace(/_/g, " ");
 
+const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
+  if (workOrderNumber === null || workOrderNumber === undefined) return "—";
+  const asString = String(workOrderNumber).trim();
+  if (!asString) return "—";
+  return asString.padStart(3, "0");
+};
+
 const ProjectDetail = () => {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
@@ -146,13 +153,6 @@ const ProjectDetail = () => {
   const [takeoffsCount, setTakeoffsCount] = useState(0);
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(true);
-
-  const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
-    if (workOrderNumber === null || workOrderNumber === undefined) return "—";
-    const asString = String(workOrderNumber).trim();
-    if (!asString) return "—";
-    return asString.padStart(3, "0");
-  };
 
   // Fetch job data on mount
   useEffect(() => {
