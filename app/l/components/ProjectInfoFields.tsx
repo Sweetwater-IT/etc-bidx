@@ -59,7 +59,16 @@ interface ProjectInfoFieldsProps {
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
   "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
-  "customerJobNumber", "customerPMFirstName", "customerPMLastName", "customerPMEmail", "isCertifiedPayroll",
+  "customerJobNumber",
+  "customerPMFirstName",
+  "customerPMLastName",
+  "customerPMPhone",
+  "customerPMEmail",
+  "customerBillingContactFirstName",
+  "customerBillingContactLastName",
+  "customerBillingPhone",
+  "customerBillingEmail",
+  "isCertifiedPayroll",
 ];
 
 const PROJECT_OWNER_OPTIONS = ["PENNDOT", "Turnpike", "SEPTA", "Private"] as const;
@@ -330,6 +339,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const payrollRequiredFields: Array<keyof JobProjectInfo> = [
     "certifiedPayrollContactFirstName",
     "certifiedPayrollContactLastName",
+    "certifiedPayrollPhone",
     "certifiedPayrollEmail",
   ];
 
@@ -941,12 +951,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
           <div>
             <Label htmlFor="customerPMPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> PM Phone
+              <Phone className="h-3 w-3" /> PM Phone<RequiredMark />
             </Label>
             <Input
               id="customerPMPhone"
               type="tel"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerPMPhone") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="(555) 555-5555"
               value={projectInfo.customerPMPhone || ""}
               onChange={(e) => update("customerPMPhone", e.target.value)}
@@ -1007,12 +1017,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               </div>
               <div>
                 <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
-                  <Phone className="h-3 w-3" /> Payroll Phone
+                  <Phone className="h-3 w-3" /> Payroll Phone<RequiredMark />
                 </Label>
                 <Input
                   id="certPayrollPhone"
                   type="tel"
-                  className="h-8 text-sm"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollPhone") && "border-destructive ring-1 ring-destructive/30")}
                   placeholder="(555) 555-5555"
                   value={projectInfo.certifiedPayrollPhone || ""}
                   onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
@@ -1036,10 +1046,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
           {/* Customer Billing */}
           <div>
-            <Label htmlFor="custBillingFirstName" className="text-xs">Billing Contact First Name</Label>
+            <Label htmlFor="custBillingFirstName" className="text-xs">Billing Contact First Name<RequiredMark /></Label>
             <Input
               id="custBillingFirstName"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerBillingContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="First name"
               value={projectInfo.customerBillingContactFirstName || ""}
               onChange={(e) =>
@@ -1054,10 +1064,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             />
           </div>
           <div>
-            <Label htmlFor="custBillingLastName" className="text-xs">Billing Contact Last Name</Label>
+            <Label htmlFor="custBillingLastName" className="text-xs">Billing Contact Last Name<RequiredMark /></Label>
             <Input
               id="custBillingLastName"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerBillingContactLastName") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="Last name"
               value={projectInfo.customerBillingContactLastName || ""}
               onChange={(e) =>
@@ -1073,12 +1083,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
           <div>
             <Label htmlFor="custBillingPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> Billing Phone
+              <Phone className="h-3 w-3" /> Billing Phone<RequiredMark />
             </Label>
             <Input
               id="custBillingPhone"
               type="tel"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerBillingPhone") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="(555) 555-5555"
               value={projectInfo.customerBillingPhone || ""}
               onChange={(e) => update("customerBillingPhone", e.target.value)}
@@ -1086,12 +1096,12 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
           <div>
             <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Billing Email
+              <Mail className="h-3 w-3" /> Billing Email<RequiredMark />
             </Label>
             <Input
               id="custBillingEmail"
               type="email"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerBillingEmail") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="billing@customer.com"
               value={projectInfo.customerBillingEmail || ""}
               onChange={(e) => update("customerBillingEmail", e.target.value)}
