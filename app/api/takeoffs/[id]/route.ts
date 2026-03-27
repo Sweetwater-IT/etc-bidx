@@ -46,6 +46,7 @@ export async function GET(
         job_id,
         contracted_or_additional,
         priority,
+        return_inventory_submitted_at,
         notes,
         crew_notes,
         build_shop_notes,
@@ -147,6 +148,59 @@ export async function GET(
     });
   } catch (error) {
     console.error('API: Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!id) {
+      return NextResponse.json({ error: 'Takeoff ID is required' }, { status: 400 });
+    }
+
+    const updateData: Record<string, string | null> = {};
+
+    if (Object.prototype.hasOwnProperty.call(body, 'installDate')) {
+      updateData.install_date = body.installDate || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'pickupDate')) {
+      updateData.pickup_date = body.pickupDate || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'neededByDate')) {
+      updateData.needed_by_date = body.neededByDate || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'returnInventorySubmittedAt')) {
+      updateData.return_inventory_submitted_at = body.returnInventorySubmittedAt || null;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No supported fields provided' }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('takeoffs_l')
+      .update(updateData)
+      .eq('id', id)
+      .select('id, install_date, pickup_date, needed_by_date, return_inventory_submitted_at')
+      .single();
+
+    if (error) {
+      console.error('API: Error updating takeoff:', error);
+      return NextResponse.json({ error: 'Failed to update takeoff' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, takeoff: data });
+  } catch (error) {
+    console.error('API: Unexpected error updating takeoff:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

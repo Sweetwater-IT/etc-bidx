@@ -323,6 +323,7 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
         const data = await response.json();
         const rows = (data.takeoffItems || []) as ReturnItem[];
         setItems(rows);
+        setSubmitted(Boolean(data.takeoff?.return_inventory_submitted_at));
 
         const init: Record<string, Record<string, string>> = {};
         const initPhotos: Record<string, Record<string, string>> = {};
@@ -525,29 +526,49 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
       };
     });
 
-    await generateReturnTakeoffPdf({
-      title: jobInfo?.title || "Pickup Return",
-      workType: jobInfo?.workType || "",
-      projectName: jobInfo?.projectName,
-      etcJobNumber: jobInfo?.etcJobNumber,
-      etcBranch: jobInfo?.etcBranch,
-      etcProjectManager: jobInfo?.etcProjectManager,
-      customerName: jobInfo?.customerName,
-      customerJobNumber: jobInfo?.customerJobNumber,
-      projectOwner: jobInfo?.projectOwner,
-      county: jobInfo?.county,
-      installDate: jobInfo?.installDate,
-      pickupDate: jobInfo?.pickupDate,
-      customerPM: jobInfo?.customerPM,
-      assignedTo: jobInfo?.assignedTo,
-      contractedOrAdditional: jobInfo?.contractedOrAdditional,
-      items: pdfItems,
-    });
+    try {
+      await generateReturnTakeoffPdf({
+        title: jobInfo?.title || "Pickup Return",
+        workType: jobInfo?.workType || "",
+        projectName: jobInfo?.projectName,
+        etcJobNumber: jobInfo?.etcJobNumber,
+        etcBranch: jobInfo?.etcBranch,
+        etcProjectManager: jobInfo?.etcProjectManager,
+        customerName: jobInfo?.customerName,
+        customerJobNumber: jobInfo?.customerJobNumber,
+        projectOwner: jobInfo?.projectOwner,
+        county: jobInfo?.county,
+        installDate: jobInfo?.installDate,
+        pickupDate: jobInfo?.pickupDate,
+        customerPM: jobInfo?.customerPM,
+        assignedTo: jobInfo?.assignedTo,
+        contractedOrAdditional: jobInfo?.contractedOrAdditional,
+        items: pdfItems,
+      });
 
-    setSubmitted(true);
-    setDirty(false);
-    setSubmitting(false);
-    toast.success("Return inventory submitted — PDF downloaded.");
+      const submitResponse = await fetch(`/api/takeoffs/${takeoffId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnInventorySubmittedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!submitResponse.ok) {
+        throw new Error("Failed to persist return inventory submission");
+      }
+
+      setSubmitted(true);
+      setDirty(false);
+      toast.success("Return inventory submitted — PDF downloaded.");
+    } catch (error) {
+      console.error("Error submitting return inventory:", error);
+      toast.error("Failed to submit return inventory.");
+    } finally {
+      setSubmitting(false);
+    }
   }, [allComplete, hasMissingDamagePhotos, items, details, photos, jobInfo, takeoffId]);
 
   // Stats

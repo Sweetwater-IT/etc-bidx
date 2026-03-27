@@ -352,7 +352,7 @@ export async function POST(request: NextRequest) {
       work_order_id: workOrderId || null,
       contracted_or_additional: contractedOrAdditional || 'contracted',
       install_date: installDate || null,
-      pickup_date: workType === 'MPT' ? (pickupDate || null) : null,
+      pickup_date: normalizedWorkType === 'MPT' ? (pickupDate || null) : null,
       needed_by_date: neededByDate || null,
       is_multi_day_job: Boolean(isMultiDayJob),
       end_date: endDate || null,

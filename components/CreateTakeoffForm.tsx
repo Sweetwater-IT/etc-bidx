@@ -639,10 +639,52 @@ export const CreateTakeoffForm = ({
 
   // Mark as having unsaved changes when form data changes
   useEffect(() => {
-    if (title || workType || activeSections.length > 0 || Object.keys(signRows).length > 0) {
+    if (
+      title ||
+      workType ||
+      workOrderNumber ||
+      workOrderId ||
+      installDate ||
+      pickupDate ||
+      neededByDate ||
+      endDate ||
+      notes ||
+      crewNotes ||
+      buildShopNotes ||
+      pmNotes ||
+      activeSections.length > 0 ||
+      Object.keys(signRows).length > 0 ||
+      activePermanentItems.length > 0 ||
+      Object.keys(permanentSignRows).length > 0 ||
+      Object.keys(permanentEntryRows).length > 0 ||
+      vehicleItems.length > 0 ||
+      rollingStockItems.length > 0 ||
+      additionalItems.length > 0
+    ) {
       setHasUnsavedChanges(true);
     }
-  }, [title, workType, activeSections, signRows, activePermanentItems, permanentSignRows, permanentEntryRows, vehicleItems, rollingStockItems, additionalItems]);
+  }, [
+    title,
+    workType,
+    workOrderNumber,
+    workOrderId,
+    installDate,
+    pickupDate,
+    neededByDate,
+    endDate,
+    notes,
+    crewNotes,
+    buildShopNotes,
+    pmNotes,
+    activeSections,
+    signRows,
+    activePermanentItems,
+    permanentSignRows,
+    permanentEntryRows,
+    vehicleItems,
+    rollingStockItems,
+    additionalItems,
+  ]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

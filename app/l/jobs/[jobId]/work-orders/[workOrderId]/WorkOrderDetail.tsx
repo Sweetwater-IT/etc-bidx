@@ -202,7 +202,6 @@ const WorkOrderDetail = ({
   const [isLoading, setIsLoading] = useState(!isNewWorkOrder);
   const [buildRequests, setBuildRequests] = useState<any[]>([]);
   const [dispatch, setDispatch] = useState<any>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
   const [woItems, setWoItems] = useState<WOItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
@@ -968,10 +967,6 @@ const WorkOrderDetail = ({
   const statusConfig = getStatusConfig(workOrder?.status || "draft");
   const isViewMode = mode === "view";
   const canEdit = (isAdmin || isPM) && !isViewMode;
-  const canDeleteWorkOrder =
-    isNewWorkOrder ||
-    ["draft", "ready", "scheduled"].includes(String(workOrder?.status || "").toLowerCase());
-
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
       <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
@@ -989,20 +984,6 @@ const WorkOrderDetail = ({
                 <Plus className="h-3.5 w-3.5" /> Create or Attach Takeoff
               </Button>
             )}
-          </div>
-        )}
-
-        {canEdit && !isNewWorkOrder && canDeleteWorkOrder && (
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete Work Order
-            </Button>
           </div>
         )}
 
@@ -2006,50 +1987,6 @@ const WorkOrderDetail = ({
               }}
             >
               Confirm — Change Order Submitted
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Draft Work Order Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" />
-              Delete Work Order
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete this work order and all its line items. Deletion is only allowed through scheduled status.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!workOrderId) return;
-                try {
-                  const response = await fetch(`/api/workorders/${workOrderId}`, {
-                    method: 'DELETE',
-                  });
-
-                  if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to delete work order');
-                  }
-
-                  const result = await response.json();
-                  toast.success("Work order deleted");
-                  router.push(result.jobId ? `/l/${result.jobId}` : "/");
-                } catch (err: any) {
-                  toast.error(err.message || 'Failed to delete work order');
-                }
-                setShowDeleteDialog(false);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete Work Order
             </Button>
           </DialogFooter>
         </DialogContent>
