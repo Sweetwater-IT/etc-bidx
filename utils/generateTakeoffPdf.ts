@@ -160,6 +160,8 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number = 12): number {
     if (_activeCols) {
       newY = drawTableHeader(doc, _activeCols, newY, _activePageW);
     }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
     return newY;
   }
   return y;
