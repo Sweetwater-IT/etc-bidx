@@ -172,7 +172,7 @@ async function loadPickupTakeoffItems(takeoff: TakeoffRecord) {
       sign_condition: null,
       structure_condition: null,
       light_condition: null,
-      pickup_images: {},
+      pickup_images: [],
       return_details: {},
       notes: null,
     }));
@@ -223,7 +223,7 @@ async function loadPickupTakeoffItems(takeoff: TakeoffRecord) {
         return_details: item.return_details || {},
         return_condition: null,
         damage_photos: item.pickup_images || {},
-        pickup_images: item.pickup_images || {},
+        pickup_images: item.pickup_images || [],
         sign_condition: item.sign_condition,
         structure_condition: item.structure_condition,
         light_condition: item.light_condition,
