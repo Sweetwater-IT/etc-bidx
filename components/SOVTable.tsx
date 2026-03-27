@@ -929,16 +929,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
                 {items.length} {items.length === 1 ? 'Item' : 'Items'}
               </Badge>
-              {showPricingColumns && (
-                <>
-                  <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
-                    Total ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </Badge>
-                  <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
-                    Retainage ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </Badge>
-                </>
-              )}
             </div>
           </div>
           {!readOnly && (

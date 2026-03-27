@@ -47,6 +47,8 @@ export default function ContractViewContent() {
   const [contractNotes, setContractNotes] = useState<Note[]>([]);
   const [contractNotesLoading, setContractNotesLoading] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+  const showPayrollContact =
+    projectInfo?.isCertifiedPayroll === "state" || projectInfo?.isCertifiedPayroll === "federal";
 
   useEffect(() => {
     const loadContract = async () => {
@@ -386,7 +388,7 @@ export default function ContractViewContent() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Email</span>
                 <span className="text-sm font-medium">{projectInfo.customerPMEmail || "—"}</span>
               </div>
-              {projectInfo.isCertifiedPayroll !== "none" && (
+              {showPayrollContact && (
                 <>
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll Contact</span>
@@ -419,7 +421,7 @@ export default function ContractViewContent() {
         </div>
 
         {/* Certified Payroll Information */}
-        {projectInfo.isCertifiedPayroll !== "none" && (
+        {showPayrollContact && (
           <div className="rounded-lg border bg-card shadow-sm">
             <div className="px-5 py-3 border-b bg-muted/30">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Certified Payroll Information</h2>

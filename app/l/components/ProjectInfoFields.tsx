@@ -59,8 +59,7 @@ interface ProjectInfoFieldsProps {
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
   "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
-  "customerJobNumber", "customerPMFirstName", "customerPMLastName", "customerPMEmail", "certifiedPayrollContactFirstName", "certifiedPayrollContactLastName",
-  "certifiedPayrollEmail", "isCertifiedPayroll",
+  "customerJobNumber", "customerPMFirstName", "customerPMLastName", "customerPMEmail", "isCertifiedPayroll",
 ];
 
 const PROJECT_OWNER_OPTIONS = ["PENNDOT", "Turnpike", "SEPTA", "Private"] as const;
@@ -69,6 +68,10 @@ const PHONE_FIELDS: Array<keyof JobProjectInfo> = [
   "certifiedPayrollPhone",
   "customerBillingPhone",
 ];
+
+function getNormalizedCertifiedPayrollType(value?: string | null): CertifiedPayrollType {
+  return value === "state" || value === "federal" ? value : "none";
+}
 
 // Stable RateField — defined OUTSIDE parent components to prevent remounting on every keystroke
 const RateField = ({
@@ -121,6 +124,7 @@ const CertifiedPayrollSection = ({
   isInvalid: (field: keyof JobProjectInfo) => boolean;
   RequiredMark: React.FC;
 }) => {
+  const certifiedPayrollType = getNormalizedCertifiedPayrollType(projectInfo.isCertifiedPayroll);
 
   const TotalCell = ({ base, fringe }: { base: string | null; fringe: string | null }) => {
     const total = (parseFloat(base || "0") || 0) + (parseFloat(fringe || "0") || 0);
@@ -143,7 +147,7 @@ const CertifiedPayrollSection = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="sm:col-span-3">
           <Label className="text-xs">Is this a Certified Payroll job?<RequiredMark /></Label>
-          <Select value={projectInfo.isCertifiedPayroll}
+          <Select value={certifiedPayrollType}
             onValueChange={(val) => update("isCertifiedPayroll", val as CertifiedPayrollType)}>
             <SelectTrigger className={cn("h-8 text-sm w-full sm:w-[240px]", isInvalid("isCertifiedPayroll") && "border-destructive ring-1 ring-destructive/30")}>
               <SelectValue placeholder="Select…" />
@@ -156,14 +160,14 @@ const CertifiedPayrollSection = ({
           </Select>
         </div>
 
-        {projectInfo.isCertifiedPayroll === "none" && (
+        {certifiedPayrollType === "none" && (
           <div>
             <Label htmlFor="shopRate" className="text-xs">Shop Rate ($/hr)</Label>
             <Input id="shopRate" className="h-8 text-sm bg-muted" type="text" readOnly value="Shop — no value required" tabIndex={-1} />
           </div>
         )}
 
-        {projectInfo.isCertifiedPayroll === "state" && (
+        {certifiedPayrollType === "state" && (
           <>
             <div className="sm:col-span-3">
               <p className="text-xs font-medium text-muted-foreground">PA Prevailing Wage Rates</p>
@@ -183,7 +187,7 @@ const CertifiedPayrollSection = ({
           </>
         )}
 
-        {projectInfo.isCertifiedPayroll === "federal" && (
+        {certifiedPayrollType === "federal" && (
           <>
             <div className="sm:col-span-3">
               <p className="text-xs font-medium text-muted-foreground">Federal Davis-Bacon Rates</p>
@@ -321,8 +325,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     });
   };
 
-  const isInvalid = (field: keyof JobProjectInfo) =>
-    showValidation && REQUIRED_FIELDS.includes(field) && !projectInfo[field];
+  const certifiedPayrollType = getNormalizedCertifiedPayrollType(projectInfo.isCertifiedPayroll);
+  const showPayrollContactRow = certifiedPayrollType === "state" || certifiedPayrollType === "federal";
+  const payrollRequiredFields: Array<keyof JobProjectInfo> = [
+    "certifiedPayrollContactFirstName",
+    "certifiedPayrollContactLastName",
+    "certifiedPayrollEmail",
+  ];
+
+  const isInvalid = (field: keyof JobProjectInfo) => {
+    const isBaseRequired = REQUIRED_FIELDS.includes(field);
+    const isPayrollRequired = showPayrollContactRow && payrollRequiredFields.includes(field);
+    return showValidation && (isBaseRequired || isPayrollRequired) && !projectInfo[field];
+  };
 
   // Customer combobox state — loaded from Supabase
   interface DBCustomer { id: string; display_name: string; company_name: string; }
@@ -952,7 +967,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
 
           {/* Certified Payroll */}
-          {projectInfo.isCertifiedPayroll !== "none" && (
+          {showPayrollContactRow && (
             <>
               <div>
                 <Label htmlFor="certPayrollFirstName" className="text-xs">Payroll Contact First Name<RequiredMark /></Label>
@@ -1086,7 +1101,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       </div>
 
       {/* Certified Payroll Information */}
-      <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
+      <CertifiedPayrollSection projectInfo={{ ...projectInfo, isCertifiedPayroll: certifiedPayrollType }} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
 
       {/* Additional Notes */}
       {!hideNotesSection && <div className="rounded-xl border bg-white p-4 shadow-sm">

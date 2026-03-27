@@ -691,10 +691,10 @@ const JobList = () => {
                       </TableHead>
                       <SortableHead label="Customer" field="customerName" />
                       <SortableHead label="Customer PM" field="customerPM" />
-                      <SortableHead label="Created At" field="createdAt" />
                       <SortableHead label="Job Status" field="projectStatus" />
                       <SortableHead label="Start Date" field="projectStartDate" />
                       <SortableHead label="End Date" field="projectEndDate" />
+                      <SortableHead label="Created At" field="createdAt" />
                       <SortableHead label="Action Items" field="actionItems" />
                     </TableRow>
                   </TableHeader>
@@ -723,9 +723,6 @@ const JobList = () => {
                         <TableCell className="py-3 text-xs">
                           {job.customerPM || "—"}
                         </TableCell>
-                        <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
-                          {job.createdAt ? formatDateTime(job.createdAt) : "—"}
-                        </TableCell>
                         <TableCell className="py-3">
                           <StatusBadge status={job.projectStatus} />
                         </TableCell>
@@ -734,6 +731,9 @@ const JobList = () => {
                         </TableCell>
                         <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
                           {job.projectEndDate ? formatDate(job.projectEndDate) : "—"}
+                        </TableCell>
+                        <TableCell className="tabular-nums py-3 whitespace-nowrap text-xs">
+                          {job.createdAt ? formatDateTime(job.createdAt) : "—"}
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           —
