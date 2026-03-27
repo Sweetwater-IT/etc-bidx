@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { normalizeWorkOrderStatusForDb, normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
+
 export async function GET(
   request: NextRequest,
   context: { params: any }
@@ -39,6 +41,20 @@ export async function PATCH(
     const resolvedParams = await context.params;
     const workOrderId = resolvedParams.id;
     const patch = await request.json();
+    const description =
+      typeof patch.description === 'string'
+        ? patch.description
+        : patch.description === null
+          ? null
+          : undefined;
+
+    if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer` },
+        { status: 400 }
+      );
+    }
+
     const normalizedPatch = {
       ...patch,
       ...(Object.prototype.hasOwnProperty.call(patch, 'status')

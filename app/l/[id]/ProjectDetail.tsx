@@ -1194,7 +1194,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                   <td className="px-3 py-1.5 font-medium">{takeoff.title}</td>
                   <td className="px-3 py-1.5 font-mono">
                     {takeoff.work_order_number ? (
-                      takeoff.work_order_number
+                      formatWorkOrderNumber(takeoff.work_order_number)
                     ) : (
                       <span className="italic text-muted-foreground">unassigned</span>
                     )}

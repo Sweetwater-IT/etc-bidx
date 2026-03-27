@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster, type SovMasterItemRecord } from '@/lib/server/sov/masterItems';
 
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
+
 type SOVLookupItem = {
   id: number;
   item_number: string;
@@ -113,6 +115,13 @@ export async function POST(request: NextRequest) {
       buildShopNotes,
       pmNotes,
     } = requestBody;
+
+    if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer` },
+        { status: 400 }
+      );
+    }
 
     if (!userEmail) {
       console.log('🔍 [API] Missing userEmail, returning 400');

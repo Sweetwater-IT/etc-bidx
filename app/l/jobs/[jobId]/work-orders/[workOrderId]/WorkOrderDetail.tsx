@@ -162,6 +162,8 @@ const formatQuantityValue = (value: number | string | null | undefined) => {
   return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
+
 const buildPermanentSignSqftTotals = (takeoffItems: any[]) => {
   const totals = new Map<string, number>();
   for (const item of takeoffItems || []) {
@@ -537,6 +539,10 @@ const WorkOrderDetail = ({
 
   const handleSave = async ({ redirectOnSuccess = mode === "edit" }: { redirectOnSuccess?: boolean } = {}) => {
     if (!workOrderId) return;
+    if (editDescription.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`Description of Work must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
     setSaving(true);
     try {
       if (isNewWorkOrder) {
@@ -1109,7 +1115,19 @@ const WorkOrderDetail = ({
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Description of Work</label>
                 {canEdit ? (
-                  <Textarea rows={2} className="text-sm" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Describe the work that will be performed by the crew..." />
+                  <div className="space-y-1.5">
+                    <Textarea
+                      rows={2}
+                      maxLength={WORK_ORDER_DESCRIPTION_MAX_LENGTH}
+                      className="text-sm"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Describe the work that will be performed by the crew..."
+                    />
+                    <div className="text-[10px] text-muted-foreground text-right">
+                      {editDescription.length}/{WORK_ORDER_DESCRIPTION_MAX_LENGTH}
+                    </div>
+                  </div>
                 ) : (
                   <span className="text-sm text-foreground">{workOrder?.description || "—"}</span>
                 )}
