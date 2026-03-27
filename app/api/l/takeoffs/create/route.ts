@@ -31,7 +31,13 @@ const isConfiguredSecondarySign = (secondarySign: any) =>
 
 function normalizeSecondarySigns(secondarySigns: any[], parentId: string, quantity: number) {
   return (Array.isArray(secondarySigns) ? secondarySigns : [])
-    .filter(isConfiguredSecondarySign)
+    .filter((secondarySign) =>
+      isConfiguredSecondarySign(secondarySign) &&
+      (
+        !secondarySign?.primarySignId ||
+        secondarySign.primarySignId === parentId
+      )
+    )
     .map((secondarySign) => ({
       ...secondarySign,
       primarySignId: parentId,

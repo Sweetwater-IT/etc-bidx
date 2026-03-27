@@ -71,6 +71,11 @@ const normalizeSecondarySigns = (secondarySigns: any[], parentId?: string, quant
           Number(secondarySign.height || 0) > 0 ||
           Number(secondarySign.sqft || 0) > 0
         )
+      ) &&
+      (
+        !parentId ||
+        !secondarySign?.primarySignId ||
+        secondarySign.primarySignId === parentId
       )
     )
     .map((secondarySign) => ({

@@ -47,6 +47,7 @@ interface TakeoffPdfData {
 }
 
 interface SecondarySignMeta {
+  primarySignId?: string;
   signDesignation?: string;
   signDescription?: string;
   dimensionLabel?: string;
@@ -58,6 +59,7 @@ interface SecondarySignMeta {
 }
 
 interface ParsedMeta {
+  id?: string;
   itemType?: string;
   material?: string;
   signDescription?: string;
@@ -106,8 +108,15 @@ function isConfiguredSecondarySign(secondarySign: SecondarySignMeta | null | und
   );
 }
 
-function getNormalizedSecondarySigns(meta?: ParsedMeta | null) {
-  return (meta?.secondarySigns || []).filter(isConfiguredSecondarySign);
+function getNormalizedSecondarySigns(meta?: ParsedMeta | null, parentId?: string) {
+  return (meta?.secondarySigns || []).filter((secondarySign) =>
+    isConfiguredSecondarySign(secondarySign) &&
+    (
+      !parentId ||
+      !secondarySign?.primarySignId ||
+      secondarySign.primarySignId === parentId
+    )
+  );
 }
 
 function addField(doc: jsPDF, label: string, value: string, x: number, y: number): number {
@@ -309,7 +318,7 @@ function renderMPTSectionSummary(
       structureCounts[meta.structureType] = (structureCounts[meta.structureType] || 0) + item.quantity;
     }
     // Secondary signs sqft
-    const secondarySigns = getNormalizedSecondarySigns(meta);
+    const secondarySigns = getNormalizedSecondarySigns(meta, meta?.id);
     if (secondarySigns.length) {
       for (const sec of secondarySigns) {
         totalSqft += (sec.sqft ?? 0) * item.quantity;
@@ -356,7 +365,7 @@ function renderPermSectionSummary(
     const meta = tryParseNotes(item.notes);
     totalSigns += item.quantity;
     totalSqft += (meta?.totalSqft ?? 0);
-    const secondarySigns = getNormalizedSecondarySigns(meta);
+    const secondarySigns = getNormalizedSecondarySigns(meta, meta?.id);
     if (secondarySigns.length) {
       for (const sec of secondarySigns) {
         totalSqft += (sec.sqft ?? 0) * item.quantity;
@@ -395,14 +404,6 @@ function drawProjectFooter(
     return line || `${label}: —`;
   };
 
-  doc.setDrawColor(210);
-  doc.setLineWidth(0.2);
-  doc.rect(footerX, footerY, footerW, footerH, "S");
-
-  for (let i = 1; i < footerItems.length; i++) {
-    const x = footerX + colW * i;
-    doc.line(x, footerY, x, footerY + footerH);
-  }
   footerItems.forEach((item, index) => {
     const x = footerX + colW * index + 1;
     doc.setFont("helvetica", "normal");
@@ -760,7 +761,7 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
           doc.line(14, y - 2.5, pageW - 14, y - 2.5);
 
           // Secondary signs (perm)
-          const permSecondarySigns = getNormalizedSecondarySigns(meta);
+          const permSecondarySigns = getNormalizedSecondarySigns(meta, meta?.id);
           if (permSecondarySigns.length) {
             for (const sec of permSecondarySigns) {
               const secDesignationLines = splitCellText(doc, sec.signDesignation || "", PERM_COLS[0].w - 8);
@@ -879,7 +880,7 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
           doc.line(14, y - 2.5, pageW - 14, y - 2.5);
 
           // Secondary signs (MPT)
-          const mptSecondarySigns = getNormalizedSecondarySigns(meta);
+          const mptSecondarySigns = getNormalizedSecondarySigns(meta, meta?.id);
           if (mptSecondarySigns.length) {
             for (const sec of mptSecondarySigns) {
               const secLegendLines = doc.splitTextToSize(sec.signLegend || "", legendCol.w);
