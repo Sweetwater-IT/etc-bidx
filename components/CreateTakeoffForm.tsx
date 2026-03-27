@@ -263,21 +263,13 @@ type SignOrderImportSign = {
   substrate: string;
   cover: boolean;
   bLights: MPTSignRow["bLights"];
-  structureSection: ImportStructureSectionKey | "";
+  structureType: string;
   existingStructure: string;
 };
 
-const IMPORT_STRUCTURE_OPTIONS: { value: ImportStructureSectionKey; label: string }[] = [
-  { value: "type_iii", label: "Type 3" },
-  { value: "trailblazers", label: "Trailblazer" },
-  { value: "sign_stands", label: "Sign Stands" },
-];
-
-const STRUCTURE_DEFAULTS: Record<ImportStructureSectionKey, string> = {
-  type_iii: "6FT RIGHT",
-  trailblazers: "Loose",
-  sign_stands: "Sign Stand",
-};
+const IMPORT_STRUCTURE_OPTIONS = Array.from(
+  new Set(MPT_SECTIONS.flatMap((section) => section.structures))
+);
 
 const TYPE_III_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "type_iii")?.structures || []);
 const TRAILBLAZER_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "trailblazers")?.structures || []);
@@ -352,6 +344,18 @@ const getImportedTotalSqft = (
 
   const structureSqft = structureType.includes("6FT") ? 12 : 8.01;
   return Math.round((signSqft + structureSqft) * quantity * 100) / 100;
+};
+
+const getImportStructureSectionFromType = (structureType?: string | null): ImportStructureSectionKey | "" => {
+  if (!structureType) return "";
+
+  const normalized = structureType.trim().toUpperCase();
+
+  if (TYPE_III_STRUCTURES.has(normalized)) return "type_iii";
+  if (TRAILBLAZER_STRUCTURES.has(normalized)) return "trailblazers";
+  if (SIGN_STAND_STRUCTURES.has(normalized)) return "sign_stands";
+
+  return normalizeImportStructureSection(normalized);
 };
 
 export const CreateTakeoffForm = ({
@@ -961,7 +965,7 @@ export const CreateTakeoffForm = ({
               cover: Boolean(sign.cover),
               bLights: normalizeImportedBLight(sign.bLights),
               existingStructure,
-              structureSection: normalizeImportStructureSection(existingStructure),
+              structureType: IMPORT_STRUCTURE_OPTIONS.includes(existingStructure) ? existingStructure : "",
             } satisfies SignOrderImportSign;
           });
 
@@ -1034,13 +1038,14 @@ export const CreateTakeoffForm = ({
     const nextActiveSections = new Set(activeSections);
 
     signsToImport.forEach((sign) => {
-      if (!sign.structureSection) return;
+      const structureSection = getImportStructureSectionFromType(sign.structureType);
+      if (!structureSection) return;
 
-      nextActiveSections.add(sign.structureSection);
+      nextActiveSections.add(structureSection);
       const quantity = Math.max(1, Number(sign.quantity || 1));
       const material: SignMaterial = sign.substrate.toUpperCase().includes("PLASTIC") ? "PLASTIC" : "ALUMINUM";
       const sqft = Math.round(((Number(sign.width || 0) * Number(sign.height || 0)) / 144) * 100) / 100;
-      const structureType = STRUCTURE_DEFAULTS[sign.structureSection];
+      const structureType = sign.structureType;
       const baseRow: MPTSignRow = {
         id: crypto.randomUUID(),
         isCustom: false,
@@ -1054,8 +1059,8 @@ export const CreateTakeoffForm = ({
         structureType,
         bLights: sign.bLights,
         sqft,
-        totalSqft: getImportedTotalSqft(sign.structureSection, structureType, sqft, sign.structureSection === "type_iii" ? 1 : quantity),
-        quantity: sign.structureSection === "type_iii" ? 1 : quantity,
+        totalSqft: getImportedTotalSqft(structureSection, structureType, sqft, structureSection === "type_iii" ? 1 : quantity),
+        quantity: structureSection === "type_iii" ? 1 : quantity,
         needsOrder: false,
         cover: Boolean(sign.cover),
         loadOrder: 1,
@@ -1063,9 +1068,9 @@ export const CreateTakeoffForm = ({
         secondarySigns: [],
       };
 
-      const rowsForSection = nextRows[sign.structureSection] || [];
+      const rowsForSection = nextRows[structureSection] || [];
 
-      if (sign.structureSection === "type_iii" && quantity > 1) {
+      if (structureSection === "type_iii" && quantity > 1) {
         for (let index = 0; index < quantity; index += 1) {
           rowsForSection.push({
             ...baseRow,
@@ -1080,7 +1085,7 @@ export const CreateTakeoffForm = ({
         });
       }
 
-      nextRows[sign.structureSection] = rowsForSection;
+      nextRows[structureSection] = rowsForSection;
     });
 
     return {
@@ -1090,9 +1095,9 @@ export const CreateTakeoffForm = ({
   }, [activeSections]);
 
   const handleImportSignOrder = useCallback(() => {
-    const missingAssignment = importableSigns.some((sign) => !sign.structureSection);
+    const missingAssignment = importableSigns.some((sign) => !sign.structureType);
     if (missingAssignment) {
-      toast.error("Assign a structure type to each sign before importing");
+      toast.error("Assign a structure to each sign before importing");
       return;
     }
 
@@ -2250,11 +2255,11 @@ export const CreateTakeoffForm = ({
                     </div>
                   ) : (
                     <div className="min-w-[760px]">
-                      <div className="grid grid-cols-[120px_120px_160px_150px_130px_130px] gap-3 border-b bg-muted/30 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <div className="grid grid-cols-[120px_160px_150px_120px_130px_130px] gap-3 border-b bg-muted/30 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         <div>SO Number</div>
-                        <div>Requestor</div>
                         <div>Customer</div>
                         <div>Contract / Job</div>
+                        <div>Requestor</div>
                         <div>Date Made</div>
                         <div>Build Status</div>
                       </div>
@@ -2265,18 +2270,14 @@ export const CreateTakeoffForm = ({
                             key={order.id}
                             type="button"
                             className={cn(
-                              "grid w-full grid-cols-[120px_120px_160px_150px_130px_130px] gap-3 border-b px-4 py-3 text-left text-xs transition-colors hover:bg-muted/40",
+                              "grid w-full grid-cols-[120px_160px_150px_120px_130px_130px] gap-3 border-b px-4 py-3 text-left text-xs transition-colors hover:bg-muted/40",
                               isSelected && "bg-muted"
                             )}
                             onClick={() => setSelectedSignOrderId(order.id)}
                           >
-                              <div>
+                            <div>
                                 <div className="font-medium">{order.order_number || `SO-${order.id}`}</div>
                                 <div className="text-[11px] text-muted-foreground">{order.order_type || "—"}</div>
-                              </div>
-                              <div>
-                                <div>{order.requestor || "—"}</div>
-                                <div className="text-[11px] text-muted-foreground">{order.branch || "—"}</div>
                               </div>
                               <div>
                                 <div>{order.customer || "—"}</div>
@@ -2285,6 +2286,10 @@ export const CreateTakeoffForm = ({
                               <div>
                                 <div className="truncate">{order.contract_number || "—"}</div>
                                 <div className="truncate text-[11px] text-muted-foreground">{order.job_number || "—"}</div>
+                              </div>
+                              <div>
+                                <div>{order.requestor || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.branch || "—"}</div>
                               </div>
                               <div>
                                 <div>{formatDateTimeLabel(order.order_date || order.created_at)}</div>
@@ -2365,6 +2370,43 @@ export const CreateTakeoffForm = ({
                           </a>
                         </div>
                       </div>
+
+                      <div>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Signs In Order</Label>
+                        <div className="mt-1 rounded-md border">
+                          {loadingSelectedSignOrder ? (
+                            <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading signs...
+                            </div>
+                          ) : importableSigns.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                              No signs found on this order.
+                            </div>
+                          ) : (
+                            <div className="max-h-[220px] overflow-y-auto divide-y">
+                              {importableSigns.map((sign) => (
+                                <div key={`selected-order-${sign.id}`} className="px-3 py-2.5 text-xs">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="font-medium">{sign.designation || "—"}</div>
+                                      <div className="truncate text-muted-foreground">
+                                        {sign.description || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-right text-muted-foreground">
+                                      <div>Qty {sign.quantity}</div>
+                                      <div>
+                                        {sign.width > 0 && sign.height > 0 ? `${sign.width} x ${sign.height}` : "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
@@ -2379,7 +2421,7 @@ export const CreateTakeoffForm = ({
               <div className="border-b px-4 py-3">
                 <h3 className="text-sm font-semibold">Assign Structure Types</h3>
                 <p className="text-xs text-muted-foreground">
-                  Each imported sign needs a structure bucket before it can be added to this takeoff.
+                  Each imported sign needs a structure assignment before it can be added to this takeoff.
                 </p>
               </div>
               <div className="max-h-[460px] overflow-auto">
@@ -2401,7 +2443,7 @@ export const CreateTakeoffForm = ({
                         <th className="px-4 py-2 font-medium">Qty</th>
                         <th className="px-4 py-2 font-medium">Size</th>
                         <th className="px-4 py-2 font-medium">Sheeting</th>
-                        <th className="px-4 py-2 font-medium">Structure Type</th>
+                        <th className="px-4 py-2 font-medium">Structure</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2416,24 +2458,24 @@ export const CreateTakeoffForm = ({
                           <td className="px-4 py-3">{sign.sheeting || "—"}</td>
                           <td className="px-4 py-3 min-w-[220px]">
                             <Select
-                              value={sign.structureSection}
-                              onValueChange={(value: ImportStructureSectionKey) =>
+                              value={sign.structureType}
+                              onValueChange={(value: string) =>
                                 setImportableSigns((prev) =>
                                   prev.map((current) =>
                                     current.id === sign.id
-                                      ? { ...current, structureSection: value }
+                                      ? { ...current, structureType: value }
                                       : current
                                   )
                                 )
                               }
                             >
                               <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Assign structure type" />
+                                <SelectValue placeholder="Assign structure" />
                               </SelectTrigger>
                               <SelectContent>
                                 {IMPORT_STRUCTURE_OPTIONS.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
+                                  <SelectItem key={option} value={option}>
+                                    {option}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
