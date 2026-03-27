@@ -58,6 +58,27 @@ const isConfiguredRow = (row: Record<string, any> | null | undefined) =>
     )
   );
 
+const normalizeSecondarySigns = (secondarySigns: any[], parentId?: string, quantity = 0) =>
+  (Array.isArray(secondarySigns) ? secondarySigns : [])
+    .filter((secondarySign) =>
+      Boolean(
+        secondarySign &&
+        (
+          hasValue(secondarySign.signDesignation) ||
+          hasValue(secondarySign.signLegend) ||
+          hasValue(secondarySign.signDescription) ||
+          Number(secondarySign.width || 0) > 0 ||
+          Number(secondarySign.height || 0) > 0 ||
+          Number(secondarySign.sqft || 0) > 0
+        )
+      )
+    )
+    .map((secondarySign) => ({
+      ...secondarySign,
+      primarySignId: parentId || secondarySign.primarySignId,
+      quantity,
+    }));
+
 export async function getTakeoffPdfData(takeoffId: string) {
   console.log('getTakeoffPdfData: Called with takeoffId:', takeoffId);
 
@@ -105,13 +126,15 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
       for (const row of rows) {
         if (!isConfiguredRow(row)) continue;
+        const quantity = Number(row.quantity || 0);
         items.push({
           product_name: row.signDesignation || row.signDescription || 'Sign',
           category: categoryLabel,
           unit: 'EA',
-          quantity: Number(row.quantity || 0),
+          quantity,
           notes: JSON.stringify({
             ...row,
+            secondarySigns: normalizeSecondarySigns(row.secondarySigns, row.id, quantity),
             itemType: 'mpt_sign',
             sectionKey,
           }),
@@ -255,6 +278,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
         quantity: item.quantity || 0,
         notes: JSON.stringify({
           ...details,
+          secondarySigns: normalizeSecondarySigns(details?.secondarySigns, details?.id, item.quantity || 0),
           signDescription: details?.signDescription || item.sign_description || '',
           sheeting: details?.sheeting || item.sheeting || '',
           width: details?.width || item.width_inches || 0,

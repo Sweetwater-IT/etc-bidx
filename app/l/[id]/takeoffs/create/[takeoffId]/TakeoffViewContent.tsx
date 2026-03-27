@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus, Lock } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
 import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
@@ -372,17 +372,13 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
       {/* Pickup Takeoff Banner */}
       {takeoff.is_pickup && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100">
-              <span className="text-xs font-bold text-amber-800">!</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-amber-800">Pickup Takeoff</h3>
-              <p className="text-xs text-amber-700">
-                This takeoff was auto-generated from the parent work order and cannot be modified. Use the Return Inventory section below to log item conditions.
-              </p>
-            </div>
+        <div className="rounded-lg border px-4 py-3 flex items-center gap-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+          <Lock className="h-4 w-4 shrink-0" />
+          <div>
+            <h3 className="font-semibold">Pickup Takeoff</h3>
+            <p className="text-xs text-blue-700">
+              This takeoff was auto-generated from the parent work order and cannot be modified. Use the Return Inventory section below to log item conditions.
+            </p>
           </div>
         </div>
       )}

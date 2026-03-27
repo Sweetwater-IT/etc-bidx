@@ -94,6 +94,22 @@ function tryParseNotes(notes?: string | null): ParsedMeta | null {
   return null;
 }
 
+function isConfiguredSecondarySign(secondarySign: SecondarySignMeta | null | undefined) {
+  if (!secondarySign) return false;
+  return Boolean(
+    (secondarySign.signDesignation || "").trim() ||
+    (secondarySign.signLegend || "").trim() ||
+    (secondarySign.signDescription || "").trim() ||
+    Number(secondarySign.width || 0) > 0 ||
+    Number(secondarySign.height || 0) > 0 ||
+    Number(secondarySign.sqft || 0) > 0
+  );
+}
+
+function getNormalizedSecondarySigns(meta?: ParsedMeta | null) {
+  return (meta?.secondarySigns || []).filter(isConfiguredSecondarySign);
+}
+
 function addField(doc: jsPDF, label: string, value: string, x: number, y: number): number {
   doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
@@ -293,8 +309,9 @@ function renderMPTSectionSummary(
       structureCounts[meta.structureType] = (structureCounts[meta.structureType] || 0) + item.quantity;
     }
     // Secondary signs sqft
-    if (meta?.secondarySigns?.length) {
-      for (const sec of meta.secondarySigns) {
+    const secondarySigns = getNormalizedSecondarySigns(meta);
+    if (secondarySigns.length) {
+      for (const sec of secondarySigns) {
         totalSqft += (sec.sqft ?? 0) * item.quantity;
       }
     }
@@ -339,8 +356,9 @@ function renderPermSectionSummary(
     const meta = tryParseNotes(item.notes);
     totalSigns += item.quantity;
     totalSqft += (meta?.totalSqft ?? 0);
-    if (meta?.secondarySigns?.length) {
-      for (const sec of meta.secondarySigns) {
+    const secondarySigns = getNormalizedSecondarySigns(meta);
+    if (secondarySigns.length) {
+      for (const sec of secondarySigns) {
         totalSqft += (sec.sqft ?? 0) * item.quantity;
       }
     }
@@ -742,8 +760,9 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
           doc.line(14, y - 2.5, pageW - 14, y - 2.5);
 
           // Secondary signs (perm)
-          if (meta?.secondarySigns?.length) {
-            for (const sec of meta.secondarySigns) {
+          const permSecondarySigns = getNormalizedSecondarySigns(meta);
+          if (permSecondarySigns.length) {
+            for (const sec of permSecondarySigns) {
               const secDesignationLines = splitCellText(doc, sec.signDesignation || "", PERM_COLS[0].w - 8);
               const secLegendLines = splitCellText(doc, sec.signLegend || "", PERM_COLS[1].w);
               const secDimLines = splitCellText(doc, sec.dimensionLabel || "—", PERM_COLS[2].w);
@@ -860,8 +879,9 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
           doc.line(14, y - 2.5, pageW - 14, y - 2.5);
 
           // Secondary signs (MPT)
-          if (meta?.secondarySigns?.length) {
-            for (const sec of meta.secondarySigns) {
+          const mptSecondarySigns = getNormalizedSecondarySigns(meta);
+          if (mptSecondarySigns.length) {
+            for (const sec of mptSecondarySigns) {
               const secLegendLines = doc.splitTextToSize(sec.signLegend || "", legendCol.w);
               const secDesignationLines = splitCellText(
                 doc,

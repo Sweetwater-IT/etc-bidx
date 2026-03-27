@@ -10,6 +10,54 @@ const roundTo = (value: number, decimals = 4) => {
 
 const calcSqft = (width: number, height: number) => roundTo(((Number(width) || 0) * (Number(height) || 0)) / 144, 4);
 
+const hasConfiguredValue = (value: unknown) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return true;
+};
+
+const isConfiguredSecondarySign = (secondarySign: any) =>
+  Boolean(
+    secondarySign &&
+    (
+      hasConfiguredValue(secondarySign.signDesignation) ||
+      hasConfiguredValue(secondarySign.signLegend) ||
+      hasConfiguredValue(secondarySign.signDescription) ||
+      Number(secondarySign.width || 0) > 0 ||
+      Number(secondarySign.height || 0) > 0 ||
+      Number(secondarySign.sqft || 0) > 0
+    )
+  );
+
+function normalizeSecondarySigns(secondarySigns: any[], parentId: string, quantity: number) {
+  return (Array.isArray(secondarySigns) ? secondarySigns : [])
+    .filter(isConfiguredSecondarySign)
+    .map((secondarySign) => ({
+      ...secondarySign,
+      primarySignId: parentId,
+      quantity,
+    }));
+}
+
+function normalizeMptSignRows(signRows: Record<string, any[]>) {
+  return Object.fromEntries(
+    Object.entries(signRows || {}).map(([sectionKey, rows]) => [
+      sectionKey,
+      Array.isArray(rows)
+        ? rows.map((row, index) => {
+            const quantity = Number(row?.quantity || 0);
+            return {
+              ...row,
+              loadOrder: Number(row?.loadOrder || index + 1),
+              quantity,
+              secondarySigns: normalizeSecondarySigns(row?.secondarySigns, row?.id, quantity),
+            };
+          })
+        : [],
+    ])
+  );
+}
+
 function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
   const items: JsonRecord[] = [];
 
@@ -21,7 +69,7 @@ function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
       const height = Number(row?.height || 0);
       const sqft = calcSqft(width, height);
       const quantity = Number(row?.quantity || 0);
-      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
+      const secondarySigns = normalizeSecondarySigns(row?.secondarySigns, row?.id, quantity);
       const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
         const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
         return sum + roundTo(secSqft * quantity, 4);
@@ -259,6 +307,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedTitle = typeof title === 'string' ? title.trim() : '';
     const normalizedWorkType = typeof workType === 'string' ? workType.trim() : '';
+    const normalizedSignRows = normalizeMptSignRows(signRows || {});
     const sanitizedPermanentSignRows = Object.fromEntries(
       Object.entries(permanentSignRows || {}).map(([itemNumber, rows]) => [
         itemNumber,
@@ -307,7 +356,7 @@ export async function POST(request: NextRequest) {
       build_shop_notes: buildShopNotes?.trim() || null,
       pm_notes: pmNotes?.trim() || null,
       active_sections: activeSections || [],
-      sign_rows: signRows || {},
+      sign_rows: normalizedSignRows,
       default_sign_material: defaultSignMaterial || 'PLASTIC',
       active_permanent_items: activePermanentItems || [],
       permanent_sign_rows: sanitizedPermanentSignRows,
@@ -359,7 +408,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedItems = [
-      ...buildMptItems(takeoff.id, signRows || {}),
+      ...buildMptItems(takeoff.id, normalizedSignRows),
       ...buildPermanentItems(takeoff.id, sanitizedPermanentSignRows, permanentEntryRows || {}),
       ...buildGeneralItems(takeoff.id, normalizedWorkType, vehicleItems || [], rollingStockItems || [], additionalItems || []),
     ];

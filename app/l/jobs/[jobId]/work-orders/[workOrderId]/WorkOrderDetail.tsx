@@ -506,7 +506,7 @@ const WorkOrderDetail = ({
           });
       }
     }
-  }, [dbTakeoff, takeoffLoading, isNewWorkOrder, woItems.length]);
+  }, [dbTakeoff, takeoffId, takeoffLoading, isNewWorkOrder, woItems.length]);
 
   // Sync editing fields
   useEffect(() => {
@@ -986,6 +986,20 @@ const WorkOrderDetail = ({
           </div>
         )}
 
+        {canEdit && !isNewWorkOrder && canDeleteWorkOrder && (
+          <div className="flex items-center justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete Work Order
+            </Button>
+          </div>
+        )}
+
         {/* ─── Project Information Card — matching takeoff ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
           <div className="px-5 py-3 border-b bg-muted/30">
@@ -1008,19 +1022,8 @@ const WorkOrderDetail = ({
 
         {/* ─── Work Order Details Card — matching takeoff details format ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between gap-3">
+          <div className="px-5 py-3 border-b bg-muted/30">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Work Order Details</h2>
-            {canEdit && !isNewWorkOrder && canDeleteWorkOrder && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="h-3 w-3" />
-                Delete
-              </Button>
-            )}
           </div>
           <div className="p-5">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 text-xs">

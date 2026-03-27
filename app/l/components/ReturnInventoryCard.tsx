@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ interface ReturnItem {
   return_condition: string | null;
   damage_photos: Record<string, string> | null;
   notes: string | null;
+  sign_details?: Record<string, any> | string | null;
 }
 
 export interface ReturnInventoryJobInfo {
@@ -70,17 +72,39 @@ interface ReturnInventoryCardProps {
   jobInfo?: ReturnInventoryJobInfo;
 }
 
+function parseItemMeta(item: ReturnItem): Record<string, any> {
+  const sources = [item.sign_details, item.notes];
+
+  for (const source of sources) {
+    if (!source) continue;
+    if (typeof source === "object") return source;
+
+    try {
+      const parsed = JSON.parse(source);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // Ignore non-JSON note strings and keep checking fallbacks.
+    }
+  }
+
+  return {};
+}
+
 /** Determine which component columns apply to this item */
 function getComponents(item: ReturnItem): ComponentKey[] {
   const name = item.product_name.toUpperCase();
   const category = item.category.toUpperCase();
   const comps: ComponentKey[] = [];
-
-  let meta: Record<string, any> = {};
-  try { meta = JSON.parse(item.notes || "{}"); } catch { /* */ }
+  const meta = parseItemMeta(item);
 
   const isAdditionalOrEquip =
-    category === "ADDITIONAL ITEMS" || category === "VEHICLES" || category === "ROLLING STOCK";
+    category === "ADDITIONAL ITEMS" ||
+    category === "ADDITIONAL" ||
+    category === "VEHICLES" ||
+    category === "VEHICLE" ||
+    category === "ROLLING STOCK";
 
   if (isAdditionalOrEquip || name.includes("VERTICAL PANEL") || name.includes("HIP VERTICAL") || name.includes("SAND BAG")) {
     comps.push("sign");
@@ -110,9 +134,8 @@ function getStructureLabel(item: ReturnItem): string {
   if (name.includes("TYPE III") || name.includes("TYPE 3") || name.includes("BARRICADE")) {
     return "Barricade";
   }
-  let meta: Record<string, any> = {};
-  try { meta = JSON.parse(item.notes || "{}"); } catch { /* */ }
-  return meta.structureType || "—";
+  const meta = parseItemMeta(item);
+  return meta.structureType || meta.postSize || "—";
 }
 
 /* ── Damage Photo Inline ── */
@@ -171,9 +194,11 @@ const DamagePhotoUpload = ({
     <div className="mt-1">
       {currentUrl ? (
         <div className="relative inline-block">
-          <img
+          <Image
             src={currentUrl}
             alt="Damage"
+            width={40}
+            height={40}
             className="h-10 w-10 rounded object-cover border cursor-pointer"
             onClick={() => window.open(currentUrl, "_blank")}
           />
@@ -509,7 +534,7 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     setDirty(false);
     setSubmitting(false);
     toast.success("Return inventory submitted — PDF downloaded.");
-  }, [allComplete, items, details, photos, jobInfo]);
+  }, [allComplete, hasMissingDamagePhotos, items, details, photos, jobInfo, takeoffId]);
 
   // Stats
   const completedCount = items.filter((item) => {
@@ -660,9 +685,11 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
                               <div>
                                 <ConditionBadge value={d[comp]} />
                                 {d[comp] === "damaged" && p[comp] && (
-                                  <img
+                                  <Image
                                     src={p[comp]}
                                     alt="Damage"
+                                    width={32}
+                                    height={32}
                                     className="h-8 w-8 rounded object-cover border mt-1 cursor-pointer"
                                     onClick={() => window.open(p[comp], "_blank")}
                                   />

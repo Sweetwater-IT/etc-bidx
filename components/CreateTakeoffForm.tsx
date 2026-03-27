@@ -502,6 +502,12 @@ export const CreateTakeoffForm = ({
     : "install date";
   const endDateValue = parseDateString(endDate);
   const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
+  const generatedAdditionalItems = effectiveAdditionalItems.filter(
+    (item) => item.generated || item.source === "trailblazer_sandbags"
+  );
+  const manualAdditionalItems = effectiveAdditionalItems.filter(
+    (item) => !item.generated && item.source !== "trailblazer_sandbags"
+  );
   const signOrderCustomerFilter = info?.customerName || dbJob?.customer_name || "";
   const normalizedSignOrderSearch = signOrderSearch.trim().toLowerCase();
   const filteredSignOrders = signOrders.filter((order) => {
@@ -2090,30 +2096,42 @@ export const CreateTakeoffForm = ({
           </Button>
         </div>
         <div className="p-5">
-          {effectiveAdditionalItems.length === 0 ? (
-            <div className="text-center text-xs text-muted-foreground py-4">No additional items.</div>
+          {generatedAdditionalItems.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {generatedAdditionalItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold uppercase tracking-wider">{item.name}</span>
+                    <span className="text-amber-700/80">{item.description}</span>
+                  </div>
+                  <span className="font-bold tabular-nums">{item.quantity}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {manualAdditionalItems.length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-4">
+              {generatedAdditionalItems.length > 0 ? "No manual additional items." : "No additional items."}
+            </div>
           ) : (
             <div className="space-y-2">
-              {effectiveAdditionalItems.map((item) => (
+              {manualAdditionalItems.map((item) => (
                 <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background">
                   <div className="w-[320px] shrink-0">
                     <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Item</div>
                     <div className="flex items-center gap-2">
-                      {item.generated ? (
-                        <div className="h-8 px-3 rounded-md border bg-muted/30 text-xs flex items-center w-full">
-                          {item.name}
-                        </div>
-                      ) : (
-                        <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
-                          <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="Select item…" /></SelectTrigger>
-                          <SelectContent>
-                            {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            ))}
-                            <SelectItem value="__custom">Custom…</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                        <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                        <SelectContent>
+                          {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                          <SelectItem value="__custom">Custom…</SelectItem>
+                        </SelectContent>
+                      </Select>
                       {item.name === "__custom" && (
                         <Input
                           className="h-8 text-xs w-[140px] shrink-0"
@@ -2129,7 +2147,6 @@ export const CreateTakeoffForm = ({
                     <QuantityInput
                       value={item.quantity || 1}
                       min={1}
-                      disabled={item.generated}
                       onChange={(value) =>
                         setAdditionalItems((prev) =>
                           prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
@@ -2142,19 +2159,14 @@ export const CreateTakeoffForm = ({
                     <Input
                       className="h-8 text-xs w-full"
                       value={item.description}
-                      disabled={item.generated}
                       onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
                       placeholder="Notes (optional)"
                     />
                   </div>
                   <div className="pt-[18px] shrink-0">
-                    {item.generated ? (
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Auto</span>
-                    ) : (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
                   </div>
                 </div>
               ))}

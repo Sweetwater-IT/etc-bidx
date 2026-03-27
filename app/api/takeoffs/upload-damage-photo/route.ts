@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+const DAMAGE_PHOTO_BUCKET = 'files';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -16,10 +18,10 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.name.split('.').pop() || 'jpg';
-    const path = `${itemId}/${comp}/${Date.now()}.${ext}`;
+    const path = `takeoffs/damage-photos/${itemId}/${comp}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('damage-photos')
+      .from(DAMAGE_PHOTO_BUCKET)
       .upload(path, file, { upsert: true });
 
     if (uploadError) {
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: urlData } = supabase.storage
-      .from('damage-photos')
+      .from(DAMAGE_PHOTO_BUCKET)
       .getPublicUrl(path);
 
     return NextResponse.json({

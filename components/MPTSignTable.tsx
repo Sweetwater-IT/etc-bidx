@@ -25,7 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
-import { useEffect, useState, useRef } from 'react';
+import { Fragment, useEffect, useState, useRef } from 'react';
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { QuantityInput } from "@/components/ui/quantity-input";
@@ -90,6 +90,13 @@ const B_LIGHT_OPTIONS = [
 ];
 
 const roundToTwo = (value: number) => Math.round(value * 100) / 100;
+
+const cloneSecondarySign = (secondarySign: any, primarySignId: string, quantity: number) => ({
+  ...secondarySign,
+  id: crypto.randomUUID(),
+  primarySignId,
+  quantity,
+});
 
 const getTypeIIIStructureSqft = (structureType?: string) => {
   const normalized = String(structureType || "").toUpperCase();
@@ -509,16 +516,20 @@ export const MPTSignTable = ({
   const duplicateRow = (id: string) => {
     const rowToDuplicate = rows.find(row => row.id === id);
     if (rowToDuplicate) {
+      const duplicatedRowId = crypto.randomUUID();
+      const duplicatedQuantity = isTypeIIISection ? 1 : rowToDuplicate.quantity;
       const duplicatedRow: MPTSignRow = {
         ...rowToDuplicate,
-        id: crypto.randomUUID(),
-        quantity: isTypeIIISection ? 1 : rowToDuplicate.quantity,
+        id: duplicatedRowId,
+        quantity: duplicatedQuantity,
         totalSqft: getPrimaryTotalSqft({
           ...rowToDuplicate,
-          quantity: isTypeIIISection ? 1 : rowToDuplicate.quantity,
+          quantity: duplicatedQuantity,
         }),
         loadOrder: rows.length + 1,
-        secondarySigns: [], // Don't duplicate secondary signs
+        secondarySigns: (rowToDuplicate.secondarySigns || []).map((secondarySign) =>
+          cloneSecondarySign(secondarySign, duplicatedRowId, duplicatedQuantity)
+        ),
       };
       onRowsChange([...rows, duplicatedRow]);
     }
@@ -560,6 +571,19 @@ export const MPTSignTable = ({
       );
       updateRow(parentId, { secondarySigns: updatedSecondarySigns });
     }
+  };
+
+  const duplicateSecondarySign = (parentId: string, secId: string) => {
+    const row = rows.find((candidate) => candidate.id === parentId);
+    const secondarySign = row?.secondarySigns.find((candidate: any) => candidate.id === secId);
+    if (!row || !secondarySign) return;
+
+    updateRow(parentId, {
+      secondarySigns: [
+        ...row.secondarySigns,
+        cloneSecondarySign(secondarySign, parentId, row.quantity),
+      ],
+    });
   };
 
   const removeSecondarySign = (parentId: string, secId: string) => {
@@ -934,8 +958,8 @@ export const MPTSignTable = ({
                 </thead>
                 <tbody className="divide-y">
                   {rows.map(row => (
-                    <>
-                      <tr key={row.id} className="hover:bg-muted/20">
+                    <Fragment key={row.id}>
+                      <tr className="hover:bg-muted/20">
                         {columns.map(column => (
                           <td key={column.key} className={`px-2 py-1 border-r last:border-r-0 ${column.width}`}>
                             {renderCell(row, column)}
@@ -1046,6 +1070,15 @@ export const MPTSignTable = ({
                                     variant="ghost"
                                     size="icon"
                                     className="h-6 w-6"
+                                    onClick={() => duplicateSecondarySign(row.id, sec.id)}
+                                    title="Duplicate secondary sign"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
                                     onClick={() => setPendingDelete({ type: "secondary", rowId: row.id, secondaryId: sec.id })}
                                   >
                                     <Trash2 className="h-3 w-3 text-destructive" />
@@ -1058,7 +1091,7 @@ export const MPTSignTable = ({
                           ))}
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
