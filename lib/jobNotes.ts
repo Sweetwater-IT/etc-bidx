@@ -7,6 +7,7 @@ export type JobTimelineNote = {
 
 type StoredJobNotesPayload = {
   contractNotes?: string;
+  contractLog?: JobTimelineNote[];
   projectLog?: JobTimelineNote[];
 };
 
@@ -18,10 +19,11 @@ function isTimelineNote(value: unknown): value is JobTimelineNote {
 
 export function parseJobNotes(raw: string | null | undefined): {
   contractNotes: string;
+  contractLog: JobTimelineNote[];
   projectLog: JobTimelineNote[];
 } {
   if (!raw) {
-    return { contractNotes: "", projectLog: [] };
+    return { contractNotes: "", contractLog: [], projectLog: [] };
   }
 
   try {
@@ -29,16 +31,20 @@ export function parseJobNotes(raw: string | null | undefined): {
 
     if (Array.isArray(parsed)) {
       const projectLog = parsed.filter(isTimelineNote);
-      return { contractNotes: "", projectLog };
+      return { contractNotes: "", contractLog: [], projectLog };
     }
 
     if (parsed && typeof parsed === "object") {
       const payload = parsed as StoredJobNotesPayload;
+      const contractLog = Array.isArray(payload.contractLog)
+        ? payload.contractLog.filter(isTimelineNote)
+        : [];
       const projectLog = Array.isArray(payload.projectLog)
         ? payload.projectLog.filter(isTimelineNote)
         : [];
       return {
         contractNotes: typeof payload.contractNotes === "string" ? payload.contractNotes : "",
+        contractLog,
         projectLog,
       };
     }
@@ -48,13 +54,19 @@ export function parseJobNotes(raw: string | null | undefined): {
 
   return {
     contractNotes: raw,
+    contractLog: [],
     projectLog: [],
   };
 }
 
-export function stringifyJobNotes(contractNotes: string, projectLog: JobTimelineNote[]): string {
+export function stringifyJobNotes(
+  contractNotes: string,
+  projectLog: JobTimelineNote[],
+  contractLog: JobTimelineNote[] = []
+): string {
   return JSON.stringify({
     contractNotes,
+    contractLog,
     projectLog,
   });
 }

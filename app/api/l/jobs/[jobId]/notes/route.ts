@@ -69,7 +69,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes, parsed.contractLog),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId);
@@ -120,7 +120,7 @@ export async function PUT(
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes, parsed.contractLog),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId);
@@ -162,7 +162,7 @@ export async function DELETE(
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, nextNotes, parsed.contractLog),
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId);

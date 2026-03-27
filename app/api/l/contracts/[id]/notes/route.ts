@@ -25,18 +25,18 @@ async function normalizeContractNotes(contractId: string) {
 
   const parsed = parseJobNotes(data.additional_notes);
 
-  if (parsed.contractNotes.trim() && parsed.projectLog.length === 0) {
+  if (parsed.contractNotes.trim() && parsed.contractLog.length === 0) {
     const migratedNote: JobTimelineNote = {
       id: crypto.randomUUID(),
       text: parsed.contractNotes.trim(),
       timestamp: new Date(data.updated_at || data.created_at || Date.now()).getTime(),
     };
 
-    const nextNotes = [migratedNote];
+    const nextContractLog = [migratedNote];
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes("", nextNotes),
+        additional_notes: stringifyJobNotes("", parsed.projectLog, nextContractLog),
         updated_at: new Date().toISOString(),
       })
       .eq("id", contractId);
@@ -48,7 +48,7 @@ async function normalizeContractNotes(contractId: string) {
     return {
       data: {
         ...data,
-        additional_notes: stringifyJobNotes("", nextNotes),
+        additional_notes: stringifyJobNotes("", parsed.projectLog, nextContractLog),
       },
       error: null,
     };
@@ -70,7 +70,7 @@ export async function GET(
     }
 
     const parsed = parseJobNotes(data.additional_notes);
-    return NextResponse.json(parsed.projectLog);
+    return NextResponse.json(parsed.contractLog);
   } catch (error) {
     console.error("Error loading contract notes:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -105,12 +105,12 @@ export async function POST(
       user_email: typeof incoming?.user_email === "string" ? incoming.user_email : undefined,
     };
 
-    const nextNotes = [...parsed.projectLog, newNote];
+    const nextNotes = [...parsed.contractLog, newNote];
 
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes("", nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, parsed.projectLog, nextNotes),
         updated_at: new Date().toISOString(),
       })
       .eq("id", contractId);
@@ -148,20 +148,20 @@ export async function PUT(
     }
 
     const parsed = parseJobNotes(data.additional_notes);
-    const noteIndex = parsed.projectLog.findIndex((note) => note.id === noteId);
+    const noteIndex = parsed.contractLog.findIndex((note) => note.id === noteId);
 
     if (noteIndex === -1) {
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
 
-    const nextNotes = parsed.projectLog.map((note) =>
+    const nextNotes = parsed.contractLog.map((note) =>
       note.id === noteId ? { ...note, text } : note
     );
 
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes("", nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, parsed.projectLog, nextNotes),
         updated_at: new Date().toISOString(),
       })
       .eq("id", contractId);
@@ -198,12 +198,12 @@ export async function DELETE(
     }
 
     const parsed = parseJobNotes(data.additional_notes);
-    const nextNotes = parsed.projectLog.filter((note) => note.id !== noteId);
+    const nextNotes = parsed.contractLog.filter((note) => note.id !== noteId);
 
     const { error: updateError } = await supabase
       .from("jobs_l")
       .update({
-        additional_notes: stringifyJobNotes("", nextNotes),
+        additional_notes: stringifyJobNotes(parsed.contractNotes, parsed.projectLog, nextNotes),
         updated_at: new Date().toISOString(),
       })
       .eq("id", contractId);

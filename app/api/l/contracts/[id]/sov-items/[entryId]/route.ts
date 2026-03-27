@@ -311,7 +311,7 @@ export async function DELETE(
       const { error: noteUpdateError } = await supabase
         .from('jobs_l')
         .update({
-          additional_notes: stringifyJobNotes(parsedNotes.contractNotes, projectLog),
+          additional_notes: stringifyJobNotes(parsedNotes.contractNotes, projectLog, parsedNotes.contractLog),
           updated_at: new Date().toISOString(),
         })
         .eq('id', jobId);

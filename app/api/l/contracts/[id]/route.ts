@@ -192,7 +192,8 @@ export async function PATCH(
     if (Object.prototype.hasOwnProperty.call(transformedData, 'additional_notes')) {
       transformedData.additional_notes = stringifyJobNotes(
         typeof transformedData.additional_notes === 'string' ? transformedData.additional_notes : '',
-        currentNotesPayload.projectLog
+        currentNotesPayload.projectLog,
+        currentNotesPayload.contractLog
       );
     }
 
