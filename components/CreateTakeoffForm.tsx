@@ -2099,15 +2099,16 @@ export const CreateTakeoffForm = ({
           {generatedAdditionalItems.length > 0 && (
             <div className="space-y-2 mb-4">
               {generatedAdditionalItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold uppercase tracking-wider">{item.name}</span>
-                    <span className="text-amber-700/80">{item.description}</span>
+                <div key={item.id} className="space-y-1">
+                  <div className="px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 inline-flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {item.name}
+                    </span>
+                    <span className="text-sm font-bold tabular-nums text-amber-700">{item.quantity}</span>
                   </div>
-                  <span className="font-bold tabular-nums">{item.quantity}</span>
+                  {item.description ? (
+                    <p className="text-[10px] text-muted-foreground">{item.description}</p>
+                  ) : null}
                 </div>
               ))}
             </div>
