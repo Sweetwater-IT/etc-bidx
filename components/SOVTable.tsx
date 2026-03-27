@@ -170,6 +170,20 @@ function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string
   return deduped.length > 0 ? deduped : ["EA"];
 }
 
+function mergeSelectableUoms(primaryUoms: string[], fallbackUoms: string[], currentUom?: string): string[] {
+  const normalizedCurrent = currentUom?.trim() ? normalizeUom(currentUom) : null;
+
+  return Array.from(
+    new Set(
+      [
+        ...primaryUoms.map(normalizeUom),
+        ...(normalizedCurrent ? [normalizedCurrent] : []),
+        ...fallbackUoms.map(normalizeUom),
+      ].filter((uom) => uom.trim() !== "")
+    )
+  );
+}
+
 function getMasterDisplayItemNumber(item: Pick<SovMasterItem, 'display_item_number' | 'item_number'>): string {
   return item.display_item_number?.trim() || item.item_number?.trim() || '';
 }
@@ -1302,30 +1316,35 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       <SelectValue placeholder="Select UOM" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(editorDraft.itemNumber
-                        ? (editorDraft.sov_item_id != null || editorDraft.custom_sov_item_id != null
-                            ? getAvailableUoms(
-                                sovProducts.find((product) =>
-                                  (editorDraft.custom_sov_item_id != null && product.is_custom && product.id === editorDraft.custom_sov_item_id) ||
-                                  (editorDraft.sov_item_id != null && !product.is_custom && product.id === editorDraft.sov_item_id)
-                                ) || {
-                                  id: 0,
-                                  item_number: '',
-                                  display_item_number: '',
-                                  description: '',
-                                  display_name: '',
-                                  work_type: '',
-                                  uom_1: editorDraft.uom || 'EA',
-                                  uom_2: null,
-                                  uom_3: null,
-                                  uom_4: null,
-                                  uom_5: null,
-                                  uom_6: null,
-                                  uom_7: null,
-                                } as SovMasterItem
-                              )
-                            : getAvailableUomsForWorkType(sovProducts, editorDraft.workType))
-                        : customUomOptions
+                      {(
+                        editorDraft.itemNumber
+                          ? mergeSelectableUoms(
+                              editorDraft.sov_item_id != null || editorDraft.custom_sov_item_id != null
+                                ? getAvailableUoms(
+                                    sovProducts.find((product) =>
+                                      (editorDraft.custom_sov_item_id != null && product.is_custom && product.id === editorDraft.custom_sov_item_id) ||
+                                      (editorDraft.sov_item_id != null && !product.is_custom && product.id === editorDraft.sov_item_id)
+                                    ) || {
+                                      id: 0,
+                                      item_number: '',
+                                      display_item_number: '',
+                                      description: '',
+                                      display_name: '',
+                                      work_type: '',
+                                      uom_1: editorDraft.uom || 'EA',
+                                      uom_2: null,
+                                      uom_3: null,
+                                      uom_4: null,
+                                      uom_5: null,
+                                      uom_6: null,
+                                      uom_7: null,
+                                    } as SovMasterItem
+                                  )
+                                : getAvailableUomsForWorkType(sovProducts, editorDraft.workType),
+                              customUomOptions,
+                              editorDraft.uom
+                            )
+                          : customUomOptions
                       ).map((uom) => (
                         <SelectItem key={uom} value={uom}>{uom}</SelectItem>
                       ))}
