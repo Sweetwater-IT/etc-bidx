@@ -952,68 +952,72 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           </div>
 
           {/* Certified Payroll */}
-          <div>
-            <Label htmlFor="certPayrollFirstName" className="text-xs">Payroll Contact First Name<RequiredMark /></Label>
-            <Input
-              id="certPayrollFirstName"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="First name"
-              value={projectInfo.certifiedPayrollContactFirstName || ""}
-              onChange={(e) =>
-                updateSplitName(
-                  "certifiedPayrollContactFirstName",
-                  "certifiedPayrollContactLastName",
-                  "certifiedPayrollContact",
-                  "first",
-                  e.target.value
-                )
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="certPayrollLastName" className="text-xs">Payroll Contact Last Name<RequiredMark /></Label>
-            <Input
-              id="certPayrollLastName"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactLastName") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="Last name"
-              value={projectInfo.certifiedPayrollContactLastName || ""}
-              onChange={(e) =>
-                updateSplitName(
-                  "certifiedPayrollContactFirstName",
-                  "certifiedPayrollContactLastName",
-                  "certifiedPayrollContact",
-                  "last",
-                  e.target.value
-                )
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> Payroll Phone
-            </Label>
-            <Input
-              id="certPayrollPhone"
-              type="tel"
-              className="h-8 text-sm"
-              placeholder="(555) 555-5555"
-              value={projectInfo.certifiedPayrollPhone || ""}
-              onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
-            </Label>
-            <Input
-              id="certPayrollEmail"
-              type="email"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="payroll@customer.com"
-              value={projectInfo.certifiedPayrollEmail || ""}
-              onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
-            />
-          </div>
+          {projectInfo.isCertifiedPayroll !== "none" && (
+            <>
+              <div>
+                <Label htmlFor="certPayrollFirstName" className="text-xs">Payroll Contact First Name<RequiredMark /></Label>
+                <Input
+                  id="certPayrollFirstName"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="First name"
+                  value={projectInfo.certifiedPayrollContactFirstName || ""}
+                  onChange={(e) =>
+                    updateSplitName(
+                      "certifiedPayrollContactFirstName",
+                      "certifiedPayrollContactLastName",
+                      "certifiedPayrollContact",
+                      "first",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollLastName" className="text-xs">Payroll Contact Last Name<RequiredMark /></Label>
+                <Input
+                  id="certPayrollLastName"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactLastName") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="Last name"
+                  value={projectInfo.certifiedPayrollContactLastName || ""}
+                  onChange={(e) =>
+                    updateSplitName(
+                      "certifiedPayrollContactFirstName",
+                      "certifiedPayrollContactLastName",
+                      "certifiedPayrollContact",
+                      "last",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
+                  <Phone className="h-3 w-3" /> Payroll Phone
+                </Label>
+                <Input
+                  id="certPayrollPhone"
+                  type="tel"
+                  className="h-8 text-sm"
+                  placeholder="(555) 555-5555"
+                  value={projectInfo.certifiedPayrollPhone || ""}
+                  onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
+                  <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
+                </Label>
+                <Input
+                  id="certPayrollEmail"
+                  type="email"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="payroll@customer.com"
+                  value={projectInfo.certifiedPayrollEmail || ""}
+                  onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           {/* Customer Billing */}
           <div>
@@ -1053,19 +1057,6 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             />
           </div>
           <div>
-            <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Billing Email
-            </Label>
-            <Input
-              id="custBillingEmail"
-              type="email"
-              className="h-8 text-sm"
-              placeholder="billing@customer.com"
-              value={projectInfo.customerBillingEmail || ""}
-              onChange={(e) => update("customerBillingEmail", e.target.value)}
-            />
-          </div>
-          <div>
             <Label htmlFor="custBillingPhone" className="flex items-center gap-1 text-xs">
               <Phone className="h-3 w-3" /> Billing Phone
             </Label>
@@ -1076,6 +1067,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               placeholder="(555) 555-5555"
               value={projectInfo.customerBillingPhone || ""}
               onChange={(e) => update("customerBillingPhone", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> Billing Email
+            </Label>
+            <Input
+              id="custBillingEmail"
+              type="email"
+              className="h-8 text-sm"
+              placeholder="billing@customer.com"
+              value={projectInfo.customerBillingEmail || ""}
+              onChange={(e) => update("customerBillingEmail", e.target.value)}
             />
           </div>
         </div>

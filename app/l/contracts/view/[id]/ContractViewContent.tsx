@@ -379,36 +379,40 @@ export default function ContractViewContent() {
                 <span className="text-sm font-medium">{projectInfo.customerPM || "—"}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Email</span>
-                <span className="text-sm font-medium">{projectInfo.customerPMEmail || "—"}</span>
-              </div>
-              <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Phone</span>
                 <span className="text-sm font-medium">{projectInfo.customerPMPhone || "—"}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll Contact</span>
-                <span className="text-sm font-medium">{projectInfo.certifiedPayrollContact || "—"}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Email</span>
+                <span className="text-sm font-medium">{projectInfo.customerPMEmail || "—"}</span>
               </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Email</span>
-                <span className="text-sm font-medium">{projectInfo.certifiedPayrollEmail || "—"}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Phone</span>
-                <span className="text-sm font-medium">{projectInfo.certifiedPayrollPhone || "—"}</span>
-              </div>
+              {projectInfo.isCertifiedPayroll !== "none" && (
+                <>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Certified Payroll Contact</span>
+                    <span className="text-sm font-medium">{projectInfo.certifiedPayrollContact || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Phone</span>
+                    <span className="text-sm font-medium">{projectInfo.certifiedPayrollPhone || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Payroll Email</span>
+                    <span className="text-sm font-medium">{projectInfo.certifiedPayrollEmail || "—"}</span>
+                  </div>
+                </>
+              )}
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Contact Name</span>
                 <span className="text-sm font-medium">{projectInfo.customerBillingContact || "—"}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Email</span>
-                <span className="text-sm font-medium">{projectInfo.customerBillingEmail || "—"}</span>
-              </div>
-              <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Phone</span>
                 <span className="text-sm font-medium">{projectInfo.customerBillingPhone || "—"}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Billing Email</span>
+                <span className="text-sm font-medium">{projectInfo.customerBillingEmail || "—"}</span>
               </div>
             </div>
           </div>

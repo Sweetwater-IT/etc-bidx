@@ -206,7 +206,7 @@ function getWorkTypeTone(workType: string): string {
 
   switch (normalized) {
     case 'MPT':
-      return 'border-blue-900/15 bg-blue-950/5 text-blue-900';
+      return 'border-[#16335A]/15 bg-[#16335A]/5 text-[#16335A]';
     case 'RENTAL':
       return 'border-amber-500/20 bg-amber-500/5 text-amber-800';
     case 'SALE':
@@ -296,9 +296,19 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const showPricingColumns = forceShowPricing || !readOnly;
-  const totalColumnCount = (readOnly ? 0 : 1) + 1 + 1 + 1 + 1 + 1 + (showPricingColumns ? 4 : 0) + 1 + 1;
+  const showWorkTypeColumn = !readOnly;
+  const totalColumnCount =
+    (readOnly ? 0 : 1) +
+    1 +
+    1 +
+    (showWorkTypeColumn ? 1 : 0) +
+    1 +
+    1 +
+    (showPricingColumns ? 4 : 0) +
+    1 +
+    1;
   const notesColSpan = totalColumnCount;
-  const totalLabelColSpan = (readOnly ? 0 : 1) + 6;
+  const totalLabelColSpan = (readOnly ? 0 : 1) + (showWorkTypeColumn ? 6 : 5);
 
   useImperativeHandle(ref, () => ({
     flushPendingSave: async () => {
@@ -959,7 +969,11 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 {!readOnly && <TableHead className="w-[36px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" />}
                 <TableHead className="w-[120px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</TableHead>
                 <TableHead className="min-w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Description</TableHead>
-                <TableHead className="w-[125px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">Work Type</TableHead>
+                {showWorkTypeColumn && (
+                  <TableHead className="w-[125px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                    Work Type
+                  </TableHead>
+                )}
                 <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">UOM</TableHead>
                 <TableHead className="w-[70px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Qty</TableHead>
                 {showPricingColumns && <TableHead className="w-[150px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Unit Price</TableHead>}
@@ -1053,11 +1067,19 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       {item.description}
                     </span>
                   </TableCell>
-                  <TableCell className="p-1.5">
-                    <Badge variant="secondary" className={cn("rounded-md border text-[10px] font-semibold uppercase tracking-wide", getWorkTypeTone(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER')))}>
-                      {formatWorkTypeLabel(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))}
-                    </Badge>
-                  </TableCell>
+                  {showWorkTypeColumn && (
+                    <TableCell className="p-1.5">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "rounded-md border text-[10px] font-semibold uppercase tracking-wide",
+                          getWorkTypeTone(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))
+                        )}
+                      >
+                        {formatWorkTypeLabel(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5">
                     <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
                   </TableCell>
@@ -1208,15 +1230,15 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                   <TableBody>
                     {groupedSelectableItems.map((group) => (
                       <Fragment key={group.heading}>
-                        <TableRow className="border-t border-blue-900/20 bg-blue-950/5 hover:bg-blue-950/5">
-                          <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-blue-900">
+                        <TableRow className="border-t border-[#16335A]/15 bg-[#16335A]/5 hover:bg-[#16335A]/5 data-[state=selected]:bg-[#16335A]/5">
+                          <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
                             {formatWorkTypeLabel(group.heading)}
                           </TableCell>
                         </TableRow>
                         {group.items.map((p) => (
                           <TableRow
                             key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
-                            className="cursor-pointer"
+                            className="cursor-pointer hover:bg-transparent data-[state=selected]:bg-transparent"
                             onClick={() => applyMasterToEditor(p)}
                           >
                             <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
