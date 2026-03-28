@@ -1211,21 +1211,24 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
       {editorStep === 'pick' && (
             <div className="space-y-3">
-              <Input
-                placeholder="Search item #, display #, description, or category…"
-                value={selectorSearch}
-                onChange={(e) => setSelectorSearch(e.target.value)}
-                autoFocus
-              />
-              {!readOnly && (
-                <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => openCustomDialog()}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    Create Custom Item
-                  </Button>
-                </div>
-              )}
               <div className="max-h-[500px] overflow-auto rounded-md border">
+                <div className="sticky top-0 z-20 border-b bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Input
+                      placeholder="Search item #, display #, description, or category…"
+                      value={selectorSearch}
+                      onChange={(e) => setSelectorSearch(e.target.value)}
+                      autoFocus
+                      className="sm:flex-1"
+                    />
+                    {!readOnly && (
+                      <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="shrink-0">
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Create Custom Item
+                      </Button>
+                    )}
+                  </div>
+                </div>
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-[#FAFAFA]">
                     <TableRow className="hover:bg-transparent">
@@ -1245,12 +1248,12 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                         {group.items.map((p) => (
                           <TableRow
                             key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
-                            className="cursor-pointer hover:bg-transparent data-[state=selected]:bg-transparent"
+                            className="cursor-pointer border-b border-border/40 transition-colors hover:bg-[#16335A]/6 data-[state=selected]:bg-[#16335A]/8"
                             onClick={() => applyMasterToEditor(p)}
                           >
-                            <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
-                            <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
-                            <TableCell className="text-xs">{p.description}</TableCell>
+                            <TableCell className="w-[150px] text-xs font-mono text-foreground/90">{p.item_number}</TableCell>
+                            <TableCell className="w-[150px] text-xs font-mono text-foreground/80">{getMasterDisplayItemNumber(p)}</TableCell>
+                            <TableCell className="text-xs text-foreground/85">{p.description}</TableCell>
                           </TableRow>
                         ))}
                       </Fragment>
