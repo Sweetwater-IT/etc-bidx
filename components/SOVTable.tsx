@@ -523,6 +523,14 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     openEditorForNewItem();
   };
 
+  const addCustomRow = () => {
+    if (isSignedContract && !changeOrderApproved && onEditAttempt) {
+      onEditAttempt();
+      return;
+    }
+    openCustomDialog();
+  };
+
   const updateRow = (id: string, field: keyof ScheduleOfValuesItem, value: string | number) => {
     updateItems((prevItems) =>
       prevItems.map((item) => {
@@ -939,6 +947,9 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               <Button variant="outline" size="sm" onClick={addRow} className="h-8 border-border/70 bg-background text-xs font-medium">
                 <Plus className="mr-1 h-3.5 w-3.5" /> Add Line Item
               </Button>
+              <Button variant="outline" size="sm" onClick={addCustomRow} className="h-8 border-border/70 bg-background text-xs font-medium">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Create Custom Item
+              </Button>
             </div>
           )}
         </div>
@@ -1221,12 +1232,6 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                       autoFocus
                       className="sm:flex-1"
                     />
-                    {!readOnly && (
-                      <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="shrink-0">
-                        <Plus className="mr-1 h-3.5 w-3.5" />
-                        Create Custom Item
-                      </Button>
-                    )}
                   </div>
                 </div>
                 <Table>
