@@ -17,6 +17,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -26,8 +34,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { addDays, format } from "date-fns";
-import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
+import { cn, formatPhoneNumber } from "@/lib/utils";
+import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
 
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
@@ -41,14 +50,37 @@ interface ProjectInfoFieldsProps {
   showValidation?: boolean;
   readOnly?: boolean;
   contractRow?: any;
+  onProjectNameBlur?: () => void | Promise<void>;
+  onSaveNotes?: (notes: string) => Promise<void>;
+  notesSaving?: boolean;
+  hideNotesSection?: boolean;
 }
 
 const REQUIRED_FIELDS: (keyof JobProjectInfo)[] = [
   "projectOwner", "projectName", "contractNumber", "county", "etcBranch",
   "etcProjectManager", "projectStartDate", "projectEndDate", "customerName",
-  "customerJobNumber", "customerPM", "customerPMEmail", "certifiedPayrollContact",
-  "certifiedPayrollEmail", "isCertifiedPayroll",
+  "customerJobNumber",
+  "customerPMFirstName",
+  "customerPMLastName",
+  "customerPMPhone",
+  "customerPMEmail",
+  "customerBillingContactFirstName",
+  "customerBillingContactLastName",
+  "customerBillingPhone",
+  "customerBillingEmail",
+  "isCertifiedPayroll",
 ];
+
+const PROJECT_OWNER_OPTIONS = ["PENNDOT", "Turnpike", "SEPTA", "Private"] as const;
+const PHONE_FIELDS: Array<keyof JobProjectInfo> = [
+  "customerPMPhone",
+  "certifiedPayrollPhone",
+  "customerBillingPhone",
+];
+
+function getNormalizedCertifiedPayrollType(value?: string | null): CertifiedPayrollType {
+  return value === "state" || value === "federal" ? value : "none";
+}
 
 // Stable RateField — defined OUTSIDE parent components to prevent remounting on every keystroke
 const RateField = ({
@@ -64,50 +96,26 @@ const RateField = ({
   value: string | null;
   onUpdate: (field: keyof JobProjectInfo, value: string) => void;
 }) => {
-  const [localValue, setLocalValue] = useState(value || "");
-  const [focused, setFocused] = useState(false);
+  const [localValue, setLocalValue] = useState(parseFloat(value || "0") || 0);
 
-  // Sync from parent only when NOT focused (prevents cursor jump)
   useEffect(() => {
-    if (!focused) {
-      setLocalValue(value || "");
-    }
-  }, [value, focused]);
-
-  const displayValue = !focused && localValue && !isNaN(parseFloat(localValue))
-    ? parseFloat(localValue).toFixed(2)
-    : localValue;
+    setLocalValue(parseFloat(value || "0") || 0);
+  }, [value]);
 
   return (
     <div>
       <Label htmlFor={id} className="text-xs">{label}</Label>
-      <Input
-        id={id}
-        className="h-8 text-sm"
-        type="text"
-        inputMode="decimal"
-        placeholder="0.00"
-        value={displayValue}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          const cleaned = localValue.replace(/[^0-9.]/g, "");
-          const parsed = parseFloat(cleaned);
-          if (!isNaN(parsed)) {
-            const formatted = parsed.toFixed(2);
-            setLocalValue(formatted);
-            onUpdate(field, formatted);
-          } else if (localValue === "") {
-            onUpdate(field, "");
-          }
+      <DollarPercentCurrencyInputField
+        type="dollar"
+        fixedType="dollar"
+        value={localValue}
+        onTypeChange={() => {}}
+        onValueChange={(nextValue) => {
+          setLocalValue(nextValue);
+          onUpdate(field, nextValue ? nextValue.toFixed(2) : "");
         }}
-        onChange={(e) => {
-          const val = e.target.value;
-          if (val === "" || /^\d*\.?\d*$/.test(val)) {
-            setLocalValue(val);
-            onUpdate(field, val);
-          }
-        }}
+        aria-label={label}
+        className="h-8"
       />
     </div>
   );
@@ -125,6 +133,7 @@ const CertifiedPayrollSection = ({
   isInvalid: (field: keyof JobProjectInfo) => boolean;
   RequiredMark: React.FC;
 }) => {
+  const certifiedPayrollType = getNormalizedCertifiedPayrollType(projectInfo.isCertifiedPayroll);
 
   const TotalCell = ({ base, fringe }: { base: string | null; fringe: string | null }) => {
     const total = (parseFloat(base || "0") || 0) + (parseFloat(fringe || "0") || 0);
@@ -139,7 +148,7 @@ const CertifiedPayrollSection = ({
   };
 
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
       <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         Certified Payroll Information
@@ -147,7 +156,7 @@ const CertifiedPayrollSection = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="sm:col-span-3">
           <Label className="text-xs">Is this a Certified Payroll job?<RequiredMark /></Label>
-          <Select value={projectInfo.isCertifiedPayroll}
+          <Select value={certifiedPayrollType}
             onValueChange={(val) => update("isCertifiedPayroll", val as CertifiedPayrollType)}>
             <SelectTrigger className={cn("h-8 text-sm w-full sm:w-[240px]", isInvalid("isCertifiedPayroll") && "border-destructive ring-1 ring-destructive/30")}>
               <SelectValue placeholder="Select…" />
@@ -160,14 +169,14 @@ const CertifiedPayrollSection = ({
           </Select>
         </div>
 
-        {projectInfo.isCertifiedPayroll === "none" && (
+        {certifiedPayrollType === "none" && (
           <div>
             <Label htmlFor="shopRate" className="text-xs">Shop Rate ($/hr)</Label>
             <Input id="shopRate" className="h-8 text-sm bg-muted" type="text" readOnly value="Shop — no value required" tabIndex={-1} />
           </div>
         )}
 
-        {projectInfo.isCertifiedPayroll === "state" && (
+        {certifiedPayrollType === "state" && (
           <>
             <div className="sm:col-span-3">
               <p className="text-xs font-medium text-muted-foreground">PA Prevailing Wage Rates</p>
@@ -187,7 +196,7 @@ const CertifiedPayrollSection = ({
           </>
         )}
 
-        {projectInfo.isCertifiedPayroll === "federal" && (
+        {certifiedPayrollType === "federal" && (
           <>
             <div className="sm:col-span-3">
               <p className="text-xs font-medium text-muted-foreground">Federal Davis-Bacon Rates</p>
@@ -211,14 +220,18 @@ const CertifiedPayrollSection = ({
   );
 };
 
-export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow }: ProjectInfoFieldsProps) => {
+export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = false, showValidation = false, readOnly = false, contractRow, onProjectNameBlur, onSaveNotes, notesSaving = false, hideNotesSection = false }: ProjectInfoFieldsProps) => {
   const [dateWarning, setDateWarning] = useState<string | null>(null);
   const [projectStartOpen, setProjectStartOpen] = useState(false);
   const [projectEndOpen, setProjectEndOpen] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(projectInfo.otherNotes || "");
+  const [projectOwnerModalOpen, setProjectOwnerModalOpen] = useState(false);
+  const [projectOwnerDraft, setProjectOwnerDraft] = useState("");
 
   // Database-driven data
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
-  const [counties, setCounties] = useState<string[]>([]);
+  const [counties, setCounties] = useState<Array<{ name: string; branch: string | null }>>([]);
   const [projectManagers, setProjectManagers] = useState<Array<{ id: string; branch_id: number | null; full_name: string }>>([]);
 
   useEffect(() => {
@@ -227,15 +240,36 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         // Fetch branches
         const branchesResponse = await fetch("/api/branches");
         const branchesResult = await branchesResponse.json();
+        const branchRows = branchesResult.data || [];
         if (branchesResult.data) {
-          setBranches(branchesResult.data);
+          setBranches(branchRows);
         }
 
-        // Fetch counties (names only)
-        const countiesResponse = await fetch("/api/counties?namesOnly=true");
+        // Fetch counties with branch metadata so county selection can set the branch
+        const countiesResponse = await fetch("/api/counties?limit=1000");
         const countiesResult = await countiesResponse.json();
         if (countiesResult.success && countiesResult.data) {
-          setCounties(countiesResult.data);
+          const normalizedCounties = countiesResult.data
+            .map((county: { name: string; branch: string | number | null }) => {
+              const matchedBranch =
+                county.branch == null
+                  ? null
+                  : branchRows.find(
+                      (branch: { id: number; name: string }) =>
+                        String(branch.id) === String(county.branch) ||
+                        branch.name.toLowerCase() === String(county.branch).toLowerCase()
+                    )?.name || String(county.branch);
+
+              return {
+                name: county.name,
+                branch: matchedBranch,
+              };
+            })
+            .sort((a: { name: string }, b: { name: string }) =>
+              a.name.localeCompare(b.name)
+            );
+
+          setCounties(normalizedCounties);
         }
 
         const pmResponse = await fetch('/api/l/project-managers');
@@ -258,9 +292,16 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     }
   }, [dateWarning]);
 
+  useEffect(() => {
+    if (!editingNotes) {
+      setNotesDraft(projectInfo.otherNotes || "");
+    }
+  }, [editingNotes, projectInfo.otherNotes]);
+
   const update = (field: keyof JobProjectInfo, value: string) => {
     if (readOnly) return;
-    const updated = { ...projectInfo, [field]: value };
+    const nextValue = PHONE_FIELDS.includes(field) ? formatPhoneNumber(value) : value;
+    const updated = { ...projectInfo, [field]: nextValue };
     if (field === "projectStartDate" && updated.projectEndDate && value > updated.projectEndDate) {
       updated.projectEndDate = "";
       setDateWarning("End date was cleared — it was before the new start date");
@@ -272,8 +313,41 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     onChange(updated);
   };
 
-  const isInvalid = (field: keyof JobProjectInfo) =>
-    showValidation && REQUIRED_FIELDS.includes(field) && !projectInfo[field];
+  const updateSplitName = (
+    firstField: keyof JobProjectInfo,
+    lastField: keyof JobProjectInfo,
+    legacyField: keyof JobProjectInfo,
+    part: "first" | "last",
+    value: string
+  ) => {
+    if (readOnly) return;
+
+    const nextFirstName = (part === "first" ? value : projectInfo[firstField]) || "";
+    const nextLastName = (part === "last" ? value : projectInfo[lastField]) || "";
+    const combinedName = [nextFirstName, nextLastName].filter(Boolean).join(" ").trim();
+
+    onChange({
+      ...projectInfo,
+      [firstField]: nextFirstName,
+      [lastField]: nextLastName,
+      [legacyField]: combinedName,
+    });
+  };
+
+  const certifiedPayrollType = getNormalizedCertifiedPayrollType(projectInfo.isCertifiedPayroll);
+  const showPayrollContactRow = certifiedPayrollType === "state" || certifiedPayrollType === "federal";
+  const payrollRequiredFields: Array<keyof JobProjectInfo> = [
+    "certifiedPayrollContactFirstName",
+    "certifiedPayrollContactLastName",
+    "certifiedPayrollPhone",
+    "certifiedPayrollEmail",
+  ];
+
+  const isInvalid = (field: keyof JobProjectInfo) => {
+    const isBaseRequired = REQUIRED_FIELDS.includes(field);
+    const isPayrollRequired = showPayrollContactRow && payrollRequiredFields.includes(field);
+    return showValidation && (isBaseRequired || isPayrollRequired) && !projectInfo[field];
+  };
 
   // Customer combobox state — loaded from Supabase
   interface DBCustomer { id: string; display_name: string; company_name: string; }
@@ -292,7 +366,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           display_name: contractor.name,
           company_name: contractor.name
         }));
-        setCustomers(transformedCustomers);
+        setCustomers(
+          transformedCustomers.sort((a: DBCustomer, b: DBCustomer) =>
+            a.display_name.localeCompare(b.display_name)
+          )
+        );
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -305,9 +383,11 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const filteredCustomers = useMemo(
     () =>
-      customers.filter((c) =>
-        c.display_name.toLowerCase().includes(customerSearch.toLowerCase())
-      ),
+      [...customers]
+        .filter((c) =>
+          c.display_name.toLowerCase().includes(customerSearch.toLowerCase())
+        )
+        .sort((a, b) => a.display_name.localeCompare(b.display_name)),
     [customers, customerSearch]
   );
 
@@ -348,7 +428,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
         company_name: result.customer.name
       };
 
-      setCustomers((prev) => [...prev, newCustomer]);
+      setCustomers((prev) =>
+        [...prev, newCustomer].sort((a, b) => a.display_name.localeCompare(b.display_name))
+      );
       update("customerName", newCustomer.display_name);
       setCustomerSearch("");
       setCustomerOpen(false);
@@ -386,13 +468,24 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [countyOpen, setCountyOpen] = useState(false);
   const [countySearch, setCountySearch] = useState("");
   const filteredCounties = useMemo(
-    () => counties.filter((c) => c.toLowerCase().includes(countySearch.toLowerCase())),
+    () =>
+      counties.filter((c) =>
+        c.name.toLowerCase().includes(countySearch.toLowerCase())
+      ),
     [counties, countySearch]
   );
 
   // TODO: Implement job number auto-generation with business logic later
   // const { jobs } = useJobs();
   // const existingJobNumbers = useMemo(() => jobs.map((j) => j.projectInfo.etcJobNumber), [jobs]);
+
+  const customerLocked = readOnly || contractSigned;
+  const jobNumberLocked = true;
+  const projectOwnerSelection = useMemo(() => {
+    const owner = (projectInfo.projectOwner || "").trim();
+    if (!owner) return "";
+    return PROJECT_OWNER_OPTIONS.includes(owner as typeof PROJECT_OWNER_OPTIONS[number]) ? owner : "Other";
+  }, [projectInfo.projectOwner]);
 
   const RequiredMark = () => <span className="text-destructive ml-0.5">*</span>;
 
@@ -408,10 +501,19 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
     return parseDateValue(projectInfo.projectEndDate) ?? new Date();
   }, [projectInfo.projectStartDate, projectInfo.projectEndDate]);
 
+  useEffect(() => {
+    if (projectOwnerModalOpen) return;
+    const currentOwner = (projectInfo.projectOwner || "").trim();
+    const nextDraft = PROJECT_OWNER_OPTIONS.includes(currentOwner as typeof PROJECT_OWNER_OPTIONS[number])
+      ? ""
+      : currentOwner;
+    setProjectOwnerDraft(nextDraft);
+  }, [projectInfo.projectOwner, projectOwnerModalOpen]);
+
   return (
     <div className={cn("space-y-5", readOnly && "pointer-events-none opacity-70")}>
       {/* Project Details */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <Building className="h-4 w-4 text-muted-foreground" />
           Project Details
@@ -421,17 +523,31 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
           <div className="sm:col-span-2">
             <Label htmlFor="projectOwner" className="text-xs">Project Owner<RequiredMark /></Label>
             <Select
-              value={projectInfo.projectOwner || undefined}
-              onValueChange={(val) => update("projectOwner", val)}
+              value={projectOwnerSelection || undefined}
+              onValueChange={(val) => {
+                if (val === "Other") {
+                  const currentOwner = (projectInfo.projectOwner || "").trim();
+                  const nextOwner = PROJECT_OWNER_OPTIONS.includes(currentOwner as typeof PROJECT_OWNER_OPTIONS[number])
+                    ? ""
+                    : currentOwner;
+                  setProjectOwnerDraft(nextOwner);
+                  setProjectOwnerModalOpen(true);
+                  return;
+                }
+                update("projectOwner", val);
+              }}
             >
               <SelectTrigger id="projectOwner" className={cn("h-8 text-sm", isInvalid("projectOwner") && "border-destructive ring-1 ring-destructive/30")}>
-                <SelectValue placeholder="Select owner…" />
+                <SelectValue placeholder="Select owner…">
+                  {projectOwnerSelection === "Other"
+                    ? (projectInfo.projectOwner || "Other")
+                    : (projectOwnerSelection || "Select owner…")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENNDOT">PENNDOT</SelectItem>
-                <SelectItem value="Turnpike">Turnpike</SelectItem>
-                <SelectItem value="SEPTA">SEPTA</SelectItem>
-                <SelectItem value="Private">Private</SelectItem>
+                {PROJECT_OWNER_OPTIONS.map((owner) => (
+                  <SelectItem key={owner} value={owner}>{owner}</SelectItem>
+                ))}
                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
@@ -444,6 +560,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               placeholder="e.g. Highway 101 Overpass"
               value={projectInfo.projectName || ""}
               onChange={(e) => update("projectName", e.target.value)}
+              onBlur={() => void onProjectNameBlur?.()}
             />
           </div>
           <div className="sm:col-span-2">
@@ -483,18 +600,35 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   <CommandList>
                     <CommandEmpty>No county found.</CommandEmpty>
                     <CommandGroup>
-                      {filteredCounties.map((c) => (
+                      {filteredCounties.map((county) => (
                         <CommandItem
-                          key={c}
-                          value={c}
+                          key={county.name}
+                          value={county.name}
                           onSelect={() => {
-                            update("county", c);
+                            const nextBranch = county.branch || "";
+                            const currentPm = projectInfo.etcProjectManager;
+                            const nextBranchId = nextBranch
+                              ? branches.find((b) => b.name.toLowerCase() === nextBranch.toLowerCase())?.id ?? null
+                              : null;
+                            const nextAvailablePMs = nextBranchId
+                              ? projectManagers.filter((pm) => pm.branch_id === nextBranchId)
+                              : projectManagers;
+
+                            onChange({
+                              ...projectInfo,
+                              county: county.name,
+                              etcBranch: nextBranch || projectInfo.etcBranch,
+                              etcProjectManager:
+                                currentPm && !nextAvailablePMs.some((pm) => pm.full_name === currentPm)
+                                  ? ""
+                                  : currentPm,
+                            });
                             setCountyOpen(false);
                             setCountySearch("");
                           }}
                         >
-                          <Check className={cn("mr-2 h-3 w-3", projectInfo.county === c ? "opacity-100" : "opacity-0")} />
-                          {c}
+                          <Check className={cn("mr-2 h-3 w-3", projectInfo.county === county.name ? "opacity-100" : "opacity-0")} />
+                          {county.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -502,6 +636,17 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                 </Command>
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Label htmlFor="stateRoute" className="text-xs">State Route</Label>
+            <Input
+              id="stateRoute"
+              className="h-8 text-sm"
+              placeholder="e.g. SR 0196"
+              value={projectInfo.stateRoute || ""}
+              onChange={(e) => update("stateRoute", e.target.value)}
+            />
           </div>
 
           <div className="sm:col-span-2">
@@ -527,9 +672,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             <Input
               id="etcJobNumber"
               className="h-8 text-sm"
-              placeholder="e.g. PHL-2024-0123"
+              placeholder="Assigned in signed contract modal"
               value={projectInfo.etcJobNumber || ""}
-              onChange={(e) => update("etcJobNumber", e.target.value)}
+              readOnly={jobNumberLocked}
+              disabled={jobNumberLocked}
             />
           </div>
 
@@ -685,21 +831,24 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
       </div>
 
 
-      <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
           Customer Admin Information
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {/* Customer Name — searchable dropdown */}
-          <div>
+          <div className="sm:col-span-2">
             <Label className="text-xs">Customer Name<RequiredMark /></Label>
-            <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+            <Popover open={customerLocked ? false : customerOpen} onOpenChange={(open) => {
+              if (!customerLocked) setCustomerOpen(open);
+            }}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={customerOpen}
+                  aria-expanded={customerLocked ? false : customerOpen}
+                  disabled={customerLocked}
                   className={cn("w-full justify-between h-8 text-sm font-normal", isInvalid("customerName") && "border-destructive ring-1 ring-destructive/30")}
                 >
                   {projectInfo.customerName || "Select customer…"}
@@ -711,12 +860,15 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                   <CommandInput
                     placeholder="Search or add customer…"
                     value={customerSearch}
-                    onValueChange={setCustomerSearch}
+                    onValueChange={(value) => {
+                      if (!customerLocked) setCustomerSearch(value);
+                    }}
                   />
                   <CommandList>
                     <CommandEmpty className="p-0">
                       <button
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer"
+                        disabled={customerLocked}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                         onMouseDown={(e) => { e.preventDefault(); handleAddCustomer(); }}
                       >
                         <Plus className="h-3.5 w-3.5" /> Add {customerSearch}
@@ -728,6 +880,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                           key={c.id}
                           value={c.display_name}
                           onSelect={() => {
+                            if (customerLocked) return;
                             update("customerName", c.display_name);
                             setCustomerOpen(false);
                             setCustomerSearch("");
@@ -747,8 +900,10 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
                       <>
                         <CommandSeparator />
                         <CommandGroup>
-                          <CommandItem
-                            onSelect={handleAddCustomer}
+                        <CommandItem
+                            onSelect={() => {
+                              if (!customerLocked) handleAddCustomer();
+                            }}
                             className="text-sm"
                           >
                             <Plus className="mr-2 h-3 w-3" /> Add {customerSearch}
@@ -762,7 +917,7 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
             </Popover>
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <Label htmlFor="customerJobNumber" className="text-xs">Customer Job Number<RequiredMark /></Label>
             <Input
               id="customerJobNumber"
@@ -772,17 +927,39 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               onChange={(e) => update("customerJobNumber", e.target.value)}
             />
           </div>
-          <div className="hidden sm:block" /> {/* spacer to push PM to row 2 */}
 
           {/* Row 2: Customer PM */}
           <div>
-            <Label htmlFor="customerPM" className="text-xs">Customer Project Manager<RequiredMark /></Label>
+            <Label htmlFor="customerPMFirstName" className="text-xs">Customer PM First Name<RequiredMark /></Label>
             <Input
-              id="customerPM"
-              className={cn("h-8 text-sm", isInvalid("customerPM") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="Full name"
-              value={projectInfo.customerPM || ""}
-              onChange={(e) => update("customerPM", e.target.value)}
+              id="customerPMFirstName"
+              className={cn("h-8 text-sm", isInvalid("customerPMFirstName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="First name"
+              value={projectInfo.customerPMFirstName || ""}
+              onChange={(e) => updateSplitName("customerPMFirstName", "customerPMLastName", "customerPM", "first", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMLastName" className="text-xs">Customer PM Last Name<RequiredMark /></Label>
+            <Input
+              id="customerPMLastName"
+              className={cn("h-8 text-sm", isInvalid("customerPMLastName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Last name"
+              value={projectInfo.customerPMLastName || ""}
+              onChange={(e) => updateSplitName("customerPMFirstName", "customerPMLastName", "customerPM", "last", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="customerPMPhone" className="flex items-center gap-1 text-xs">
+              <Phone className="h-3 w-3" /> PM Phone<RequiredMark />
+            </Label>
+            <Input
+              id="customerPMPhone"
+              type="tel"
+              className={cn("h-8 text-sm", isInvalid("customerPMPhone") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="(555) 555-5555"
+              value={projectInfo.customerPMPhone || ""}
+              onChange={(e) => update("customerPMPhone", e.target.value)}
             />
           </div>
           <div>
@@ -798,114 +975,276 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               onChange={(e) => update("customerPMEmail", e.target.value)}
             />
           </div>
-          <div>
-            <Label htmlFor="customerPMPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> PM Phone
-            </Label>
-            <Input
-              id="customerPMPhone"
-              type="tel"
-              className="h-8 text-sm"
-              placeholder="(555) 555-5555"
-              value={projectInfo.customerPMPhone || ""}
-              onChange={(e) => update("customerPMPhone", e.target.value)}
-            />
-          </div>
 
           {/* Certified Payroll */}
-          <div>
-            <Label htmlFor="certPayroll" className="text-xs">Certified Payroll Contact<RequiredMark /></Label>
-            <Input
-              id="certPayroll"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollContact") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="Full name"
-              value={projectInfo.certifiedPayrollContact || ""}
-              onChange={(e) => update("certifiedPayrollContact", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
-            </Label>
-            <Input
-              id="certPayrollEmail"
-              type="email"
-              className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
-              placeholder="payroll@customer.com"
-              value={projectInfo.certifiedPayrollEmail || ""}
-              onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> Payroll Phone
-            </Label>
-            <Input
-              id="certPayrollPhone"
-              type="tel"
-              className="h-8 text-sm"
-              placeholder="(555) 555-5555"
-              value={projectInfo.certifiedPayrollPhone || ""}
-              onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
-            />
-          </div>
+          {showPayrollContactRow && (
+            <>
+              <div>
+                <Label htmlFor="certPayrollFirstName" className="text-xs">Payroll Contact First Name<RequiredMark /></Label>
+                <Input
+                  id="certPayrollFirstName"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="First name"
+                  value={projectInfo.certifiedPayrollContactFirstName || ""}
+                  onChange={(e) =>
+                    updateSplitName(
+                      "certifiedPayrollContactFirstName",
+                      "certifiedPayrollContactLastName",
+                      "certifiedPayrollContact",
+                      "first",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollLastName" className="text-xs">Payroll Contact Last Name<RequiredMark /></Label>
+                <Input
+                  id="certPayrollLastName"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollContactLastName") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="Last name"
+                  value={projectInfo.certifiedPayrollContactLastName || ""}
+                  onChange={(e) =>
+                    updateSplitName(
+                      "certifiedPayrollContactFirstName",
+                      "certifiedPayrollContactLastName",
+                      "certifiedPayrollContact",
+                      "last",
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollPhone" className="flex items-center gap-1 text-xs">
+                  <Phone className="h-3 w-3" /> Payroll Phone<RequiredMark />
+                </Label>
+                <Input
+                  id="certPayrollPhone"
+                  type="tel"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollPhone") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="(555) 555-5555"
+                  value={projectInfo.certifiedPayrollPhone || ""}
+                  onChange={(e) => update("certifiedPayrollPhone", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="certPayrollEmail" className="flex items-center gap-1 text-xs">
+                  <Mail className="h-3 w-3" /> Payroll Email<RequiredMark />
+                </Label>
+                <Input
+                  id="certPayrollEmail"
+                  type="email"
+                  className={cn("h-8 text-sm", isInvalid("certifiedPayrollEmail") && "border-destructive ring-1 ring-destructive/30")}
+                  placeholder="payroll@customer.com"
+                  value={projectInfo.certifiedPayrollEmail || ""}
+                  onChange={(e) => update("certifiedPayrollEmail", e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           {/* Customer Billing */}
           <div>
-            <Label htmlFor="custBillingContact" className="text-xs">Billing Contact Name</Label>
+            <Label htmlFor="custBillingFirstName" className="text-xs">Billing Contact First Name<RequiredMark /></Label>
             <Input
-              id="custBillingContact"
-              className="h-8 text-sm"
-              placeholder="Full name"
-              value={projectInfo.customerBillingContact || ""}
-              onChange={(e) => update("customerBillingContact", e.target.value)}
+              id="custBillingFirstName"
+              className={cn("h-8 text-sm", isInvalid("customerBillingContactFirstName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="First name"
+              value={projectInfo.customerBillingContactFirstName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "customerBillingContactFirstName",
+                  "customerBillingContactLastName",
+                  "customerBillingContact",
+                  "first",
+                  e.target.value
+                )
+              }
             />
           </div>
           <div>
-            <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
-              <Mail className="h-3 w-3" /> Billing Email
-            </Label>
+            <Label htmlFor="custBillingLastName" className="text-xs">Billing Contact Last Name<RequiredMark /></Label>
             <Input
-              id="custBillingEmail"
-              type="email"
-              className="h-8 text-sm"
-              placeholder="billing@customer.com"
-              value={projectInfo.customerBillingEmail || ""}
-              onChange={(e) => update("customerBillingEmail", e.target.value)}
+              id="custBillingLastName"
+              className={cn("h-8 text-sm", isInvalid("customerBillingContactLastName") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="Last name"
+              value={projectInfo.customerBillingContactLastName || ""}
+              onChange={(e) =>
+                updateSplitName(
+                  "customerBillingContactFirstName",
+                  "customerBillingContactLastName",
+                  "customerBillingContact",
+                  "last",
+                  e.target.value
+                )
+              }
             />
           </div>
           <div>
             <Label htmlFor="custBillingPhone" className="flex items-center gap-1 text-xs">
-              <Phone className="h-3 w-3" /> Billing Phone
+              <Phone className="h-3 w-3" /> Billing Phone<RequiredMark />
             </Label>
             <Input
               id="custBillingPhone"
               type="tel"
-              className="h-8 text-sm"
+              className={cn("h-8 text-sm", isInvalid("customerBillingPhone") && "border-destructive ring-1 ring-destructive/30")}
               placeholder="(555) 555-5555"
               value={projectInfo.customerBillingPhone || ""}
               onChange={(e) => update("customerBillingPhone", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="custBillingEmail" className="flex items-center gap-1 text-xs">
+              <Mail className="h-3 w-3" /> Billing Email<RequiredMark />
+            </Label>
+            <Input
+              id="custBillingEmail"
+              type="email"
+              className={cn("h-8 text-sm", isInvalid("customerBillingEmail") && "border-destructive ring-1 ring-destructive/30")}
+              placeholder="billing@customer.com"
+              value={projectInfo.customerBillingEmail || ""}
+              onChange={(e) => update("customerBillingEmail", e.target.value)}
             />
           </div>
         </div>
       </div>
 
       {/* Certified Payroll Information */}
-      <CertifiedPayrollSection projectInfo={projectInfo} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
+      <CertifiedPayrollSection projectInfo={{ ...projectInfo, isCertifiedPayroll: certifiedPayrollType }} update={update} isInvalid={isInvalid} RequiredMark={RequiredMark} />
 
-      {/* Other Notes */}
-      <div className="rounded-xl border bg-card p-4">
-        <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          Additional Notes
-        </h2>
-        <Textarea
-          placeholder="Enter any additional notes, comments, or special instructions…"
-          className="min-h-[100px] text-sm"
-          value={projectInfo.otherNotes || ""}
-          onChange={(e) => update("otherNotes", e.target.value)}
-        />
-      </div>
+      {/* Additional Notes */}
+      {!hideNotesSection && <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-violet-500/10">
+              <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Additional Notes
+            </span>
+          </div>
+          {!readOnly && (
+            editingNotes ? (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setNotesDraft(projectInfo.otherNotes || "");
+                    setEditingNotes(false);
+                  }}
+                  disabled={notesSaving}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={async () => {
+                    onChange({ ...projectInfo, otherNotes: notesDraft });
+                    if (onSaveNotes) {
+                      await onSaveNotes(notesDraft);
+                    }
+                    setEditingNotes(false);
+                  }}
+                  disabled={notesSaving}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                className="h-7 gap-1.5 text-xs bg-[#16335A] text-white hover:bg-[#122947]"
+                onClick={() => setEditingNotes(true)}
+              >
+                <StickyNote className="h-3 w-3" />
+                {projectInfo.otherNotes?.trim() ? "Edit Note" : "Add Note"}
+              </Button>
+            )
+          )}
+        </div>
+        {editingNotes && !readOnly ? (
+          <Textarea
+            placeholder="Enter any additional notes, comments, or special instructions…"
+            className="min-h-[120px] text-sm resize-none"
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            autoFocus
+          />
+        ) : (
+          <div className="min-h-[72px] text-sm text-foreground whitespace-pre-wrap">
+            {projectInfo.otherNotes?.trim() ? (
+              projectInfo.otherNotes
+            ) : (
+              <span className="text-muted-foreground italic text-xs">
+                No notes yet. Use &quot;Add Note&quot; to get started.
+              </span>
+            )}
+          </div>
+        )}
+      </div>}
+
+      <Dialog
+        open={projectOwnerModalOpen && !readOnly}
+        onOpenChange={(open) => {
+          setProjectOwnerModalOpen(open);
+          if (!open && !(projectInfo.projectOwner || "").trim()) {
+            setProjectOwnerDraft("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Project Owner</DialogTitle>
+            <DialogDescription>
+              Add the specific project owner name as plain text.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="projectOwnerOther" className="text-xs">
+              Project Owner<RequiredMark />
+            </Label>
+            <Input
+              id="projectOwnerOther"
+              className={cn(
+                "h-9 text-sm",
+                showValidation && !projectOwnerDraft.trim() && "border-destructive ring-1 ring-destructive/30"
+              )}
+              placeholder="Enter project owner"
+              value={projectOwnerDraft}
+              onChange={(e) => setProjectOwnerDraft(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProjectOwnerModalOpen(false);
+                if (!(projectInfo.projectOwner || "").trim()) {
+                  setProjectOwnerDraft("");
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const trimmedOwner = projectOwnerDraft.trim();
+                if (!trimmedOwner) return;
+                update("projectOwner", trimmedOwner);
+                setProjectOwnerModalOpen(false);
+              }}
+              disabled={!projectOwnerDraft.trim()}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

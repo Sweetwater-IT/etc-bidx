@@ -8,7 +8,7 @@ import { SaleItem } from "./TSaleItem";
 export interface INote {
     text:string;
     timestamp: number;
-    id?: number;
+    id?: number | string;
     user_email?: string
 }
 

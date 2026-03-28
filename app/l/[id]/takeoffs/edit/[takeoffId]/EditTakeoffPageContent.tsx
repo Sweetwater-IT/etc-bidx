@@ -1,26 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CreateTakeoffForm } from "@/components/CreateTakeoffForm";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
-import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { Save, Download } from "lucide-react";
 import { toast } from "sonner";
-
-const WORK_TYPES = [
-  { value: "MPT", label: "MPT" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
-  { value: "FLAGGING", label: "Flagging" },
-  { value: "LANE_CLOSURE", label: "Lane Closure" },
-  { value: "SERVICE", label: "Service" },
-  { value: "DELIVERY", label: "Delivery" },
-  { value: "RENTAL", label: "Rental" },
-];
+import { formatTakeoffPageTitle } from "@/app/l/utils/pageTitles";
 
 interface EditTakeoffPageContentProps {
   jobId: string;
@@ -31,7 +18,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
   const router = useRouter();
   const { data: takeoff, isLoading, error } = useTakeoffFromDB(takeoffId);
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
+  const jobLabel = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
   
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
@@ -96,20 +83,8 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
     );
   }
 
-  const getTitle = () => {
-    if (!takeoff) return "Edit Takeoff";
-
-    if (takeoff.is_pickup) {
-      return `Edit Pickup Takeoff for ${jobName}`;
-    }
-
-    // Get work type from the takeoff
-    const workTypeLabel = takeoff.work_type || "";
-    return workTypeLabel ? `Edit ${workTypeLabel} Takeoff for ${jobName}` : `Edit Takeoff for ${jobName}`;
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -125,15 +100,10 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{jobName}</BreadcrumbPage>
+            <BreadcrumbPage>{jobLabel}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-
-      <PageTitleBlock
-        title={getTitle()}
-        description={`Edit takeoff details, work types, materials, and scheduling information for ${jobName}.`}
-      />
 
       <CreateTakeoffForm
         jobId={jobId}
@@ -141,6 +111,12 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
         draftTakeoff={takeoff}
         backLabel="Takeoff"
         mode="edit"
+        pageTitle={formatTakeoffPageTitle({
+          workType: takeoff?.work_type,
+          isPickup: takeoff?.is_pickup,
+          jobLabel,
+        })}
+        pageDescription={`Edit takeoff details, work types, materials, and scheduling information for ${jobLabel}.`}
       />
     </div>
   );

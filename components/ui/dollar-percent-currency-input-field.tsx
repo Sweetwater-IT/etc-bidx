@@ -15,6 +15,7 @@ interface DollarPercentCurrencyInputFieldProps {
   value: number;
   onTypeChange: (type: 'percent' | 'dollar') => void;
   onValueChange: (value: number) => void;
+  fixedType?: 'percent' | 'dollar';
   className?: string;
   size?: 'sm' | 'default';
   disabled?: boolean;
@@ -26,6 +27,7 @@ export function DollarPercentCurrencyInputField({
   value,
   onTypeChange,
   onValueChange,
+  fixedType,
   className,
   size = 'default',
   disabled = false,
@@ -34,40 +36,50 @@ export function DollarPercentCurrencyInputField({
   const heightClass = size === 'sm' ? 'h-7' : 'h-8';
   const textSizeClass = size === 'sm' ? 'text-xs' : 'text-sm';
   const selectWidth = size === 'sm' ? 'w-10' : 'w-12';
-  const inputWidth = size === 'sm' ? 'w-[125px]' : 'flex-1';
+  const effectiveType = fixedType || type;
+  const inputWidth = size === 'sm' ? 'w-[160px]' : 'flex-1';
 
   return (
-    <div className={cn('flex items-center border rounded-md bg-background overflow-hidden', heightClass, className)}>
-      <Select
-        value={type}
-        onValueChange={(newType) => {
-          // Convert value when switching between percent and dollar
-          const currentValue = value;
-          const mappedType = newType === 'fixed' ? 'dollar' : newType as 'percent' | 'dollar';
-          const newValue = mappedType === 'percent' ? currentValue / 100 : currentValue * 100;
-          onTypeChange(mappedType);
-          onValueChange(newValue);
-        }}
-        disabled={disabled}
-      >
-        <SelectTrigger className={cn(
-          heightClass,
-          selectWidth,
-          'rounded-none border-0 border-r px-0 justify-center focus:ring-0',
-          textSizeClass
-        )}>
-          <SelectValue>{type === 'percent' ? '%' : '$'}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="percent">%</SelectItem>
-          <SelectItem value="dollar">$</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className={cn('flex items-center border rounded-md bg-background overflow-hidden transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]', heightClass, className)}>
+      {fixedType ? (
+        <div
+          className={cn(
+            heightClass,
+            selectWidth,
+            'flex items-center justify-center border-r bg-muted/30',
+            textSizeClass
+          )}
+        >
+          {fixedType === 'percent' ? '%' : '$'}
+        </div>
+      ) : (
+        <Select
+          value={type}
+          onValueChange={(newType) => {
+            const mappedType = newType === 'fixed' ? 'dollar' : newType as 'percent' | 'dollar';
+            onTypeChange(mappedType);
+          }}
+          disabled={disabled}
+        >
+          <SelectTrigger className={cn(
+            heightClass,
+            selectWidth,
+            'rounded-none border-0 border-r px-0 justify-center focus:ring-0',
+            textSizeClass
+          )}>
+            <SelectValue>{type === 'percent' ? '%' : '$'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="percent">%</SelectItem>
+            <SelectItem value="dollar">$</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
       <CurrencyInput
         value={Math.round(value * 100).toString()}
         onChange={(digits) => {
           const num = parseInt(digits || '0', 10) || 0;
-          const scaled = type === 'percent' ? num / 100 : num / 100;
+          const scaled = effectiveType === 'percent' ? num / 100 : num / 100;
           onValueChange(scaled);
         }}
         className={cn(
@@ -77,7 +89,7 @@ export function DollarPercentCurrencyInputField({
           textSizeClass
         )}
         disabled={disabled}
-        aria-label={ariaLabel || `Value in ${type === 'percent' ? 'percent' : 'dollars'}`}
+        aria-label={ariaLabel || `Value in ${effectiveType === 'percent' ? 'percent' : 'dollars'}`}
       />
     </div>
   );

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes } from '@/lib/jobNotes';
+import { normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
 interface TakeoffSummary {
   id: string;
@@ -60,7 +62,7 @@ export async function GET(
     // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, is_pickup, takeoff_id, parent_work_order_id')
+      .select('job_id, is_pickup, takeoff_id, parent_work_order_id, status, wo_number')
       .eq('id', id)
       .single();
 
@@ -86,8 +88,8 @@ export async function GET(
       // SOV items for picklist — try dedicated table first, fall back to JSONB column
       supabase.from("sov_items").select("id, item_number, description, quantity, uom").eq("job_id", jobId).order("sort_order", { ascending: true }),
 
-      // Documents linked to this work order (via job + checklist)
-      supabase.from("documents").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
+      // Documents linked to this work order. Newer /l flows use documents_l.
+      supabase.from("documents_l").select("id, file_name, file_path, file_type, file_size, uploaded_at").eq("job_id", jobId).like("file_path", `%work-orders/${id}%`).order("uploaded_at", { ascending: false }),
 
       // Pickup work order if this is a parent
       !isPickup ? supabase.from("work_orders_l").select("id, wo_number, status").eq("parent_work_order_id", id).eq("is_pickup", true).limit(1) : Promise.resolve({ data: null }),
@@ -102,6 +104,7 @@ export async function GET(
     let job = null;
     if (jobRes.data) {
       const jobData = jobRes.data;
+      const parsedNotes = parseJobNotes(jobData.additional_notes);
       const projectInfo = {
         projectName: jobData.project_name,
         etcJobNumber: jobData.etc_job_number,
@@ -116,7 +119,7 @@ export async function GET(
         projectStartDate: jobData.project_start_date,
         projectEndDate: jobData.project_end_date,
         extensionDate: jobData.extension_date,
-        otherNotes: jobData.additional_notes,
+        otherNotes: parsedNotes.contractNotes,
       };
 
       job = {
@@ -181,17 +184,27 @@ export async function GET(
     // Process pickup work order
     let pickupWO: { id: string; wo_number: string | null; status: string } | null = null;
     if (pickupRes.data && pickupRes.data.length > 0) {
-      pickupWO = pickupRes.data[0] as any;
+      pickupWO = {
+        ...(pickupRes.data[0] as any),
+        status: normalizeWorkOrderStatusForUi((pickupRes.data[0] as any).status) || "",
+      };
     }
 
     return NextResponse.json({
+      status: normalizeWorkOrderStatusForUi(workOrder.status),
+      woNumber: workOrder.wo_number || null,
       job,
       takeoffs,
       woItems,
       sovItems,
       documents,
       pickupWO,
-      parentWO: parentWORes.data || null,
+      parentWO: parentWORes.data
+        ? {
+            ...(parentWORes.data as any),
+            status: normalizeWorkOrderStatusForUi((parentWORes.data as any).status) || "",
+          }
+        : null,
       isPickup,
     });
 

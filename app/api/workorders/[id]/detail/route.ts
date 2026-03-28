@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes } from '@/lib/jobNotes';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster } from '@/lib/server/sov/masterItems';
+import { normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
 interface TakeoffSummary {
   id: string;
@@ -60,7 +63,7 @@ export async function GET(
     // Get work order to get job_id and takeoff_id
     const { data: workOrder, error: woError } = await supabase
       .from('work_orders_l')
-      .select('job_id, takeoff_id, is_pickup, parent_work_order_id')
+      .select('job_id, takeoff_id, is_pickup, parent_work_order_id, status, wo_number')
       .eq('id', id)
       .single();
 
@@ -104,7 +107,7 @@ export async function GET(
     };
 
     // Fetch all related data in parallel
-    const [jobRes, takeoffRes, woItemsRes, sovRes, sovFullRes, docsRes, pickupRes, parentWORes] = await Promise.all([
+    const [jobRes, takeoffRes, woItemsRes, sovEntriesRes, docsRes, pickupRes, parentWORes] = await Promise.all([
       // Job info (fetch all fields like jobs API)
       supabase.from("jobs_l").select("*").eq("id", jobId).single(),
 
@@ -114,7 +117,8 @@ export async function GET(
       // Work order items
       supabase.from("work_order_items_l").select("*").eq("work_order_id", id).order("sort_order", { ascending: true }),
 
-      // SOV items for picklist — query sov_entries joined with sov_items for job-specific items
+      // SOV entries for this job. Master rows are hydrated in a second query because
+      // the database does not define a relation from sov_entries.sov_item_id -> sov_items.id.
       supabase
         .from("sov_entries")
         .select(`
@@ -127,41 +131,10 @@ export async function GET(
           retainage_amount,
           notes,
           sov_item_id,
-          sov_items!inner (
-            id,
-            item_number,
-            display_item_number,
-            description,
-            display_name,
-            work_type,
-            uom
-          )
-        `)
-        .eq("job_id", jobId)
-        .order("sort_order", { ascending: true }),
-
-      // Full SOV items with pricing for PDFs — same query but with all fields
-      supabase
-        .from("sov_entries")
-        .select(`
-          id,
-          quantity,
-          unit_price,
-          extended_price,
-          retainage_type,
-          retainage_value,
-          retainage_amount,
-          notes,
-          sov_item_id,
-          sov_items!inner (
-            id,
-            item_number,
-            display_item_number,
-            description,
-            display_name,
-            work_type,
-            uom
-          )
+          custom_sov_item_id,
+          sort_order,
+          created_at,
+          updated_at
         `)
         .eq("job_id", jobId)
         .order("sort_order", { ascending: true }),
@@ -182,6 +155,7 @@ export async function GET(
     let job = null;
     if (jobRes.data) {
       const jobData = jobRes.data;
+      const parsedNotes = parseJobNotes(jobData.additional_notes);
       const projectInfo = {
         projectName: jobData.project_name,
         etcJobNumber: jobData.etc_job_number,
@@ -196,7 +170,7 @@ export async function GET(
         projectStartDate: jobData.project_start_date,
         projectEndDate: jobData.project_end_date,
         extensionDate: jobData.extension_date,
-        otherNotes: jobData.additional_notes,
+        otherNotes: parsedNotes.contractNotes,
       };
 
       job = {
@@ -226,18 +200,50 @@ export async function GET(
     }
 
     // Process work order items
-    const woItems: WOItem[] = (woItemsRes.data || []) as WOItem[];
+    const woItems: WOItem[] = ((woItemsRes.data || []) as WOItem[]).filter((item: any) => Boolean(item.sov_item_id));
 
-    // Process SOV items (from joined query)
+    // Process SOV items
     let sovItems: { id: string; item_number: string; description: string; quantity: number; uom: string }[] = [];
-    if (sovRes.data && sovRes.data.length > 0) {
-      sovItems = sovRes.data.map((s: any) => ({
-        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
-        item_number: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.description || s.sov_items?.display_name || "",
-        quantity: Number(s.quantity) || 0,
-        uom: s.sov_items?.uom || "EA",
-      }));
+    let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
+    if (sovEntriesRes.error) {
+      console.error('Error fetching SOV entries for work order detail:', sovEntriesRes.error);
+    } else if (sovEntriesRes.data && sovEntriesRes.data.length > 0) {
+      let masterMaps;
+      try {
+        masterMaps = await fetchSovMastersForEntries(sovEntriesRes.data || []);
+      } catch (masterError) {
+        console.error('Error hydrating SOV master items for work order detail:', masterError);
+      }
+
+      if (masterMaps) {
+        sovItems = (sovEntriesRes.data || []).map((entry: any) => {
+          const master = resolveEntryMaster(entry, masterMaps);
+          return {
+            id: String(entry.custom_sov_item_id ?? entry.sov_item_id),
+            item_number: master?.item_number || master?.display_item_number || "",
+            description: master?.display_name || master?.description || "",
+            quantity: Number(entry.quantity) || 0,
+            uom: getPrimaryUom(master),
+          };
+        });
+
+        sovItemsFull = (sovEntriesRes.data || []).map((entry: any) => {
+          const master = resolveEntryMaster(entry, masterMaps);
+          return {
+            id: String(entry.custom_sov_item_id ?? entry.sov_item_id),
+            itemNumber: master?.item_number || master?.display_item_number || "",
+            description: master?.display_name || master?.description || "",
+            uom: getPrimaryUom(master),
+            quantity: Number(entry.quantity) || 0,
+            unitPrice: Number(entry.unit_price) || 0,
+            extendedPrice: Number(entry.extended_price) || 0,
+            retainageType: (entry.retainage_type as 'percent' | 'dollar') || 'percent',
+            retainageValue: Number(entry.retainage_value) || 0,
+            retainageAmount: Number(entry.retainage_amount) || 0,
+            notes: entry.notes || null,
+          };
+        });
+      }
     } else if (jobRes.data) {
       // Fallback: read from JSONB sov_items column on jobs table
       const { data: jobFull } = await supabase
@@ -255,34 +261,21 @@ export async function GET(
       }));
     }
 
-    // Process full SOV items with pricing (from joined query)
-    let sovItemsFull: { id: string; itemNumber: string; description: string; uom: string; quantity: number; unitPrice: number; extendedPrice: number; retainageType: 'percent' | 'dollar'; retainageValue: number; retainageAmount: number; notes?: string | null }[] = [];
-    if (sovFullRes.data && sovFullRes.data.length > 0) {
-      sovItemsFull = sovFullRes.data.map((s: any) => ({
-        id: s.sov_items?.id || s.sov_item_id, // Use the actual sov_items.id UUID, fallback to sov_item_id if join failed
-        itemNumber: s.sov_items?.item_number || s.sov_items?.display_item_number || "",
-        description: s.sov_items?.description || s.sov_items?.display_name || "",
-        uom: s.sov_items?.uom || "EA",
-        quantity: Number(s.quantity) || 0,
-        unitPrice: Number(s.unit_price) || 0,
-        extendedPrice: Number(s.extended_price) || 0,
-        retainageType: (s.retainage_type as 'percent' | 'dollar') || 'percent',
-        retainageValue: Number(s.retainage_value) || 0,
-        retainageAmount: Number(s.retainage_amount) || 0,
-        notes: s.notes || null,
-      }));
-    }
-
     // Process documents
     const documents: WODocument[] = (docsRes.data || []) as WODocument[];
 
     // Process pickup work order
     let pickupWO: { id: string; wo_number: string | null; status: string } | null = null;
     if (pickupRes.data && pickupRes.data.length > 0) {
-      pickupWO = pickupRes.data[0] as any;
+      pickupWO = {
+        ...(pickupRes.data[0] as any),
+        status: normalizeWorkOrderStatusForUi((pickupRes.data[0] as any).status) || "",
+      };
     }
 
     return NextResponse.json({
+      status: normalizeWorkOrderStatusForUi(workOrder.status),
+      woNumber: workOrder.wo_number || null,
       job,
       takeoffs,
       woItems,
@@ -290,7 +283,12 @@ export async function GET(
       sovItemsFull,
       documents,
       pickupWO,
-      parentWO: parentWORes.data || null,
+      parentWO: parentWORes.data
+        ? {
+            ...(parentWORes.data as any),
+            status: normalizeWorkOrderStatusForUi((parentWORes.data as any).status) || "",
+          }
+        : null,
       isPickup,
     });
 

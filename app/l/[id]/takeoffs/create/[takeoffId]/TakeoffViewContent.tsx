@@ -5,16 +5,14 @@ import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus } from "lucide-react";
+import { ClipboardList, Download, Send, Edit, FileText, ArrowRight, Loader2, Upload, Trash2, Package, Plus, Lock } from "lucide-react";
 import { MPTSignConfiguration, type MPTSignRow } from "@/components/MPTSignConfiguration";
 import { PermanentSignConfiguration } from "@/components/PermanentSignConfiguration";
-import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
 import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
+import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
+import type { SignMaterial } from "@/utils/signMaterial";
 
 interface Props {
   jobId: string;
@@ -32,18 +30,31 @@ const WORK_TYPES = [
   { value: "RENTAL", label: "Rental" },
 ];
 
-const formatVehicleType = (vehicleType: string) => {
+const formatVehicleType = (vehicleType?: string | null) => {
+  if (!vehicleType) {
+    return "";
+  }
+
   const vehicleTypeMap: Record<string, string> = {
+    pickup_truck: "Pick Up Truck",
     message_board: "Message Board",
+    arrow_panel: "Arrow Panel",
+    speed_trailer: "Speed Trailer",
     tma: "TMA",
   };
-  return vehicleTypeMap[vehicleType] || vehicleType;
+  if (vehicleTypeMap[vehicleType]) {
+    return vehicleTypeMap[vehicleType];
+  }
+
+  return vehicleType
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const formatSqft = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)]";
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)]";
 
 export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = false }: Props) {
   const router = useRouter();
@@ -66,22 +77,30 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
-        console.log('Loading takeoff with ID:', takeoffId);
+        console.log('[TakeoffViewContent] Loading takeoff', { takeoffId, jobId, isViewMode });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
-        console.log('API response status:', response.status);
-        console.log('API response ok:', response.ok);
+        console.log('[TakeoffViewContent] API response', { status: response.status, ok: response.ok });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.log('API error response:', errorText);
+          console.error('[TakeoffViewContent] API error response', { errorText });
           throw new Error(`Failed to load takeoff: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
-        console.log('API response data:', data);
+        console.log('[TakeoffViewContent] Loaded takeoff payload', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          isPickup: data?.is_pickup,
+          takeoffItemsCount: Array.isArray(data?.takeoff_items) ? data.takeoff_items.length : 0,
+          activeSections: data?.active_sections,
+          vehicleItemsCount: Array.isArray(data?.vehicle_items) ? data.vehicle_items.length : 0,
+          additionalItemsCount: Array.isArray(data?.additional_items) ? data.additional_items.length : 0,
+        });
         setTakeoff(data);
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewContent] Error loading takeoff', error);
         toast.error('Failed to load takeoff');
       } finally {
         setLoading(false);
@@ -91,7 +110,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     if (takeoffId) {
       loadTakeoff();
     }
-  }, [takeoffId]);
+  }, [takeoffId, jobId, isViewMode]);
 
 
 
@@ -137,6 +156,14 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   const handleCreateWorkOrder = async () => {
     setLoading(true);
     try {
+      console.log('[TakeoffViewContent] Generate work order clicked', {
+        takeoffId,
+        jobId,
+        workType: takeoff?.work_type,
+        title: takeoff?.title,
+        takeoffItemCount: Array.isArray(takeoff?.takeoff_items) ? takeoff.takeoff_items.length : 0,
+        additionalItemsCount: Array.isArray(takeoff?.additional_items) ? takeoff.additional_items.length : 0,
+      });
 
       const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
         method: 'POST',
@@ -148,16 +175,23 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         })
       });
 
+      console.log('[TakeoffViewContent] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
+
       if (woResponse.ok) {
         const result = await woResponse.json();
+        console.log('[TakeoffViewContent] Generate work order success', result);
         toast.success('Work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
+        console.error('[TakeoffViewContent] Generate work order failed', err);
         toast.error(err.error || 'Failed to generate work order');
       }
     } catch (error) {
-      console.error("Error generating work order:", error);
+      console.error("[TakeoffViewContent] Error generating work order", error);
       toast.error("Failed to generate work order");
     } finally {
       setLoading(false);
@@ -215,9 +249,6 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   };
 
   // Separate takeoff items by category
-  const signItems = Array.isArray(takeoff.takeoff_items)
-    ? takeoff.takeoff_items.filter((item: any) => item.category === 'sign' || !item.category)
-    : [];
   const vehicleItems = Array.isArray(takeoff.takeoff_items)
     ? takeoff.takeoff_items.filter((item: any) => item.category === 'vehicle')
     : [];
@@ -226,7 +257,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     : [];
 
   const mptSquareFootageSummary = (() => {
-    if (takeoff.work_type !== "MPT" || !Array.isArray(takeoff.active_sections) || !takeoff.sign_rows) {
+    if (takeoff.work_type !== "MPT" || !takeoff.sign_rows) {
       return null;
     }
 
@@ -240,7 +271,11 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     let grandSigns = 0;
     let grandSqft = 0;
 
-    for (const sectionKey of takeoff.active_sections) {
+    const sectionKeys = Array.isArray(takeoff.active_sections) && takeoff.active_sections.length > 0
+      ? takeoff.active_sections
+      : Object.keys(takeoff.sign_rows || {});
+
+    for (const sectionKey of sectionKeys) {
       let sectionSigns = 0;
       let sectionSqft = 0;
 
@@ -248,8 +283,10 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         if (!row?.signDesignation) continue;
 
         const quantity = Number(row.quantity || 0);
+        const primarySqft =
+          Number(row.totalSqft || 0) || Math.round(Number(row.sqft || 0) * quantity * 100) / 100;
         sectionSigns += quantity;
-        sectionSqft += Number(row.totalSqft || 0);
+        sectionSqft += primarySqft;
 
         for (const sec of row.secondarySigns || []) {
           if (!sec?.signDesignation) continue;
@@ -332,20 +369,16 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
   })();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
       {/* Pickup Takeoff Banner */}
       {takeoff.is_pickup && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100">
-              <span className="text-xs font-bold text-amber-800">!</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-amber-800">Pickup Takeoff</h3>
-              <p className="text-xs text-amber-700">
-                This takeoff was auto-generated from the parent work order and cannot be modified. Use the Return Inventory section below to log item conditions.
-              </p>
-            </div>
+        <div className="rounded-lg border px-4 py-3 flex items-center gap-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+          <Lock className="h-4 w-4 shrink-0" />
+          <div>
+            <h3 className="font-semibold">Pickup Takeoff</h3>
+            <p className="text-xs text-blue-700">
+              This takeoff was auto-generated from the parent work order and cannot be modified. Use the Return Inventory section below to log item conditions.
+            </p>
           </div>
         </div>
       )}
@@ -406,7 +439,17 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</span>
             {formattedWorkOrderNumber ? (
-              <span className="text-sm font-medium font-mono">{formattedWorkOrderNumber}</span>
+              <button
+                type="button"
+                className="text-sm font-medium font-mono text-primary underline underline-offset-2 hover:text-primary/80"
+                onClick={() => {
+                  if (takeoff.work_order_id) {
+                    router.push(`/l/jobs/${jobId}/work-orders/view/${takeoff.work_order_id}`);
+                  }
+                }}
+              >
+                {formattedWorkOrderNumber}
+              </button>
             ) : (
               <span className="text-sm text-muted-foreground">Not assigned</span>
             )}
@@ -434,10 +477,15 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       </TakeoffViewCard>
 
+      {takeoff.is_pickup && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <ReturnInventoryCard takeoffId={takeoffId} jobInfo={jobInfo} />
+        </div>
+      )}
 
 
       {/* ─── Vehicles Card — For flagging and lane closure work types ─── */}
-      {(takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
+      {!takeoff.is_pickup && (takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
         <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
           <TakeoffViewCard title="Vehicles" icon={<Package />} badge={vehicleItems.length}>
           {vehicleItems.length > 0 ? (
@@ -447,6 +495,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-64">Type</th>
                     <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -454,6 +503,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
                     <tr key={item.id} className="hover:bg-muted/10">
                       <td className="px-2 py-1 w-64 text-xs font-medium">{formatVehicleType(item.vehicleType) || item.product_name || '—'}</td>
                       <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || item.sign_details?.description || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -468,188 +518,69 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
         </div>
       )}
 
-      {mptSquareFootageSummary && (
+      {!takeoff.is_pickup && (takeoff.work_type === "MPT" || takeoff.work_type === "FLAGGING" || takeoff.work_type === "LANE_CLOSURE") && (
         <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={mptSquareFootageSummary.totalSigns}>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {mptSquareFootageSummary.items.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
-                  <span className="text-[10px] text-muted-foreground">sq ft</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-            <div className="flex items-baseline gap-3">
-              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(mptSquareFootageSummary.totalSqft)}</span>
-              <span className="text-xs text-muted-foreground">sq ft</span>
-              <span className="text-xs text-muted-foreground">({mptSquareFootageSummary.totalSigns} sign{mptSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
-            </div>
-          </div>
-          </TakeoffViewCard>
+          <MPTSignConfiguration
+            activeSections={Array.isArray(takeoff.active_sections) ? takeoff.active_sections : []}
+            signRows={(takeoff.sign_rows || {}) as Record<string, MPTSignRow[]>}
+            defaultSignMaterial={(takeoff.default_sign_material || "PLASTIC") as SignMaterial}
+            onToggleSection={() => {}}
+            onSignRowsChange={() => {}}
+            onDefaultMaterialChange={() => {}}
+            onApplyMaterialToAll={() => {}}
+            disabled
+          />
         </div>
       )}
 
-      {permanentSquareFootageSummary && (
-        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-          <TakeoffViewCard title="Square Footage Summary" icon={<Package />} badge={permanentSquareFootageSummary.totalSigns}>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {permanentSquareFootageSummary.items.map((item) => (
-              <div key={item.label} className="rounded-md border bg-muted/20 p-3">
-                <p className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground" title={item.label}>
-                  {item.label}
-                </p>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-lg font-bold tabular-nums text-foreground">{formatSqft(item.sqft)}</span>
-                  <span className="text-[10px] text-muted-foreground">sq ft</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{item.signs} sign{item.signs !== 1 ? "s" : ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 p-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-foreground">Total</span>
-            <div className="flex items-baseline gap-3">
-              <span className="text-xl font-black tabular-nums text-primary">{formatSqft(permanentSquareFootageSummary.totalSqft)}</span>
-              <span className="text-xs text-muted-foreground">sq ft</span>
-              <span className="text-xs text-muted-foreground">({permanentSquareFootageSummary.totalSigns} sign{permanentSquareFootageSummary.totalSigns !== 1 ? "s" : ""})</span>
-            </div>
-          </div>
-          </TakeoffViewCard>
-        </div>
+      {takeoff.work_type === "PERMANENT_SIGNS" && (
+        <PermanentSignConfiguration
+          activeItems={Array.isArray(takeoff.active_permanent_items) ? takeoff.active_permanent_items : []}
+          signRows={takeoff.permanent_sign_rows || {}}
+          entryRows={takeoff.permanent_entry_rows || {}}
+          defaultSignMaterial={(takeoff.default_permanent_sign_material || "ALUMINUM") as SignMaterial}
+          onToggleItem={() => {}}
+          onSignRowsChange={() => {}}
+          onEntryRowsChange={() => {}}
+          onDefaultMaterialChange={() => {}}
+          onApplyMaterialToAll={() => {}}
+          disabled
+          jobId={jobId}
+        />
       )}
-
-      {/* ─── Takeoff Items Card — Sign designations from takeoff ─── */}
-      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-        <TakeoffViewCard title="Takeoff Items" icon={<Package />} badge={signItems.length}>
-        {signItems.length > 0 ? (
-          <div className="overflow-x-auto">
-            {takeoff.work_type === "PERMANENT_SIGNS" ? (
-              // Permanent Signs Table
-              <table className="w-full min-w-[1000px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/70">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Post Size</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Plan Sheet</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {signItems.map((item: any) => {
-                    // Extract sign details from the jsonb field
-                    const signDetails = item.sign_details || {};
-                    return (
-                      <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.postSize || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs">
-                          {signDetails.planSheetNum && signDetails.planSheetTotal ? `${signDetails.planSheetNum}/${signDetails.planSheetTotal}` : '—'}
-                        </td>
-                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              // MPT Signs Table
-              <table className="w-full min-w-[1100px] text-sm" style={{ tableLayout: 'fixed' }}>
-                <thead className="bg-muted/70">
-                  <tr>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Designation</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Legend</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-28">Dimensions</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Sheeting</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Qty</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-40">Structure</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">B-Lights</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Sq Ft</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-24">Material</th>
-                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-16">Cover</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {signItems.map((item: any) => {
-                    // Extract sign details from the jsonb field
-                    const signDetails = item.sign_details || {};
-                    return (
-                      <tr key={item.id} className="hover:bg-muted/10">
-                        <td className="px-2 py-1 w-32 text-xs font-medium">{signDetails.signDesignation || item.product_name || '—'}</td>
-                        <td className="px-2 py-1 w-96 text-xs">{signDetails.signLegend || item.description || '—'}</td>
-                        <td className="px-2 py-1 w-28 text-xs">{signDetails.dimensionLabel || (item.width_inches && item.height_inches ? `${item.width_inches}" x ${item.height_inches}"` : '—')}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.sheeting || item.sheeting || '—'}</td>
-                        <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                        <td className="px-2 py-1 w-40 text-xs">{signDetails.structureType || item.structure_type || '—'}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.bLights || item.b_lights || 'none'}</td>
-                        <td className="px-2 py-1 w-32 text-xs font-medium tabular-nums text-right">{item.total_sqft ?? '—'}</td>
-                        <td className="px-2 py-1 w-24 text-xs">{signDetails.material || item.material || '—'}</td>
-                        <td className="px-2 py-1 w-16 text-xs text-center">{signDetails.cover !== undefined ? (signDetails.cover ? '✓' : '—') : (item.cover ? '✓' : '—')}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No takeoff items found. Sign designations will appear here when the takeoff is created.
-          </div>
-        )}
-        </TakeoffViewCard>
-      </div>
 
       {/* ─── Additional Items Card — Custom items added to takeoff ─── */}
-      <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
-        <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
-        {additionalItems.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
-              <thead className="bg-muted/70">
-                <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {additionalItems.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-muted/10">
-                    <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
-                    <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
-                    <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
+      {!takeoff.is_pickup && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <TakeoffViewCard title="Additional Items" icon={<Plus />} badge={additionalItems.length}>
+          {additionalItems.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-sm" style={{ tableLayout: 'fixed' }}>
+                <thead className="bg-muted/70">
+                  <tr>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-48">Item</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-32">Quantity</th>
+                    <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-96">Notes</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No additional items. Custom items added manually will appear here.
-          </div>
-        )}
-        </TakeoffViewCard>
-      </div>
-
-      {takeoff.is_pickup && takeoff.work_order_id && (
-        <ReturnInventoryCard
-          takeoffId={takeoffId}
-          jobInfo={jobInfo}
-        />
+                </thead>
+                <tbody className="divide-y">
+                  {additionalItems.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-muted/10">
+                      <td className="px-2 py-1 w-48 text-xs font-medium">{item.product_name || '—'}</td>
+                      <td className="px-2 py-1 w-32 text-xs tabular-nums">{item.quantity || 1}</td>
+                      <td className="px-2 py-1 w-96 text-xs">{item.description || item.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No additional items. Custom items added manually will appear here.
+            </div>
+          )}
+          </TakeoffViewCard>
+        </div>
       )}
 
       {/* Notes */}

@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { SOVTable } from "@/components/SOVTable";
 import { EquipmentSummary } from "@/app/l/components/EquipmentSummary";
+import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
+import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
+import type { ContractDocument, DocumentCategory } from "@/types/document";
 
 import {
   Sheet,
@@ -60,8 +63,6 @@ import {
   Wrench,
   FileCheck,
   ClipboardList,
-  X,
-  Save,
   Loader2,
   Maximize2,
   Trash2,
@@ -81,6 +82,13 @@ type Job360Tab =
 
 const formatWorkType = (workType: string) => {
   const workTypeMap: Record<string, string> = {
+    MPT: "MPT",
+    PERMANENT_SIGNS: "Permanent Signs",
+    FLAGGING: "Flagging",
+    LANE_CLOSURE: "Lane Closure",
+    SERVICE: "Service",
+    DELIVERY: "Delivery",
+    RENTAL: "Rental",
     permanent_sign: "Permanent Sign",
     permanent_signs: "Permanent Sign",
     lane_closure: "Lane Closure",
@@ -88,6 +96,38 @@ const formatWorkType = (workType: string) => {
     mpt: "MPT",
   };
   return workTypeMap[workType] || workType;
+};
+
+const TAKEOFF_WORK_TYPE_COLORS: Record<string, string> = {
+  MPT: "bg-blue-500/15 text-blue-700",
+  PERMANENT_SIGNS: "bg-purple-500/15 text-purple-700",
+  FLAGGING: "bg-amber-500/15 text-amber-700",
+  LANE_CLOSURE: "bg-amber-500/15 text-amber-700",
+  DELIVERY: "bg-emerald-500/15 text-emerald-700",
+  SERVICE: "bg-indigo-500/15 text-indigo-700",
+  RENTAL: "bg-red-500/15 text-red-700",
+};
+
+const TAKEOFF_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  sent_to_build_shop: "bg-blue-500/15 text-blue-700",
+  sent_to_sign_shop: "bg-purple-500/15 text-purple-700",
+  submitted: "bg-blue-500/15 text-blue-700",
+  in_progress: "bg-amber-500/15 text-amber-700",
+  ready: "bg-emerald-500/15 text-emerald-700",
+  complete: "bg-emerald-500/15 text-emerald-700",
+  completed: "bg-emerald-500/15 text-emerald-700",
+  canceled: "bg-destructive/15 text-destructive",
+  cancelled: "bg-destructive/15 text-destructive",
+};
+
+const formatTakeoffStatus = (status: string) => status.replace(/_/g, " ");
+
+const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
+  if (workOrderNumber === null || workOrderNumber === undefined) return "—";
+  const asString = String(workOrderNumber).trim();
+  if (!asString) return "—";
+  return asString.padStart(3, "0");
 };
 
 const ProjectDetail = () => {
@@ -100,8 +140,8 @@ const ProjectDetail = () => {
   const [activeTab, setActiveTab] = useState<Job360Tab>("bid-items");
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const [signOrderCounts, setSignOrderCounts] = useState({ submitted: 0, in_production: 0, complete: 0, closed: 0 });
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
+  const [projectNotes, setProjectNotes] = useState<Note[]>([]);
+  const [projectNotesLoading, setProjectNotesLoading] = useState(true);
   const [woDialogOpen, setWoDialogOpen] = useState(false);
   const [editJobOpen, setEditJobOpen] = useState(false);
   const [editCustomerPM, setEditCustomerPM] = useState("");
@@ -111,13 +151,8 @@ const ProjectDetail = () => {
   const [editJobSaving, setEditJobSaving] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [takeoffsCount, setTakeoffsCount] = useState(0);
-
-  const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
-    if (workOrderNumber === null || workOrderNumber === undefined) return "—";
-    const asString = String(workOrderNumber).trim();
-    if (!asString) return "—";
-    return asString.padStart(3, "0");
-  };
+  const [documents, setDocuments] = useState<ContractDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
 
   // Fetch job data on mount
   useEffect(() => {
@@ -203,6 +238,208 @@ const ProjectDetail = () => {
     fetchTakeoffsCount();
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDocuments = async () => {
+      setDocumentsLoading(true);
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/documents`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch documents");
+        }
+
+        const data = await response.json();
+        const mapped: ContractDocument[] = (data || []).map((doc: any) => ({
+          id: doc.id,
+          name: doc.file_name || "Document",
+          size: Number(doc.file_size || 0),
+          type: doc.mime_type || doc.file_type || "application/octet-stream",
+          category: (doc.file_type || "other") as DocumentCategory,
+          uploadedAt: doc.uploaded_at || doc.created_at || new Date().toISOString(),
+          filePath: doc.file_path || undefined,
+        }));
+        setDocuments(mapped);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        setDocuments([]);
+      } finally {
+        setDocumentsLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchProjectNotes = async () => {
+      setProjectNotesLoading(true);
+      try {
+        const response = await fetch(`/api/l/jobs/${id}/notes`);
+        if (response.ok) {
+          const notes = await response.json();
+          setProjectNotes(Array.isArray(notes) ? notes : []);
+        } else {
+          console.error("Failed to fetch project notes");
+          setProjectNotes([]);
+        }
+      } catch (error) {
+        console.error("Error fetching project notes:", error);
+        setProjectNotes([]);
+      } finally {
+        setProjectNotesLoading(false);
+      }
+    };
+
+    fetchProjectNotes();
+  }, [id]);
+
+  const handleAddProjectNote = async (note: Note) => {
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: {
+            ...note,
+            user_email: user?.email || note.user_email,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save note");
+      }
+
+      const savedNote = await response.json();
+      setProjectNotes((prev) => [...prev, savedNote]);
+      toast.success("Note added");
+    } catch (error) {
+      console.error("Error adding project note:", error);
+      toast.error("Failed to add note");
+    }
+  };
+
+  const handleEditProjectNote = async (index: number, updatedNote: Note) => {
+    if (!id || !projectNotes[index]?.id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: projectNotes[index].id,
+          text: updatedNote.text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      const savedNote = await response.json();
+      setProjectNotes((prev) => prev.map((note, noteIndex) => (noteIndex === index ? savedNote : note)));
+      toast.success("Note updated");
+    } catch (error) {
+      console.error("Error updating project note:", error);
+      toast.error("Failed to update note");
+    }
+  };
+
+  const handleDeleteProjectNote = async (index: number) => {
+    if (!id || !projectNotes[index]?.id) return;
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/notes?id=${encodeURIComponent(String(projectNotes[index].id))}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      setProjectNotes((prev) => prev.filter((_, noteIndex) => noteIndex !== index));
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting project note:", error);
+      toast.error("Failed to delete note");
+    }
+  };
+
+  const handleAddDocuments = async (
+    files: File[],
+    associatedItemId?: string,
+    _associatedItemLabel?: string,
+    category?: DocumentCategory
+  ) => {
+    if (!id) return;
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    formData.append("associatedItemId", associatedItemId || "");
+    formData.append("category", category || "other");
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload documents");
+      }
+
+      const result = await response.json();
+      setDocuments((prev) => [...result.documents, ...prev]);
+      toast.success(`${files.length} document(s) uploaded`);
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      toast.error("Failed to upload documents");
+    }
+  };
+
+  const handleRemoveDocument = async (documentId: string) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents?documentId=${documentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete document");
+      }
+
+      setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+      toast.success("Document deleted");
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Failed to delete document");
+    }
+  };
+
+  const handleUpdateDocumentCategory = async (documentId: string, category: DocumentCategory) => {
+    if (!id) return;
+
+    try {
+      const response = await fetch(`/api/l/jobs/${id}/documents`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId, category }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update document type");
+      }
+
+      setDocuments((prev) => prev.map((doc) => (doc.id === documentId ? { ...doc, category } : doc)));
+    } catch (error) {
+      console.error("Error updating document category:", error);
+      toast.error("Failed to update document type");
+    }
+  };
+
   if (jobLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -250,13 +487,21 @@ const ProjectDetail = () => {
     Overdue: "bg-destructive/15 text-destructive",
   }[jobStatus];
 
+  const notesEmptyState = (
+    <div className="text-xs italic text-muted-foreground">
+      No notes yet. Use &quot;Add Note&quot; to get started.
+    </div>
+  );
+
+  const notesButtonClassName = "h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]";
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
           {/* ─── TOP HEADER BAR ─── */}
           <header className="border-b bg-card shrink-0">
-        <div className="w-full px-4 py-2">
+        <div className="w-full px-4 pt-2 pb-2">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Button
@@ -411,10 +656,7 @@ const ProjectDetail = () => {
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs h-7"
-            onClick={() => {
-              setNotesValue(info.otherNotes || "");
-              setEditingNotes(true);
-            }}
+            onClick={() => setActiveTab("notes")}
           >
             <StickyNote className="h-3 w-3" /> Add Note
           </Button>
@@ -534,22 +776,22 @@ const ProjectDetail = () => {
               ) : (
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {workOrders.slice(0, 3).map((wo) => (
-                    <div key={wo.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                    <button
+                      key={wo.id}
+                      type="button"
+                      className="group flex w-full items-center justify-between rounded border border-transparent bg-muted/30 p-2 text-left transition-colors hover:border-[#16335A]/20 hover:bg-[#16335A]/5"
+                      onClick={() => router.push(`/l/jobs/${id}/work-orders/view/${wo.id}`)}
+                    >
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium truncate">
+                        <div className="truncate text-xs font-medium transition-colors group-hover:text-[#16335A]">
                           {formatWorkOrderNumber(wo.workOrderNumber ?? wo.wo_number)}
                         </div>
                         <div className="text-[10px] text-muted-foreground capitalize">{wo.status?.toLowerCase().replace('_', ' ')}</div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => router.push(`/l/jobs/${id}/work-orders/${wo.id}`)}
-                      >
-                        <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </div>
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors group-hover:bg-[#16335A]/10">
+                        <ChevronRight className="h-3 w-3 transition-colors group-hover:text-[#16335A]" />
+                      </span>
+                    </button>
                   ))}
                   {workOrders.length > 3 && (
                     <div className="text-center pt-1">
@@ -567,76 +809,31 @@ const ProjectDetail = () => {
               )}
             </div>
 
-            <div className={`rounded-lg border bg-card p-4 flex flex-col ${editingNotes ? "" : "max-h-[200px]"}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-violet-500/10">
-                    <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+            <QuoteNotes
+              title="Project Notes"
+              notes={projectNotes}
+              loading={projectNotesLoading}
+              onSave={handleAddProjectNote}
+              onEdit={handleEditProjectNote}
+              onDelete={handleDeleteProjectNote}
+              emptyState={notesEmptyState}
+              addButtonClassName={notesButtonClassName}
+              submitButtonClassName={notesButtonClassName}
+              containerClassName="bg-card"
+              addButtonInHeader
+              headerContent={
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-md bg-violet-500/10 p-1.5">
+                      <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Project Notes
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Project Notes</span>
                 </div>
-                {editingNotes && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setEditingNotes(false)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={async () => {
-                        if (id) {
-                          try {
-                            const response = await fetch(`/api/l/jobs/${id}/notes`, {
-                              method: 'PATCH',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({ additional_notes: notesValue }),
-                            });
-
-                            if (response.ok) {
-                              toast.success("Notes saved");
-                              // Refresh the job data to show updated notes
-                              const jobResponse = await fetch(`/api/l/jobs/${id}`);
-                              if (jobResponse.ok) {
-                                const jobData = await jobResponse.json();
-                                setDbJob(jobData);
-                              }
-                            } else {
-                              toast.error("Failed to save notes");
-                            }
-                          } catch (error) {
-                            console.error('Error saving notes:', error);
-                            toast.error("Failed to save notes");
-                          }
-                        }
-                        setEditingNotes(false);
-                      }}
-                    >
-                      <Save className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              {editingNotes ? (
-                <Textarea
-                  className="flex-1 text-sm min-h-[120px] resize-none"
-                  placeholder="Add project notes, scope details, special instructions..."
-                  value={notesValue}
-                  onChange={(e) => setNotesValue(e.target.value)}
-                  autoFocus
-                />
-              ) : (
-                <div className="flex-1 overflow-y-auto text-sm text-foreground whitespace-pre-wrap">
-                  {info.otherNotes ? info.otherNotes : <span className="text-muted-foreground italic text-xs">No notes yet. Use Add Note to get started.</span>}
-                </div>
-              )}
-            </div>
+              }
+            />
           </div>
         </div>
       </div>
@@ -708,21 +905,34 @@ const ProjectDetail = () => {
             </TabsContent>
 
             <TabsContent value="notes" className="m-0 p-4">
-              <TabPlaceholder
-                icon={StickyNote}
+              <QuoteNotes
                 title="Notes & Photos"
-                description="Chronological feed of field notes, photos, and attachments from technicians and project managers."
-                columns={["Date", "Author", "Type", "Content"]}
+                notes={projectNotes}
+                loading={projectNotesLoading}
+                onSave={handleAddProjectNote}
+                onEdit={handleEditProjectNote}
+                onDelete={handleDeleteProjectNote}
+                emptyState={notesEmptyState}
+                addButtonClassName={notesButtonClassName}
+                submitButtonClassName={notesButtonClassName}
               />
             </TabsContent>
 
             <TabsContent value="documents" className="m-0 p-4">
-              <TabPlaceholder
-                icon={FileText}
-                title="Documents"
-                description="Project documents, contracts, and supporting files."
-                columns={["Document", "Type", "Uploaded", "Size"]}
-              />
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <DocumentsFormsStep
+                  documents={documents}
+                  projectInfo={dbJob.projectInfo}
+                  jobId={id || ""}
+                  onAddDocuments={handleAddDocuments}
+                  onRemoveDocument={handleRemoveDocument}
+                  onUpdateCategory={handleUpdateDocumentCategory}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="purchase-orders" className="m-0 p-4">
@@ -880,6 +1090,7 @@ interface TakeoffSummary {
   title: string;
   work_type: string;
   status: string;
+  is_pickup?: boolean | null;
   created_at: string;
   install_date: string | null;
   pickup_date: string | null;
@@ -959,9 +1170,6 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                 <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                   Work Type
                 </th>
-                <th className="px-3 py-2 text-center text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Items
-                </th>
                 <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                   Need By
                 </th>
@@ -986,13 +1194,23 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                   <td className="px-3 py-1.5 font-medium">{takeoff.title}</td>
                   <td className="px-3 py-1.5 font-mono">
                     {takeoff.work_order_number ? (
-                      takeoff.work_order_number
+                      formatWorkOrderNumber(takeoff.work_order_number)
                     ) : (
                       <span className="italic text-muted-foreground">unassigned</span>
                     )}
                   </td>
-                  <td className="px-3 py-1.5">{formatWorkType(takeoff.work_type)}</td>
-                  <td className="px-3 py-1.5 text-center">{takeoff.items_count || '—'}</td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${TAKEOFF_WORK_TYPE_COLORS[takeoff.work_type] || "bg-muted text-muted-foreground"}`}>
+                        {formatWorkType(takeoff.work_type)}
+                      </span>
+                      {takeoff.is_pickup && (
+                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700">
+                          Pickup
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-1.5">
                     {takeoff.needed_by_date
                       ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
@@ -1003,9 +1221,9 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                       : "—"}
                   </td>
                   <td className="px-3 py-1.5">
-                    <Badge variant="secondary" className="text-[9px]">
-                      {takeoff.status}
-                    </Badge>
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${TAKEOFF_STATUS_COLORS[takeoff.status] || "bg-muted text-muted-foreground"}`}>
+                      {formatTakeoffStatus(takeoff.status)}
+                    </span>
                   </td>
                   <td className="px-3 py-1.5">
                     {new Date(takeoff.created_at).toLocaleDateString("en-US", {

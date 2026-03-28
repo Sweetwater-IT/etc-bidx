@@ -1,13 +1,16 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { useSovItems } from '@/hooks/useSovItems';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -17,14 +20,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import {
   Select,
   SelectContent,
@@ -40,9 +35,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil } from 'lucide-react';
+import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
+import { toast } from 'sonner';
 interface SovMasterItem {
   id: number;
   item_number: string;
@@ -56,6 +52,8 @@ interface SovMasterItem {
   uom_4: string | null;
   uom_5: string | null;
   uom_6: string | null;
+  uom_7: string | null;
+  is_custom?: boolean;
 }
 
 import type { ScheduleOfValuesItem } from '@/types/job';
@@ -67,22 +65,64 @@ interface SOVTableProps {
   onEditAttempt?: () => void;
   isSignedContract?: boolean;
   changeOrderApproved?: boolean;
+  forceShowPricing?: boolean;
+}
+
+export interface SOVTableHandle {
+  flushPendingSave: () => Promise<void>;
 }
 
 interface CustomItemDraft {
   rowId: string;
   itemNumber: string;
   description: string;
+  workType: string;
   uom: string;
   quantity: number;
   unitPrice: number;
   retainageType: 'percent' | 'dollar';
   retainageValue: number;
+  notes: string;
 }
+
+interface PendingDeleteState {
+  rowId: string;
+  reason: string;
+}
+
+interface SovItemEditorDraft {
+  rowId: string;
+  isNew: boolean;
+  itemNumber: string;
+  displayItemNumber: string;
+  displayName: string;
+  sourceDescription: string;
+  workType: string;
+  uom: string;
+  quantity: number;
+  unitPrice: number;
+  retainageType: 'percent' | 'dollar';
+  retainageValue: number;
+  notes: string;
+  sov_item_id?: number;
+  custom_sov_item_id?: number;
+  isCustom?: boolean;
+}
+
+const CUSTOM_WORK_TYPE_OPTIONS = [
+  { value: 'MPT', label: 'MPT' },
+  { value: 'PERMANENT_SIGNS', label: 'Permanent Signs' },
+  { value: 'FLAGGING', label: 'Flagging' },
+  { value: 'LANE_CLOSURE', label: 'Lane Closure' },
+  { value: 'SERVICE', label: 'Service' },
+  { value: 'DELIVERY', label: 'Delivery' },
+  { value: 'RENTAL', label: 'Rental' },
+  { value: 'SALE', label: 'Sale' },
+];
 
 function calcRetainageAmount(extendedPrice: number, type: 'percent' | 'dollar', value: number): number {
   if (type === 'percent') return Math.round(extendedPrice * (value / 100) * 100) / 100;
-  return Math.round(value * 100) / 100;
+  return Math.round(Math.min(value, extendedPrice) * 100) / 100;
 }
 
 function clampNumber(value: number, min: number, max: number) {
@@ -90,29 +130,134 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 function getFirstNonNullUom(master: SovMasterItem): string {
-  return master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || "EA";
+  const firstUom = master.uom_1 || master.uom_2 || master.uom_3 || master.uom_4 || master.uom_5 || master.uom_6 || master.uom_7 || "EA";
+  return normalizeUom(firstUom);
+}
+
+function normalizeUom(uom: string): string {
+  const trimmed = uom.trim().replace(/\s+/g, " ");
+  const normalizedKey = trimmed.replace(/\./g, "").toUpperCase();
+
+  if (normalizedKey === "SQ FT" || normalizedKey === "SQFT") return "SQ. FT";
+  if (normalizedKey === "SF") return "SF";
+  if (normalizedKey === "LS" || normalizedKey === "LUMP SUM") return "LUMP SUM";
+
+  return trimmed.toUpperCase();
 }
 
 function getAvailableUoms(master: SovMasterItem): string[] {
-  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6];
-  return uoms.filter((uom): uom is string => uom !== null && uom.trim() !== '');
+  const uoms = [master.uom_1, master.uom_2, master.uom_3, master.uom_4, master.uom_5, master.uom_6, master.uom_7];
+  return Array.from(
+    new Set(
+      uoms
+        .filter((uom): uom is string => uom !== null && uom.trim() !== '')
+        .map(normalizeUom)
+    )
+  );
 }
 
-export const SOVTable = ({
+function getAvailableUomsForWorkType(products: SovMasterItem[], workType: string): string[] {
+  if (!workType.trim()) return ["EA"];
+
+  const matchingProducts = products.filter((product) => {
+    const normalizedType = product.work_type?.trim().toUpperCase();
+    return normalizedType === workType.trim().toUpperCase();
+  });
+
+  const uoms = matchingProducts.flatMap((product) => getAvailableUoms(product));
+  const deduped = Array.from(new Set(uoms.map(normalizeUom)));
+
+  return deduped.length > 0 ? deduped : ["EA"];
+}
+
+function mergeSelectableUoms(primaryUoms: string[], fallbackUoms: string[], currentUom?: string): string[] {
+  const normalizedCurrent = currentUom?.trim() ? normalizeUom(currentUom) : null;
+
+  return Array.from(
+    new Set(
+      [
+        ...primaryUoms.map(normalizeUom),
+        ...(normalizedCurrent ? [normalizedCurrent] : []),
+        ...fallbackUoms.map(normalizeUom),
+      ].filter((uom) => uom.trim() !== "")
+    )
+  );
+}
+
+function getMasterDisplayItemNumber(item: Pick<SovMasterItem, 'display_item_number' | 'item_number'>): string {
+  return item.display_item_number?.trim() || item.item_number?.trim() || '';
+}
+
+function formatWorkTypeLabel(workType: string): string {
+  const normalized = workType.trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PERMANENT_SIGNS':
+      return 'Permanent Signs';
+    case 'LANE_CLOSURE':
+      return 'Lane Closure';
+    case 'FLAGGING':
+      return 'Flagging';
+    case 'DELIVERY':
+      return 'Delivery';
+    case 'SERVICE':
+      return 'Service';
+    case 'RENTAL':
+      return 'Rental';
+    case 'SALE':
+      return 'Sale';
+    case 'MPT':
+      return 'MPT';
+    case 'CUSTOM':
+      return 'Custom';
+    default:
+      return workType || 'Other';
+  }
+}
+
+function getWorkTypeTone(workType: string): string {
+  const normalized = workType.trim().toUpperCase();
+
+  switch (normalized) {
+    case 'MPT':
+      return 'border-[#16335A]/15 bg-[#16335A]/5 text-[#16335A]';
+    case 'RENTAL':
+      return 'border-amber-500/20 bg-amber-500/5 text-amber-800';
+    case 'SALE':
+      return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-800';
+    case 'SERVICE':
+      return 'border-violet-500/20 bg-violet-500/5 text-violet-800';
+    case 'DELIVERY':
+      return 'border-cyan-500/20 bg-cyan-500/5 text-cyan-800';
+    case 'FLAGGING':
+      return 'border-orange-500/20 bg-orange-500/5 text-orange-800';
+    case 'LANE_CLOSURE':
+      return 'border-rose-500/20 bg-rose-500/5 text-rose-800';
+    case 'PERMANENT_SIGNS':
+      return 'border-slate-500/20 bg-slate-500/5 text-slate-800';
+    case 'CUSTOM':
+      return 'border-zinc-500/20 bg-zinc-500/5 text-zinc-800';
+    default:
+      return 'border-border bg-muted/40 text-foreground';
+  }
+}
+
+const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
   jobId,
   contractId,
   readOnly = false,
   onEditAttempt,
   isSignedContract = false,
-  changeOrderApproved = false
-}: SOVTableProps) => {
+  changeOrderApproved = false,
+  forceShowPricing = false
+}, ref) => {
   console.log('[SOVTable] Component initialized with:', { jobId, contractId, readOnly });
 
   const [sovProducts, setSovProducts] = useState<SovMasterItem[]>([]);
   const [sovMasterLoading, setSovMasterLoading] = useState(false);
   // Use contractId if available, otherwise use jobId for the hook
   const effectiveId = contractId || jobId;
-  const { items, loading: sovLoading, saving, updateItems, saveNow } = useSovItems(effectiveId, !!contractId);
+  const { items, loading: sovLoading, saving, updateItems, saveNow, removeItemWithReason } = useSovItems(effectiveId, !!contractId);
 
   console.log('[SOVTable] useSovItems hook returned:', { items: items.length, loading: sovLoading, saving });
 
@@ -121,7 +266,9 @@ export const SOVTable = ({
     const fetchSovItems = async () => {
       setSovMasterLoading(true);
       try {
-        const response = await fetch('/api/sov-items');
+        const params = new URLSearchParams();
+        if (effectiveId) params.set('job_id', effectiveId);
+        const response = await fetch(`/api/sov-items${params.toString() ? `?${params.toString()}` : ''}`);
         console.log('[SOVTable] SOV master items API response:', response.status, response.statusText);
         if (response.ok) {
           const data = await response.json();
@@ -139,11 +286,16 @@ export const SOVTable = ({
     };
 
     fetchSovItems();
-  }, []);
+  }, [effectiveId]);
 
   const [selectorOpen, setSelectorOpen] = useState<string | null>(null);
   const [selectorSearch, setSelectorSearch] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorStep, setEditorStep] = useState<'pick' | 'configure'>('pick');
+  const [editorDraft, setEditorDraft] = useState<SovItemEditorDraft | null>(null);
   const [customDraft, setCustomDraft] = useState<CustomItemDraft | null>(null);
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null);
 
   // Bulk retainage controls
   const [bulkType, setBulkType] = useState<'percent' | 'dollar'>('dollar');
@@ -153,6 +305,84 @@ export const SOVTable = ({
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const notesTimeoutRef = useRef<number | null>(null);
+  const [unitPriceDrafts, setUnitPriceDrafts] = useState<Record<string, string>>({});
+  const [activePriceInputId, setActivePriceInputId] = useState<string | null>(null);
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
+  const showPricingColumns = forceShowPricing || !readOnly;
+  const showWorkTypeColumn = !readOnly;
+  const totalColumnCount =
+    (readOnly ? 0 : 1) +
+    1 +
+    1 +
+    (showWorkTypeColumn ? 1 : 0) +
+    1 +
+    1 +
+    (showPricingColumns ? 4 : 0) +
+    1 +
+    1;
+  const notesColSpan = totalColumnCount;
+  const totalLabelColSpan = (readOnly ? 0 : 1) + (showWorkTypeColumn ? 6 : 5);
+
+  useImperativeHandle(ref, () => ({
+    flushPendingSave: async () => {
+      await saveNow();
+    },
+  }), [saveNow]);
+
+  useEffect(() => {
+    setUnitPriceDrafts((prev) => {
+      const next: Record<string, string> = {};
+      items.forEach((item) => {
+        next[item.id] = prev[item.id] ?? Math.round(item.unitPrice * 100).toFixed(0);
+      });
+      return next;
+    });
+  }, [items]);
+
+  useEffect(() => {
+    if (customDialogOpen) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      document.body.style.pointerEvents = "";
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [customDialogOpen]);
+
+  useEffect(() => {
+    if (readOnly || sovProducts.length === 0) return;
+
+    const nextUomById = new Map<string, string>();
+
+    items.forEach((item) => {
+      if (!item.itemNumber) return;
+      const masterItem = sovProducts.find((p) => p.item_number === item.itemNumber);
+      if (!masterItem) return;
+
+      const availableUoms = getAvailableUoms(masterItem);
+      if (availableUoms.length === 0) return;
+
+      const normalizedCurrent = item.uom ? normalizeUom(item.uom) : '';
+
+      if (!normalizedCurrent || !availableUoms.includes(normalizedCurrent) || availableUoms.length === 1) {
+        const nextUom = availableUoms.length === 1 ? availableUoms[0] : (normalizedCurrent || availableUoms[0]);
+        if (normalizedCurrent !== nextUom) {
+          nextUomById.set(item.id, nextUom);
+        }
+      }
+    });
+
+    if (nextUomById.size === 0) return;
+
+    updateItems((prevItems) =>
+      prevItems.map((item) =>
+        nextUomById.has(item.id)
+          ? { ...item, uom: nextUomById.get(item.id)! }
+          : item
+      )
+    );
+  }, [items, readOnly, sovProducts, updateItems]);
 
   const filteredItems = useMemo(() => {
     if (!selectorSearch.trim()) return sovProducts;
@@ -174,40 +404,128 @@ export const SOVTable = ({
     });
   }, [sovProducts, selectorSearch]);
 
+  const sortedSelectableItems = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      const aType = (a.is_custom ? 'CUSTOM' : a.work_type || 'OTHER').trim().toUpperCase();
+      const bType = (b.is_custom ? 'CUSTOM' : b.work_type || 'OTHER').trim().toUpperCase();
+
+      if (aType !== bType) {
+        if (aType === 'CUSTOM') return 1;
+        if (bType === 'CUSTOM') return -1;
+        return aType.localeCompare(bType);
+      }
+
+      return a.item_number.localeCompare(b.item_number, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [filteredItems]);
+
+  const groupedSelectableItems = useMemo(() => {
+    return sortedSelectableItems.reduce<Array<{ heading: string; items: SovMasterItem[] }>>((acc, item) => {
+      const heading = (item.is_custom ? 'CUSTOM' : item.work_type || 'OTHER').trim().toUpperCase();
+      const lastGroup = acc[acc.length - 1];
+
+      if (!lastGroup || lastGroup.heading !== heading) {
+        acc.push({ heading, items: [item] });
+        return acc;
+      }
+
+      lastGroup.items.push(item);
+      return acc;
+    }, []);
+  }, [sortedSelectableItems]);
+
+  const customUomOptions = useMemo(() => {
+    const allUoms = sovProducts.flatMap((product) => getAvailableUoms(product));
+    const deduped = Array.from(new Set(allUoms.filter((uom) => uom.trim() !== "").map(normalizeUom)));
+    return deduped.length > 0 ? deduped : ["EA"];
+  }, [sovProducts]);
+
+  const buildEditorDraftFromItem = useCallback((item: ScheduleOfValuesItem, options?: { isNew?: boolean }): SovItemEditorDraft => ({
+    rowId: item.id,
+    isNew: options?.isNew ?? false,
+    itemNumber: item.itemNumber || '',
+    displayItemNumber: item.displayItemNumber || item.itemNumber || '',
+    displayName: item.displayNameOverride || item.description || '',
+    sourceDescription: item.sourceDescription || item.description || '',
+    workType: item.work_type || '',
+    uom: item.uomOverride || item.uom || '',
+    quantity: item.quantity || 1,
+    unitPrice: item.unitPrice || 0,
+    retainageType: item.retainageType || 'dollar',
+    retainageValue: item.retainageValue || 0,
+    notes: item.notes || '',
+    sov_item_id: item.sov_item_id,
+    custom_sov_item_id: item.custom_sov_item_id,
+    isCustom: item.is_custom,
+  }), []);
+
+  const openEditorForNewItem = useCallback(() => {
+    const rowId = `temp-${crypto.randomUUID()}`;
+    setEditorDraft({
+      rowId,
+      isNew: true,
+      itemNumber: '',
+      displayItemNumber: '',
+      displayName: '',
+      sourceDescription: '',
+      workType: '',
+      uom: '',
+      quantity: 1,
+      unitPrice: 0,
+      retainageType: 'dollar',
+      retainageValue: 0,
+      notes: '',
+    });
+    setEditorStep('pick');
+    setSelectorSearch('');
+    setEditorOpen(true);
+  }, []);
+
+  const openEditorForExistingItem = useCallback((item: ScheduleOfValuesItem) => {
+    setEditorDraft(buildEditorDraftFromItem(item));
+    setEditorStep('configure');
+    setSelectorSearch('');
+    setEditorOpen(true);
+  }, [buildEditorDraftFromItem]);
+
+  const applyMasterToEditor = useCallback((master: SovMasterItem) => {
+    setEditorDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        itemNumber: master.item_number,
+        displayItemNumber: getMasterDisplayItemNumber(master),
+        displayName: master.description || master.display_name || getMasterDisplayItemNumber(master),
+        sourceDescription: master.description || '',
+        workType: master.work_type || '',
+        uom: getFirstNonNullUom(master),
+        sov_item_id: master.is_custom ? undefined : master.id,
+        custom_sov_item_id: master.is_custom ? master.id : undefined,
+        isCustom: master.is_custom,
+      };
+    });
+    setEditorStep('configure');
+  }, []);
+
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    setEditorStep('pick');
+    setEditorDraft(null);
+    setSelectorSearch('');
+  }, []);
+
   const addRow = () => {
     // Check if change order is required for signed contracts
     if (isSignedContract && !changeOrderApproved && onEditAttempt) {
       onEditAttempt();
       return;
     }
-
-    const newItem: ScheduleOfValuesItem = {
-      id: `temp-${crypto.randomUUID()}`, // Mark as temporary/incomplete
-      itemNumber: '',
-      description: '',
-      uom: '',
-      quantity: 0,
-      unitPrice: 0,
-      extendedPrice: 0,
-      retainageType: 'dollar',
-      retainageValue: 0,
-      retainageAmount: 0,
-      notes: '',
-    };
-    // Add to items but don't trigger save yet (validation will prevent it)
-    updateItems([...items, newItem]);
-    // Open selector immediately to reduce one extra click
-    setSelectorOpen(newItem.id);
-    setSelectorSearch('');
-  };
-
-  const removeRow = (id: string) => {
-    updateItems(items.filter((i) => i.id !== id));
+    openEditorForNewItem();
   };
 
   const updateRow = (id: string, field: keyof ScheduleOfValuesItem, value: string | number) => {
-    updateItems(
-      items.map((item) => {
+    updateItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id !== id) return item;
         const updated = { ...item, [field]: value };
         if (field === 'quantity' || field === 'unitPrice') {
@@ -226,14 +544,21 @@ export const SOVTable = ({
     );
   };
 
+  const updateUnitPrice = (id: string, digits: string) => {
+    setUnitPriceDrafts((prev) => ({ ...prev, [id]: digits }));
+    updateRow(id, 'unitPrice', parseInt(digits || '0', 10) / 100);
+  };
+
   const updateRetainage = (
     id: string,
     nextType: 'percent' | 'dollar',
     rawValue: number
   ) => {
+    const currentItem = items.find((item) => item.id === id);
+    const maxDollarRetainage = currentItem?.extendedPrice ?? Number.MAX_SAFE_INTEGER;
     let nextValue = Number.isFinite(rawValue) ? rawValue : 0;
     if (nextType === 'percent') nextValue = clampNumber(nextValue, 0, 100);
-    else nextValue = clampNumber(nextValue, 0, Number.MAX_SAFE_INTEGER);
+    else nextValue = clampNumber(nextValue, 0, maxDollarRetainage);
     nextValue = Math.round(nextValue * 100) / 100;
 
     updateItems(
@@ -258,13 +583,15 @@ export const SOVTable = ({
     // useSovItems will persist the items once a contractId becomes available.
     if (!effectiveId) {
       console.log('[SOVTable] No effectiveId yet — updating local state optimistically');
-      updateItems(
-        items.map((item) =>
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
           item.id === rowId
             ? {
                 ...item,
                 itemNumber: master.item_number,
-                description: master.display_name,
+                displayItemNumber: getMasterDisplayItemNumber(master),
+                description: master.description,
+                work_type: master.work_type,
                 uom: getFirstNonNullUom(master),
                 quantity: item.quantity || 1,
                 unitPrice: item.unitPrice || 0,
@@ -284,9 +611,11 @@ export const SOVTable = ({
     try {
       // Immediately create database record when item is selected
       const payload = {
-        sov_item_id: master.id,
+        sov_item_id: master.is_custom ? null : master.id,
+        custom_sov_item_id: master.is_custom ? master.id : null,
         item_number: master.item_number,
-        description: master.display_name,
+        description: master.description,
+        work_type: master.is_custom ? 'CUSTOM' : master.work_type,
         uom: getFirstNonNullUom(master),
         quantity: 1, // Default quantity
         unit_price: 0, // Default unit price
@@ -303,18 +632,18 @@ export const SOVTable = ({
         ? `/api/l/contracts/${contractId}/sov-items`
         : `/api/l/jobs/${jobId}/sov-items`;
 
+      const requestBody = contractId ? { items: [payload] } : payload;
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: [payload] // The contract endpoint expects an array of items
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[SOVTable] Failed to create SOV item record:', errorData);
-        throw new Error(`Failed to create SOV item: ${response.status} ${response.statusText}`);
+        throw new Error(errorData?.error || `Failed to create SOV item: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -326,14 +655,18 @@ export const SOVTable = ({
         : result.data;
 
       // Replace the temp item with the real database record
-      updateItems(
-        items.map((item) =>
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
           item.id === rowId
             ? {
                 ...item,
                 id: createdItem.id, // Replace temp ID with real database ID
+                sov_item_id: createdItem.sov_item_id ?? payload.sov_item_id ?? undefined,
+                custom_sov_item_id: createdItem.custom_sov_item_id ?? payload.custom_sov_item_id ?? undefined,
                 itemNumber: master.item_number,
-                description: master.display_name,
+                displayItemNumber: createdItem.display_item_number || getMasterDisplayItemNumber(master),
+                description: master.description,
+                work_type: createdItem.work_type || master.work_type,
                 uom: createdItem.uom || getFirstNonNullUom(master),
                 quantity: createdItem.quantity || payload.quantity,
                 unitPrice: createdItem.unit_price || payload.unit_price,
@@ -349,7 +682,7 @@ export const SOVTable = ({
       console.log('[SOVTable] Successfully replaced temp item with database record');
     } catch (error) {
       console.error('[SOVTable] Error selecting master item:', error);
-      // Could show a toast error here if needed
+      toast.error(error instanceof Error ? error.message : 'Failed to create SOV item');
     } finally {
       setSelectorOpen(null);
       setSelectorSearch('');
@@ -377,8 +710,8 @@ export const SOVTable = ({
       notes: '',
     };
 
-    updateItems(
-      items.map((item) => (item.id === rowId ? newItem : item))
+    updateItems((prevItems) =>
+      prevItems.map((item) => (item.id === rowId ? newItem : item))
     );
     setSelectorOpen(null);
   };
@@ -392,11 +725,13 @@ export const SOVTable = ({
           rowId,
           itemNumber: existing.itemNumber,
           description: existing.description,
-          uom: existing.uom,
-          quantity: existing.quantity,
-          unitPrice: existing.unitPrice,
-          retainageType: existing.retainageType,
-          retainageValue: existing.retainageValue,
+          workType: existing.work_type || '',
+          uom: existing.uom || customUomOptions[0] || 'EA',
+          quantity: existing.quantity || 1,
+          unitPrice: existing.unitPrice || 0,
+          retainageType: existing.retainageType || 'dollar',
+          retainageValue: existing.retainageValue || 0,
+          notes: existing.notes || '',
         });
       }
     } else {
@@ -406,7 +741,8 @@ export const SOVTable = ({
         id: newId,
         itemNumber: '',
         description: '',
-        uom: 'EA',
+        work_type: '',
+        uom: '',
         quantity: 0,
         unitPrice: 0,
         extendedPrice: 0,
@@ -415,54 +751,129 @@ export const SOVTable = ({
         retainageAmount: 0,
         notes: '',
       };
-      updateItems([...items, newItem]);
+      updateItems((prevItems) => [...prevItems, newItem]);
       setCustomDraft({
         rowId: newId,
         itemNumber: '',
         description: '',
-        uom: 'EA',
-        quantity: 0,
+        workType: '',
+        uom: customUomOptions[0] || 'EA',
+        quantity: 1,
         unitPrice: 0,
         retainageType: 'dollar',
         retainageValue: 0,
+        notes: '',
       });
     }
+    setCustomDialogOpen(true);
     setSelectorOpen(null);
     setSelectorSearch('');
   };
 
+  const closeCustomDialog = (discardUnsavedRow: boolean) => {
+    if (discardUnsavedRow && customDraft) {
+      updateItems((prevItems) => {
+        const row = prevItems.find((item) => item.id === customDraft.rowId);
+        if (row && !row.itemNumber) {
+          return prevItems.filter((item) => item.id !== customDraft.rowId);
+        }
+        return prevItems;
+      });
+    }
+
+    setCustomDialogOpen(false);
+    window.setTimeout(() => {
+      setCustomDraft(null);
+    }, 0);
+  };
+
   const saveCustomItem = () => {
     if (!customDraft || !customDraft.itemNumber.trim() || !customDraft.description.trim()) return;
-    const extendedPrice = Math.round(customDraft.quantity * customDraft.unitPrice * 100) / 100;
-    const retainageAmount = calcRetainageAmount(extendedPrice, customDraft.retainageType, customDraft.retainageValue);
-    updateItems(
-      items.map((item) =>
+    const quantity = Math.max(1, customDraft.quantity || 1);
+    const unitPrice = Math.max(0, customDraft.unitPrice || 0);
+    const extendedPrice = Math.round(quantity * unitPrice * 100) / 100;
+    const retainageValue = customDraft.retainageType === 'percent'
+      ? clampNumber(customDraft.retainageValue || 0, 0, 100)
+      : clampNumber(customDraft.retainageValue || 0, 0, extendedPrice);
+    const nextUom = normalizeUom(customDraft.uom || customUomOptions[0] || 'EA');
+
+    updateItems((prevItems) =>
+      prevItems.map((item) =>
         item.id === customDraft.rowId
           ? {
               ...item,
               itemNumber: customDraft.itemNumber.trim(),
               description: customDraft.description.trim(),
-              uom: customDraft.uom.trim() || 'EA',
-              quantity: customDraft.quantity,
-              unitPrice: customDraft.unitPrice,
+              sourceDescription: customDraft.description.trim(),
+              work_type: customDraft.workType,
+              uom: nextUom,
+              uomOverride: nextUom,
+              quantity,
+              unitPrice,
               extendedPrice,
               retainageType: customDraft.retainageType,
-              retainageValue: customDraft.retainageValue,
-              retainageAmount,
+              retainageValue,
+              retainageAmount: calcRetainageAmount(
+                extendedPrice,
+                customDraft.retainageType,
+                retainageValue
+              ),
+              notes: customDraft.notes || '',
+              is_custom: true,
             }
           : item
       )
     );
-    setCustomDraft(null);
+    closeCustomDialog(false);
   };
+
+  const saveEditorDraft = useCallback(() => {
+    if (!editorDraft?.itemNumber.trim()) return;
+
+    const normalizedUom = editorDraft.uom.trim();
+    const normalizedDescription = (editorDraft.sourceDescription || editorDraft.displayName || editorDraft.itemNumber).trim();
+    const nextItem: ScheduleOfValuesItem = {
+      id: editorDraft.rowId,
+      itemNumber: editorDraft.itemNumber,
+      displayItemNumber: editorDraft.displayItemNumber || editorDraft.itemNumber,
+      description: normalizedDescription,
+      sourceDescription: normalizedDescription,
+      displayNameOverride: undefined,
+      quantity: Math.max(1, editorDraft.quantity || 1),
+      unitPrice: Math.max(0, editorDraft.unitPrice || 0),
+      extendedPrice: Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
+      retainageAmount: calcRetainageAmount(
+        Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
+        editorDraft.retainageType,
+        editorDraft.retainageValue || 0
+      ),
+      retainageType: editorDraft.retainageType,
+      retainageValue: editorDraft.retainageValue || 0,
+      uom: normalizedUom || 'EA',
+      uomOverride: normalizedUom || 'EA',
+      notes: editorDraft.notes || '',
+      work_type: editorDraft.workType,
+      sov_item_id: editorDraft.sov_item_id,
+      custom_sov_item_id: editorDraft.custom_sov_item_id,
+      is_custom: editorDraft.isCustom,
+    };
+
+    if (editorDraft.isNew) {
+      updateItems((prev) => [...prev, nextItem]);
+    } else {
+      updateItems((prev) => prev.map((item) => (item.id === editorDraft.rowId ? { ...item, ...nextItem } : item)));
+    }
+
+    closeEditor();
+  }, [closeEditor, editorDraft, updateItems]);
 
   const applyBulkRetainage = () => {
     let val = bulkValueDigits ? (parseInt(bulkValueDigits, 10) || 0) / 100 : 0;
     if (bulkType === 'percent') val = clampNumber(val, 0, 100);
     val = Math.round(val * 100) / 100;
 
-    updateItems(
-      items.map((item) => ({
+    updateItems((prevItems) =>
+      prevItems.map((item) => ({
         ...item,
         retainageType: bulkType,
         retainageValue: val,
@@ -472,43 +883,69 @@ export const SOVTable = ({
 
   };
 
+  const moveItem = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    updateItems((prevItems) => {
+      const fromIndex = prevItems.findIndex((item) => item.id === fromId);
+      const toIndex = prevItems.findIndex((item) => item.id === toId);
+
+      if (fromIndex === -1 || toIndex === -1) return prevItems;
+
+      const nextItems = [...prevItems];
+      const [movedItem] = nextItems.splice(fromIndex, 1);
+      nextItems.splice(toIndex, 0, movedItem);
+      return nextItems;
+    });
+  }, [updateItems]);
+
   const totalExtended = items.reduce((sum, i) => sum + i.extendedPrice, 0);
   const totalRetainage = items.reduce((sum, i) => sum + i.retainageAmount, 0);
 
-  const customExtended = customDraft
-    ? Math.round(customDraft.quantity * customDraft.unitPrice * 100) / 100
-    : 0;
-
   if (sovLoading) {
     return (
-      <div className="rounded-xl border bg-card p-4">
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+        <div className="border-b border-border/60 bg-muted/30 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-foreground/70" />
+            <h2 className="text-sm font-semibold tracking-[0.08em] text-foreground uppercase">Schedule of Values</h2>
+          </div>
+        </div>
         <div className="text-center py-8 text-muted-foreground">Loading SOV items...</div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          Schedule of Values
-        </h2>
-        {!readOnly && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={addRow} className="h-7 text-xs gap-1">
-              <Plus className="h-3 w-3" /> Add Line Item
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => openCustomDialog()} className="h-7 text-xs gap-1">
-              <Plus className="h-3 w-3" /> Add Custom Item
-            </Button>
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="border-b border-border/60 bg-muted/30 px-5 py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-foreground/70" />
+              <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-foreground">Schedule of Values</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="border border-border/70 bg-background/80 text-[11px] font-medium text-foreground">
+                {items.length} {items.length === 1 ? 'Item' : 'Items'}
+              </Badge>
+            </div>
           </div>
-        )}
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={addRow} className="h-8 border-border/70 bg-background text-xs font-medium">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Line Item
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+
+      <div className="px-5 py-4">
 
       {/* Bulk retainage controls - only show when not read-only */}
       {items.length > 0 && !readOnly && (
-        <div className="mb-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-border/60 bg-muted/40 p-3">
           <span className="text-xs font-medium text-foreground whitespace-nowrap">Apply retainage to all:</span>
           <DollarPercentCurrencyInputField
             type={bulkType}
@@ -524,23 +961,30 @@ export const SOVTable = ({
       )}
 
       {items.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-sm">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 py-10 text-center text-sm text-muted-foreground">
           No line items yet. Click Add Line Item to begin.
         </div>
       ) : (
-        <div className="overflow-x-auto max-w-full">
-          <Table className="min-w-[800px]">
+        <div className="max-w-full min-w-0 overflow-hidden rounded-xl border border-border/60">
+          <div className="overflow-x-auto">
+          <Table className={cn("min-w-[800px]", readOnly && "min-w-[600px]")}>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px] text-xs">Item Number</TableHead>
-                <TableHead className="text-xs">Description</TableHead>
-                <TableHead className="w-[200px] text-xs">UOM</TableHead>
-                <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
-                <TableHead className="w-[100px] text-xs text-right">Unit Price</TableHead>
-                <TableHead className="w-[110px] text-xs text-right">Extended</TableHead>
-                <TableHead className="w-[280px] text-xs text-right">Retainage</TableHead>
-                <TableHead className="w-[100px] text-xs text-right">Ret. Amt</TableHead>
-                <TableHead className="w-[40px] text-xs text-center">Notes</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                {!readOnly && <TableHead className="w-[36px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" />}
+                <TableHead className="w-[120px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</TableHead>
+                <TableHead className="min-w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Description</TableHead>
+                {showWorkTypeColumn && (
+                  <TableHead className="w-[125px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+                    Work Type
+                  </TableHead>
+                )}
+                <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap">UOM</TableHead>
+                <TableHead className="w-[70px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Qty</TableHead>
+                {showPricingColumns && <TableHead className="w-[150px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Unit Price</TableHead>}
+                {showPricingColumns && <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Extended</TableHead>}
+                {showPricingColumns && <TableHead className="w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Retainage</TableHead>}
+                {showPricingColumns && <TableHead className="w-[100px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Ret. Amt</TableHead>}
+                <TableHead className="w-[40px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">Notes</TableHead>
                 <TableHead className="w-[40px]" />
               </TableRow>
             </TableHeader>
@@ -551,380 +995,148 @@ export const SOVTable = ({
 
                 return (
                 <Fragment key={item.id}>
-                <TableRow key={item.id}>
-                  <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs font-mono truncate block px-1">{item.itemNumber}</span>
-                    ) : (
-                      <Select
-                        value={item.itemNumber || undefined}
-                        onValueChange={(value) => {
-                          if (value === "custom") {
-                            openCustomDialog(item.id);
-                            return;
-                          }
-                          if (value === "delivery") {
-                            handleQuickAdd(item.id, 'delivery');
-                            return;
-                          }
-                          if (value === "service") {
-                            handleQuickAdd(item.id, 'service');
-                            return;
-                          }
-                          const selected = sovProducts.find(p => p.item_number === value);
-                          if (selected) selectMasterItem(item.id, selected);
+                <TableRow
+                  key={item.id}
+                  className={cn(
+                    !readOnly && "transition-colors hover:bg-muted/20",
+                    dragOverItemId === item.id && draggedItemId !== item.id && "bg-primary/5"
+                  )}
+                  onDragOver={(e) => {
+                    if (readOnly || !draggedItemId || draggedItemId === item.id) return;
+                    e.preventDefault();
+                    setDragOverItemId(item.id);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverItemId === item.id) {
+                      setDragOverItemId(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (readOnly || !draggedItemId) return;
+                    e.preventDefault();
+                    moveItem(draggedItemId, item.id);
+                    setDraggedItemId(null);
+                    setDragOverItemId(null);
+                  }}
+                >
+                  {!readOnly && (
+                    <TableCell className="p-1.5 align-top">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        draggable
+                        className={cn(
+                          "h-7 w-7 cursor-grab text-muted-foreground hover:text-foreground",
+                          draggedItemId === item.id && "cursor-grabbing text-foreground"
+                        )}
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', String(item.id));
+                          setDraggedItemId(item.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedItemId(null);
+                          setDragOverItemId(null);
                         }}
                       >
-                        <SelectTrigger className="w-full h-7 text-xs font-mono font-normal bg-transparent">
-                          <SelectValue placeholder="Select item…">
-                            {item.itemNumber || "Select item…"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent position="popper" side="bottom" className="max-h-80 w-[550px] p-2">
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder="Search by item #, name, or work type…"
-                              value={selectorSearch}
-                              onValueChange={setSelectorSearch}
-                              autoFocus
-                            />
-                            <CommandList>
-
-                              {/* Items grouped by work type */}
-                              {(() => {
-                                const searchTerm = selectorSearch.toLowerCase().trim();
-                                const grouped = filteredItems.reduce<Record<string, SovMasterItem[]>>((acc, curr) => {
-                                  const key = curr.work_type?.trim().toUpperCase();
-                                  if (key && !acc[key]) acc[key] = [];
-                                  if (key) acc[key].push(curr);
-                                  return acc;
-                                }, {});
-
-                                // Always show these three categories at the top when no search
-                                const alwaysShowCategories = ['SERVICE', 'DELIVERY', 'CUSTOM'];
-
-                                // Add synthetic groups for Delivery, Service, and Custom
-                                if (!grouped['DELIVERY']) grouped['DELIVERY'] = [];
-                                if (!grouped['SERVICE']) grouped['SERVICE'] = [];
-                                if (!grouped['CUSTOM']) grouped['CUSTOM'] = [];
-
-                                let allWorkTypes: string[];
-
-                                if (!searchTerm) {
-                                  // No search: show always-show categories first, then others with items
-                                  allWorkTypes = [
-                                    ...alwaysShowCategories,
-                                    ...Object.keys(grouped)
-                                      .filter(type => !alwaysShowCategories.includes(type) && grouped[type].length > 0)
-                                      .sort()
-                                  ];
-                                } else {
-                                  // With search: show categories that have items or match search
-                                  allWorkTypes = Object.keys(grouped)
-                                    .filter(type => {
-                                      if (alwaysShowCategories.includes(type)) {
-                                        // Always show these when searched
-                                        return true;
-                                      }
-                                      return grouped[type].length > 0;
-                                    })
-                                    .sort();
-                                }
-
-                                return allWorkTypes.map((workType) => {
-                                  const groupItems = grouped[workType] || [];
-
-                                  // For synthetic sections (Delivery, Service, Custom), show items without category headers
-                                  if (workType === 'DELIVERY' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="delivery-item"
-                                        value="delivery"
-                                        onSelect={() => handleQuickAdd(item.id, 'delivery')}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">DELIVERY</span>
-                                        <span className="truncate">Delivery</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  if (workType === 'SERVICE' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="service-item"
-                                        value="service"
-                                        onSelect={() => handleQuickAdd(item.id, 'service')}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">SERVICE</span>
-                                        <span className="truncate">Service</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  if (workType === 'CUSTOM' && groupItems.length === 0) {
-                                    return (
-                                      <CommandItem
-                                        key="custom-item"
-                                        value="custom"
-                                        onSelect={() => openCustomDialog(item.id)}
-                                        className="text-xs cursor-pointer"
-                                      >
-                                        <Check className="mr-2 h-4 w-4 opacity-0" />
-                                        <span className="font-mono mr-2 text-muted-foreground">CUSTOM</span>
-                                        <span className="truncate">Custom Item Number</span>
-                                      </CommandItem>
-                                    );
-                                  }
-
-                                  // For work type groups with items, show them with category headers
-                                  if (groupItems.length > 0) {
-                                    return (
-                                      <CommandGroup key={workType} heading={workType}>
-                                        {groupItems.map((p) => (
-                                          <CommandItem
-                                            key={p.id}
-                                            value={[
-                                              p.item_number,
-                                              p.display_item_number,
-                                              p.display_name,
-                                              p.description,
-                                              p.work_type,
-                                            ].filter(Boolean).join(' ')}
-                                            onSelect={() => selectMasterItem(item.id, p)}
-                                            className="text-xs cursor-pointer"
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                item.itemNumber === p.item_number ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            <span className="font-mono mr-2 text-muted-foreground">{p.item_number}</span>
-                                            <span className="truncate">{p.display_name}</span>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    );
-                                  }
-
-                                  return null;
-                                });
-                              })()}
-
-                              {filteredItems.length === 0 && !sovMasterLoading && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                  No matching items found.
-                                </div>
-                              )}
-
-                              {sovMasterLoading && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                  Loading...
-                                </div>
-                              )}
-                            </CommandList>
-                          </Command>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <span className="text-xs px-1 truncate block">{item.description}</span>
-                  </TableCell>
+                        <GripVertical className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5">
                     {readOnly ? (
-                      <span className="text-xs px-1">{item.uom}</span>
+                      <span className="text-xs font-mono truncate block px-1">{item.displayItemNumber || item.itemNumber}</span>
                     ) : (
-                      (() => {
-                        const masterItem = sovProducts.find(p => p.item_number === item.itemNumber);
-                        const availableUoms = masterItem ? getAvailableUoms(masterItem) : [];
-
-                        // Always show select if we have UOM options, otherwise show as text
-                        return availableUoms.length > 0 ? (
-                          <Select
-                            value={item.uom}
-                            onValueChange={(value) => updateRow(item.id, 'uom', value)}
-                          >
-                            <SelectTrigger className="w-full h-7 text-xs bg-transparent">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableUoms.map((uom) => (
-                                <SelectItem key={uom} value={uom} className="text-xs">
-                                  {uom}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-xs px-1">{item.uom}</span>
-                        );
-                      })()
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-7 w-full justify-start overflow-hidden px-2 text-xs font-mono font-normal"
+                        onClick={() => openEditorForExistingItem(item)}
+                      >
+                        <span className="truncate">
+                          {item.displayItemNumber || item.itemNumber || 'Select item…'}
+                        </span>
+                      </Button>
                     )}
                   </TableCell>
                   <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">{item.quantity}</span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(item.id, 'quantity', Math.max(1, item.quantity - 1))}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          className="h-8 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={item.quantity || 1}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const cleaned = raw.replace(/\D/g, '');
-                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                            updateRow(item.id, 'quantity', num);
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(item.id, 'quantity', item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    {readOnly ? (
-                      <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                        ) : (
-                        <div className="flex items-center h-7 border rounded-md bg-background">
-                          <span className="px-2 text-xs text-muted-foreground border-r">$</span>
-                          <CurrencyInput
-                            value={Math.round(item.unitPrice * 100).toFixed(0)}
-                            onChange={(digits) => updateRow(item.id, 'unitPrice', parseInt(digits) / 100)}
-                            className="h-7 text-xs text-right w-[100px] border-0 focus-visible:ring-0"
-                          />
-                        </div>
-                        )}
-                  </TableCell>
-                  <TableCell className="p-1.5">
-                    <span className="text-xs text-right block px-1 font-medium">
-                      ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <span
+                      className={cn(
+                        "block px-1 text-sm text-foreground",
+                        readOnly ? "whitespace-normal break-words" : "truncate max-w-[35ch]"
+                      )}
+                      title={item.description || item.sourceDescription}
+                    >
+                      {item.description}
                     </span>
                   </TableCell>
+                  {showWorkTypeColumn && (
+                    <TableCell className="p-1.5">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "rounded-md border text-[10px] font-semibold uppercase tracking-wide",
+                          getWorkTypeTone(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))
+                        )}
+                      >
+                        {formatWorkTypeLabel(item.work_type || (isCustom ? 'CUSTOM' : 'OTHER'))}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5">
-                    {readOnly ? (
+                    <span className="text-xs px-1 whitespace-nowrap">{item.uom}</span>
+                  </TableCell>
+                  <TableCell className="p-1.5">
+                    <span className="text-xs text-right block px-1">{item.quantity}</span>
+                  </TableCell>
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
+                      <span className="text-xs text-right block px-1">${item.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
+                      <span className="text-xs text-right block px-1 font-medium">
+                        ${item.extendedPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5">
                       <span className="text-xs text-right block px-1">
                         {item.retainageType === 'percent'
                           ? `${item.retainageValue}%`
                           : `$${item.retainageValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                       </span>
-                    ) : (
-                      <div className="flex justify-end">
-                        <DollarPercentCurrencyInputField
-                          type={item.retainageType}
-                          value={item.retainageValue}
-                          onTypeChange={(type) => {
-                            const currentValue = item.retainageValue;
-                            const newValue = type === 'percent' ? currentValue / 100 : currentValue * 100;
-                            updateRetainage(item.id, type, newValue);
-                          }}
-                          onValueChange={(value) => updateRetainage(item.id, item.retainageType, value)}
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
-                    ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </TableCell>
+                    </TableCell>
+                  )}
+                  {showPricingColumns && (
+                    <TableCell className="p-1.5 text-right text-xs font-medium text-primary">
+                      ${item.retainageAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                  )}
                   <TableCell className="p-1.5 text-center relative">
-                    {readOnly ? (
-                      <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </div>
-                    ) : (
-                      <Popover
-                        open={editingNotesId === item.id}
-                        onOpenChange={(open) => {
-                          if (open) {
-                            setEditingNotesId(item.id);
-                            setNotesDraft(item.notes || '');
-                          } else {
-                            setEditingNotesId(null);
-                            setNotesDraft('');
-                          }
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn('h-6 w-6 relative', item.notes ? 'text-primary' : 'text-muted-foreground/40')}
-                          >
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {item.notes && (
-                              <div className="absolute top-0.5 right-0.5 h-1.5 w-1.5 bg-red-500 rounded-full" />
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-3" align="end">
-                          <div className="space-y-3">
-                            <label className="text-xs font-semibold text-foreground">Scope Notes</label>
-                            <textarea
-                              className="text-xs min-h-[80px] resize-none w-full p-2 border rounded"
-                              placeholder="Add notes about scope, special instructions, etc."
-                              value={notesDraft}
-                              onChange={(e) => setNotesDraft(e.target.value)}
-                            />
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[10px] text-muted-foreground">These notes will be visible in the project manager portal.</p>
-                              <Button
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => {
-                                  updateRow(item.id, 'notes', notesDraft);
-                                  setEditingNotesId(null);
-                                  setNotesDraft('');
-                                }}
-                              >
-                                Save
-                              </Button>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
+                    <div className={cn('inline-flex items-center justify-center h-6 w-6', item.notes ? 'text-primary' : 'text-muted-foreground/40')}>
+                      <MessageSquare className="h-3.5 w-3.5" />
+                    </div>
                   </TableCell>
                   <TableCell className="p-1.5">
                     {!readOnly && (
                       <div className="flex items-center gap-0.5">
-                        {isCustom && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => openCustomDialog(item.id)}
-                          >
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => removeRow(item.id)}
+                          onClick={() => openEditorForExistingItem(item)}
+                        >
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setPendingDelete({ rowId: item.id, reason: '' })}
                         >
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
@@ -933,8 +1145,8 @@ export const SOVTable = ({
                   </TableCell>
                 </TableRow>
                 {hasNotes && (
-                  <TableRow className="border-t-0">
-                    <TableCell colSpan={10} className="p-1.5 pt-0">
+                  <TableRow className="border-t-0 bg-muted/10">
+                    <TableCell colSpan={notesColSpan} className="p-1.5 pt-0">
                       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
                         <div className="flex items-start gap-2">
                           <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-foreground/70 shrink-0" />
@@ -951,42 +1163,299 @@ export const SOVTable = ({
                 );
               })}
 
-              {/* Totals row */}
-              <TableRow className="bg-muted/30 font-semibold">
-                <TableCell colSpan={5} className="p-1.5 text-xs text-right">
-                  Total
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs">
-                  ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs">
-                  Retainage
-                </TableCell>
-                <TableCell className="p-1.5 text-right text-xs text-primary">
-                  ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </TableCell>
-                <TableCell />
-                <TableCell />
-              </TableRow>
+              {showPricingColumns && (
+                <TableRow className="bg-muted/30 font-semibold">
+                  <TableCell colSpan={totalLabelColSpan} className="p-1.5 text-xs text-right">
+                    Total
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs">
+                    ${totalExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs">
+                    Retainage
+                  </TableCell>
+                  <TableCell className="p-1.5 text-right text-xs text-primary">
+                    ${totalRetainage.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell />
+                  <TableCell />
+                </TableRow>
+              )}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
+      </div>
+
+      <Dialog open={editorOpen} onOpenChange={(open) => {
+        if (!open) closeEditor();
+      }}>
+        <DialogContent className="flex h-[85vh] max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[1100px]">
+          <div className="shrink-0 px-6 pt-6">
+          <DialogHeader>
+            <DialogTitle className="text-sm">
+              {editorStep === 'pick' ? 'Choose SOV Item' : 'Configure SOV Item'}
+            </DialogTitle>
+            <DialogDescription>
+              {editorStep === 'pick'
+                ? 'Search the SOV master table and choose the line item you want to add.'
+                : 'Review the row values before saving them into the contract schedule of values.'}
+            </DialogDescription>
+          </DialogHeader>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+      {editorStep === 'pick' && (
+            <div className="space-y-3">
+              <Input
+                placeholder="Search item #, display #, description, or category…"
+                value={selectorSearch}
+                onChange={(e) => setSelectorSearch(e.target.value)}
+                autoFocus
+              />
+              {!readOnly && (
+                <div className="flex justify-end">
+                  <Button variant="outline" size="sm" onClick={() => openCustomDialog()}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Create Custom Item
+                  </Button>
+                </div>
+              )}
+              <div className="max-h-[500px] overflow-auto rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-[#FAFAFA]">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Item #</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px] w-[150px]">Display #</TableHead>
+                      <TableHead className="sticky top-0 bg-[#FAFAFA] text-[11px]">Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedSelectableItems.map((group) => (
+                      <Fragment key={group.heading}>
+                        <TableRow className="border-t border-[#16335A]/15 bg-[#16335A]/5 hover:bg-[#16335A]/5 data-[state=selected]:bg-[#16335A]/5">
+                          <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
+                            {formatWorkTypeLabel(group.heading)}
+                          </TableCell>
+                        </TableRow>
+                        {group.items.map((p) => (
+                          <TableRow
+                            key={`${p.is_custom ? 'custom' : 'standard'}-${p.id}`}
+                            className="cursor-pointer hover:bg-transparent data-[state=selected]:bg-transparent"
+                            onClick={() => applyMasterToEditor(p)}
+                          >
+                            <TableCell className="text-xs font-mono w-[150px]">{p.item_number}</TableCell>
+                            <TableCell className="text-xs font-mono w-[150px]">{getMasterDisplayItemNumber(p)}</TableCell>
+                            <TableCell className="text-xs">{p.description}</TableCell>
+                          </TableRow>
+                        ))}
+                      </Fragment>
+                    ))}
+                    {!sovMasterLoading && groupedSelectableItems.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground">
+                          No matching items found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {sovMasterLoading && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="py-6 text-center text-xs text-muted-foreground">
+                          Loading…
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {editorStep === 'configure' && editorDraft && (
+            <div className="space-y-4 pb-2">
+              <div className="grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</p>
+                  <p className="text-sm font-mono">{editorDraft.itemNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Display Number</p>
+                  <p className="text-sm font-mono">{editorDraft.displayItemNumber || editorDraft.itemNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Category</p>
+                  <p className="text-sm">{formatWorkTypeLabel(editorDraft.workType || 'OTHER')}</p>
+                </div>
+                <div className="md:col-span-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Master Description</p>
+                  <p className="text-sm">{editorDraft.sourceDescription || '—'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">UOM</p>
+                  </div>
+                  <Select
+                    value={editorDraft.uom || undefined}
+                    onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, uom: value } : prev)}
+                  >
+                    <SelectTrigger className="w-full max-w-[220px]">
+                      <SelectValue placeholder="Select UOM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        editorDraft.itemNumber
+                          ? mergeSelectableUoms(
+                              editorDraft.sov_item_id != null || editorDraft.custom_sov_item_id != null
+                                ? getAvailableUoms(
+                                    sovProducts.find((product) =>
+                                      (editorDraft.custom_sov_item_id != null && product.is_custom && product.id === editorDraft.custom_sov_item_id) ||
+                                      (editorDraft.sov_item_id != null && !product.is_custom && product.id === editorDraft.sov_item_id)
+                                    ) || {
+                                      id: 0,
+                                      item_number: '',
+                                      display_item_number: '',
+                                      description: '',
+                                      display_name: '',
+                                      work_type: '',
+                                      uom_1: editorDraft.uom || 'EA',
+                                      uom_2: null,
+                                      uom_3: null,
+                                      uom_4: null,
+                                      uom_5: null,
+                                      uom_6: null,
+                                      uom_7: null,
+                                    } as SovMasterItem
+                                  )
+                                : getAvailableUomsForWorkType(sovProducts, editorDraft.workType),
+                              customUomOptions,
+                              editorDraft.uom
+                            )
+                          : customUomOptions
+                      ).map((uom) => (
+                        <SelectItem key={uom} value={uom}>{uom}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quantity</p>
+                  </div>
+                  <div className="flex items-center gap-2 max-w-[220px]">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setEditorDraft((prev) => prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : prev)}
+                      disabled={editorDraft.quantity <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className="h-9 w-20 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={editorDraft.quantity || 1}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, '');
+                        const quantity = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
+                        setEditorDraft((prev) => prev ? { ...prev, quantity } : prev);
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setEditorDraft((prev) => prev ? { ...prev, quantity: prev.quantity + 1 } : prev)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unit Price</p>
+                  </div>
+                  <div className="flex items-center h-9 max-w-[260px] border rounded-md bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+                    <span className="px-3 text-sm text-muted-foreground border-r">$</span>
+                    <CurrencyInput
+                      value={Math.round(editorDraft.unitPrice * 100).toString()}
+                      onChange={(digits) => {
+                        const nextUnitPrice = parseInt(digits || '0', 10) / 100;
+                        setEditorDraft((prev) => prev ? { ...prev, unitPrice: nextUnitPrice } : prev);
+                      }}
+                      className="h-9 w-full border-0 bg-transparent text-right pr-3 focus-visible:ring-0 cursor-text"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Retainage</p>
+                  </div>
+                  <div className="flex max-w-[320px] justify-start rounded-md border bg-background px-3 py-2 transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+                    <DollarPercentCurrencyInputField
+                      type={editorDraft.retainageType}
+                      value={editorDraft.retainageValue}
+                      onTypeChange={(type) => setEditorDraft((prev) => prev ? { ...prev, retainageType: type } : prev)}
+                      onValueChange={(value) => setEditorDraft((prev) => prev ? { ...prev, retainageValue: value } : prev)}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</p>
+                  </div>
+                  <Textarea
+                    className="min-h-[90px] max-w-2xl"
+                    value={editorDraft.notes}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, notes: e.target.value } : prev)}
+                    placeholder="Optional notes for this line item"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
+            {editorStep === 'configure' && (
+              <Button variant="outline" onClick={() => setEditorStep('pick')}>
+                Back
+              </Button>
+            )}
+            <Button variant="outline" onClick={closeEditor}>Cancel</Button>
+            {editorStep === 'configure' && (
+            <Button
+              onClick={saveEditorDraft}
+              disabled={!editorDraft?.itemNumber.trim() || !editorDraft?.uom.trim()}
+            >
+              Save Item
+            </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Custom Item Dialog */}
-      <Dialog open={!!customDraft} onOpenChange={(open) => {
-        if (!open && customDraft) {
-          // Remove row if it was a new custom item with no data saved
-          const row = items.find(i => i.id === customDraft.rowId);
-          if (row && !row.itemNumber) {
-            updateItems(items.filter(i => i.id !== customDraft.rowId));
-          }
-          setCustomDraft(null);
+      <Dialog modal={false} open={customDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          closeCustomDialog(true);
         }
       }}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle className="text-sm">Add Custom Item Number</DialogTitle>
+            <DialogTitle className="text-sm">Create Custom Line Item</DialogTitle>
+            <DialogDescription>
+              Add the custom line item with its UOM and pricing details up front.
+            </DialogDescription>
           </DialogHeader>
           {customDraft && (
             <div className="grid gap-3 py-2">
@@ -1008,70 +1477,99 @@ export const SOVTable = ({
                   onChange={(e) => setCustomDraft({ ...customDraft, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid gap-1.5">
+                <label className="text-xs">Work Type <span className="text-destructive">*</span></label>
+                <Select
+                  value={customDraft.workType}
+                  onValueChange={(value) => setCustomDraft({ ...customDraft, workType: value })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select work type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CUSTOM_WORK_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">UOM <span className="text-destructive">*</span></label>
+                <Select
+                  value={customDraft.uom}
+                  onValueChange={(value) => setCustomDraft({ ...customDraft, uom: value })}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select UOM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customUomOptions.map((uom) => (
+                      <SelectItem key={uom} value={uom}>
+                        {uom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="grid gap-1.5">
-                  <label className="text-xs">UOM</label>
+                  <label className="text-xs">Quantity</label>
                   <Input
                     className="h-8 text-sm"
-                    value={customDraft.uom}
-                    onChange={(e) => setCustomDraft({ ...customDraft, uom: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs">Qty</label>
-                  <Input
-                    className="h-8 text-sm text-right"
                     type="number"
+                    min="1"
                     step="1"
-                    min="0"
-                    value={customDraft.quantity || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, quantity: parseInt(e.target.value) || 0 })}
+                    value={customDraft.quantity}
+                    onChange={(e) => setCustomDraft({ ...customDraft, quantity: Math.max(1, parseInt(e.target.value || '1', 10)) })}
                   />
                 </div>
                 <div className="grid gap-1.5">
                   <label className="text-xs">Unit Price</label>
-                  <Input
-                    className="h-8 text-sm text-right"
-                    type="number"
-                    step="0.01"
-                    value={customDraft.unitPrice || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, unitPrice: parseFloat(e.target.value) || 0 })}
-                  />
+                  <div className="flex items-center h-8 rounded-md border bg-background">
+                    <span className="border-r px-2 text-xs text-muted-foreground">$</span>
+                    <CurrencyInput
+                      value={Math.round(customDraft.unitPrice * 100).toString()}
+                      onChange={(digits) => setCustomDraft({ ...customDraft, unitPrice: parseInt(digits || '0', 10) / 100 })}
+                      className="h-8 w-full border-0 bg-transparent pr-2 text-right text-sm focus-visible:ring-0"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-muted/50 border border-border/50">
-                <span className="text-xs font-medium text-foreground">Extended Price</span>
-                <span className="text-sm font-semibold">${customExtended.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="grid gap-1.5">
-                <label className="text-xs">Retainage Value</label>
-                <div className="flex items-center h-8 border rounded-md bg-background">
-                  <span className="px-2 text-xs text-muted-foreground border-r">$</span>
-                  <Input
-                    className="h-8 text-sm text-right border-0 focus-visible:ring-0"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={customDraft.retainageValue || ''}
-                    onChange={(e) => setCustomDraft({ ...customDraft, retainageType: 'dollar', retainageValue: parseFloat(e.target.value) || 0 })}
+                <label className="text-xs">Retainage</label>
+                <div className="flex rounded-md border bg-background px-3 py-2">
+                  <DollarPercentCurrencyInputField
+                    type={customDraft.retainageType}
+                    value={customDraft.retainageValue}
+                    onTypeChange={(type) => setCustomDraft({ ...customDraft, retainageType: type })}
+                    onValueChange={(value) => setCustomDraft({ ...customDraft, retainageValue: value })}
+                    size="sm"
                   />
                 </div>
+              </div>
+              <div className="grid gap-1.5">
+                <label className="text-xs">Notes</label>
+                <Textarea
+                  className="min-h-[88px] text-sm"
+                  placeholder="Optional notes for this custom item"
+                  value={customDraft.notes}
+                  onChange={(e) => setCustomDraft({ ...customDraft, notes: e.target.value })}
+                />
+              </div>
+              <div className="rounded-md border bg-muted/30 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">
+                  Extended amount: ${(Math.max(1, customDraft.quantity || 1) * Math.max(0, customDraft.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              if (customDraft) {
-                const row = items.find(i => i.id === customDraft.rowId);
-                if (row && !row.itemNumber) {
-                  updateItems(items.filter(i => i.id !== customDraft.rowId));
-                }
-              }
-              setCustomDraft(null);
-            }}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => closeCustomDialog(true)}>Cancel</Button>
             <Button
               size="sm"
-              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim()}
+              disabled={!customDraft?.itemNumber.trim() || !customDraft?.description.trim() || !customDraft?.workType || !customDraft?.uom}
               onClick={saveCustomItem}
             >
               Add to Table
@@ -1079,6 +1577,67 @@ export const SOVTable = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!pendingDelete} onOpenChange={(open) => {
+        if (!open) setPendingDelete(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Why are you removing this item?</DialogTitle>
+            <DialogDescription>
+              We do not currently have a standard removal-reason dropdown for contract SOV items, so this reason will be saved as freeform text in the contract log.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <label className="text-xs font-medium text-foreground">
+              Reason for removal <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              className="min-h-[90px] text-sm"
+              placeholder="Explain why this item is being removed..."
+              value={pendingDelete?.reason ?? ''}
+              onChange={(e) => setPendingDelete((prev) => (
+                prev ? { ...prev, reason: e.target.value } : prev
+              ))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!pendingDelete?.reason.trim()}
+              onClick={async () => {
+                if (!pendingDelete?.rowId || !pendingDelete.reason.trim()) return;
+                try {
+                  await removeItemWithReason(pendingDelete.rowId, pendingDelete.reason.trim());
+                  toast.success('SOV item removed');
+                  setPendingDelete(null);
+                } catch (error) {
+                  console.error('Failed to remove SOV item:', error);
+                }
+              }}
+            >
+              Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
+});
+
+SOVTableComponent.displayName = 'SOVTableComponent';
+
+export const SOVTable = memo(SOVTableComponent, (prevProps, nextProps) => (
+  prevProps.jobId === nextProps.jobId &&
+  prevProps.contractId === nextProps.contractId &&
+  prevProps.readOnly === nextProps.readOnly &&
+  prevProps.onEditAttempt === nextProps.onEditAttempt &&
+  prevProps.isSignedContract === nextProps.isSignedContract &&
+  prevProps.changeOrderApproved === nextProps.changeOrderApproved &&
+  prevProps.forceShowPricing === nextProps.forceShowPricing
+));
+
+SOVTable.displayName = 'SOVTable';

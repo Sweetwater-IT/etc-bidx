@@ -12,19 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Lock, Pencil } from "lucide-react";
+import { Lock, Pencil, StickyNote } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
-import { SOVTable } from "@/components/SOVTable";
+import { SOVTable, type SOVTableHandle } from "@/components/SOVTable";
+import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 import { saveContract } from "@/lib/api-client";
 import isEqual from "lodash/isEqual";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
+import { useAuth } from "@/contexts/auth-context";
 
 
-type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "bond" | "plan" | "specification" | "correspondence" | "photo" | "other";
+type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "change_order" | "plan" | "specification" | "correspondence" | "photo" | "other";
 
 interface ContractDocument {
   id: string;
@@ -38,6 +40,18 @@ interface ContractDocument {
   filePath: string;
 }
 
+const composeName = (firstName?: string | null, lastName?: string | null, fallback?: string | null) => {
+  const combined = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ").trim();
+  return combined || fallback || "";
+};
+
+const splitNameParts = (fullName?: string | null) => {
+  const trimmed = fullName?.trim() || "";
+  if (!trimmed) return { firstName: "", lastName: "" };
+  const [firstName, ...rest] = trimmed.split(/\s+/);
+  return { firstName, lastName: rest.join(" ") };
+};
+
 const emptyProjectInfo: JobProjectInfo = {
   projectName: "",
   contractNumber: "",
@@ -47,13 +61,20 @@ const emptyProjectInfo: JobProjectInfo = {
   etcJobNumber: null,
   etcBranch: "",
   county: "",
+  stateRoute: "",
   customerPM: "",
+  customerPMFirstName: "",
+  customerPMLastName: "",
   customerPMEmail: "",
   customerPMPhone: "",
   certifiedPayrollContact: "",
+  certifiedPayrollContactFirstName: "",
+  certifiedPayrollContactLastName: "",
   certifiedPayrollEmail: "",
   certifiedPayrollPhone: "",
   customerBillingContact: "",
+  customerBillingContactFirstName: "",
+  customerBillingContactLastName: "",
   customerBillingEmail: "",
   customerBillingPhone: "",
   etcProjectManager: "",
@@ -76,6 +97,8 @@ const emptyProjectInfo: JobProjectInfo = {
   extensionDate: "",
 };
 
+const CONTRACT_ACTION_BUTTON_CLASS = "bg-[#16335A] text-white hover:bg-[#122947]";
+
 const SIGNED_STATUSES = ["CONTRACT_SIGNED", "SOURCE_OF_SUPPLY"];
 
 const mapProjectInfoToContractData = (projectInfo: JobProjectInfo, contractStatus?: string) => ({
@@ -88,13 +111,28 @@ const mapProjectInfoToContractData = (projectInfo: JobProjectInfo, contractStatu
   etc_job_number: projectInfo.etcJobNumber,
   etc_branch: projectInfo.etcBranch,
   county: projectInfo.county,
-  customer_pm: projectInfo.customerPM,
+  state_route: projectInfo.stateRoute,
+  customer_pm: composeName(projectInfo.customerPMFirstName, projectInfo.customerPMLastName, projectInfo.customerPM),
+  customer_pm_first_name: projectInfo.customerPMFirstName,
+  customer_pm_last_name: projectInfo.customerPMLastName,
   customer_pm_email: projectInfo.customerPMEmail,
   customer_pm_phone: projectInfo.customerPMPhone,
-  certified_payroll_contact: projectInfo.certifiedPayrollContact,
+  certified_payroll_contact: composeName(
+    projectInfo.certifiedPayrollContactFirstName,
+    projectInfo.certifiedPayrollContactLastName,
+    projectInfo.certifiedPayrollContact
+  ),
+  certified_payroll_contact_first_name: projectInfo.certifiedPayrollContactFirstName,
+  certified_payroll_contact_last_name: projectInfo.certifiedPayrollContactLastName,
   certified_payroll_email: projectInfo.certifiedPayrollEmail,
   certified_payroll_phone: projectInfo.certifiedPayrollPhone,
-  customer_billing_contact: projectInfo.customerBillingContact,
+  customer_billing_contact: composeName(
+    projectInfo.customerBillingContactFirstName,
+    projectInfo.customerBillingContactLastName,
+    projectInfo.customerBillingContact
+  ),
+  customer_billing_contact_first_name: projectInfo.customerBillingContactFirstName,
+  customer_billing_contact_last_name: projectInfo.customerBillingContactLastName,
   customer_billing_email: projectInfo.customerBillingEmail,
   customer_billing_phone: projectInfo.customerBillingPhone,
   etc_project_manager: projectInfo.etcProjectManager,
@@ -122,6 +160,7 @@ const getContractStatus = (contractRow: any) =>
 
 const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useParams();
   const routeId = params?.id as string;
   const isNew = !routeId || routeId === "new";
@@ -131,22 +170,35 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [secondCounter, setSecondCounter] = useState<number>(0);
   const [firstSave, setFirstSave] = useState<boolean>(false);
   const saveTimeoutRef = useRef<number | null>(null);
+  const sovTableRef = useRef<SOVTableHandle | null>(null);
 
   // Signed-contract status
   const isSigned = contractRow ? SIGNED_STATUSES.includes(getContractStatus(contractRow)) : false;
-  const isReadOnly = forceReadOnly || isSigned;
+  const isReadOnly = forceReadOnly;
 
   // Change order gate state
   const [changeOrderApproved, setChangeOrderApproved] = useState(false);
   const [showChangeOrderDialog, setShowChangeOrderDialog] = useState(false);
 
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
+  const [pendingDocumentDeleteId, setPendingDocumentDeleteId] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [projectInfo, setProjectInfo] = useState<JobProjectInfo>(emptyProjectInfo);
   const [hydrated, setHydrated] = useState(isNew);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [contractNotes, setContractNotes] = useState<Note[]>([]);
+  const [contractNotesLoading, setContractNotesLoading] = useState(false);
+  const buildContractData = useCallback((info: JobProjectInfo) => {
+    const nextData = mapProjectInfoToContractData(info, getContractStatus(contractRow));
+    delete (nextData as { additional_notes?: string }).additional_notes;
+    return nextData;
+  }, [contractRow]);
+  const handleSovEditAttempt = useCallback(() => {
+    setShowChangeOrderDialog(true);
+  }, []);
+  const hasAssignedProjectManager = Boolean(projectInfo.etcProjectManager?.trim());
 
   // Check if we're in view mode (forceReadOnly is true and contract exists)
   const isViewMode = forceReadOnly && contractId;
@@ -172,12 +224,44 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     contractId
   });
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setSecondCounter(prev => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(intervalId);
+  const hasMeaningfulContent = useCallback((info: JobProjectInfo, id?: string) => {
+    return Boolean(id && (
+      info.projectName ||
+      info.contractNumber ||
+      info.customerName ||
+      info.customerJobNumber ||
+      info.projectOwner ||
+      info.etcJobNumber ||
+      info.etcBranch ||
+      info.county ||
+      info.customerPM ||
+      info.customerPMEmail ||
+      info.customerPMPhone ||
+      info.certifiedPayrollContact ||
+      info.certifiedPayrollEmail ||
+      info.certifiedPayrollPhone ||
+      info.customerBillingContact ||
+      info.customerBillingEmail ||
+      info.customerBillingPhone ||
+      info.etcProjectManager ||
+      info.etcBillingManager ||
+      info.etcProjectManagerEmail ||
+      info.etcBillingManagerEmail ||
+      info.projectStartDate ||
+      info.projectEndDate ||
+      info.otherNotes ||
+      info.isCertifiedPayroll !== "none" ||
+      info.shopRate ||
+      info.stateMptBaseRate ||
+      info.stateMptFringeRate ||
+      info.stateFlaggingBaseRate ||
+      info.stateFlaggingFringeRate ||
+      info.federalMptBaseRate ||
+      info.federalMptFringeRate ||
+      info.federalFlaggingBaseRate ||
+      info.federalFlaggingFringeRate ||
+      info.extensionDate
+    ));
   }, []);
 
   // Cleanup timeout on unmount
@@ -188,6 +272,37 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!contractId || !isSigned) {
+      setChangeOrderApproved(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchChangeOrderState = async () => {
+      try {
+        const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch change orders: ${response.status}`);
+        }
+        const result = await response.json();
+        if (!cancelled) {
+          setChangeOrderApproved(!!result?.hasApprovedChangeOrder);
+        }
+      } catch (error) {
+        console.error('Error loading change order state:', error);
+        if (!cancelled) setChangeOrderApproved(false);
+      }
+    };
+
+    fetchChangeOrderState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contractId, isSigned]);
 
   // Fetch contract data for existing contracts
   useEffect(() => {
@@ -210,13 +325,20 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             etcJobNumber: contract.etc_job_number || null,
             etcBranch: contract.etc_branch || "",
             county: contract.county || "",
+            stateRoute: contract.state_route || "",
             customerPM: contract.customer_pm || "",
+            customerPMFirstName: contract.customer_pm_first_name || splitNameParts(contract.customer_pm).firstName,
+            customerPMLastName: contract.customer_pm_last_name || splitNameParts(contract.customer_pm).lastName,
             customerPMEmail: contract.customer_pm_email || "",
             customerPMPhone: contract.customer_pm_phone || "",
             certifiedPayrollContact: contract.certified_payroll_contact || "",
+            certifiedPayrollContactFirstName: contract.certified_payroll_contact_first_name || splitNameParts(contract.certified_payroll_contact).firstName,
+            certifiedPayrollContactLastName: contract.certified_payroll_contact_last_name || splitNameParts(contract.certified_payroll_contact).lastName,
             certifiedPayrollEmail: contract.certified_payroll_email || "",
             certifiedPayrollPhone: contract.certified_payroll_phone || "",
             customerBillingContact: contract.customer_billing_contact || "",
+            customerBillingContactFirstName: contract.customer_billing_contact_first_name || splitNameParts(contract.customer_billing_contact).firstName,
+            customerBillingContactLastName: contract.customer_billing_contact_last_name || splitNameParts(contract.customer_billing_contact).lastName,
             customerBillingEmail: contract.customer_billing_email || "",
             customerBillingPhone: contract.customer_billing_phone || "",
             etcProjectManager: contract.etc_project_manager || "",
@@ -270,12 +392,37 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     fetchContract();
   }, [isNew, contractId]);
 
+  useEffect(() => {
+    if (!contractId) {
+      setContractNotes([]);
+      return;
+    }
+
+    const fetchContractNotes = async () => {
+      setContractNotesLoading(true);
+      try {
+        const response = await fetch(`/api/l/contracts/${contractId}/notes`);
+        if (!response.ok) throw new Error("Failed to fetch notes");
+        const notes = await response.json();
+        setContractNotes(Array.isArray(notes) ? notes : []);
+      } catch (error) {
+        console.error("Error fetching contract notes:", error);
+        setContractNotes([]);
+      } finally {
+        setContractNotesLoading(false);
+      }
+    };
+
+    fetchContractNotes();
+  }, [contractId]);
+
   const ensureContractExists = useCallback(async (info: JobProjectInfo) => {
     if (contractId) return contractId;
     if (creatingRef.current) return creatingRef.current;
 
     const trimmedProjectName = info.projectName?.trim();
-    if (!trimmedProjectName) return undefined;
+    const trimmedProjectManager = info.etcProjectManager?.trim();
+    if (!trimmedProjectName || !trimmedProjectManager) return undefined;
 
     const promise = (async () => {
       try {
@@ -286,10 +433,13 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             projectName: trimmedProjectName,
           }, getContractStatus(contractRow)),
         };
+        delete (contractData.data as { additional_notes?: string }).additional_notes;
         const result = await saveContract(contractData);
         const newId = result.id;
         setContractId(newId);
         setContractRow(result);
+        setLastSavedAt(new Date());
+        setFirstSave(true);
         // Update URL without full page reload for better UX
         window.history.replaceState(null, '', `/l/contracts/edit/${newId}`);
         return newId;
@@ -304,32 +454,68 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     return promise;
   }, [contractId, contractRow]);
 
+  const handleProjectNameBlur = useCallback(async () => {
+    if (isReadOnly || contractId) return;
+    const trimmedProjectName = projectInfo.projectName?.trim();
+    if (!trimmedProjectName) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    try {
+      setIsSaving(true);
+      await ensureContractExists(projectInfo);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isReadOnly, contractId, projectInfo, ensureContractExists]);
+
+  useEffect(() => {
+    if (isReadOnly || isViewMode || contractId) return;
+    if (!projectInfo.projectName?.trim() || !hasAssignedProjectManager) return;
+
+    let cancelled = false;
+
+    const ensureDraftAfterPmAssignment = async () => {
+      try {
+        setIsSaving(true);
+        await ensureContractExists(projectInfo);
+      } finally {
+        if (!cancelled) {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    ensureDraftAfterPmAssignment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isReadOnly,
+    isViewMode,
+    contractId,
+    projectInfo,
+    hasAssignedProjectManager,
+    ensureContractExists,
+  ]);
+
   const handleProjectInfoChange = useCallback(
     async (newInfo: JobProjectInfo) => {
       setProjectInfo(newInfo);
 
       if (!contractId) {
-        // Only create contract if job name is entered
-        if (newInfo.projectName && newInfo.projectName.trim()) {
-          // Clear any existing timeout
-          if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-          }
-
-          // Set a 4-second delay before creating the contract
-          saveTimeoutRef.current = window.setTimeout(async () => {
-            await ensureContractExists(newInfo);
-          }, 4000);
-        } else {
-          // If job name is cleared, cancel the timeout
-          if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-          }
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
         }
         return;
       }
     },
-    [contractId, ensureContractExists]
+    [contractId]
   );
 
   // Autosave logic - exactly like sign-orders
@@ -348,51 +534,12 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       }
 
       saveTimeoutRef.current = window.setTimeout(async () => {
-        // Check if we have a contractId and some meaningful content to save
-        const hasContent = contractId && (
-          projectInfo.projectName ||
-          projectInfo.contractNumber ||
-          projectInfo.customerName ||
-          projectInfo.customerJobNumber ||
-          projectInfo.projectOwner ||
-          projectInfo.etcJobNumber ||
-          projectInfo.etcBranch ||
-          projectInfo.county ||
-          projectInfo.customerPM ||
-          projectInfo.customerPMEmail ||
-          projectInfo.customerPMPhone ||
-          projectInfo.certifiedPayrollContact ||
-          projectInfo.certifiedPayrollEmail ||
-          projectInfo.certifiedPayrollPhone ||
-          projectInfo.customerBillingContact ||
-          projectInfo.customerBillingEmail ||
-          projectInfo.customerBillingPhone ||
-          projectInfo.etcProjectManager ||
-          projectInfo.etcBillingManager ||
-          projectInfo.etcProjectManagerEmail ||
-          projectInfo.etcBillingManagerEmail ||
-          projectInfo.projectStartDate ||
-          projectInfo.projectEndDate ||
-          projectInfo.otherNotes ||
-          projectInfo.isCertifiedPayroll !== "none" ||
-          projectInfo.shopRate ||
-          projectInfo.stateMptBaseRate ||
-          projectInfo.stateMptFringeRate ||
-          projectInfo.stateFlaggingBaseRate ||
-          projectInfo.stateFlaggingFringeRate ||
-          projectInfo.federalMptBaseRate ||
-          projectInfo.federalMptFringeRate ||
-          projectInfo.federalFlaggingBaseRate ||
-          projectInfo.federalFlaggingFringeRate ||
-          projectInfo.extensionDate
-        );
-
-        if (hasContent) {
+        if (hasMeaningfulContent(projectInfo, contractId) && hasAssignedProjectManager) {
           try {
             setIsSaving(true);
             const contractData = {
               contractId,
-              data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
+              data: buildContractData(projectInfo),
             };
             console.log('Autosave: sending contract data:', contractData);
             const result = await saveContract(contractData);
@@ -400,7 +547,6 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             setContractRow(result);
             setLastSavedAt(new Date());
             setFirstSave(true);
-            setSecondCounter(1); // Reset counter to 1 like sign order page
           } catch (error) {
             console.error('Autosave failed:', error);
             toast.error('Failed to save contract');
@@ -410,9 +556,89 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         }
       }, 5000); // Autosave every 5 seconds like sign orders
     }
-  }, [projectInfo, contractId, isViewMode]);
+  }, [projectInfo, contractId, isViewMode, hasMeaningfulContent, contractRow, hasAssignedProjectManager, buildContractData]);
+
+  useEffect(() => {
+    if (isViewMode) return;
+
+    const handlePageLeave = () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+
+      const shouldSend =
+        hasAssignedProjectManager && (
+          hasMeaningfulContent(projectInfo, contractId) ||
+          (!contractId && Boolean(projectInfo.projectName?.trim()))
+        );
+
+      if (!shouldSend) return;
+
+      const payload = {
+        contractId,
+        data: buildContractData(projectInfo),
+      };
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      navigator.sendBeacon("/api/l/contracts", blob);
+    };
+
+    window.addEventListener("beforeunload", handlePageLeave);
+    window.addEventListener("pagehide", handlePageLeave);
+
+    return () => {
+      window.removeEventListener("beforeunload", handlePageLeave);
+      window.removeEventListener("pagehide", handlePageLeave);
+    };
+  }, [isViewMode, hasMeaningfulContent, projectInfo, contractId, contractRow]);
 
   const manualSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    await sovTableRef.current?.flushPendingSave();
+
+    let currentContractId = contractId;
+
+    if (!projectInfo.etcProjectManager?.trim()) {
+      setShowValidation(true);
+      toast.error('Assign an ETC Project Manager before saving this contract');
+      return null;
+    }
+
+    if (!currentContractId) {
+      const hasProjectName = Boolean(projectInfo.projectName?.trim());
+      if (!hasProjectName) return null;
+      currentContractId = await ensureContractExists(projectInfo);
+      if (!currentContractId) return null;
+    }
+
+    try {
+      setIsSaving(true);
+      const contractData = {
+        contractId: currentContractId,
+        data: buildContractData(projectInfo),
+      };
+      console.log('Manual save: sending contract data:', contractData);
+      const result = await saveContract(contractData);
+      console.log('Manual save: received result:', result);
+      setContractRow(result);
+      setLastSavedAt(new Date());
+      setFirstSave(true);
+      toast.success('Contract saved successfully');
+      return currentContractId;
+    } catch (error) {
+      console.error('Manual save failed:', error);
+      toast.error('Failed to save contract');
+      return null;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [contractId, projectInfo, ensureContractExists, buildContractData]);
+
+  const handleAddContractNote = useCallback(async (note: Note) => {
     let currentContractId = contractId;
 
     if (!currentContractId) {
@@ -423,28 +649,89 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
 
     try {
-      setIsSaving(true);
-      const contractData = {
-        contractId: currentContractId,
-        data: mapProjectInfoToContractData(projectInfo, getContractStatus(contractRow)),
-      };
-      console.log('Manual save: sending contract data:', contractData);
-      const result = await saveContract(contractData);
-      console.log('Manual save: received result:', result);
-      setContractRow(result);
-      setLastSavedAt(new Date());
-      setFirstSave(true);
-      toast.success('Contract saved successfully');
+      setIsSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${currentContractId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          note: {
+            ...note,
+            user_email: user?.email || note.user_email,
+          },
+        }),
+      });
 
-      // Route to view page after successful save
-      router.push(`/l/contracts/view/${currentContractId}`);
+      if (!response.ok) {
+        throw new Error("Failed to save note");
+      }
+
+      const savedNote = await response.json();
+      setContractNotes((prev) => [...prev, savedNote]);
+      toast.success("Note added");
     } catch (error) {
-      console.error('Manual save failed:', error);
-      toast.error('Failed to save contract');
+      console.error("Error adding contract note:", error);
+      toast.error("Failed to add note");
     } finally {
-      setIsSaving(false);
+      setIsSavingNotes(false);
     }
-  }, [contractId, projectInfo, ensureContractExists, contractRow, router]);
+  }, [contractId, projectInfo, ensureContractExists, user?.email]);
+
+  const handleEditContractNote = useCallback(async (index: number, updatedNote: Note) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setIsSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: contractNotes[index].id,
+          text: updatedNote.text,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      const savedNote = await response.json();
+      setContractNotes((prev) => prev.map((note, noteIndex) => (noteIndex === index ? savedNote : note)));
+      toast.success("Note updated");
+    } catch (error) {
+      console.error("Error updating contract note:", error);
+      toast.error("Failed to update note");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [contractId, contractNotes]);
+
+  const handleDeleteContractNote = useCallback(async (index: number) => {
+    if (!contractId || !contractNotes[index]?.id) return;
+    try {
+      setIsSavingNotes(true);
+      const response = await fetch(`/api/l/contracts/${contractId}/notes?id=${encodeURIComponent(String(contractNotes[index].id))}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      setContractNotes((prev) => prev.filter((_, noteIndex) => noteIndex !== index));
+      toast.success("Note deleted");
+    } catch (error) {
+      console.error("Error deleting contract note:", error);
+      toast.error("Failed to delete note");
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [contractId, contractNotes]);
+
+  const handleDone = useCallback(async () => {
+    const savedContractId = await manualSave();
+    if (savedContractId) {
+      router.push(`/l/contracts/view/${savedContractId}`);
+    }
+  }, [manualSave, router]);
 
   // Document handlers
   const handleAddDocuments = async (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => {
@@ -460,6 +747,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     formData.append('category', docCategory);
 
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
         method: 'POST',
         body: formData,
@@ -483,6 +772,8 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   const handleRemoveDocument = async (id: string) => {
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents?documentId=${id}`, {
         method: 'DELETE',
       });
@@ -499,8 +790,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   };
 
+  const requestRemoveDocument = (id: string) => {
+    setPendingDocumentDeleteId(id);
+  };
+
   const handleUpdateDocumentCategory = async (id: string, category: DocumentCategory) => {
     try {
+      await sovTableRef.current?.flushPendingSave();
+
       const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -527,12 +824,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     description?: string;
     amount?: number;
     documentFile?: File;
-    approverUserId?: string;
     approverName?: string;
-  }) => {
+  }): Promise<boolean> => {
     if (!contractId) {
       toast.error("Contract must be saved first");
-      return;
+      return false;
     }
 
     try {
@@ -566,6 +862,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           const error = await response.json();
           throw new Error(`Failed to create change order: ${error.error}`);
         }
+
+        const result = await response.json();
+        if (result.document) {
+          setDocuments((prev) => {
+            const exists = prev.some((doc) => doc.id === result.document.id);
+            return exists ? prev : [...prev, result.document];
+          });
+        }
       } else {
         // Admin approval - just create the record
         const response = await fetch(`/api/l/contracts/${contractId}/change-orders`, {
@@ -584,9 +888,11 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       setChangeOrderApproved(true);
       setShowChangeOrderDialog(false);
       toast.success("Change order approved. SOV editing is now enabled.");
+      return true;
     } catch (error: any) {
       console.error('Error creating change order:', error);
       toast.error(error.message || 'Failed to create change order');
+      return false;
     }
   };
 
@@ -596,14 +902,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
   if (!isNew && isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center bg-background">
         <p className="text-muted-foreground">Loading contract…</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-w-0 bg-slate-50">
       <NewRecordStickyPageHeader
         backLabel="Contracts"
         onBack={async () => {
@@ -612,16 +918,23 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
           }
-          if (!isViewMode) await manualSave();
+          if (!isViewMode && hasAssignedProjectManager && hasMeaningfulContent(projectInfo, contractId)) {
+            await manualSave();
+          }
           router.push("/l/contracts");
         }}
-        onDone={manualSave}
+        onDone={handleDone}
+        doneLabel={isNew ? "Create Contract" : "Save Contract"}
+        saveStatusLabel="Contract"
         isSaving={isSaving}
         lastSavedAt={lastSavedAt}
         hasUnsavedChanges={!lastSavedAt && firstSave}
+        firstSave={firstSave}
+        doneButtonClassName={CONTRACT_ACTION_BUTTON_CLASS}
+        doneDisabled={!hasAssignedProjectManager}
         additionalButtons={
           isViewMode ? (
-            <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className="gap-2">
+            <Button onClick={() => router.push(`/l/contracts/edit/${contractId}`)} className={`gap-2 ${CONTRACT_ACTION_BUTTON_CLASS}`}>
               <Pencil className="h-4 w-4" />
               Edit Contract
             </Button>
@@ -631,34 +944,38 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
       {/* Signed contract info banner */}
       {isSigned && (
-        <div className="max-w-7xl mx-auto px-4 pt-3">
+        <div className="mx-auto max-w-7xl min-w-0 px-4 pt-3">
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
             <Lock className="h-4 w-4 text-primary shrink-0" />
             <p className="text-xs text-primary font-medium">
-              This contract is signed. Admin fields can be edited freely. SOV changes require a Change Order.
+              This contract is signed. Customer and ETC job number are locked. Other admin fields remain editable. SOV changes require a Change Order.
             </p>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12 space-y-8">
+      <div className="mx-auto max-w-7xl min-w-0 px-4 py-8 sm:py-12 space-y-8">
         <ChecklistHeader title={checklistTitle} description={checklistDescription} />
 
         {/* Admin Info — always editable */}
         <ProjectInfoFields
           projectInfo={projectInfo}
           onChange={handleProjectInfoChange}
+          onProjectNameBlur={handleProjectNameBlur}
+          contractSigned={isSigned}
           showValidation={showValidation}
           readOnly={isReadOnly}
           contractRow={contractRow}
+          hideNotesSection
         />
 
         {/* Schedule of Values */}
-        <div>
+        <div className="min-w-0">
           <SOVTable
+            ref={sovTableRef}
             contractId={contractId}
             readOnly={false}
-            onEditAttempt={isSigned && !changeOrderApproved ? () => setShowChangeOrderDialog(true) : undefined}
+            onEditAttempt={isSigned && !changeOrderApproved ? handleSovEditAttempt : undefined}
             isSignedContract={isSigned}
             changeOrderApproved={changeOrderApproved}
           />
@@ -684,9 +1001,42 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           projectInfo={projectInfo}
           jobId={routeId}
           onAddDocuments={handleAddDocuments}
-          onRemoveDocument={handleRemoveDocument}
+          onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
-          readOnly={isReadOnly}
+          readOnly={forceReadOnly}
+        />
+
+        <QuoteNotes
+          title="Additional Notes"
+          notes={contractNotes}
+          loading={contractNotesLoading}
+          onSave={handleAddContractNote}
+          onEdit={handleEditContractNote}
+          onDelete={handleDeleteContractNote}
+          submitLabel="Save"
+          updateLabel="Save"
+          actionAlignment="right"
+          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
+          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
+          containerClassName="bg-card"
+          addButtonInHeader
+          headerContent={
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="rounded-md bg-violet-500/10 p-1.5">
+                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Additional Notes
+                </span>
+              </div>
+            </div>
+          }
+          emptyState={
+            <div className="text-xs italic text-muted-foreground">
+              No notes yet. Use &quot;Add Note&quot; to get started.
+            </div>
+          }
         />
       </div>
 
@@ -728,6 +1078,35 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         onApproved={handleChangeOrderApproved}
         onCancel={handleChangeOrderCancel}
       />
+
+      <Dialog open={!!pendingDocumentDeleteId} onOpenChange={(open) => {
+        if (!open) setPendingDocumentDeleteId(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Document?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the selected contract document.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDocumentDeleteId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (pendingDocumentDeleteId) {
+                  await handleRemoveDocument(pendingDocumentDeleteId);
+                }
+                setPendingDocumentDeleteId(null);
+              }}
+            >
+              Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

@@ -30,7 +30,7 @@ const CATEGORY_LABELS: Record<DocumentCategory, string> = {
   addendum: "Addendum",
   permit: "Permit",
   insurance: "Insurance",
-  bond: "Bond",
+  change_order: "Change Order",
   plan: "Plan",
   specification: "Specification",
   correspondence: "Correspondence",
@@ -97,7 +97,7 @@ export const ContractSaveDocument = ({
   return (
     <div className="space-y-8">
       {/* Uploaded / Saved Documents */}
-      <div className="rounded-xl border bg-card p-6">
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-semibold text-foreground">Saved Documents</h3>
@@ -106,7 +106,7 @@ export const ContractSaveDocument = ({
             </p>
           </div>
           {!readOnly && (
-            <Button onClick={() => inputRef.current?.click()} className="gap-2">
+            <Button onClick={() => inputRef.current?.click()} className="gap-2 bg-[#16335A] text-white hover:bg-[#122947]">
               <Upload className="h-4 w-4" />
               Upload Document
             </Button>

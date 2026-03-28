@@ -1,5 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { parseJobNotes, stringifyJobNotes } from '@/lib/jobNotes';
+
+const REQUIRED_CONTRACT_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'project_owner', label: 'Project Owner' },
+  { key: 'project_name', label: 'Job Name' },
+  { key: 'contract_number', label: 'Project Owner Contract #' },
+  { key: 'county', label: 'County' },
+  { key: 'etc_branch', label: 'ETC Branch' },
+  { key: 'etc_project_manager', label: 'ETC Project Manager' },
+  { key: 'project_start_date', label: 'Project Start Date' },
+  { key: 'project_end_date', label: 'Project End Date' },
+  { key: 'customer_name', label: 'Customer Name' },
+  { key: 'customer_job_number', label: 'Customer Job #' },
+  { key: 'customer_pm', label: 'Customer PM' },
+  { key: 'customer_pm_email', label: 'Customer PM Email' },
+  { key: 'certified_payroll_contact', label: 'Certified Payroll Contact' },
+  { key: 'certified_payroll_email', label: 'Certified Payroll Email' },
+  { key: 'certified_payroll_type', label: 'Certified Payroll Type' },
+];
+
+function getMissingContractRequirements(contractData: Record<string, unknown>) {
+  const certifiedPayrollType = typeof contractData.certified_payroll_type === 'string'
+    ? contractData.certified_payroll_type.trim()
+    : contractData.certified_payroll_type;
+
+  return REQUIRED_CONTRACT_FIELDS.flatMap(({ key, label }) => {
+    const value = contractData[key];
+
+    if (key === 'certified_payroll_type') {
+      return value === 'none' || value === 'state' || value === 'federal' ? [] : [label];
+    }
+
+    if (
+      (key === 'certified_payroll_contact' || key === 'certified_payroll_email') &&
+      certifiedPayrollType === 'none'
+    ) {
+      return [];
+    }
+
+    const normalized = typeof value === 'string' ? value.trim() : value;
+    if (!normalized) return [label];
+    if (key === 'project_owner' && normalized === 'Other') return [label];
+    return [];
+  });
+}
 
 export async function GET(
   request: NextRequest,
@@ -21,6 +66,8 @@ export async function GET(
     }
 
     console.log('[API] Contract fetched successfully:', data?.id);
+
+    const parsedNotes = parseJobNotes(data.additional_notes);
 
     // Transform the data to match the expected format
     const contract = {
@@ -51,9 +98,12 @@ export async function GET(
       rejected_by: data.rejected_by,
       rejection_reason: data.rejection_reason,
       rejection_notes: data.rejection_notes,
+      additional_notes: parsedNotes.contractNotes,
       // Include all other fields
       ...data
     };
+
+    contract.additional_notes = parsedNotes.contractNotes;
 
     return NextResponse.json(contract);
   } catch (error) {
@@ -75,7 +125,7 @@ export async function PATCH(
     // Get current contract to check version
     const { data: currentContract, error: currentError } = await supabase
       .from('jobs_l')
-      .select('version')
+      .select('*')
       .eq('id', contractId)
       .single();
 
@@ -97,6 +147,7 @@ export async function PATCH(
       billingStatus: 'billing_status',
       etcJobNumber: 'etc_job_number',
       etcBranch: 'etc_branch',
+      stateRoute: 'state_route',
       etcProjectManager: 'etc_project_manager',
       etcBillingManager: 'etc_billing_manager',
       etcProjectManagerEmail: 'etc_project_manager_email',
@@ -107,12 +158,18 @@ export async function PATCH(
       certifiedPayrollType: 'certified_payroll_type',
       isCertifiedPayroll: 'certified_payroll_type',
       customerPM: 'customer_pm',
+      customerPMFirstName: 'customer_pm_first_name',
+      customerPMLastName: 'customer_pm_last_name',
       customerPMEmail: 'customer_pm_email',
       customerPMPhone: 'customer_pm_phone',
       certifiedPayrollContact: 'certified_payroll_contact',
+      certifiedPayrollContactFirstName: 'certified_payroll_contact_first_name',
+      certifiedPayrollContactLastName: 'certified_payroll_contact_last_name',
       certifiedPayrollEmail: 'certified_payroll_email',
       certifiedPayrollPhone: 'certified_payroll_phone',
       customerBillingContact: 'customer_billing_contact',
+      customerBillingContactFirstName: 'customer_billing_contact_first_name',
+      customerBillingContactLastName: 'customer_billing_contact_last_name',
       customerBillingEmail: 'customer_billing_email',
       customerBillingPhone: 'customer_billing_phone',
       additionalNotes: 'additional_notes',
@@ -120,6 +177,9 @@ export async function PATCH(
       extensionDate: 'extension_date',
       internalId: 'internal_id',
     };
+
+    // Preserve structured job notes when contract/admin notes are updated.
+    const currentNotesPayload = parseJobNotes((currentContract as any).additional_notes);
 
     // Transform camelCase fields to snake_case
     const transformedData: Record<string, unknown> = {};
@@ -129,10 +189,44 @@ export async function PATCH(
       transformedData[snakeKey] = value;
     }
 
+    if (Object.prototype.hasOwnProperty.call(transformedData, 'additional_notes')) {
+      transformedData.additional_notes = stringifyJobNotes(
+        typeof transformedData.additional_notes === 'string' ? transformedData.additional_notes : '',
+        currentNotesPayload.projectLog,
+        currentNotesPayload.contractLog
+      );
+    }
+
+    const nextContractStatus = transformedData.contract_status as string | undefined;
+    const currentContractStatus = currentContract.contract_status as string | undefined;
+    if (
+      nextContractStatus &&
+      nextContractStatus !== currentContractStatus &&
+      nextContractStatus !== 'CONTRACT_RECEIPT'
+    ) {
+      const mergedContractData = {
+        ...currentContract,
+        ...transformedData,
+      };
+      const missing = getMissingContractRequirements(mergedContractData);
+      if (missing.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Missing required fields',
+            code: 'MISSING_REQUIREMENTS',
+            missing,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Increment version
     transformedData.version = (currentContract.version || 0) + 1;
 
-    // Check if contract status is changing to CONTRACT_SIGNED and generate job number
+    // Check if contract status is changing to CONTRACT_SIGNED and preserve the
+    // job number supplied from the signed-contract modal. Auto-generation remains
+    // only as a fallback for older flows that do not send a job number.
     if (transformedData.contract_status === 'CONTRACT_SIGNED') {
       // Get current contract data to check if it was previously not signed
       const { data: currentContract, error: currentError } = await supabase
@@ -144,8 +238,14 @@ export async function PATCH(
       if (!currentError && currentContract) {
         const wasNotSigned = !['CONTRACT_SIGNED', 'SOURCE_OF_SUPPLY'].includes(currentContract.contract_status || '');
         const hasNoJobNumber = !currentContract.etc_job_number;
+        const incomingJobNumber =
+          typeof transformedData.etc_job_number === 'string'
+            ? transformedData.etc_job_number.trim()
+            : '';
 
-        if (wasNotSigned && hasNoJobNumber) {
+        if (incomingJobNumber) {
+          transformedData.etc_job_number = incomingJobNumber;
+        } else if (wasNotSigned && hasNoJobNumber) {
           // Generate job number (J-0001, J-0002, etc.) - simple sequential numbering
           const { count, error: countError } = await supabase
             .from('jobs_l')
@@ -192,6 +292,7 @@ export async function PATCH(
       etcJobNumber: updatedData.etc_job_number,
       etcBranch: updatedData.etc_branch,
       county: updatedData.county,
+      stateRoute: updatedData.state_route,
       etcProjectManager: updatedData.etc_project_manager,
       projectStartDate: updatedData.project_start_date,
       projectEndDate: updatedData.project_end_date,
@@ -210,7 +311,22 @@ export async function PATCH(
       rejectedAt: updatedData.rejected_at,
       rejectedBy: updatedData.rejected_by,
       rejectionReason: updatedData.rejection_reason,
-      rejectionNotes: updatedData.rejection_notes
+      rejectionNotes: updatedData.rejection_notes,
+      customerPM: updatedData.customer_pm,
+      customerPMFirstName: updatedData.customer_pm_first_name,
+      customerPMLastName: updatedData.customer_pm_last_name,
+      customerPMEmail: updatedData.customer_pm_email,
+      customerPMPhone: updatedData.customer_pm_phone,
+      certifiedPayrollContact: updatedData.certified_payroll_contact,
+      certifiedPayrollContactFirstName: updatedData.certified_payroll_contact_first_name,
+      certifiedPayrollContactLastName: updatedData.certified_payroll_contact_last_name,
+      certifiedPayrollEmail: updatedData.certified_payroll_email,
+      certifiedPayrollPhone: updatedData.certified_payroll_phone,
+      customerBillingContact: updatedData.customer_billing_contact,
+      customerBillingContactFirstName: updatedData.customer_billing_contact_first_name,
+      customerBillingContactLastName: updatedData.customer_billing_contact_last_name,
+      customerBillingEmail: updatedData.customer_billing_email,
+      customerBillingPhone: updatedData.customer_billing_phone
     };
 
     return NextResponse.json({

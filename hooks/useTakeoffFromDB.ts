@@ -12,6 +12,7 @@ interface TakeoffData {
   install_date: string | null;
   pickup_date: string | null;
   needed_by_date: string | null;
+  return_inventory_submitted_at?: string | null;
   work_order_number: string | null;
   work_order_id?: string | null;
   job_id: string;

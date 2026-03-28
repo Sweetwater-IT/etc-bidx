@@ -10,6 +10,60 @@ const roundTo = (value: number, decimals = 4) => {
 
 const calcSqft = (width: number, height: number) => roundTo(((Number(width) || 0) * (Number(height) || 0)) / 144, 4);
 
+const hasConfiguredValue = (value: unknown) => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  return true;
+};
+
+const isConfiguredSecondarySign = (secondarySign: any) =>
+  Boolean(
+    secondarySign &&
+    (
+      hasConfiguredValue(secondarySign.signDesignation) ||
+      hasConfiguredValue(secondarySign.signLegend) ||
+      hasConfiguredValue(secondarySign.signDescription) ||
+      Number(secondarySign.width || 0) > 0 ||
+      Number(secondarySign.height || 0) > 0 ||
+      Number(secondarySign.sqft || 0) > 0
+    )
+  );
+
+function normalizeSecondarySigns(secondarySigns: any[], parentId: string, quantity: number) {
+  return (Array.isArray(secondarySigns) ? secondarySigns : [])
+    .filter((secondarySign) =>
+      isConfiguredSecondarySign(secondarySign) &&
+      (
+        !secondarySign?.primarySignId ||
+        secondarySign.primarySignId === parentId
+      )
+    )
+    .map((secondarySign) => ({
+      ...secondarySign,
+      primarySignId: parentId,
+      quantity,
+    }));
+}
+
+function normalizeMptSignRows(signRows: Record<string, any[]>) {
+  return Object.fromEntries(
+    Object.entries(signRows || {}).map(([sectionKey, rows]) => [
+      sectionKey,
+      Array.isArray(rows)
+        ? rows.map((row, index) => {
+            const quantity = Number(row?.quantity || 0);
+            return {
+              ...row,
+              loadOrder: Number(row?.loadOrder || index + 1),
+              quantity,
+              secondarySigns: normalizeSecondarySigns(row?.secondarySigns, row?.id, quantity),
+            };
+          })
+        : [],
+    ])
+  );
+}
+
 function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
   const items: JsonRecord[] = [];
 
@@ -21,7 +75,7 @@ function buildMptItems(takeoffId: string, signRows: Record<string, any[]>) {
       const height = Number(row?.height || 0);
       const sqft = calcSqft(width, height);
       const quantity = Number(row?.quantity || 0);
-      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
+      const secondarySigns = normalizeSecondarySigns(row?.secondarySigns, row?.id, quantity);
       const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
         const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
         return sum + roundTo(secSqft * quantity, 4);
@@ -72,12 +126,11 @@ function buildPermanentItems(
       const height = Number(row?.height || 0);
       const sqft = calcSqft(width, height);
       const quantity = Number(row?.quantity || 0);
-      const secondarySigns = Array.isArray(row?.secondarySigns) ? row.secondarySigns : [];
-      const secondaryTotal = secondarySigns.reduce((sum: number, sec: any) => {
-        const secSqft = calcSqft(Number(sec?.width || 0), Number(sec?.height || 0));
-        return sum + roundTo(secSqft * quantity, 4);
-      }, 0);
-      const totalSqft = roundTo((Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4)) + secondaryTotal, 4);
+      const totalSqft = roundTo(Number(row?.totalSqft || 0) || roundTo(sqft * quantity, 4), 4);
+      const sanitizedRow = {
+        ...row,
+        secondarySigns: [],
+      };
 
       items.push({
         takeoff_id: takeoffId,
@@ -91,7 +144,7 @@ function buildPermanentItems(
         to_order_qty: 0,
         inventory_status: 'pending_review',
         material: row?.material || null,
-        sign_details: row,
+        sign_details: sanitizedRow,
         sign_description: row?.signDescription || null,
         sheeting: row?.sheeting || null,
         width_inches: width || null,
@@ -100,7 +153,7 @@ function buildPermanentItems(
         total_sqft: totalSqft,
         load_order: index + 1,
         cover: true,
-        secondary_signs: secondarySigns,
+        secondary_signs: [],
       });
     });
   });
@@ -142,20 +195,21 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
   const items: JsonRecord[] = [];
 
   vehicleItems.forEach((item, index) => {
+    const vehicleLabel = item?.vehicleType || 'Vehicle';
     items.push({
       takeoff_id: takeoffId,
-      product_name: item?.vehicleType || 'Vehicle',
+      product_name: vehicleLabel,
       category: 'vehicle',
       unit: 'EA',
       quantity: Number(item?.quantity || 0),
       requisition_type: 'none',
-      notes: null,
+      notes: item?.description || null,
       in_stock_qty: 0,
       to_order_qty: 0,
       inventory_status: 'pending_review',
       material: null,
       sign_details: item,
-      sign_description: item?.vehicleType || null,
+      sign_description: item?.description || vehicleLabel || null,
       sheeting: null,
       width_inches: null,
       height_inches: null,
@@ -194,7 +248,9 @@ function buildGeneralItems(takeoffId: string, workType: string, vehicleItems: an
   });
 
   additionalItems.forEach((item, index) => {
-    const productName = item?.name === '__custom' ? item?.description || 'Custom Item' : item?.name || 'Additional Item';
+    const productName = item?.name === '__custom'
+      ? item?.customName || 'Custom Item'
+      : item?.name || 'Additional Item';
     items.push({
       takeoff_id: takeoffId,
       product_name: productName,
@@ -257,6 +313,15 @@ export async function POST(request: NextRequest) {
 
     const normalizedTitle = typeof title === 'string' ? title.trim() : '';
     const normalizedWorkType = typeof workType === 'string' ? workType.trim() : '';
+    const normalizedSignRows = normalizeMptSignRows(signRows || {});
+    const sanitizedPermanentSignRows = Object.fromEntries(
+      Object.entries(permanentSignRows || {}).map(([itemNumber, rows]) => [
+        itemNumber,
+        Array.isArray(rows)
+          ? rows.map((row) => ({ ...row, secondarySigns: [] }))
+          : [],
+      ])
+    );
 
     if (!jobId || !normalizedTitle || !normalizedWorkType) {
       return NextResponse.json(
@@ -287,7 +352,7 @@ export async function POST(request: NextRequest) {
       work_order_id: workOrderId || null,
       contracted_or_additional: contractedOrAdditional || 'contracted',
       install_date: installDate || null,
-      pickup_date: pickupDate || null,
+      pickup_date: normalizedWorkType === 'MPT' ? (pickupDate || null) : null,
       needed_by_date: neededByDate || null,
       is_multi_day_job: Boolean(isMultiDayJob),
       end_date: endDate || null,
@@ -297,10 +362,10 @@ export async function POST(request: NextRequest) {
       build_shop_notes: buildShopNotes?.trim() || null,
       pm_notes: pmNotes?.trim() || null,
       active_sections: activeSections || [],
-      sign_rows: signRows || {},
+      sign_rows: normalizedSignRows,
       default_sign_material: defaultSignMaterial || 'PLASTIC',
       active_permanent_items: activePermanentItems || [],
-      permanent_sign_rows: permanentSignRows || {},
+      permanent_sign_rows: sanitizedPermanentSignRows,
       permanent_entry_rows: permanentEntryRows || {},
       default_permanent_sign_material: defaultPermanentSignMaterial || 'ALUMINUM',
       vehicle_items: vehicleItems || [],
@@ -349,8 +414,8 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedItems = [
-      ...buildMptItems(takeoff.id, signRows || {}),
-      ...buildPermanentItems(takeoff.id, permanentSignRows || {}, permanentEntryRows || {}),
+      ...buildMptItems(takeoff.id, normalizedSignRows),
+      ...buildPermanentItems(takeoff.id, sanitizedPermanentSignRows, permanentEntryRows || {}),
       ...buildGeneralItems(takeoff.id, normalizedWorkType, vehicleItems || [], rollingStockItems || [], additionalItems || []),
     ];
 

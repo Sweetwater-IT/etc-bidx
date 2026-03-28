@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+const DAMAGE_PHOTO_KEY = '__damage_photos';
+
+const flattenDamagePhotos = (damagePhotos: unknown): string[] => {
+  if (!damagePhotos || typeof damagePhotos !== 'object') return [];
+
+  return Object.values(damagePhotos as Record<string, unknown>)
+    .flatMap((value) => {
+      if (typeof value === 'string') return [value];
+      if (Array.isArray(value)) {
+        return value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+      }
+      return [];
+    })
+    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+};
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -47,8 +63,17 @@ export async function PUT(
       console.log('🔍 [ITEM UPDATE] Updating pickup takeoff item:', itemId);
 
       const updateData: any = {};
-      if (return_details !== undefined) updateData.return_details = return_details;
-      if (damage_photos !== undefined) updateData.pickup_images = damage_photos;
+      if (return_details !== undefined) {
+        updateData.return_details = return_details;
+      }
+      if (damage_photos !== undefined) {
+        const nextReturnDetails = {
+          ...((updateData.return_details || return_details || {}) as Record<string, unknown>),
+          [DAMAGE_PHOTO_KEY]: damage_photos,
+        };
+        updateData.return_details = nextReturnDetails;
+        updateData.pickup_images = flattenDamagePhotos(damage_photos);
+      }
 
       // Handle individual condition updates
       if (return_details && typeof return_details === 'object') {
@@ -60,7 +85,7 @@ export async function PUT(
       console.log('🔍 [ITEM UPDATE] Prepared update data for pickup item:', {
         updateDataKeys: Object.keys(updateData),
         hasReturnDetails: !!updateData.return_details,
-        hasPickupImages: !!updateData.pickup_images,
+        hasPickupImages: Array.isArray(updateData.pickup_images) && updateData.pickup_images.length > 0,
         signCondition: updateData.sign_condition,
         structureCondition: updateData.structure_condition,
         lightCondition: updateData.light_condition

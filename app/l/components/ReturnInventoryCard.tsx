@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RotateCcw, Loader2, CheckCircle2, Camera, X, Send, FileText, Save, RefreshCw } from "lucide-react";
+import { RotateCcw, Loader2, CheckCircle2, Camera, X, Send, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 import { generateReturnTakeoffPdf } from "@/app/l/utils/generateReturnTakeoffPdf";
 
@@ -44,6 +45,7 @@ interface ReturnItem {
   return_condition: string | null;
   damage_photos: Record<string, string> | null;
   notes: string | null;
+  sign_details?: Record<string, any> | string | null;
 }
 
 export interface ReturnInventoryJobInfo {
@@ -70,17 +72,39 @@ interface ReturnInventoryCardProps {
   jobInfo?: ReturnInventoryJobInfo;
 }
 
+function parseItemMeta(item: ReturnItem): Record<string, any> {
+  const sources = [item.sign_details, item.notes];
+
+  for (const source of sources) {
+    if (!source) continue;
+    if (typeof source === "object") return source;
+
+    try {
+      const parsed = JSON.parse(source);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // Ignore non-JSON note strings and keep checking fallbacks.
+    }
+  }
+
+  return {};
+}
+
 /** Determine which component columns apply to this item */
 function getComponents(item: ReturnItem): ComponentKey[] {
   const name = item.product_name.toUpperCase();
   const category = item.category.toUpperCase();
   const comps: ComponentKey[] = [];
-
-  let meta: Record<string, any> = {};
-  try { meta = JSON.parse(item.notes || "{}"); } catch { /* */ }
+  const meta = parseItemMeta(item);
 
   const isAdditionalOrEquip =
-    category === "ADDITIONAL ITEMS" || category === "VEHICLES" || category === "ROLLING STOCK";
+    category === "ADDITIONAL ITEMS" ||
+    category === "ADDITIONAL" ||
+    category === "VEHICLES" ||
+    category === "VEHICLE" ||
+    category === "ROLLING STOCK";
 
   if (isAdditionalOrEquip || name.includes("VERTICAL PANEL") || name.includes("HIP VERTICAL") || name.includes("SAND BAG")) {
     comps.push("sign");
@@ -110,9 +134,8 @@ function getStructureLabel(item: ReturnItem): string {
   if (name.includes("TYPE III") || name.includes("TYPE 3") || name.includes("BARRICADE")) {
     return "Barricade";
   }
-  let meta: Record<string, any> = {};
-  try { meta = JSON.parse(item.notes || "{}"); } catch { /* */ }
-  return meta.structureType || "—";
+  const meta = parseItemMeta(item);
+  return meta.structureType || meta.postSize || "—";
 }
 
 /* ── Damage Photo Inline ── */
@@ -129,10 +152,40 @@ const DamagePhotoUpload = ({
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const displayUrl = localPreviewUrl || currentUrl;
+
+  const clearLocalPreview = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setLocalPreviewUrl(null);
+  }, []);
+
+  useEffect(() => {
+    setImageLoading(Boolean(displayUrl));
+    setImageFailed(false);
+  }, [displayUrl]);
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+  }, []);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    clearLocalPreview();
+    const objectUrl = URL.createObjectURL(file);
+    previewUrlRef.current = objectUrl;
+    setLocalPreviewUrl(objectUrl);
+    setImageLoading(true);
+    setImageFailed(false);
     setUploading(true);
 
     try {
@@ -151,9 +204,13 @@ const DamagePhotoUpload = ({
       }
 
       const data = await response.json();
+      setImageLoading(true);
+      setImageFailed(false);
+      clearLocalPreview();
       onPhotoUpdated(data.url);
       toast.success("Damage photo attached");
     } catch (error) {
+      clearLocalPreview();
       console.error('Error uploading photo:', error);
       toast.error("Failed to upload photo");
     } finally {
@@ -163,25 +220,60 @@ const DamagePhotoUpload = ({
   };
 
   const handleRemove = () => {
+    clearLocalPreview();
     onPhotoUpdated(null);
     toast.success("Photo removed");
   };
 
   return (
     <div className="mt-1">
-      {currentUrl ? (
-        <div className="relative inline-block">
-          <img
-            src={currentUrl}
-            alt="Damage"
-            className="h-10 w-10 rounded object-cover border cursor-pointer"
-            onClick={() => window.open(currentUrl, "_blank")}
-          />
+      {displayUrl ? (
+        <div className="relative inline-flex">
           <button
-            onClick={handleRemove}
-            className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full h-3.5 w-3.5 flex items-center justify-center"
+            type="button"
+            onClick={() => window.open(displayUrl, "_blank")}
+            className="group relative h-16 w-16 overflow-hidden rounded-md border border-border/70 bg-[linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%),linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%,transparent_75%,hsl(var(--muted))_75%)] bg-[length:12px_12px] bg-[position:0_0,6px_6px] shadow-sm transition hover:border-primary/50 hover:shadow-md"
+            aria-label="Open damage photo"
           >
-            <X className="h-2 w-2" />
+            <Image
+              src={displayUrl}
+              alt="Damage"
+              fill
+              unoptimized
+              className={`object-cover transition ${imageLoading ? "opacity-0" : "opacity-100"}`}
+              onLoad={() => {
+                setImageLoading(false);
+                setImageFailed(false);
+              }}
+              onError={() => {
+                setImageLoading(false);
+                setImageFailed(true);
+              }}
+            />
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {imageFailed && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-muted/90 px-1 text-center">
+                <Camera className="h-4 w-4 text-muted-foreground" />
+                <span className="text-[9px] leading-none text-muted-foreground">Preview unavailable</span>
+              </div>
+            )}
+            {!imageLoading && !imageFailed && (
+              <div className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                View
+              </div>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-4.5 w-4.5 flex items-center justify-center shadow"
+            aria-label="Remove damage photo"
+          >
+            <X className="h-2.5 w-2.5" />
           </button>
         </div>
       ) : (
@@ -219,7 +311,6 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -232,6 +323,7 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
         const data = await response.json();
         const rows = (data.takeoffItems || []) as ReturnItem[];
         setItems(rows);
+        setSubmitted(Boolean(data.takeoff?.return_inventory_submitted_at));
 
         const init: Record<string, Record<string, string>> = {};
         const initPhotos: Record<string, Record<string, string>> = {};
@@ -303,58 +395,6 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     setDirty(true);
     setSavingBulk(false);
   }, [items]);
-
-  const handleFetchData = useCallback(async () => {
-    console.log('🔍 [FRONTEND] Manual fetch triggered for takeoff:', takeoffId);
-    setFetching(true);
-    try {
-      const response = await fetch(`/api/takeoffs/${takeoffId}/data`);
-      console.log('🔍 [FRONTEND] Fetch response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('🔍 [FRONTEND] Raw API response:', data);
-      console.log('🔍 [FRONTEND] Takeoff items found:', data.takeoffItems?.length || 0);
-
-      if (data.takeoffItems) {
-        console.log('🔍 [FRONTEND] First few items:', data.takeoffItems.slice(0, 3).map((item: any) => ({
-          id: item.id,
-          product_name: item.product_name,
-          quantity: item.quantity
-        })));
-      }
-
-      const rows = (data.takeoffItems || []) as ReturnItem[];
-      setItems(rows);
-
-      const init: Record<string, Record<string, string>> = {};
-      const initPhotos: Record<string, Record<string, string>> = {};
-      rows.forEach((item) => {
-        const saved = (item.return_details as Record<string, string>) || {};
-        if (item.return_condition && Object.keys(saved).length === 0) {
-          const comps = getComponents(item);
-          const m: Record<string, string> = {};
-          comps.forEach((c) => { m[c] = item.return_condition!; });
-          init[item.id] = m;
-        } else {
-          init[item.id] = { ...saved };
-        }
-        initPhotos[item.id] = { ...((item.damage_photos as Record<string, string>) || {}) };
-      });
-      setDetails(init);
-      setPhotos(initPhotos);
-
-      toast.success(`Fetched ${rows.length} items`);
-    } catch (error) {
-      console.error('🔍 [FRONTEND] Error fetching takeoff data:', error);
-      toast.error('Failed to fetch return inventory data');
-    } finally {
-      setFetching(false);
-    }
-  }, [takeoffId]);
 
   const handleSave = useCallback(async () => {
     // Check if any damaged items are missing photos
@@ -486,30 +526,50 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
       };
     });
 
-    await generateReturnTakeoffPdf({
-      title: jobInfo?.title || "Pickup Return",
-      workType: jobInfo?.workType || "",
-      projectName: jobInfo?.projectName,
-      etcJobNumber: jobInfo?.etcJobNumber,
-      etcBranch: jobInfo?.etcBranch,
-      etcProjectManager: jobInfo?.etcProjectManager,
-      customerName: jobInfo?.customerName,
-      customerJobNumber: jobInfo?.customerJobNumber,
-      projectOwner: jobInfo?.projectOwner,
-      county: jobInfo?.county,
-      installDate: jobInfo?.installDate,
-      pickupDate: jobInfo?.pickupDate,
-      customerPM: jobInfo?.customerPM,
-      assignedTo: jobInfo?.assignedTo,
-      contractedOrAdditional: jobInfo?.contractedOrAdditional,
-      items: pdfItems,
-    });
+    try {
+      await generateReturnTakeoffPdf({
+        title: jobInfo?.title || "Pickup Return",
+        workType: jobInfo?.workType || "",
+        projectName: jobInfo?.projectName,
+        etcJobNumber: jobInfo?.etcJobNumber,
+        etcBranch: jobInfo?.etcBranch,
+        etcProjectManager: jobInfo?.etcProjectManager,
+        customerName: jobInfo?.customerName,
+        customerJobNumber: jobInfo?.customerJobNumber,
+        projectOwner: jobInfo?.projectOwner,
+        county: jobInfo?.county,
+        installDate: jobInfo?.installDate,
+        pickupDate: jobInfo?.pickupDate,
+        customerPM: jobInfo?.customerPM,
+        assignedTo: jobInfo?.assignedTo,
+        contractedOrAdditional: jobInfo?.contractedOrAdditional,
+        items: pdfItems,
+      });
 
-    setSubmitted(true);
-    setDirty(false);
-    setSubmitting(false);
-    toast.success("Return inventory submitted — PDF downloaded.");
-  }, [allComplete, items, details, photos, jobInfo]);
+      const submitResponse = await fetch(`/api/takeoffs/${takeoffId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnInventorySubmittedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!submitResponse.ok) {
+        throw new Error("Failed to persist return inventory submission");
+      }
+
+      setSubmitted(true);
+      setDirty(false);
+      toast.success("Return inventory submitted — PDF downloaded.");
+    } catch (error) {
+      console.error("Error submitting return inventory:", error);
+      toast.error("Failed to submit return inventory.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [allComplete, hasMissingDamagePhotos, items, details, photos, jobInfo, takeoffId]);
 
   // Stats
   const completedCount = items.filter((item) => {
@@ -566,20 +626,6 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs h-7"
-            onClick={handleFetchData}
-            disabled={fetching}
-          >
-            {fetching ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            {fetching ? "Fetching…" : "Fetch Data"}
-          </Button>
           {!isReadOnly && items.length > 0 && (
             <Button
               size="sm"
@@ -660,9 +706,11 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
                               <div>
                                 <ConditionBadge value={d[comp]} />
                                 {d[comp] === "damaged" && p[comp] && (
-                                  <img
+                                  <Image
                                     src={p[comp]}
                                     alt="Damage"
+                                    width={32}
+                                    height={32}
                                     className="h-8 w-8 rounded object-cover border mt-1 cursor-pointer"
                                     onClick={() => window.open(p[comp], "_blank")}
                                   />

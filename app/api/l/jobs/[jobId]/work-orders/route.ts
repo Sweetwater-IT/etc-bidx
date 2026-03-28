@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +17,7 @@ export async function GET(
       .from('work_orders_l')
       .select('id, wo_number, title, status, updated_at')
       .eq('job_id', jobId)
-      .in('status', ['completed', 'ready', 'scheduled', 'draft'])
+      .in('status', ['complete', 'scheduled', 'draft'])
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -24,7 +25,12 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch work orders' }, { status: 500 });
     }
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(
+      (data || []).map((workOrder) => ({
+        ...workOrder,
+        status: normalizeWorkOrderStatusForUi(workOrder.status),
+      }))
+    );
   } catch (error) {
     console.error('Error in work orders API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

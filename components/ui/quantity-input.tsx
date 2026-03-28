@@ -12,6 +12,8 @@ interface QuantityInputProps {
   step?: number;
   className?: string;
   disabled?: boolean;
+  inputClassName?: string;
+  onBlur?: () => void;
 }
 
 export function QuantityInput({
@@ -21,7 +23,9 @@ export function QuantityInput({
   max = 999,
   step = 1,
   className = '',
-  disabled = false
+  disabled = false,
+  inputClassName = '',
+  onBlur,
 }: QuantityInputProps) {
   const handleIncrement = () => {
     if (disabled) return;
@@ -66,7 +70,8 @@ export function QuantityInput({
         max={max}
         value={value}
         onChange={handleInputChange}
-        className="no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none"
+        onBlur={onBlur}
+        className={`no-spinner w-10 px-0 py-1 border rounded text-center bg-background !border-none ${inputClassName}`}
         style={{ width: 40, height: 28 }}
         disabled={disabled}
       />

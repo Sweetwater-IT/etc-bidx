@@ -16,6 +16,7 @@ interface BillingPacketData {
   customerJobNumber: string;
   customerPM: string;
   projectOwner: string;
+  contractNumber: string;
   county: string;
   etcBranch: string;
   etcProjectManager: string;
@@ -63,6 +64,91 @@ function addField(doc: jsPDF, label: string, value: string, x: number, y: number
   return y;
 }
 
+function drawBillingTableHeader(
+  doc: jsPDF,
+  columns: { label: string; x: number; w: number; align?: "left" | "right" }[],
+  y: number,
+  pageW: number,
+  marginLeft: number
+): number {
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setFillColor(240, 240, 240);
+  doc.rect(marginLeft, y - 3.5, pageW - 28, 7, "F");
+
+  for (const col of columns) {
+    if (col.align === "right") {
+      doc.text(col.label, col.x + col.w, y, { align: "right" });
+    } else {
+      doc.text(col.label, col.x, y);
+    }
+  }
+
+  return y + 7;
+}
+
+function drawProjectFooter(
+  doc: jsPDF,
+  items: Array<{ label: string; value?: string | null }>,
+  pageW: number,
+  pageH: number
+) {
+  const footerX = 14;
+  const footerY = pageH - 16;
+  const footerW = pageW - 28;
+  const footerH = 5.5;
+  const footerItems = items.slice(0, 8);
+  const colW = footerW / footerItems.length;
+  const fitInline = (label: string, value?: string | null) => {
+    const [line] = doc.splitTextToSize(`${label}: ${(value || "—").toString()}`, colW - 2);
+    return line || `${label}: —`;
+  };
+
+  footerItems.forEach((item, index) => {
+    const x = footerX + colW * index + 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(80);
+    doc.text(fitInline(item.label, item.value), x, footerY + 3.6);
+  });
+  doc.setTextColor(0);
+}
+
+function formatWorkOrderNumber(woNumber?: string | number | null): string {
+  if (woNumber === null || woNumber === undefined || woNumber === "") return "";
+  const asString = String(woNumber).trim();
+  const asNumber = Number(asString);
+  if (!Number.isNaN(asNumber) && Number.isFinite(asNumber)) {
+    return String(Math.trunc(asNumber)).padStart(3, "0");
+  }
+  return asString;
+}
+
+async function loadPublicLogoDataUrl(path: string): Promise<string> {
+  if (typeof window === "undefined") {
+    const { readFile } = await import("fs/promises");
+    const pathModule = await import("path");
+    const filePath = pathModule.join(process.cwd(), "public", path.replace(/^\//, ""));
+    const file = await readFile(filePath);
+    return `data:image/jpeg;base64,${file.toString("base64")}`;
+  }
+
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch logo image from ${path}: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read logo blob"));
+    reader.readAsDataURL(blob);
+  });
+
+  return dataUrl;
+}
+
 export async function generateBillingPacketPdf(data: BillingPacketData): Promise<ArrayBuffer | null> {
   const doc = new jsPDF({ orientation: "portrait" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -70,33 +156,19 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   // ── ETC Logo ──
   try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject();
-      img.src = "/ETC-2.jpg";
-    });
-    // Logo aspect ratio ~1.17:1, fit to h=12mm
+    const logo = await loadPublicLogoDataUrl("/logo.jpg");
     const logoH = 12;
-    const logoW = logoH * (img.naturalWidth / img.naturalHeight);
-    doc.addImage(img, "JPEG", ml, 6, logoW, logoH);
-  } catch {
-    // Fallback to text
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 64, 120);
-    doc.text("ETC", ml, 14);
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100);
-    doc.text("ESTABLISHED TRAFFIC CONTROL", ml, 17.5);
+    const logoW = logoH * (1152 / 648);
+    doc.addImage(logo, "JPEG", ml, 6, logoW, logoH);
+  } catch (error) {
+    console.error("[generateBillingPacketPdf] Failed to load sidebar logo", error);
   }
   // ── Title line ──
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0);
-  const woTitle = data.woNumber ? `WORK ORDER ${data.woNumber}` : "WORK ORDER";
+  const formattedWoNumber = formatWorkOrderNumber(data.woNumber);
+  const woTitle = formattedWoNumber ? `Work Order ${formattedWoNumber}` : "Work Order";
   doc.text(woTitle, pageW / 2, 14, { align: "center" });
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
@@ -152,7 +224,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   // Row 2
   addField(doc, "PROJECT OWNER", data.projectOwner || "—", col1X, y);
-  addField(doc, "OWNER JOB #", data.customerJobNumber || "—", col2X, y);
+  addField(doc, "OWNER CONTRACT #", data.contractNumber || "—", col2X, y);
   addField(doc, "COUNTY", data.county || "—", col3X, y);
   y += rowH;
   drawRowDivider(y - 2);
@@ -167,7 +239,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   // Row 4
   addField(doc, "CUSTOMER", data.customerName || "—", col1X, y);
   addField(doc, "CUSTOMER JOB #", data.customerJobNumber || "—", col2X, y);
-  addField(doc, "CUSTOMER POC", data.customerPM || "—", col3X, y);
+  addField(doc, "CUSTOMER POC", [data.customerPM, data.customerPocPhone].filter(Boolean).join(" · ") || "—", col3X, y);
   y += rowH;
   drawRowDivider(y - 2);
 
@@ -197,27 +269,39 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   doc.text("Billing Line Items", ml, y);
   y += 5;
 
-  // Table header
-  doc.setFontSize(7);
-  doc.setFillColor(240, 240, 240);
-  doc.rect(ml, y - 3.5, pageW - 28, 7, "F");
-  doc.text("ITEM #", ml + 2, y);
-  doc.text("DESCRIPTION", 50, y);
-  doc.text("UOM", 130, y);
-  doc.text("CONTRACT QTY", 150, y);
-  doc.text("WORK ORDER QTY", 170, y);
-  y += 7;
+  const billingTableLeft = ml;
+  const billingCols = [
+    { label: "ITEM #", x: billingTableLeft + 2, w: 24 },
+    { label: "DESCRIPTION", x: billingTableLeft + 26, w: 76 },
+    { label: "UOM", x: billingTableLeft + 102, w: 14 },
+    { label: "CONTRACT QTY", x: billingTableLeft + 116, w: 30, align: "right" as const },
+    { label: "WORK ORDER QTY", x: billingTableLeft + 146, w: 36, align: "right" as const },
+  ];
+
+  y = drawBillingTableHeader(doc, billingCols, y, pageW, ml);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   for (const item of data.items) {
-    if (y > 270) { doc.addPage(); y = 20; }
-    doc.text(item.item_number || "", ml + 2, y);
-    doc.text((item.description || "").substring(0, 45), 50, y);
-    doc.text(item.uom || "EA", 130, y);
-    doc.text(String(item.contract_quantity), 158, y);
-    doc.text(String(item.work_order_quantity), 185, y);
-    y += 5;
+    const itemNumberLines = doc.splitTextToSize(item.item_number || "", billingCols[0].w - 2);
+    const descriptionLines = doc.splitTextToSize(item.description || "", billingCols[1].w - 2);
+    const rowLineCount = Math.max(itemNumberLines.length, descriptionLines.length, 1);
+    const rowH = Math.max(6, rowLineCount * 4);
+
+    if (y > 270 - rowH) {
+      doc.addPage();
+      y = 20;
+      y = drawBillingTableHeader(doc, billingCols, y, pageW, ml);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+    }
+
+    doc.text(itemNumberLines, billingCols[0].x, y);
+    doc.text(descriptionLines, billingCols[1].x, y);
+    doc.text(item.uom || "EA", billingCols[2].x, y);
+    doc.text(String(item.contract_quantity), billingCols[3].x + billingCols[3].w, y, { align: "right" });
+    doc.text(String(item.work_order_quantity), billingCols[4].x + billingCols[4].w, y, { align: "right" });
+    y += rowH;
     // Light grey row divider
     doc.setDrawColor(220);
     doc.setLineWidth(0.15);
@@ -327,20 +411,29 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
   // Page numbers + fixed Customer Acknowledgment on last page
   const totalPages = doc.getNumberOfPages();
   const pageH = doc.internal.pageSize.getHeight();
-  const sigBlockTop = pageH - 50; // fixed position above page number
+  const sigBlockTop = pageH - 66; // leave room for the boxed project footer and page number
+  const footerItems = [
+    { label: "Job Name", value: data.projectName },
+    { label: "Project Owner", value: data.projectOwner },
+    { label: "Owner Job #", value: data.customerJobNumber },
+    { label: "County", value: data.county },
+    { label: "ETC PM", value: data.etcProjectManager },
+    { label: "ETC Job #", value: data.etcJobNumber },
+    { label: "Customer", value: data.customerName },
+    { label: "Customer Job #", value: data.customerJobNumber },
+  ];
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    // Page number at bottom center
     const label = `Page ${i} of ${totalPages}`;
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(140);
-    doc.text(label, pw - ml, 10, { align: "right" });
-    doc.text(label, pw / 2, ph - 5, { align: "center" });
+    drawProjectFooter(doc, footerItems, pw, ph);
+    doc.text(label, pw / 2, ph - 18.5, { align: "center" });
     doc.setTextColor(0);
 
     // Signature block only on last page

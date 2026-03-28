@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
-import { generateBillingPacketPdf } from "@/utils/generateBillingPacketPdf";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 import {
   Dialog,
@@ -62,7 +62,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Plus,
-  Minus,
   Loader2,
   Save,
   FileText,
@@ -75,7 +74,6 @@ import {
   File,
   X,
   ExternalLink,
-  Lock,
   Paperclip,
   RotateCcw,
 } from "lucide-react";
@@ -88,7 +86,7 @@ const WO_STATUSES = [
   { value: "draft", label: "Draft", color: "bg-muted text-muted-foreground" },
   { value: "ready", label: "Ready", color: "bg-emerald-500/15 text-emerald-700" },
   { value: "scheduled", label: "Scheduled", color: "bg-indigo-500/15 text-indigo-700" },
-  { value: "completed", label: "Complete", color: "bg-emerald-600/15 text-emerald-800" },
+  { value: "installed", label: "Installed", color: "bg-emerald-600/15 text-emerald-800" },
 ];
 
 const TAKEOFF_STATUSES: Record<string, { label: string; color: string }> = {
@@ -158,14 +156,37 @@ const formatWorkOrderNumber = (workOrderNumber?: string | number | null) => {
   return asString.padStart(3, "0");
 };
 
+const formatQuantityValue = (value: number | string | null | undefined) => {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0";
+  return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
+
+const buildPermanentSignSqftTotals = (takeoffItems: any[]) => {
+  const totals = new Map<string, number>();
+  for (const item of takeoffItems || []) {
+    const itemNumber = String(item?.product_name || "").trim();
+    if (!itemNumber) continue;
+    const totalSqft = Number(item?.total_sqft || 0);
+    totals.set(itemNumber, (totals.get(itemNumber) || 0) + totalSqft);
+  }
+  return totals;
+};
+
 const WorkOrderDetail = ({
   workOrderId,
   takeoffId,
   mode = "edit",
+  onSaveStateChange,
+  onSaveActionReady,
 }: {
   workOrderId: string;
   takeoffId?: string;
   mode?: "view" | "edit";
+  onSaveStateChange?: (state: { isSaving: boolean; lastSavedAt: Date | null; firstSave: boolean }) => void;
+  onSaveActionReady?: (saveAction: () => Promise<void>) => void;
 }) => {
   const router = useRouter();
   const { user } = useAuth();
@@ -181,7 +202,6 @@ const WorkOrderDetail = ({
   const [isLoading, setIsLoading] = useState(!isNewWorkOrder);
   const [buildRequests, setBuildRequests] = useState<any[]>([]);
   const [dispatch, setDispatch] = useState<any>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [takeoffs, setTakeoffs] = useState<TakeoffSummary[]>([]);
   const [woItems, setWoItems] = useState<WOItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
@@ -212,6 +232,11 @@ const WorkOrderDetail = ({
   const [editPickupDate, setEditPickupDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const saveHandlerRef = useRef<() => Promise<void>>(async () => {});
+  const performSaveRef = useRef<(redirectOnSuccess: boolean) => Promise<void>>(async () => {});
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editSnapshotRef = useRef("");
+  const editStateInitializedRef = useRef(false);
 
   // SOV picklist state
   const [sovItems, setSovItems] = useState<{ id: string; item_number: string; description: string; quantity: number; uom: string }[]>([]);
@@ -260,6 +285,16 @@ const WorkOrderDetail = ({
     [sovItems, itemPickerSearch]
   );
 
+  const primaryWorkOrderItems = useMemo(
+    () => woItems.filter((item) => Boolean(item.sov_item_id)),
+    [woItems]
+  );
+
+  const additionalWorkOrderItems = useMemo<WOItem[]>(
+    () => [],
+    []
+  );
+
   // Blocking modal
   const [blockingModalOpen, setBlockingModalOpen] = useState(false);
   const [blockingModalType, setBlockingModalType] = useState<"takeoff" | "items">("takeoff");
@@ -294,6 +329,40 @@ const WorkOrderDetail = ({
 
   // Combined readiness
   const readyToSchedule = hasTakeoff && hasWoItems && buildComplete;
+
+  const getEditSnapshot = useCallback(
+    () =>
+      JSON.stringify({
+        editTitle,
+        editDescription,
+        editNotes,
+        editScheduledDate,
+        editAssignedTo,
+        editContractedOrAdditional,
+        editCustomerPocPhone,
+        editInstallDate,
+        editPickupDate,
+      }),
+    [
+      editAssignedTo,
+      editContractedOrAdditional,
+      editCustomerPocPhone,
+      editDescription,
+      editInstallDate,
+      editNotes,
+      editPickupDate,
+      editScheduledDate,
+      editTitle,
+    ]
+  );
+
+  useEffect(() => {
+    onSaveStateChange?.({
+      isSaving: saving,
+      lastSavedAt,
+      firstSave: Boolean(lastSavedAt),
+    });
+  }, [lastSavedAt, onSaveStateChange, saving]);
 
   // Fetch work order data (skip for new work orders)
   useEffect(() => {
@@ -438,7 +507,7 @@ const WorkOrderDetail = ({
           });
       }
     }
-  }, [dbTakeoff, takeoffLoading, isNewWorkOrder, woItems.length]);
+  }, [dbTakeoff, takeoffId, takeoffLoading, isNewWorkOrder, woItems.length]);
 
   // Sync editing fields
   useEffect(() => {
@@ -461,8 +530,18 @@ const WorkOrderDetail = ({
     }
   }, [takeoffs]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (!workOrder || (takeoffs.length === 0 && !isNewWorkOrder)) return;
+    editSnapshotRef.current = getEditSnapshot();
+    editStateInitializedRef.current = true;
+  }, [getEditSnapshot, isNewWorkOrder, takeoffs, workOrder]);
+
+  const handleSave = async ({ redirectOnSuccess = mode === "edit" }: { redirectOnSuccess?: boolean } = {}) => {
     if (!workOrderId) return;
+    if (editDescription.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      toast.error(`Description of Work must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
     setSaving(true);
     try {
       if (isNewWorkOrder) {
@@ -492,7 +571,7 @@ const WorkOrderDetail = ({
         const result = await response.json();
         toast.success(`Work order "${editTitle}" created successfully`);
         // Navigate to edit (to preserve the "generate → edit first" flow) with takeoffId to enable immediate loading
-        router.push(`/l/jobs/${dbJob?.id}/work-orders/${result.workOrder.id}/edit?takeoffId=${takeoffId}`);
+        router.push(`/l/jobs/${dbJob?.id}/work-orders/edit/${result.workOrder.id}?takeoffId=${takeoffId}`);
       } else {
         // Update existing work order
         const response = await fetch(`/api/workorders/${workOrderId}`, {
@@ -549,11 +628,12 @@ const WorkOrderDetail = ({
           setWorkOrder(data);
         }
         fetchRelated();
+        editSnapshotRef.current = getEditSnapshot();
 
         // When saving from the edit page, send the user back to the read-only view
-        if (mode === "edit" && workOrder?.job_id) {
+        if (redirectOnSuccess && mode === "edit" && workOrder?.job_id) {
           const qs = takeoffId ? `?takeoffId=${encodeURIComponent(takeoffId)}` : "";
-          router.push(`/l/jobs/${workOrder.job_id}/work-orders/${workOrderId}/view${qs}`);
+          router.push(`/l/jobs/${workOrder.job_id}/work-orders/view/${workOrderId}${qs}`);
         }
       }
     } catch (err: any) {
@@ -562,6 +642,37 @@ const WorkOrderDetail = ({
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    saveHandlerRef.current = () => handleSave({ redirectOnSuccess: true });
+    performSaveRef.current = (redirectOnSuccess: boolean) => handleSave({ redirectOnSuccess });
+  });
+
+  useEffect(() => {
+    if (!onSaveActionReady) return;
+    onSaveActionReady(() => saveHandlerRef.current());
+  }, [onSaveActionReady]);
+
+  useEffect(() => {
+    if (mode !== "edit" || isNewWorkOrder || !editStateInitializedRef.current) return;
+
+    const currentSnapshot = getEditSnapshot();
+    if (currentSnapshot === editSnapshotRef.current) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      void performSaveRef.current(false);
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [getEditSnapshot, isNewWorkOrder, mode]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!workOrderId || !workOrder) return;
@@ -573,7 +684,7 @@ const WorkOrderDetail = ({
       return;
     }
 
-    const schedulingStatuses = ["scheduled", "completed"];
+    const schedulingStatuses = ["scheduled", "installed"];
     if (schedulingStatuses.includes(newStatus) && newStatus !== workOrder.status && !hasWoItems) {
       setPendingStatusTransition(newStatus);
       setBlockingModalType("items");
@@ -652,8 +763,13 @@ const WorkOrderDetail = ({
   const isCombinable = (doc: WODocument) => {
     const name = doc.file_name.toLowerCase();
     const type = doc.file_type || "";
-    return type.includes("pdf") || name.endsWith(".pdf") ||
-           type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i.test(name);
+    return (
+      type.includes("pdf") ||
+      name.endsWith(".pdf") ||
+      type === "image/png" ||
+      type === "image/jpeg" ||
+      /\.(png|jpe?g)$/i.test(name)
+    );
   };
 
   const toggleAllDocs = () => {
@@ -669,39 +785,12 @@ const WorkOrderDetail = ({
     if (!workOrder || selectedDocIds.size === 0) return;
     setCombining(true);
     try {
-      // 1. Generate the WO PDF as bytes
-      const woBytes = await generateBillingPacketPdf({
-        woNumber: workOrder.wo_number || "",
-        woTitle: workOrder.title || "",
-        woDescription: workOrder.description || "",
-        woNotes: workOrder.notes || "",
-        etcAssignedTo: workOrder.assigned_to || "",
-        contractedOrAdditional: (workOrder as any).contracted_or_additional || "contracted",
-        customerPocPhone: workOrder.customer_poc_phone || "",
-                      projectName: dbJob?.projectInfo?.projectName || "",
-                      etcJobNumber: String(dbJob?.projectInfo?.etcJobNumber || ""),
-                      customerName: dbJob?.projectInfo?.customerName || "",
-                      customerJobNumber: dbJob?.projectInfo?.customerJobNumber || "",
-                      customerPM: dbJob?.projectInfo?.customerPM || "",
-                      projectOwner: dbJob?.projectInfo?.projectOwner || "",
-                      county: dbJob?.projectInfo?.county || "",
-                      etcBranch: dbJob?.etc_branch || "",
-                      etcProjectManager: dbJob?.etc_project_manager || "",
-        installDate: takeoffs[0]?.install_date || "",
-        pickupDate: takeoffs[0]?.pickup_date || "",
-        items: woItems.map(i => ({
-          item_number: i.item_number,
-          description: i.description || "",
-          uom: i.uom || "EA",
-          contract_quantity: i.contract_quantity,
-          work_order_quantity: i.work_order_quantity,
-        })),
-        crewNotes: (dispatch as any)?.crew_notes || "",
-        customerNotOnSite: (dispatch as any)?.customer_not_on_site || false,
-        customerSignatureName: (dispatch as any)?.customer_signature_name || "",
-        signedAt: (dispatch as any)?.signed_at || "",
-        returnBytes: true,
-      });
+      // 1. Use the server PDF route as the source of truth for the WO packet.
+      const woPdfResponse = await fetch(`/api/workorders/${workOrderId}/pdf`);
+      if (!woPdfResponse.ok) {
+        throw new Error("Failed to generate work order PDF");
+      }
+      const woBytes = await woPdfResponse.arrayBuffer();
 
       if (!woBytes) {
         toast.error("Failed to generate work order PDF");
@@ -719,29 +808,38 @@ const WorkOrderDetail = ({
         try {
           // Get signed URL for the document
           const urlResponse = await fetch(`/api/documents/${doc.id}/signed-url`);
-          if (!urlResponse.ok) continue;
+          if (!urlResponse.ok) {
+            console.warn(`Failed to get signed URL for ${doc.file_name}`);
+            continue;
+          }
           const urlData = await urlResponse.json();
-          if (!urlData.signedUrl) continue;
+          if (!urlData.signedUrl) {
+            console.warn(`No signed URL returned for ${doc.file_name}`);
+            continue;
+          }
 
           const response = await fetch(urlData.signedUrl);
+          if (!response.ok) {
+            console.warn(`Failed to fetch file bytes for ${doc.file_name}`);
+            continue;
+          }
           const fileBytes = await response.arrayBuffer();
           const fileUint8 = new Uint8Array(fileBytes);
 
           const isPdf = doc.file_type?.includes("pdf") || doc.file_name.toLowerCase().endsWith(".pdf");
-          const isImage = doc.file_type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i.test(doc.file_name.toLowerCase());
+          const isPng = doc.file_type === "image/png" || /\.png$/i.test(doc.file_name);
+          const isJpeg = doc.file_type === "image/jpeg" || /\.jpe?g$/i.test(doc.file_name);
 
           if (isPdf) {
             const attachedPdf = await PDFDocument.load(fileBytes);
             const attachedPages = await mergedPdf.copyPages(attachedPdf, attachedPdf.getPageIndices());
             attachedPages.forEach(p => mergedPdf.addPage(p));
-          } else if (isImage) {
+          } else if (isPng || isJpeg) {
             // Embed image as a full page in the PDF
             let img;
-            const name = doc.file_name.toLowerCase();
-            if (name.endsWith(".png")) {
+            if (isPng) {
               img = await mergedPdf.embedPng(fileUint8);
             } else {
-              // Treat everything else as JPEG (jpg, jpeg, etc.)
               img = await mergedPdf.embedJpg(fileUint8);
             }
             const { width, height } = img.scaleToFit(612, 792); // Letter size
@@ -752,6 +850,8 @@ const WorkOrderDetail = ({
               width,
               height,
             });
+          } else {
+            console.warn(`Skipping unsupported combinable file type for ${doc.file_name}`);
           }
         } catch (err) {
           console.warn(`Skipping document ${doc.file_name}:`, err);
@@ -867,8 +967,6 @@ const WorkOrderDetail = ({
   const statusConfig = getStatusConfig(workOrder?.status || "draft");
   const isViewMode = mode === "view";
   const canEdit = (isAdmin || isPM) && !isViewMode;
-  const isDraft = workOrder?.status === "draft" || isNewWorkOrder;
-
   return (
     <div className="min-h-screen bg-[hsl(var(--muted)/0.3)] flex flex-col overflow-x-hidden">
       <div className="w-full px-6 pt-6 pb-6 flex-1 space-y-6 overflow-x-hidden">
@@ -886,25 +984,6 @@ const WorkOrderDetail = ({
                 <Plus className="h-3.5 w-3.5" /> Create or Attach Takeoff
               </Button>
             )}
-          </div>
-        )}
-
-        {/* Backlink to linked takeoff (when present) */}
-        {!!workOrder?.takeoff_id && !!workOrder?.job_id && (
-          <div className="rounded-lg border bg-card px-4 py-3 flex items-center justify-between min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground shrink-0">Linked takeoff</span>
-              <span className="text-xs font-mono truncate">{workOrder.takeoff_id}</span>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs gap-1.5 shrink-0"
-              onClick={() => router.push(`/l/${workOrder.job_id}/takeoffs/view/${workOrder.takeoff_id}`)}
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> View Takeoff
-            </Button>
           </div>
         )}
 
@@ -1017,7 +1096,19 @@ const WorkOrderDetail = ({
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Description of Work</label>
                 {canEdit ? (
-                  <Textarea rows={2} className="text-sm" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Describe the work that will be performed by the crew..." />
+                  <div className="space-y-1.5">
+                    <Textarea
+                      rows={2}
+                      maxLength={WORK_ORDER_DESCRIPTION_MAX_LENGTH}
+                      className="text-sm"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Describe the work that will be performed by the crew..."
+                    />
+                    <div className="text-[10px] text-muted-foreground text-right">
+                      {editDescription.length}/{WORK_ORDER_DESCRIPTION_MAX_LENGTH}
+                    </div>
+                  </div>
                 ) : (
                   <span className="text-sm text-foreground">{workOrder?.description || "—"}</span>
                 )}
@@ -1031,95 +1122,6 @@ const WorkOrderDetail = ({
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* ─── Execution Readiness ─── */}
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="px-5 py-3 border-b bg-muted/30">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Execution Readiness</h2>
-          </div>
-          <div className="p-5">
-            <div className="flex flex-wrap gap-6">
-              <div className="flex items-center gap-2 text-xs">
-                {hasTakeoff ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={hasTakeoff ? "text-emerald-700" : "text-amber-700"}>
-                  {hasTakeoff ? `${takeoffs.length} takeoff(s) attached` : "No takeoff attached"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {hasWoItems ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={hasWoItems ? "text-emerald-700" : "text-amber-700"}>
-                  Items: {woItems.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {buildComplete ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Hammer className="h-3.5 w-3.5 text-amber-500" />}
-                <span className={buildComplete ? "text-emerald-700" : "text-amber-700"}>
-                  {!latestBuildRequest ? "Build: N/A" : buildComplete ? "Build complete" : `Build: ${latestBuildRequest.status.replace(/_/g, " ")}`}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                {(workOrder?.status === "completed") ? <Truck className="h-3.5 w-3.5 text-emerald-600" /> : <Truck className="h-3.5 w-3.5 text-muted-foreground" />}
-                <span className={workOrder?.status === "completed" ? "text-emerald-700" : "text-muted-foreground"}>
-                  {workOrder?.status === "completed" ? "Complete" : "Not complete"}
-                </span>
-              </div>
-            </div>
-            {/* Quick actions row */}
-            {canEdit && (
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                {workOrder.status === "ready" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs gap-1.5"
-                    onClick={() => setShowScheduleDialog(true)}
-                    disabled={!readyToSchedule || !!dispatch}
-                  >
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {dispatch ? "Dispatch Scheduled" : "Schedule Dispatch"}
-                  </Button>
-                )}
-                {dispatch && (
-                  <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => router.push(`/dispatch/${dispatch.id}`)}>
-                    <Truck className="h-3.5 w-3.5" /> View Dispatch
-                  </Button>
-                )}
-                {dispatch?.status === "completed" && workOrder.status !== "sent_to_billing" && (
-                  <Button
-                    size="sm"
-                    className="text-xs gap-1.5"
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(`/api/workorders/${workOrderId}`, {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ status: "completed" }),
-                        });
-
-                        if (!response.ok) {
-                          const error = await response.json();
-                          throw new Error(error.error || 'Failed to update status');
-                        }
-
-                        toast.success("Marked as sent to billing");
-                        // Refetch work order data
-                        const workOrderResponse = await fetch(`/api/workorders/${workOrderId}`);
-                        if (workOrderResponse.ok) {
-                          const data = await workOrderResponse.json();
-                          setWorkOrder(data);
-                        }
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to send to billing');
-                      }
-                    }}
-                  >
-                    <DollarSign className="h-3.5 w-3.5" /> Send to Billing
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -1240,14 +1242,14 @@ const WorkOrderDetail = ({
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
               Work Order Items
             </h2>
-            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => item.sov_item_id).length} SOV items</Badge>
+            <Badge variant="secondary" className="text-[10px]">{primaryWorkOrderItems.length} items</Badge>
           </div>
 
           {loadingRelated ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : woItems.filter(item => item.sov_item_id).length === 0 ? (
+          ) : primaryWorkOrderItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No SOV items found. Work order items will be automatically populated from the Schedule of Values when a takeoff is linked.
             </div>
@@ -1259,13 +1261,13 @@ const WorkOrderDetail = ({
                     <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                     <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="w-[80px] text-xs">UOM</TableHead>
-                    <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
+                    <TableHead className="w-[110px] text-xs text-right">Contract Quantity</TableHead>
                     <TableHead className="w-[100px] text-xs text-right">WO Qty</TableHead>
                     {canEdit && <TableHead className="w-[40px]" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {woItems.filter(item => item.sov_item_id).map((item) => (
+                  {primaryWorkOrderItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="p-1.5">
                         {canEdit ? (
@@ -1392,25 +1394,6 @@ const WorkOrderDetail = ({
                                     })}
                                   </CommandGroup>
                                   )}
-                                  <CommandGroup heading="Custom">
-                                    <CommandItem
-                                      value="__custom_item__"
-                                      onSelect={() => {
-                                        setCustomItemRowId(item.id);
-                                        setCustomItemNumber("");
-                                        setCustomItemDescription("");
-                                        setCustomItemUom("EA");
-                                        setCustomItemQty(1);
-                                        setShowCustomItemDialog(true);
-                                        setOpenItemPickerRow(null);
-                                        setItemPickerSearch("");
-                                      }}
-                                      className="text-xs"
-                                    >
-                                      <Plus className="mr-1.5 h-3 w-3" />
-                                      <span>Enter custom item…</span>
-                                    </CommandItem>
-                                  </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
@@ -1426,66 +1409,36 @@ const WorkOrderDetail = ({
                         <span className="text-xs px-1">{item.uom || "EA"}</span>
                       </TableCell>
                       <TableCell className="p-1.5">
-                        <span className="text-xs text-right block">{item.contract_quantity}</span>
+                        <span className="text-xs text-right block">{formatQuantityValue(item.contract_quantity)}</span>
                       </TableCell>
                       <TableCell className="p-1.5">
                         {canEdit ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                const newQty = Math.max(0, (item.work_order_quantity || 0) - 1);
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
-                              }}
-                              disabled={(item.work_order_quantity || 0) <= 0}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={item.work_order_quantity || ""}
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                const cleaned = raw.replace(/\D/g, '');
-                                const num = cleaned === '' ? 0 : Math.max(0, parseInt(cleaned, 10));
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: num } : i));
-                              }}
-                              onBlur={async () => {
-                                const response = await fetch(`/api/workorders/${workOrderId}/items`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    action: 'update',
-                                    itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
-                                  }),
-                                });
-                                if (!response.ok) {
-                                  const error = await response.json();
-                                  toast.error(error.error || 'Failed to update quantity');
-                                  // Revert the change
-                                  setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: item.work_order_quantity } : i));
-                                }
-                              }}
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                const newQty = (item.work_order_quantity || 0) + 1;
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
-                              }}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <QuantityInput
+                            value={Number(item.work_order_quantity || 0)}
+                            min={0}
+                            onChange={(value) =>
+                              setWoItems((prev) =>
+                                prev.map((i) => (i.id === item.id ? { ...i, work_order_quantity: Math.max(0, value) } : i))
+                              )
+                            }
+                            onBlur={async () => {
+                              const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  action: 'update',
+                                  itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
+                                }),
+                              });
+                              if (!response.ok) {
+                                const error = await response.json();
+                                toast.error(error.error || 'Failed to update quantity');
+                              }
+                            }}
+                            inputClassName="text-xs tabular-nums w-16"
+                          />
                         ) : (
-                          <span className="text-xs text-right block">{item.work_order_quantity}</span>
+                          <span className="text-xs text-right block">{formatQuantityValue(item.work_order_quantity)}</span>
                         )}
                       </TableCell>
                       {canEdit && (
@@ -1504,20 +1457,20 @@ const WorkOrderDetail = ({
         </div>
 
         {/* ─── Additional Items Card — Custom items added manually ─── */}
-        <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
+        {false && <div className="rounded-xl border bg-card p-4 overflow-x-hidden">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Plus className="h-4 w-4 text-muted-foreground" />
               Additional Items
             </h2>
-            <Badge variant="secondary" className="text-[10px]">{woItems.filter(item => !item.sov_item_id).length} custom items</Badge>
+            <Badge variant="secondary" className="text-[10px]">{additionalWorkOrderItems.length} additional items</Badge>
           </div>
 
           {loadingRelated ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : woItems.filter(item => !item.sov_item_id).length === 0 ? (
+          ) : additionalWorkOrderItems.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No additional items. Custom items added manually will appear here.
             </div>
@@ -1529,13 +1482,13 @@ const WorkOrderDetail = ({
                     <TableHead className="w-[120px] text-xs">Item Number</TableHead>
                     <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="w-[80px] text-xs">UOM</TableHead>
-                    <TableHead className="w-[70px] text-xs text-right">Qty</TableHead>
+                    <TableHead className="w-[110px] text-xs text-right">Contract Quantity</TableHead>
                     <TableHead className="w-[100px] text-xs text-right">WO Qty</TableHead>
                     {canEdit && <TableHead className="w-[40px]" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {woItems.filter(item => !item.sov_item_id).map((item) => (
+                  {additionalWorkOrderItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="p-1.5">
                         {canEdit ? (
@@ -1662,25 +1615,6 @@ const WorkOrderDetail = ({
                                     })}
                                   </CommandGroup>
                                   )}
-                                  <CommandGroup heading="Custom">
-                                    <CommandItem
-                                      value="__custom_item__"
-                                      onSelect={() => {
-                                        setCustomItemRowId(item.id);
-                                        setCustomItemNumber("");
-                                        setCustomItemDescription("");
-                                        setCustomItemUom("EA");
-                                        setCustomItemQty(1);
-                                        setShowCustomItemDialog(true);
-                                        setOpenItemPickerRow(null);
-                                        setItemPickerSearch("");
-                                      }}
-                                      className="text-xs"
-                                    >
-                                      <Plus className="mr-1.5 h-3 w-3" />
-                                      <span>Enter custom item…</span>
-                                    </CommandItem>
-                                  </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
@@ -1700,60 +1634,30 @@ const WorkOrderDetail = ({
                       </TableCell>
                       <TableCell className="p-1.5">
                         {canEdit ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                const newQty = Math.max(0, (item.work_order_quantity || 0) - 1);
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
-                              }}
-                              disabled={(item.work_order_quantity || 0) <= 0}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={item.work_order_quantity || ""}
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                const cleaned = raw.replace(/\D/g, '');
-                                const num = cleaned === '' ? 0 : Math.max(0, parseInt(cleaned, 10));
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: num } : i));
-                              }}
-                              onBlur={async () => {
-                                const response = await fetch(`/api/workorders/${workOrderId}/items`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    action: 'update',
-                                    itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
-                                  }),
-                                });
-                                if (!response.ok) {
-                                  const error = await response.json();
-                                  toast.error(error.error || 'Failed to update quantity');
-                                  // Revert the change
-                                  setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: item.work_order_quantity } : i));
-                                }
-                              }}
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                const newQty = (item.work_order_quantity || 0) + 1;
-                                setWoItems((prev) => prev.map(i => i.id === item.id ? { ...i, work_order_quantity: newQty } : i));
-                              }}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <QuantityInput
+                            value={Number(item.work_order_quantity || 0)}
+                            min={0}
+                            onChange={(value) =>
+                              setWoItems((prev) =>
+                                prev.map((i) => (i.id === item.id ? { ...i, work_order_quantity: Math.max(0, value) } : i))
+                              )
+                            }
+                            onBlur={async () => {
+                              const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  action: 'update',
+                                  itemData: { itemId: item.id, updates: { work_order_quantity: item.work_order_quantity } },
+                                }),
+                              });
+                              if (!response.ok) {
+                                const error = await response.json();
+                                toast.error(error.error || 'Failed to update quantity');
+                              }
+                            }}
+                            inputClassName="text-xs tabular-nums w-16"
+                          />
                         ) : (
                           <span className="text-xs text-right block">{item.work_order_quantity}</span>
                         )}
@@ -1771,7 +1675,7 @@ const WorkOrderDetail = ({
               </Table>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* ─── Documents Card ─── */}
         <div className="rounded-lg border bg-card shadow-sm">
@@ -2088,50 +1992,6 @@ const WorkOrderDetail = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Draft Work Order Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-destructive" />
-              Delete Work Order
-            </DialogTitle>
-            <DialogDescription>
-              This will permanently delete this draft work order and all its line items. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!workOrderId) return;
-                try {
-                  const response = await fetch(`/api/workorders/${workOrderId}`, {
-                    method: 'DELETE',
-                  });
-
-                  if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to delete work order');
-                  }
-
-                  const result = await response.json();
-                  toast.success("Work order deleted");
-                  router.push(result.jobId ? `/l/${result.jobId}` : "/");
-                } catch (err: any) {
-                  toast.error(err.message || 'Failed to delete work order');
-                }
-                setShowDeleteDialog(false);
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete Work Order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Link Takeoff Modal */}
       <Dialog open={showLinkTakeoffModal} onOpenChange={setShowLinkTakeoffModal}>
         <DialogContent className="max-w-2xl">
@@ -2185,15 +2045,23 @@ const WorkOrderDetail = ({
                             if (response.ok) {
                               const data = await response.json();
                               if (data.takeoff?.items) {
-                                const newItems = data.takeoff.items.map((item: any, index: number) => ({
-                                  id: `temp-${Date.now()}-${index}`,
-                                  item_number: item.item_number || "",
-                                  description: item.description || "",
-                                  contract_quantity: item.quantity || 1,
-                                  work_order_quantity: item.quantity || 1,
-                                  uom: item.uom || "EA",
-                                  sort_order: woItems.length + index,
-                                }));
+                                const isPermanentSigns = data.takeoff?.work_type === "PERMANENT_SIGNS";
+                                const permanentSqftTotals = isPermanentSigns ? buildPermanentSignSqftTotals(data.takeoffItems || []) : null;
+                                const newItems = data.takeoff.items.map((item: any, index: number) => {
+                                  const itemNumber = item.item_number || item.product_name || "";
+                                  const quantity = isPermanentSigns
+                                    ? permanentSqftTotals?.get(String(itemNumber).trim()) || Number(item.quantity || 1)
+                                    : Number(item.quantity || 1);
+                                  return {
+                                    id: `temp-${Date.now()}-${index}`,
+                                    item_number: itemNumber,
+                                    description: item.description || item.notes || "",
+                                    contract_quantity: quantity,
+                                    work_order_quantity: quantity,
+                                    uom: isPermanentSigns ? "SF" : (item.uom || item.unit || "EA"),
+                                    sort_order: woItems.length + index,
+                                  };
+                                });
                                 setWoItems(prev => [...prev, ...newItems]);
                               }
                             }
@@ -2234,7 +2102,42 @@ const WorkOrderDetail = ({
                             const takeoffDataResponse = await fetch(`/api/l/takeoffs/${takeoff.id}/data`);
                             if (takeoffDataResponse.ok) {
                               const takeoffData = await takeoffDataResponse.json();
-                              if (takeoffData.takeoff?.sign_rows) {
+                              if (takeoff.work_type === "PERMANENT_SIGNS" && takeoffData.takeoffItems) {
+                                const sqftTotals = buildPermanentSignSqftTotals(takeoffData.takeoffItems || []);
+
+                                for (const [itemNumber, totalSqft] of sqftTotals.entries()) {
+                                  const matchingSovItem = woItems.find(item =>
+                                    item.sov_item_id &&
+                                    String(item.item_number || "").trim().toUpperCase() === itemNumber.toUpperCase()
+                                  );
+
+                                  if (!matchingSovItem) continue;
+
+                                  const response = await fetch(`/api/workorders/${workOrderId}/items`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      action: 'update',
+                                      itemData: {
+                                        itemId: matchingSovItem.id,
+                                        updates: {
+                                          contract_quantity: totalSqft,
+                                          work_order_quantity: totalSqft,
+                                          uom: 'SF',
+                                        },
+                                      },
+                                    }),
+                                  });
+
+                                  if (response.ok) {
+                                    setWoItems(prev => prev.map(item =>
+                                      item.id === matchingSovItem.id
+                                        ? { ...item, contract_quantity: totalSqft, work_order_quantity: totalSqft, uom: 'SF' }
+                                        : item
+                                    ));
+                                  }
+                                }
+                              } else if (takeoffData.takeoff?.sign_rows) {
                                 const signRowsData = takeoffData.takeoff.sign_rows || {};
 
                                 // Count total signs by work type category
@@ -2244,7 +2147,10 @@ const WorkOrderDetail = ({
                                   for (const row of sectionRows) {
                                     const quantity = row.quantity || 1;
                                     // Extract work type category from takeoff work_type (e.g., "MPT" from "MPT:trailblazers")
-                                    const workTypeCategory = takeoff.work_type?.split(':')[0] || 'UNKNOWN';
+                                    const workTypeCategory =
+                                      typeof takeoff.work_type === 'string' && takeoff.work_type.length > 0
+                                        ? takeoff.work_type.split(':')[0]
+                                        : 'UNKNOWN';
                                     signCounts[workTypeCategory] = (signCounts[workTypeCategory] || 0) + quantity;
                                   }
                                 }

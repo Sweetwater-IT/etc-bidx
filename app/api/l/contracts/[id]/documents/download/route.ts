@@ -14,14 +14,31 @@ export async function GET(
       return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
     }
 
-    // Get document info
-    const { data: doc, error: fetchErr } = await supabase
-      .from("documents")
+    // Newer /l flows store files in documents_l, but older rows may still be in documents.
+    let doc: { file_path: string | null; file_name: string | null } | null = null;
+
+    const { data: docL } = await supabase
+      .from("documents_l")
       .select("file_path, file_name")
       .eq("id", documentId)
-      .single();
+      .maybeSingle();
 
-    if (fetchErr || !doc) {
+    if (docL) {
+      doc = docL;
+    } else {
+      const { data: legacyDoc, error: fetchErr } = await supabase
+        .from("documents")
+        .select("file_path, file_name")
+        .eq("id", documentId)
+        .maybeSingle();
+
+      if (fetchErr) {
+        console.error("Error fetching contract document:", fetchErr);
+      }
+      doc = legacyDoc;
+    }
+
+    if (!doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 

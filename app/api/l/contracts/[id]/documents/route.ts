@@ -11,7 +11,8 @@ export async function GET(
     const { data: docs, error } = await supabase
       .from("documents_l")
       .select("*")
-      .eq("job_id", jobId);
+      .eq("job_id", jobId)
+      .is("deleted_at", null);
 
     if (error) {
       console.error('Error fetching documents:', error);

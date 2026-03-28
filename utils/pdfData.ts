@@ -26,6 +26,27 @@ const hasValue = (value: unknown) => {
   return true;
 };
 
+const getAdditionalItemName = (item: Record<string, any> | null | undefined) => {
+  const rawName = typeof item?.name === 'string' ? item.name.trim() : '';
+  const rawCustomName = typeof item?.customName === 'string' ? item.customName.trim() : '';
+  const rawDescription = typeof item?.description === 'string' ? item.description.trim() : '';
+  const genericNames = new Set(['', 'additional item', 'additional items', '__custom']);
+
+  if (rawCustomName) {
+    return rawCustomName;
+  }
+
+  if (!genericNames.has(rawName.toLowerCase())) {
+    return rawName;
+  }
+
+  if (rawDescription) {
+    return rawDescription;
+  }
+
+  return 'Additional Item';
+};
+
 const isConfiguredRow = (row: Record<string, any> | null | undefined) =>
   Boolean(
     row &&
@@ -36,6 +57,32 @@ const isConfiguredRow = (row: Record<string, any> | null | undefined) =>
       Number(row.quantity || 0) > 0
     )
   );
+
+const normalizeSecondarySigns = (secondarySigns: any[], parentId?: string, quantity = 0) =>
+  (Array.isArray(secondarySigns) ? secondarySigns : [])
+    .filter((secondarySign) =>
+      Boolean(
+        secondarySign &&
+        (
+          hasValue(secondarySign.signDesignation) ||
+          hasValue(secondarySign.signLegend) ||
+          hasValue(secondarySign.signDescription) ||
+          Number(secondarySign.width || 0) > 0 ||
+          Number(secondarySign.height || 0) > 0 ||
+          Number(secondarySign.sqft || 0) > 0
+        )
+      ) &&
+      (
+        !parentId ||
+        !secondarySign?.primarySignId ||
+        secondarySign.primarySignId === parentId
+      )
+    )
+    .map((secondarySign) => ({
+      ...secondarySign,
+      primarySignId: parentId || secondarySign.primarySignId,
+      quantity,
+    }));
 
 export async function getTakeoffPdfData(takeoffId: string) {
   console.log('getTakeoffPdfData: Called with takeoffId:', takeoffId);
@@ -59,7 +106,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
   // Fetch related job explicitly to avoid relation-name mismatches
   const { data: job } = await supabase
     .from('jobs_l')
-    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, county, etc_branch, etc_project_manager, etc_job_number')
+    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, contract_number, county, etc_branch, etc_project_manager, etc_job_number')
     .eq('id', takeoff.job_id)
     .single();
 
@@ -84,13 +131,15 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
       for (const row of rows) {
         if (!isConfiguredRow(row)) continue;
+        const quantity = Number(row.quantity || 0);
         items.push({
           product_name: row.signDesignation || row.signDescription || 'Sign',
           category: categoryLabel,
           unit: 'EA',
-          quantity: Number(row.quantity || 0),
+          quantity,
           notes: JSON.stringify({
             ...row,
+            secondarySigns: normalizeSecondarySigns(row.secondarySigns, row.id, quantity),
             itemType: 'mpt_sign',
             sectionKey,
           }),
@@ -171,14 +220,10 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
   const additionalItems = Array.isArray(takeoff.additional_items) ? takeoff.additional_items : [];
   for (const item of additionalItems) {
-    const productName = item?.name === '__custom'
-      ? item?.description || 'Custom Item'
-      : item?.name || 'Additional Item';
-
     items.push({
-      product_name: productName,
+      product_name: getAdditionalItemName(item),
       category: 'Additional Items',
-      unit: 'EA',
+      unit: item?.unit || 'EA',
       quantity: Number(item?.quantity || 0),
       notes: JSON.stringify({
         ...item,
@@ -221,13 +266,24 @@ export async function getTakeoffPdfData(takeoffId: string) {
 
     for (const item of takeoffItems || []) {
       const details = (item.sign_details && typeof item.sign_details === 'object') ? item.sign_details : {};
+      const isAdditionalItem =
+        String(item.category || '').toLowerCase().includes('additional') ||
+        details?.itemType === 'additional';
+      const fallbackAdditionalName = isAdditionalItem
+        ? getAdditionalItemName({
+            name: item.product_name,
+            description: details?.description || item.notes || item.sign_description,
+          })
+        : item.product_name || '';
+
       items.push({
-        product_name: item.product_name || '',
+        product_name: fallbackAdditionalName,
         category: item.category || '',
         unit: item.unit || 'EA',
         quantity: item.quantity || 0,
         notes: JSON.stringify({
           ...details,
+          secondarySigns: normalizeSecondarySigns(details?.secondarySigns, details?.id, item.quantity || 0),
           signDescription: details?.signDescription || item.sign_description || '',
           sheeting: details?.sheeting || item.sheeting || '',
           width: details?.width || item.width_inches || 0,
@@ -259,6 +315,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     customerJobNumber: job?.customer_job_number || '',
     customerPM: job?.customer_pm || '',
     projectOwner: job?.project_owner || '',
+    contractNumber: job?.contract_number || '',
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
@@ -281,6 +338,7 @@ export async function getBillingPacketData(workOrderId: string) {
         customer_job_number,
         customer_pm,
         project_owner,
+        contract_number,
         county,
         etc_branch,
         etc_project_manager,
@@ -300,7 +358,8 @@ export async function getBillingPacketData(workOrderId: string) {
   const { data: woItems, error: itemsError } = await supabase
     .from('work_order_items_l')
     .select('*')
-    .eq('work_order_id', workOrderId);
+    .eq('work_order_id', workOrderId)
+    .not('sov_item_id', 'is', null);
 
   if (itemsError) {
     console.warn('Error fetching work order items:', itemsError);
@@ -315,11 +374,11 @@ export async function getBillingPacketData(workOrderId: string) {
   }));
 
   return {
-    woNumber: workOrder.work_order_number || workOrder.id,
+    woNumber: workOrder.wo_number || workOrder.work_order_number || '',
     woTitle: workOrder.title || '',
     woDescription: workOrder.description || '',
     woNotes: workOrder.notes || '',
-    etcAssignedTo: workOrder.etc_assigned_to || '',
+    etcAssignedTo: workOrder.assigned_to || workOrder.etc_assigned_to || '',
     contractedOrAdditional: workOrder.contracted_or_additional || 'contracted',
     customerPocPhone: workOrder.customer_poc_phone || '',
     projectName: job?.project_name || '',
@@ -328,9 +387,11 @@ export async function getBillingPacketData(workOrderId: string) {
     customerJobNumber: job?.customer_job_number || '',
     customerPM: job?.customer_pm || '',
     projectOwner: job?.project_owner || '',
+    contractNumber: job?.contract_number || '',
     county: job?.county || '',
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
+    primaryTakeoffId: workOrder.takeoff_id || '',
     installDate: workOrder.install_date || '',
     pickupDate: workOrder.pickup_date || '',
     items,

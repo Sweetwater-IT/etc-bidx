@@ -1,4 +1,14 @@
 import { supabase } from '@/lib/supabase';
+import {
+  buildRepeatableCloneItemNumber,
+  fetchSovMastersForEntries,
+  getPrimaryUom,
+  getVisibleSovItemNumber,
+  isRepeatableCloneItemNumber,
+  isRepeatableSovItemNumber,
+  resolveEntryMaster,
+  SOV_MASTER_SELECT_FIELDS,
+} from '@/lib/server/sov/masterItems';
 
 export class SovUpsertError extends Error {
   status: number;
@@ -15,9 +25,13 @@ export class SovUpsertError extends Error {
 export type UpsertSovEntryInput = {
   jobId: string;
   sov_item_id?: string | null;
+  custom_sov_item_id?: string | null;
   item_number?: string | null;
   description?: string | null;
+  display_name_override?: string | null;
+  work_type?: string | null;
   uom?: string | null;
+  uom_override?: string | null;
   quantity?: number | null;
   unit_price?: number | null;
   retainage_type?: string | null;
@@ -30,9 +44,13 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   const {
     jobId,
     sov_item_id,
+    custom_sov_item_id,
     item_number,
     description,
+    display_name_override,
+    work_type,
     uom,
+    uom_override,
     quantity,
     unit_price,
     retainage_type,
@@ -42,44 +60,84 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   } = input;
 
   let finalSovItemId = sov_item_id ?? null;
+  let finalCustomSovItemId = custom_sov_item_id ?? null;
 
-  if (!finalSovItemId && item_number) {
-    const { data: existingItem, error: findError } = await supabase
+  if (!finalSovItemId && !finalCustomSovItemId && item_number) {
+    const normalizedItemNumber = String(item_number).trim();
+    let standardLookup = supabase
       .from('sov_items')
-      .select('id')
-      .eq('item_number', item_number)
-      .single();
+      .select(SOV_MASTER_SELECT_FIELDS)
+      .eq('item_number', normalizedItemNumber);
+
+    if (work_type) {
+      standardLookup = standardLookup.eq('work_type', work_type);
+    }
+
+    const { data: standardMatches, error: findError } = await standardLookup.limit(2);
 
     if (findError && findError.code !== 'PGRST116') {
       throw new SovUpsertError('Failed to lookup master SOV item', 500, findError);
     }
 
+    const existingItem = standardMatches?.[0] ?? null;
+
+    if ((standardMatches?.length || 0) > 1) {
+      throw new SovUpsertError(
+        'Found multiple standard SOV items for this item number. Please include work type when selecting the row.',
+        400,
+        { item_number: normalizedItemNumber, work_type }
+      );
+    }
+
     if (existingItem) {
-      finalSovItemId = existingItem.id;
+      if (isRepeatableSovItemNumber(existingItem.display_item_number || existingItem.item_number)) {
+        const { data: repeatableClone, error: cloneError } = await supabase
+          .from('custom_sov_items')
+          .insert({
+            job_id: jobId,
+            item_number: buildRepeatableCloneItemNumber(existingItem.display_item_number || existingItem.item_number),
+            display_item_number: existingItem.display_item_number || existingItem.item_number,
+            description: description ?? existingItem.description ?? '',
+            display_name: description || existingItem.display_name || existingItem.display_item_number || existingItem.item_number,
+            work_type: work_type ?? existingItem.work_type ?? 'OTHER',
+            uom_1: uom ?? getPrimaryUom(existingItem),
+          })
+          .select('id')
+          .single();
+
+        if (cloneError) {
+          throw new SovUpsertError('Failed to create repeatable SOV item clone', 500, cloneError);
+        }
+
+        finalCustomSovItemId = repeatableClone.id;
+      } else {
+        finalSovItemId = existingItem.id;
+      }
     } else {
       const { data: newItem, error: createError } = await supabase
-        .from('sov_items')
+        .from('custom_sov_items')
         .insert({
-          item_number,
-          display_item_number: item_number,
+          job_id: jobId,
+          item_number: normalizedItemNumber,
+          display_item_number: normalizedItemNumber,
           description: description ?? '',
-          display_name: description || item_number,
-          work_type: 'OTHER',
+          display_name: description || normalizedItemNumber,
+          work_type: work_type ?? 'OTHER',
           uom_1: uom ?? 'UNKNOWN',
         })
         .select('id')
         .single();
 
       if (createError) {
-        throw new SovUpsertError('Failed to create master SOV item', 500, createError);
+        throw new SovUpsertError('Failed to create custom SOV item', 500, createError);
       }
 
-      finalSovItemId = newItem.id;
+      finalCustomSovItemId = newItem.id;
     }
   }
 
-  if (!finalSovItemId) {
-    throw new SovUpsertError('Missing sov_item_id or item_number', 400);
+  if (!finalSovItemId && !finalCustomSovItemId) {
+    throw new SovUpsertError('Missing sov_item_id, custom_sov_item_id, or item_number', 400);
   }
 
   const normalizedQuantity = Number(quantity ?? 0);
@@ -112,6 +170,9 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   const writePayload = {
     job_id: jobId,
     sov_item_id: finalSovItemId,
+    custom_sov_item_id: finalCustomSovItemId,
+    display_name_override: display_name_override ?? null,
+    uom_override: uom_override ?? null,
     quantity: normalizedQuantity,
     unit_price: normalizedUnitPrice,
     extended_price,
@@ -122,76 +183,84 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     sort_order: finalSortOrder,
   };
 
+  const selectEntryFields = `
+    id,
+    job_id,
+    sov_item_id,
+    custom_sov_item_id,
+    display_name_override,
+    uom_override,
+    quantity,
+    unit_price,
+    extended_price,
+    retainage_type,
+    retainage_value,
+    retainage_amount,
+    notes,
+    sort_order,
+    created_at,
+    updated_at
+  `;
+
+  const hydrateResponse = async (entry: any) => {
+    const masterMaps = await fetchSovMastersForEntries([entry]);
+    const masterItem = resolveEntryMaster(entry, masterMaps);
+
+    if (!masterItem) {
+      throw new SovUpsertError('Failed to fetch SOV master item after save', 500);
+    }
+
+    return {
+      id: entry.id,
+      job_id: entry.job_id,
+      sov_item_id: entry.sov_item_id,
+      custom_sov_item_id: entry.custom_sov_item_id,
+      display_name_override: entry.display_name_override,
+      uom_override: entry.uom_override,
+      item_number: masterItem.item_number,
+      display_item_number: masterItem.display_item_number,
+      description: masterItem.description,
+      display_name: entry.display_name_override || masterItem.display_name,
+      work_type: masterItem.work_type,
+      uom: entry.uom_override || getPrimaryUom(masterItem),
+      is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
+      quantity: entry.quantity,
+      unit_price: entry.unit_price,
+      extended_price: entry.extended_price,
+      retainage_type: entry.retainage_type,
+      retainage_value: entry.retainage_value,
+      retainage_amount: entry.retainage_amount,
+      notes: entry.notes,
+      sort_order: entry.sort_order,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+    };
+  };
+
   let { data, error } = await supabase
     .from('sov_entries')
     .insert(writePayload)
-    .select(`
-      id,
-      job_id,
-      sov_item_id,
-      quantity,
-      unit_price,
-      extended_price,
-      retainage_type,
-      retainage_value,
-      retainage_amount,
-      notes,
-      sort_order,
-      created_at,
-      updated_at,
-      sov_items (
-        id,
-        item_number,
-        display_item_number,
-        description,
-        display_name,
-        work_type,
-        uom_1,
-        uom_2,
-        uom_3,
-        uom_4,
-        uom_5,
-        uom_6
-      )
-    `)
+    .select(selectEntryFields)
     .single();
 
-  if (error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key')) {
+  const duplicateStandard = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key');
+  const duplicateCustom = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_custom_sov_item_id_key');
+
+  if (duplicateStandard || duplicateCustom) {
     const { sort_order: _ignoredSort, ...updatePayload } = writePayload;
-    const { data: updatedData, error: updateError } = await supabase
+    let updateQuery = supabase
       .from('sov_entries')
       .update(updatePayload)
-      .eq('job_id', jobId)
-      .eq('sov_item_id', finalSovItemId)
-      .select(`
-        id,
-        job_id,
-        sov_item_id,
-        quantity,
-        unit_price,
-        extended_price,
-        retainage_type,
-        retainage_value,
-        retainage_amount,
-        notes,
-        sort_order,
-        created_at,
-        updated_at,
-        sov_items (
-          id,
-          item_number,
-          display_item_number,
-          description,
-          display_name,
-          work_type,
-          uom_1,
-          uom_2,
-          uom_3,
-          uom_4,
-          uom_5,
-          uom_6
-        )
-      `)
+      .eq('job_id', jobId);
+
+    if (finalCustomSovItemId) {
+      updateQuery = updateQuery.eq('custom_sov_item_id', finalCustomSovItemId);
+    } else {
+      updateQuery = updateQuery.eq('sov_item_id', finalSovItemId);
+    }
+
+    const { data: updatedData, error: updateError } = await updateQuery
+      .select(selectEntryFields)
       .single();
 
     if (updateError) {
@@ -210,25 +279,5 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     throw new SovUpsertError('No data returned from database operation', 500);
   }
 
-  return {
-    id: data.id,
-    job_id: data.job_id,
-    sov_item_id: data.sov_item_id,
-    item_number: (data as any).sov_items?.item_number,
-    display_item_number: (data as any).sov_items?.display_item_number,
-    description: (data as any).sov_items?.description,
-    display_name: (data as any).sov_items?.display_name,
-    work_type: (data as any).sov_items?.work_type,
-    uom: (data as any).sov_items?.uom_1 || (data as any).sov_items?.uom_2 || (data as any).sov_items?.uom_3 || (data as any).sov_items?.uom_4 || (data as any).sov_items?.uom_5 || (data as any).sov_items?.uom_6,
-    quantity: data.quantity,
-    unit_price: data.unit_price,
-    extended_price: data.extended_price,
-    retainage_type: data.retainage_type,
-    retainage_value: data.retainage_value,
-    retainage_amount: data.retainage_amount,
-    notes: data.notes,
-    sort_order: data.sort_order,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-  };
+  return await hydrateResponse(data);
 }

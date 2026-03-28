@@ -5,21 +5,11 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { Button } from "@/components/ui/button";
-import { Edit, ClipboardList, Download, CheckCircle } from "lucide-react";
+import { Edit, ClipboardList, Download, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-
-const WORK_TYPES = [
-  { value: "MPT", label: "MPT" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
-  { value: "FLAGGING", label: "Flagging" },
-  { value: "LANE_CLOSURE", label: "Lane Closure" },
-  { value: "SERVICE", label: "Service" },
-  { value: "DELIVERY", label: "Delivery" },
-  { value: "RENTAL", label: "Rental" },
-];
+import { formatWorkOrderPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
 export default function WorkOrderViewContent({
   workOrderId,
@@ -57,6 +47,11 @@ export default function WorkOrderViewContent({
   }, [workOrderId]);
 
   const handleBack = () => {
+    const linkedTakeoffId = takeoffId || workOrderData?.takeoffs?.[0]?.id;
+    if (linkedTakeoffId) {
+      router.push(`/l/${jobId}/takeoffs/view/${linkedTakeoffId}`);
+      return;
+    }
     router.push(`/l/${jobId}`);
   };
 
@@ -206,57 +201,52 @@ export default function WorkOrderViewContent({
     }
   };
 
-  const handleMarkAsReady = async () => {
-    try {
-      const response = await fetch(`/api/workorders/${workOrderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'ready'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to mark work order as ready');
-      }
-
-      toast.success("Work order marked as ready");
-      // Refresh the work order data
-      const detailResponse = await fetch(`/api/workorders/${workOrderId}/detail`);
-      if (detailResponse.ok) {
-        const data = await detailResponse.json();
-        setWorkOrderData(data);
-      }
-    } catch (error) {
-      console.error("Error marking work order as ready:", error);
-      toast.error("Failed to mark work order as ready");
-    }
-  };
-
   const getTitle = () => {
-    if (!workOrderData) return "Work Order Details";
-
-    if (workOrderData.isPickup) {
-      return `Pickup workorder for ${jobName}`;
-    }
-
-    // Get work type from the associated takeoff
-    const takeoff = workOrderData.takeoffs?.[0];
-    if (takeoff) {
-      const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
-      return workTypeLabel ? `${workTypeLabel} work order for ${jobName}` : `Work order for ${jobName}`;
-    }
-
-    return `Work order for ${jobName}`;
+    return formatWorkOrderPageTitle({
+      workType: workOrderData?.takeoffs?.[0]?.work_type,
+      isPickup: workOrderData?.isPickup,
+      jobLabel: jobName,
+    });
   };
+
+  const isMptTakeoff = workOrderData?.takeoffs?.[0]?.work_type === "MPT";
+  const canGeneratePickup = !workOrderData?.isPickup && isMptTakeoff && workOrderData?.status === "installed";
+  const workTypeLabel = getWorkTypeLabel(workOrderData?.takeoffs?.[0]?.work_type);
+  const breadcrumbCurrentLabel = workOrderData?.isPickup
+    ? "Pickup work order"
+    : workTypeLabel
+      ? `${workTypeLabel} work order`
+      : "Work order";
 
   return (
     <div>
       <StickyPageHeader
         backLabel="Job"
         onBack={handleBack}
+        showBackButton={false}
+        leftContent={
+          <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => router.push("/l/jobs")}
+              className="whitespace-nowrap transition-colors hover:text-foreground"
+            >
+              Jobs
+            </button>
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <button
+              type="button"
+              onClick={() => router.push(`/l/${jobId}`)}
+              className="whitespace-nowrap transition-colors hover:text-foreground"
+            >
+              {jobName}
+            </button>
+            <ChevronRight className="h-3 w-3 shrink-0" />
+            <span className="whitespace-nowrap font-medium text-foreground">
+              {breadcrumbCurrentLabel}
+            </span>
+          </div>
+        }
         rightContent={
           <>
             <Button
@@ -286,26 +276,17 @@ export default function WorkOrderViewContent({
               <Download className="h-3.5 w-3.5 mr-1.5" />
               {downloadingPdf === 'combined' ? "Downloading…" : "WO + Takeoff PDF"}
             </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMarkAsReady}
-              disabled={workOrderData?.status === 'ready'}
-            >
-              <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-              {workOrderData?.status === 'ready' ? 'Ready' : 'Mark as Ready'}
-            </Button>
-            {!workOrderData?.isPickup && (pickupWO ? (
+            {!workOrderData?.isPickup && isMptTakeoff && (pickupWO ? (
               <Button variant="outline" size="sm" onClick={handleViewPickupWorkOrder}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 View Pickup Work Order
               </Button>
-            ) : (
+            ) : canGeneratePickup ? (
               <Button variant="outline" size="sm" onClick={handleGeneratePickupWorkOrder} disabled={generatingPickup}>
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                 {generatingPickup ? "Creating…" : "Generate Pickup Work Order"}
               </Button>
-            ))}
+            ) : null)}
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Edit className="h-3.5 w-3.5 mr-1.5" />
               Edit
@@ -314,27 +295,7 @@ export default function WorkOrderViewContent({
         }
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href={`/l/${jobId}/takeoffs/view/${workOrderData?.takeoffs?.[0]?.id || takeoffId}`}>Takeoff</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{jobName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
+      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
         <PageTitleBlock
           title={getTitle()}
           description={`View work order details for ${jobName}.`}

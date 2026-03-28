@@ -6,24 +6,14 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Edit, Download, ClipboardList } from "lucide-react";
+import { Edit, Download, ClipboardList, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import TakeoffViewContent from '../../create/[takeoffId]/TakeoffViewContent';
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ProjectFooter } from "@/components/ProjectFooter";
-
-const WORK_TYPES = [
-  { value: "MPT", label: "MPT" },
-  { value: "PERMANENT_SIGNS", label: "Permanent Sign" },
-  { value: "FLAGGING", label: "Flagging" },
-  { value: "LANE_CLOSURE", label: "Lane Closure" },
-  { value: "SERVICE", label: "Service" },
-  { value: "DELIVERY", label: "Delivery" },
-  { value: "RENTAL", label: "Rental" },
-];
+import { formatTakeoffPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
 export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
@@ -46,8 +36,8 @@ export default function TakeoffViewPage({ params }: any) {
         <Suspense fallback={null}>
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} />
+              <div className="flex flex-col gap-4 pt-0 pb-4 md:gap-6 md:pt-0 md:pb-6">
+                <TakeoffViewPageHeader jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
                 {/* Content Area */}
                 <div className="px-4 py-8">
                   <TakeoffViewPageContent jobId={jobId} takeoffId={takeoffId} jobName={jobName} />
@@ -69,14 +59,21 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
+        console.log('[TakeoffViewPage] Loading title block data', { takeoffId, jobId });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
         if (!response.ok) {
           throw new Error(`Failed to load takeoff: ${response.status}`);
         }
         const data = await response.json();
+        console.log('[TakeoffViewPage] Title block takeoff loaded', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          isPickup: data?.is_pickup,
+        });
         setTakeoff(data);
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewPage] Error loading title block takeoff', error);
       }
     };
     if (takeoffId) {
@@ -85,34 +82,15 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   }, [takeoffId]);
 
   const getTitle = () => {
-    if (!takeoff) return `Takeoff for ${jobName}`;
-
-    if (takeoff.is_pickup) {
-      return `Pick up takeoff for ${jobName}`;
-    }
-
-    const workTypeLabel = WORK_TYPES.find((wt) => wt.value === takeoff.work_type)?.label || takeoff.work_type || "";
-    return workTypeLabel ? `${workTypeLabel} takeoff for ${jobName}` : `Takeoff for ${jobName}`;
+    return formatTakeoffPageTitle({
+      workType: takeoff?.work_type,
+      isPickup: takeoff?.is_pickup,
+      jobLabel: jobName,
+    });
   };
 
   return (
     <>
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{jobName}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <PageTitleBlock
         title={getTitle()}
         description="Review takeoff details, materials, and linked work order actions."
@@ -121,23 +99,47 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
   );
 }
 
-function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId: string }) {
+function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; takeoffId: string; jobName: string }) {
   const router = useRouter();
   const [takeoff, setTakeoff] = useState<any>(null);
+  const [linkedWorkOrderStatus, setLinkedWorkOrderStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     const loadTakeoff = async () => {
       try {
+        console.log('[TakeoffViewPageHeader] Loading takeoff', { takeoffId, jobId });
         const response = await fetch(`/api/takeoffs/${takeoffId}`);
         if (!response.ok) {
           throw new Error(`Failed to load takeoff: ${response.status}`);
         }
         const data = await response.json();
+        console.log('[TakeoffViewPageHeader] Loaded takeoff', {
+          id: data?.id,
+          title: data?.title,
+          workType: data?.work_type,
+          linkedWorkOrderId: data?.work_order_id,
+        });
         setTakeoff(data);
+        if (data?.work_order_id) {
+          try {
+            const workOrderResponse = await fetch(`/api/workorders/${data.work_order_id}`);
+            if (workOrderResponse.ok) {
+              const workOrder = await workOrderResponse.json();
+              setLinkedWorkOrderStatus(workOrder?.status || null);
+            } else {
+              setLinkedWorkOrderStatus(null);
+            }
+          } catch (workOrderError) {
+            console.error('[TakeoffViewPageHeader] Error loading linked work order', workOrderError);
+            setLinkedWorkOrderStatus(null);
+          }
+        } else {
+          setLinkedWorkOrderStatus(null);
+        }
       } catch (error) {
-        console.error('Error loading takeoff:', error);
+        console.error('[TakeoffViewPageHeader] Error loading takeoff', error);
         toast.error('Failed to load takeoff');
       }
     };
@@ -155,6 +157,13 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
     router.push(`/l/${resolvedJobId}/takeoffs/edit/${resolvedTakeoffId}`);
   };
+
+  const isMptTakeoff = takeoff?.work_type === "MPT";
+  const canGeneratePickupWorkOrder =
+    !takeoff?.is_pickup &&
+    isMptTakeoff &&
+    takeoff?.work_order_id &&
+    linkedWorkOrderStatus === "installed";
 
   const handleDownloadPdf = async () => {
     setGeneratingPdf(true);
@@ -185,6 +194,12 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
   const handleCreateWorkOrder = async () => {
     setLoading(true);
     try {
+      console.log('[TakeoffViewPageHeader] Generate work order clicked', {
+        takeoffId,
+        jobId,
+        workType: takeoff?.work_type,
+        title: takeoff?.title,
+      });
       const woResponse = await fetch(`/api/workorders/from-takeoff/${takeoffId}`, {
         method: 'POST',
         headers: {
@@ -194,16 +209,22 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
           userEmail: 'unknown@example.com'
         })
       });
+      console.log('[TakeoffViewPageHeader] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
       if (woResponse.ok) {
         const result = await woResponse.json();
+        console.log('[TakeoffViewPageHeader] Generate work order success', result);
         toast.success('Work order generated successfully!');
         router.push(`/l/jobs/${jobId}/work-orders/edit/${result.workOrder.id}`);
       } else {
         const err = await woResponse.json();
+        console.error('[TakeoffViewPageHeader] Generate work order failed', err);
         toast.error(err.error || 'Failed to generate work order');
       }
     } catch (error) {
-      console.error("Error generating work order:", error);
+      console.error("[TakeoffViewPageHeader] Error generating work order", error);
       toast.error("Failed to generate work order");
     } finally {
       setLoading(false);
@@ -272,16 +293,39 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
     }
   };
 
+  const workTypeLabel = getWorkTypeLabel(takeoff?.work_type);
+  const breadcrumbCurrentLabel = takeoff?.is_pickup
+    ? "Pickup takeoff"
+    : workTypeLabel
+      ? `${workTypeLabel} takeoff`
+      : "Takeoff";
+
   return (
     <StickyPageHeader
       backLabel="Job"
       onBack={() => router.push(`/l/${jobId}`)}
+      showBackButton={false}
       leftContent={
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold truncate">{takeoff?.title || "Takeoff"}</h1>
-          <p className="text-xs text-muted-foreground truncate">
-            {WORK_TYPES.find((wt) => wt.value === takeoff?.work_type)?.label || takeoff?.work_type || "—"}
-          </p>
+        <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => router.push("/l/jobs")}
+            className="whitespace-nowrap transition-colors hover:text-foreground"
+          >
+            Jobs
+          </button>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <button
+            type="button"
+            onClick={() => router.push(`/l/${jobId}`)}
+            className="whitespace-nowrap transition-colors hover:text-foreground"
+          >
+            {jobName}
+          </button>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <span className="whitespace-nowrap font-medium text-foreground">
+            {breadcrumbCurrentLabel}
+          </span>
         </div>
       }
       rightContent={
@@ -295,7 +339,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
               View Parent Takeoff
             </Button>
           )}
-          {!takeoff?.is_pickup && takeoff?.pickup_takeoff?.id && (
+          {!takeoff?.is_pickup && isMptTakeoff && takeoff?.pickup_takeoff?.id && (
             <Button
               variant="outline"
               size="sm"
@@ -320,7 +364,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId }: { jobId: string; takeoffId:
                 <ClipboardList className="h-3.5 w-3.5" />
                 View Work Order
               </Button>
-              {!takeoff?.is_pickup && (
+              {canGeneratePickupWorkOrder && (
                 <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreatePickupWorkOrder} disabled={loading}>
                   <ClipboardList className="h-3.5 w-3.5" />
                   {loading ? "Creating…" : "Generate Pickup Work Order"}

@@ -21,6 +21,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, FileText, User } from "lucide-react";
 
+const APPROVER_OPTIONS = [
+  "Garret Brunton",
+  "Fran Kelby",
+  "Rena Alexander",
+] as const;
+
 interface ChangeOrderGateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,9 +36,8 @@ interface ChangeOrderGateDialogProps {
     description?: string;
     amount?: number;
     documentFile?: File;
-    approverUserId?: string;
     approverName?: string;
-  }) => void;
+  }) => Promise<boolean> | boolean;
   onCancel: () => void;
 }
 
@@ -48,21 +53,19 @@ export const ChangeOrderGateDialog = ({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [approverUserId, setApproverUserId] = useState("");
   const [approverName, setApproverName] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const details = {
       coNumber: coNumber || undefined,
       description: description || undefined,
       amount: amount ? parseFloat(amount) : undefined,
       documentFile: method === "document" ? documentFile || undefined : undefined,
-      approverUserId: method === "admin_approval" ? approverUserId || undefined : undefined,
       approverName: method === "admin_approval" ? approverName || undefined : undefined,
     };
 
-    onApproved(method, details);
-    handleClose();
+    const success = await onApproved(method, details);
+    if (success) handleClose();
   };
 
   const handleClose = () => {
@@ -71,7 +74,6 @@ export const ChangeOrderGateDialog = ({
     setDescription("");
     setAmount("");
     setDocumentFile(null);
-    setApproverUserId("");
     setApproverName("");
     onOpenChange(false);
   };
@@ -196,23 +198,20 @@ export const ChangeOrderGateDialog = ({
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
-                  Approver Name <span className="text-destructive">*</span>
+                  Approver <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  value={approverName}
-                  onChange={(e) => setApproverName(e.target.value)}
-                  placeholder="Enter admin approver name"
-                  className="h-8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Approver User ID (Optional)</Label>
-                <Input
-                  value={approverUserId}
-                  onChange={(e) => setApproverUserId(e.target.value)}
-                  placeholder="User ID"
-                  className="h-8"
-                />
+                <Select value={approverName} onValueChange={setApproverName}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Select approver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {APPROVER_OPTIONS.map((approver) => (
+                      <SelectItem key={approver} value={approver}>
+                        {approver}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
@@ -241,7 +240,7 @@ export const ChangeOrderGateDialog = ({
           <Button
             onClick={handleSubmit}
             disabled={!isValid()}
-            className="gap-2"
+            className="gap-2 bg-[#16335A] text-white hover:bg-[#122947]"
           >
             <FileText className="h-4 w-4" />
             Create Change Order

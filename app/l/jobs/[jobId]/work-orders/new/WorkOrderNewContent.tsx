@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { useTakeoffFromDB } from "@/hooks/useTakeoffFromDB";
+import { formatWorkOrderPageTitle } from "@/app/l/utils/pageTitles";
 import WorkOrderDetail from "../[workOrderId]/WorkOrderDetail";
 
 export default function WorkOrderNewContent({
@@ -15,7 +17,8 @@ export default function WorkOrderNewContent({
 }) {
   const router = useRouter();
   const { data: dbJob } = useJobFromDB(jobId);
-  const jobName = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
+  const { data: takeoff } = useTakeoffFromDB(takeoffId);
+  const jobLabel = dbJob?.projectInfo?.etcJobNumber?.toString() || dbJob?.projectInfo?.projectName || "Project";
 
   const handleBack = () => {
     router.push(`/l/${jobId}`);
@@ -33,10 +36,14 @@ export default function WorkOrderNewContent({
         }
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
         <PageTitleBlock
-          title="Create New Work Order"
-          description={`Create a new work order for ${jobName}.`}
+          title={formatWorkOrderPageTitle({
+            workType: takeoff?.work_type,
+            isPickup: takeoff?.is_pickup,
+            jobLabel,
+          })}
+          description={`Create a new work order for ${jobLabel}.`}
         />
 
         <WorkOrderDetail workOrderId="new" takeoffId={takeoffId} mode="edit" />

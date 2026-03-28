@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Trash2, Copy, FilePlus, Search } from "lucide-react";
+import { Plus, Minus, Trash2, Copy, Search } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
 import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
-import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
+import { PrimarySign } from "@/types/MPTEquipment";
 import { createClient } from '@supabase/supabase-js';
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,21 +47,6 @@ export interface PermSignRow {
   isCustom: boolean;
   needsOrder: boolean;
   material: string;
-  secondarySigns?: PermSecondarySign[];
-}
-
-export interface PermSecondarySign {
-  id: string;
-  signDesignation: string;
-  signDescription: string;
-  dimensionLabel: string;
-  width: number;
-  height: number;
-  signLegend: string;
-  sheeting: string;
-  isCustom: boolean;
-  sqft: number;
-  needsOrder: boolean;
 }
 
 export interface PermEntryRow {
@@ -114,7 +101,7 @@ export const PermanentSignConfiguration = ({
   const [loading, setLoading] = useState(true);
 
   // DesignationSearcher state
-  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
+  const [localSign, setLocalSign] = useState<PrimarySign | undefined>();
   const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
@@ -169,57 +156,25 @@ export const PermanentSignConfiguration = ({
 
   const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
     if (!localSign) return;
+    const itemNumber = (localSign as any).itemNumber;
+    const rows = signRows[itemNumber] || [];
+    const updatedRows = rows.map(row =>
+      row.id === localSign.id ? {
+        ...row,
+        signDesignation: updatedSign.designation,
+        signDescription: updatedSign.description || '',
+        signLegend: updatedSign.description || '',
+        width: updatedSign.width,
+        height: updatedSign.height,
+        dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
+        sheeting: updatedSign.sheeting as any,
+        sqft: calcSqft(updatedSign.width, updatedSign.height),
+        totalSqft: Math.round(calcSqft(updatedSign.width, updatedSign.height) * (row.quantity || updatedSign.quantity || 1) * 100) / 100,
+        quantity: updatedSign.quantity,
+      } : row
+    );
 
-    // Check if this is a secondary sign (has primarySignId)
-    if ((localSign as SecondarySign).primarySignId) {
-      // Update secondary sign in parent's secondarySigns array
-      const secondarySign = localSign as SecondarySign;
-      const parentRows = signRows[secondarySign.primarySignId] || [];
-      const parentRow = parentRows.find(r => r.secondarySigns?.some(s => s.id === secondarySign.id));
-
-      if (parentRow) {
-        const updatedSecondarySigns = parentRow.secondarySigns?.map(sec =>
-          sec.id === secondarySign.id ? {
-            ...sec,
-            signDesignation: updatedSign.designation,
-            signDescription: updatedSign.description || '',
-            signLegend: updatedSign.description || '',
-            width: updatedSign.width,
-            height: updatedSign.height,
-            dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
-            sheeting: updatedSign.sheeting as any,
-            sqft: calcSqft(updatedSign.width, updatedSign.height),
-          } : sec
-        ) || [];
-
-        const updatedRows = parentRows.map(r =>
-          r.id === parentRow.id ? { ...r, secondarySigns: updatedSecondarySigns } : r
-        );
-
-        onSignRowsChange(secondarySign.primarySignId, updatedRows);
-      }
-    } else {
-      // Update primary sign row
-      const itemNumber = (localSign as any).itemNumber;
-      const rows = signRows[itemNumber] || [];
-      const updatedRows = rows.map(row =>
-        row.id === localSign.id ? {
-          ...row,
-          signDesignation: updatedSign.designation,
-          signDescription: updatedSign.description || '',
-          signLegend: updatedSign.description || '',
-          width: updatedSign.width,
-          height: updatedSign.height,
-          dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
-          sheeting: updatedSign.sheeting as any,
-          sqft: calcSqft(updatedSign.width, updatedSign.height),
-          totalSqft: Math.round(calcSqft(updatedSign.width, updatedSign.height) * (row.quantity || updatedSign.quantity || 1) * 100) / 100,
-          quantity: updatedSign.quantity,
-        } : row
-      );
-
-      onSignRowsChange(itemNumber, updatedRows);
-    }
+    onSignRowsChange(itemNumber, updatedRows);
 
     setLocalSign(undefined);
   };
@@ -234,7 +189,7 @@ export const PermanentSignConfiguration = ({
   }
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] flex flex-col">
+    <div className="w-full rounded-lg border bg-card shadow-sm max-h-[600px] max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)] flex flex-col">
       <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Permanent Signs Configuration</h2>
       </div>
@@ -339,7 +294,7 @@ export const PermanentSignConfiguration = ({
       {localSign && (
         <DesignationSearcher
           localSign={localSign}
-          setLocalSign={setLocalSign}
+          setLocalSign={setLocalSign as any}
           onDesignationSelected={(updatedSign) => {
             handleDesignationSelected(updatedSign);
             setDesignationSearcherOpen(false);
@@ -368,10 +323,12 @@ const PermanentSignTable = ({
   onRowsChange: (rows: PermSignRow[]) => void;
   disabled?: boolean;
   defaultMaterial: SignMaterial;
-  onDesignationSelected: (sign: any) => void;
-  setLocalSign: (sign: any) => void;
+  onDesignationSelected: (sign: PrimarySign) => void;
+  setLocalSign: (sign: PrimarySign | undefined) => void;
   setDesignationSearcherOpen: (open: boolean) => void;
 }) => {
+  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
+
   const addSign = () => {
     const newRow: PermSignRow = {
       id: crypto.randomUUID(),
@@ -392,7 +349,6 @@ const PermanentSignTable = ({
       isCustom: false,
       needsOrder: false,
       material: defaultMaterial,
-      secondarySigns: [],
     };
     onRowsChange([...rows, newRow]);
   };
@@ -422,53 +378,8 @@ const PermanentSignTable = ({
       const duplicatedRow: PermSignRow = {
         ...rowToDuplicate,
         id: crypto.randomUUID(),
-        secondarySigns: (rowToDuplicate.secondarySigns || []).map((s) => ({ ...s, id: crypto.randomUUID() })),
       };
       onRowsChange([...rows, duplicatedRow]);
-    }
-  };
-
-  const addSecondarySign = (id: string) => {
-    const row = rows.find(row => row.id === id);
-    if (row) {
-      const newSecondarySign: PermSecondarySign = {
-        id: crypto.randomUUID(),
-        signDesignation: "",
-        signDescription: "",
-        dimensionLabel: "",
-        width: 0,
-        height: 0,
-        signLegend: "",
-        sheeting: "HI",
-        isCustom: false,
-        sqft: 0,
-        needsOrder: false,
-      };
-
-      const updatedRow = {
-        ...row,
-        secondarySigns: [...(row.secondarySigns || []), newSecondarySign],
-      };
-
-      updateRow(id, { secondarySigns: updatedRow.secondarySigns });
-    }
-  };
-
-  const updateSecondarySign = (parentId: string, secId: string, updates: Partial<PermSecondarySign>) => {
-    const row = rows.find(row => row.id === parentId);
-    if (row) {
-      const updatedSecondarySigns = (row.secondarySigns || []).map(sec =>
-        sec.id === secId ? { ...sec, ...updates } : sec
-      );
-      updateRow(parentId, { secondarySigns: updatedSecondarySigns });
-    }
-  };
-
-  const removeSecondarySign = (parentId: string, secId: string) => {
-    const row = rows.find(row => row.id === parentId);
-    if (row) {
-      const updatedSecondarySigns = (row.secondarySigns || []).filter(sec => sec.id !== secId);
-      updateRow(parentId, { secondarySigns: updatedSecondarySigns });
     }
   };
 
@@ -571,40 +482,13 @@ const PermanentSignTable = ({
                       </Select>
                     </td>
                     <td className="px-2 py-1 border-r w-32">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(row.id, { quantity: Math.max(1, row.quantity - 1) })}
-                          disabled={disabled || row.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          className="h-7 text-xs text-center w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={row.quantity || 1}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const cleaned = raw.replace(/\D/g, '');
-                            const num = cleaned === '' ? 1 : Math.max(1, parseInt(cleaned, 10));
-                            updateRow(row.id, { quantity: num });
-                          }}
-                          disabled={disabled}
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateRow(row.id, { quantity: row.quantity + 1 })}
-                          disabled={disabled}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <QuantityInput
+                        value={row.quantity || 1}
+                        min={1}
+                        onChange={(value) => updateRow(row.id, { quantity: Math.max(1, value) })}
+                        disabled={disabled}
+                        inputClassName="text-xs tabular-nums"
+                      />
                     </td>
                     <td className="px-2 py-1 border-r w-24">
                       <Select value={row.postSize} onValueChange={(v) => updateRow(row.id, { postSize: v })} disabled={disabled}>
@@ -644,90 +528,13 @@ const PermanentSignTable = ({
                           <Button variant="ghost" size="icon" className="h-6 w-6" title="Duplicate sign" onClick={() => duplicateRow(row.id)}>
                             <Copy className="h-3 w-3 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" title="Add secondary sign" onClick={() => addSecondarySign(row.id)}>
-                            <Plus className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeRow(row.id)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingDeleteRowId(row.id)}>
                             <Trash2 className="h-3 w-3 text-destructive" />
                           </Button>
                         </div>
                       </td>
                     )}
                   </tr>
-
-                  {/* Secondary signs */}
-                  {(row.secondarySigns || []).map((sec) => (
-                    <tr key={sec.id} className="bg-muted/10">
-                      <td className="px-2 py-1 border-r w-32">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-muted-foreground">↳</span>
-                          <Button
-                            variant="outline"
-                            className="h-6 flex-1 justify-start text-left font-normal text-[11px] truncate"
-                            onClick={() => {
-                              const secondarySign: SecondarySign = {
-                                id: sec.id,
-                                primarySignId: row.id,
-                                designation: sec.signDesignation || '',
-                                width: sec.width || 0,
-                                height: sec.height || 0,
-                                quantity: row.quantity,
-                                sheeting: sec.sheeting as any,
-                                isCustom: sec.isCustom || false,
-                                description: sec.signDescription || '',
-                                substrate: 'Aluminum',
-                              };
-                              setLocalSign(secondarySign);
-                              setDesignationSearcherOpen(true);
-                            }}
-                            disabled={disabled}
-                          >
-                            {sec.signDesignation || 'select sign...'}
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 border-r w-96">
-                        <Textarea className="text-[11px] w-full min-h-[24px] resize-none overflow-hidden py-1 px-2" value={sec.signLegend}
-                          onChange={(e) => updateSecondarySign(row.id, sec.id, { signLegend: e.target.value })}
-                          placeholder="Legend" disabled={disabled} rows={1}
-                          onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }} />
-                      </td>
-                      <td className="px-2 py-1 border-r w-28">
-                        <span className="text-[11px] text-muted-foreground">{sec.dimensionLabel || "—"}</span>
-                      </td>
-                      <td className="px-2 py-1 border-r w-24">
-                        <Select value={sec.sheeting} onValueChange={(v) => updateSecondarySign(row.id, sec.id, { sheeting: v })} disabled={disabled}>
-                          <SelectTrigger className="h-6 text-[11px] w-full"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {SHEETING_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>{o.value}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-2 py-1 border-r w-32">
-                        <span className="text-[11px] text-muted-foreground">{row.quantity}</span>
-                      </td>
-                      <td className="px-2 py-1 border-r w-24">
-                        <span className="text-[10px] text-muted-foreground italic">same post</span>
-                      </td>
-                      <td className="px-2 py-1 border-r w-32">
-                        <span className="text-[10px] text-muted-foreground italic">same sheet</span>
-                      </td>
-                      <td className="px-2 py-1 border-r w-32 text-[11px] font-medium tabular-nums text-right">
-                        {sec.sqft > 0 ? Math.round(sec.sqft * row.quantity * 100) / 100 : "—"}
-                      </td>
-                      {!disabled && (
-                        <td className="px-2 py-1">
-                          <div className="flex items-center justify-end">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeSecondarySign(row.id, sec.id)}>
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
                 </>
               ))}
             </tbody>
@@ -741,13 +548,7 @@ const PermanentSignTable = ({
           <div>
             <span className="text-muted-foreground font-medium">Total Sq Ft: </span>
             <span className="font-bold tabular-nums">
-              {Math.round(rows.reduce((sum, r) => {
-                let rowTotal = r.totalSqft;
-                (r.secondarySigns || []).forEach((s) => {
-                  rowTotal += Math.round(s.sqft * r.quantity * 100) / 100;
-                });
-                return sum + rowTotal;
-              }, 0) * 100) / 100}
+              {Math.round(rows.reduce((sum, r) => sum + r.totalSqft, 0) * 100) / 100}
             </span>
           </div>
           <div>
@@ -760,6 +561,28 @@ const PermanentSignTable = ({
           </div>
         </div>
       )}
+      <Dialog open={!!pendingDeleteRowId} onOpenChange={(open) => !open && setPendingDeleteRowId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              This will remove the selected permanent sign row. Choose confirm to continue or cancel to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteRowId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDeleteRowId) removeRow(pendingDeleteRowId);
+                setPendingDeleteRowId(null);
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -776,6 +599,8 @@ const PermanentSignEntryTable = ({
   onRowsChange: (rows: PermEntryRow[]) => void;
   disabled?: boolean;
 }) => {
+  const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
+
   const addEntry = () => {
     const newRow: PermEntryRow = {
       id: crypto.randomUUID(),
@@ -843,7 +668,7 @@ const PermanentSignEntryTable = ({
                 </td>
                 {!disabled && (
                   <td className="px-4 py-2">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeRow(row.id)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingDeleteRowId(row.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </td>
@@ -853,6 +678,28 @@ const PermanentSignEntryTable = ({
           </tbody>
         </table>
       )}
+      <Dialog open={!!pendingDeleteRowId} onOpenChange={(open) => !open && setPendingDeleteRowId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              This will remove the selected entry row. Choose confirm to continue or cancel to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteRowId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingDeleteRowId) removeRow(pendingDeleteRowId);
+                setPendingDeleteRowId(null);
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

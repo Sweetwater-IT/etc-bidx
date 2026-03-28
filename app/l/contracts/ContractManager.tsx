@@ -11,13 +11,28 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, LayoutGrid, List, ArrowUpDown, MoreHorizontal, FileText, Clock,
   RotateCcw, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft,
-  Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2,
+  Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2, Check, ChevronsUpDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -63,9 +78,9 @@ const PIPELINE_STAGES: {
   bgColor: string;
   borderColor: string;
 }[] = [
-  { id: "CONTRACT_RECEIPT", label: "Contract Received", shortLabel: "Received", icon: FileText, color: "text-primary", bgColor: "bg-primary/5", borderColor: "border-primary/20" },
-  { id: "RETURNED_TO_CUSTOMER", label: "Returned to Customer", shortLabel: "Returned", icon: RotateCcw, color: "text-muted-foreground", bgColor: "bg-muted/50", borderColor: "border-border" },
-  { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-warning", bgColor: "bg-warning/5", borderColor: "border-warning/20" },
+  { id: "CONTRACT_RECEIPT", label: "Contract Received", shortLabel: "Received", icon: FileText, color: "text-blue-900", bgColor: "bg-blue-950/5", borderColor: "border-blue-900/20" },
+  { id: "RETURNED_TO_CUSTOMER", label: "Contract Sent", shortLabel: "Sent", icon: RotateCcw, color: "text-amber-700", bgColor: "bg-amber-500/5", borderColor: "border-amber-500/20" },
+  { id: "CONTRACT_SIGNED", label: "Contract Signed — Job Created", shortLabel: "Signed", icon: Lock, color: "text-emerald-700", bgColor: "bg-emerald-500/5", borderColor: "border-emerald-500/20" },
 ];
 
 type VisiblePipelineStage =
@@ -74,6 +89,21 @@ type VisiblePipelineStage =
   | "CONTRACT_SIGNED";
 
 type ViewMode = "kanban" | "list";
+
+interface ContractorOption {
+  id: string;
+  display_name: string;
+}
+
+interface CountyOption {
+  name: string;
+  branch: string | null;
+}
+
+interface BranchOption {
+  id: string;
+  name: string;
+}
 
 const ALLOWED_TRANSITIONS: Record<string, ContractPipelineStatus[]> = {
   CONTRACT_RECEIPT: ["RETURNED_TO_CUSTOMER"],
@@ -106,7 +136,12 @@ const ContractManager = () => {
   const [signedDialogOpen, setSignedDialogOpen] = useState(false);
   const [pendingSignedJobId, setPendingSignedJobId] = useState<string | null>(null);
   const [signedFiles, setSignedFiles] = useState<File[]>([]);
+  const [signedJobNumber, setSignedJobNumber] = useState("");
+  const [existingSignedContractCount, setExistingSignedContractCount] = useState(0);
+  const [loadingSignedContractDocs, setLoadingSignedContractDocs] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingSignedFileDeleteIndex, setPendingSignedFileDeleteIndex] = useState<number | null>(null);
   const signedFileInputRef = useRef<HTMLInputElement>(null);
 
   // Missing requirements modal
@@ -121,6 +156,18 @@ const ContractManager = () => {
   // Fetch contracts
   const [jobs, setJobs] = useState<ContractListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const [countyFilter, setCountyFilter] = useState<string>("all");
+  const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [countyOpen, setCountyOpen] = useState(false);
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [countySearch, setCountySearch] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
+  const [customerOptions, setCustomerOptions] = useState<ContractorOption[]>([]);
+  const [countyOptions, setCountyOptions] = useState<CountyOption[]>([]);
+  const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -144,10 +191,132 @@ const ContractManager = () => {
   }, []);
 
   const pipelineJobs = useMemo(() => jobs.filter((j) => !j.archived), [jobs]);
+
+  useEffect(() => {
+    const fetchExistingSignedContractDocs = async () => {
+      if (!signedDialogOpen || !pendingSignedJobId) {
+        setExistingSignedContractCount(0);
+        setLoadingSignedContractDocs(false);
+        return;
+      }
+
+      try {
+        setLoadingSignedContractDocs(true);
+        const response = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch existing documents");
+        }
+
+        const docs = await response.json();
+        const contractDocs = Array.isArray(docs)
+          ? docs.filter((doc) => doc?.file_type === "contract")
+          : [];
+        setExistingSignedContractCount(contractDocs.length);
+      } catch (error) {
+        console.error("Error fetching existing signed contract docs:", error);
+        setExistingSignedContractCount(0);
+      } finally {
+        setLoadingSignedContractDocs(false);
+      }
+    };
+
+    fetchExistingSignedContractDocs();
+  }, [signedDialogOpen, pendingSignedJobId]);
+  useEffect(() => {
+    const fetchFilterSources = async () => {
+      try {
+        const [contractorsResponse, countiesResponse, branchesResponse] = await Promise.all([
+          fetch("/api/contractors?limit=1000"),
+          fetch("/api/counties?limit=1000"),
+          fetch("/api/branches?limit=1000"),
+        ]);
+
+        const contractorsResult = await contractorsResponse.json();
+        if (contractorsResult.success && contractorsResult.data) {
+          setCustomerOptions(
+            contractorsResult.data
+              .map((contractor: { id: number | string; name: string }) => ({
+                id: String(contractor.id),
+                display_name: contractor.name,
+              }))
+              .sort((a: ContractorOption, b: ContractorOption) =>
+                a.display_name.localeCompare(b.display_name)
+              )
+          );
+        }
+
+        const countiesResult = await countiesResponse.json();
+        if (countiesResult.success && countiesResult.data) {
+          setCountyOptions(
+            countiesResult.data
+              .map((county: { name: string; branch: string | null }) => ({
+                name: county.name,
+                branch: county.branch,
+              }))
+              .sort((a: CountyOption, b: CountyOption) => a.name.localeCompare(b.name))
+          );
+        }
+
+        const branchesResult = await branchesResponse.json();
+        if (Array.isArray(branchesResult.data)) {
+          setBranchOptions(
+            branchesResult.data
+              .map((branch: { id: number | string; name: string | null }) => ({
+                id: String(branch.id),
+                name: branch.name || "",
+              }))
+              .filter((branch: BranchOption) => branch.name.length > 0)
+              .sort((a: BranchOption, b: BranchOption) =>
+                a.name.localeCompare(b.name)
+              )
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching contract filter sources:", error);
+      }
+    };
+
+    fetchFilterSources();
+  }, []);
+
+  const filteredCustomerOptions = useMemo(
+    () =>
+      customerOptions.filter((customer) =>
+        customer.display_name.toLowerCase().includes(customerSearch.toLowerCase())
+      ),
+    [customerOptions, customerSearch]
+  );
+
+  const filteredCountyOptions = useMemo(
+    () =>
+      countyOptions.filter((county) =>
+        county.name.toLowerCase().includes(countySearch.toLowerCase())
+      ),
+    [countyOptions, countySearch]
+  );
+
+  const filteredBranchOptions = useMemo(
+    () =>
+      branchOptions.filter((branch) =>
+        branch.name.toLowerCase().includes(branchSearch.toLowerCase())
+      ),
+    [branchOptions, branchSearch]
+  );
+  const hasActiveFilters =
+    customerFilter !== "all" || countyFilter !== "all" || branchFilter !== "all";
+
+  const displayedPipelineJobs = useMemo(() => {
+    return pipelineJobs.filter((job) => {
+      if (customerFilter !== "all" && (job.customerName || "") !== customerFilter) return false;
+      if (countyFilter !== "all" && (job.county || "") !== countyFilter) return false;
+      if (branchFilter !== "all" && (job.etcBranch || "") !== branchFilter) return false;
+      return true;
+    });
+  }, [pipelineJobs, customerFilter, countyFilter, branchFilter]);
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     PIPELINE_STAGES.forEach((s) => { map[s.id] = []; });
-    pipelineJobs.forEach((j) => {
+    displayedPipelineJobs.forEach((j) => {
       const displayStage = mapToDisplayStage(j.contractStatus || "CONTRACT_RECEIPT");
       if (map[displayStage]) {
         map[displayStage].push(j);
@@ -156,7 +325,7 @@ const ContractManager = () => {
       }
     });
     return map as Record<ContractPipelineStatus, ContractListItem[]>;
-  }, [pipelineJobs]);
+  }, [displayedPipelineJobs]);
 
   const showMissingReqs = (title: string, items: string[]) => {
     setMissingReqsTitle(title);
@@ -172,6 +341,7 @@ const ContractManager = () => {
     if (newStatus === "CONTRACT_SIGNED") {
       setPendingSignedJobId(jobId);
       setSignedFiles([]);
+      setSignedJobNumber(job.etcJobNumber || "");
       setSignedDialogOpen(true);
       return;
     }
@@ -199,6 +369,9 @@ const ContractManager = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.code === "MISSING_REQUIREMENTS" && Array.isArray(errorData.missing)) {
+          showMissingReqs("Cannot advance contract", errorData.missing);
+        }
         throw new Error(errorData.error || 'Failed to update contract status');
       }
 
@@ -224,43 +397,93 @@ const ContractManager = () => {
       return;
     }
     setContractToDelete({ id: job.id, name: job.projectName || "Untitled" });
-    setDeleteDialogOpen(true);
+    window.setTimeout(() => {
+      setDeleteDialogOpen(true);
+    }, 0);
   };
 
   const deleteJob = async () => {
     if (!contractToDelete) return;
     const jobId = contractToDelete.id;
-    setDeleteDialogOpen(false);
-    setContractToDelete(null);
 
-    // This will need to be implemented with your API
-    toast.success("Contract deleted");
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/l/contracts/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to delete contract");
+      }
+
+      setJobs((prev) => prev.filter((job) => job.id !== jobId));
+      setDeleteDialogOpen(false);
+      setContractToDelete(null);
+      toast.success("Contract deleted");
+    } catch (error) {
+      console.error("Error deleting contract:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete contract");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  const archiveContract = async (job: ContractListItem) => {
+    try {
+      const response = await fetch(`/api/l/contracts/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: true }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to archive contract');
+      }
+
+      setJobs((prev) => prev.map((item) => (item.id === job.id ? { ...item, archived: true } : item)));
+      toast.success('Contract archived');
+    } catch (error) {
+      console.error('Error archiving contract:', error);
+      toast.error('Failed to archive contract');
+    }
   };
 
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleConfirmSigned = async () => {
-    if (!pendingSignedJobId || signedFiles.length === 0) return;
+    if (!pendingSignedJobId || !signedJobNumber.trim()) return;
     const job = jobs.find((j) => j.id === pendingSignedJobId);
     if (!job) return;
+
+    const hasExistingContractDoc = existingSignedContractCount > 0;
+    const hasNewUpload = signedFiles.length > 0;
+    if (!hasExistingContractDoc && !hasNewUpload) {
+      toast.error("Upload a signed contract or use an existing attached contract document.");
+      return;
+    }
 
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
-      // Upload files first
-      const formData = new FormData();
-      signedFiles.forEach(file => formData.append('files', file));
-      formData.append('contractId', pendingSignedJobId);
+      if (hasNewUpload) {
+        const formData = new FormData();
+        signedFiles.forEach(file => formData.append('files', file));
+        formData.append('contractId', pendingSignedJobId);
+        formData.append('category', 'contract');
 
-      const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
-        method: 'POST',
-        body: formData,
-      });
+        const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json();
-        throw new Error(errorData.error || 'Failed to upload files');
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'Failed to upload files');
+        }
+
+        setExistingSignedContractCount((prev) => prev + signedFiles.length);
       }
 
       setUploadProgress(100);
@@ -269,7 +492,7 @@ const ContractManager = () => {
       setJobs(prevJobs =>
         prevJobs.map(j =>
           j.id === pendingSignedJobId
-            ? { ...j, contractStatus: "CONTRACT_SIGNED" }
+            ? { ...j, contractStatus: "CONTRACT_SIGNED", etcJobNumber: signedJobNumber.trim() }
             : j
         )
       );
@@ -281,19 +504,25 @@ const ContractManager = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractStatus: "CONTRACT_SIGNED"
+          contractStatus: "CONTRACT_SIGNED",
+          etcJobNumber: signedJobNumber.trim(),
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.code === "MISSING_REQUIREMENTS" && Array.isArray(errorData.missing)) {
+          showMissingReqs("Cannot sign contract", errorData.missing);
+        }
         throw new Error(errorData.error || 'Failed to update contract status');
       }
 
-      toast.success("Contract signed! Job number assigned.");
+      toast.success("Contract signed and saved.");
       setSignedDialogOpen(false);
       setPendingSignedJobId(null);
       setSignedFiles([]);
+      setSignedJobNumber("");
+      setExistingSignedContractCount(0);
     } catch (err: any) {
       console.error('Error updating contract status:', err);
       toast.error("Sign Contract failed");
@@ -349,7 +578,7 @@ const ContractManager = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
         <header className="border-b bg-card">
           <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
             <div className="h-8 w-56 rounded bg-muted animate-pulse" />
@@ -389,7 +618,7 @@ const ContractManager = () => {
 
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
       {/* Header */}
       <header className="shrink-0 border-b bg-card">
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
@@ -410,6 +639,217 @@ const ContractManager = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2">
+              <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={customerOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
+                    <span className={customerFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {customerFilter === "all" ? "All Customers" : customerFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {customerFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear customer filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCustomerFilter("all");
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      {customerFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[260px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search customer…" value={customerSearch} onValueChange={setCustomerSearch} />
+                    <CommandList>
+                      <CommandEmpty>No customer found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-customers"
+                          onSelect={() => {
+                            setCustomerFilter("all");
+                            setCustomerOpen(false);
+                            setCustomerSearch("");
+                          }}
+                        >
+                          <Check className={customerFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Customers
+                        </CommandItem>
+                        {filteredCustomerOptions.map((customer) => (
+                          <CommandItem
+                            key={customer.id}
+                            value={customer.display_name}
+                            onSelect={() => {
+                              setCustomerFilter(customer.display_name);
+                              setCustomerOpen(false);
+                              setCustomerSearch("");
+                            }}
+                          >
+                            <Check className={customerFilter === customer.display_name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {customer.display_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <Popover open={countyOpen} onOpenChange={setCountyOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={countyOpen} className="h-9 w-[180px] justify-between text-xs font-normal">
+                    <span className={countyFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {countyFilter === "all" ? "All Counties" : countyFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {countyFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear county filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCountyFilter("all");
+                            setCountySearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      {countyFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[220px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search county…" value={countySearch} onValueChange={setCountySearch} />
+                    <CommandList>
+                      <CommandEmpty>No county found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-counties"
+                          onSelect={() => {
+                            setCountyFilter("all");
+                            setCountyOpen(false);
+                            setCountySearch("");
+                          }}
+                        >
+                          <Check className={countyFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Counties
+                        </CommandItem>
+                        {filteredCountyOptions.map((county) => (
+                          <CommandItem
+                            key={county.name}
+                            value={county.name}
+                            onSelect={() => {
+                              setCountyFilter(county.name);
+                              setCountyOpen(false);
+                              setCountySearch("");
+                            }}
+                          >
+                            <Check className={countyFilter === county.name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {county.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <Popover open={branchOpen} onOpenChange={setBranchOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={branchOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
+                    <span className={branchFilter === "all" ? "text-muted-foreground" : "truncate"}>
+                      {branchFilter === "all" ? "All Branches" : branchFilter}
+                    </span>
+                    <span className="ml-2 flex items-center gap-1 shrink-0">
+                      {branchFilter !== "all" && (
+                        <span
+                          role="button"
+                          aria-label="Clear branch filter"
+                          className="inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setBranchFilter("all");
+                            setBranchSearch("");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      )}
+                      {branchFilter === "all" && (
+                        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      )}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[240px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search branch…" value={branchSearch} onValueChange={setBranchSearch} />
+                    <CommandList>
+                      <CommandEmpty>No branch found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all-branches"
+                          onSelect={() => {
+                            setBranchFilter("all");
+                            setBranchOpen(false);
+                            setBranchSearch("");
+                          }}
+                        >
+                          <Check className={branchFilter === "all" ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                          All Branches
+                        </CommandItem>
+                        {filteredBranchOptions.map((branch) => (
+                          <CommandItem
+                            key={branch.id}
+                            value={branch.name}
+                            onSelect={() => {
+                              setBranchFilter(branch.name);
+                              setBranchOpen(false);
+                              setBranchSearch("");
+                            }}
+                          >
+                            <Check className={branchFilter === branch.name ? "mr-2 h-3 w-3 opacity-100" : "mr-2 h-3 w-3 opacity-0"} />
+                            {branch.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setCustomerFilter("all");
+                    setCountyFilter("all");
+                    setBranchFilter("all");
+                    setCustomerSearch("");
+                    setCountySearch("");
+                    setBranchSearch("");
+                  }}
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
             <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
               <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
                 <LayoutGrid className="h-4 w-4" />
@@ -418,7 +858,10 @@ const ContractManager = () => {
                 <List className="h-4 w-4" />
               </button>
             </div>
-            <Button onClick={() => router.push("/l/contracts/new")} className="gap-2">
+            <Button
+              onClick={() => router.push("/l/contracts/new")}
+              className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            >
               <Plus className="h-4 w-4" />
               New Contract
             </Button>
@@ -464,16 +907,18 @@ const ContractManager = () => {
             jobsByStage={jobsByStage}
             moveContract={moveContract}
             openDeleteDialog={openDeleteDialog}
+            archiveContract={archiveContract}
             getStageIndex={getStageIndex}
             formatDate={formatDate}
             router={router}
           />
         ) : (
           <ListView
-            pipelineJobs={pipelineJobs}
+            filteredJobs={displayedPipelineJobs}
             getStatusBadge={getStatusBadge}
             moveContract={moveContract}
             openDeleteDialog={openDeleteDialog}
+            archiveContract={archiveContract}
             formatDate={formatDate}
             router={router}
             stages={PIPELINE_STAGES}
@@ -484,16 +929,36 @@ const ContractManager = () => {
       {/* Signed Contract Upload Dialog */}
       <Dialog open={signedDialogOpen} onOpenChange={(open) => {
         if (isUploading) return;
-        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); }
+        if (!open) { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); setExistingSignedContractCount(0); }
       }}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
+        <DialogContent className="w-[min(92vw,32rem)] max-w-[32rem] overflow-hidden sm:max-w-md" onPointerDownOutside={(e) => { if (isUploading) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (isUploading) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Attach Signed Contract</DialogTitle>
             <DialogDescription>
-              Upload the signed contract document (max 25 MB each). The file will be stored securely and a job number assigned automatically.
+              Enter the ETC job number, then confirm this contract has a signed contract document attached before moving it into signed status.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="min-w-0 space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="signed-etc-job-number" className="text-xs">ETC Job Number</Label>
+              <Input
+                id="signed-etc-job-number"
+                className="h-9 text-sm"
+                placeholder="e.g. 11-22-2025001"
+                value={signedJobNumber}
+                onChange={(e) => setSignedJobNumber(e.target.value)}
+                disabled={isUploading}
+              />
+            </div>
+            <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+              <p className="text-xs font-medium text-foreground">
+                {loadingSignedContractDocs
+                  ? "Checking existing contract documents…"
+                  : existingSignedContractCount > 0
+                    ? `${existingSignedContractCount} existing contract document${existingSignedContractCount === 1 ? "" : "s"} already attached. Uploading another signed contract is optional.`
+                    : "No attached contract document found yet. Upload a signed contract to continue."}
+              </p>
+            </div>
             <input ref={signedFileInputRef} type="file" className="hidden" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleSignedFileChange} />
             {!isUploading && (
               <button onClick={() => signedFileInputRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 hover:bg-primary/5 transition-colors">
@@ -518,14 +983,14 @@ const ContractManager = () => {
               </div>
             )}
             {signedFiles.length > 0 && (
-              <div className="space-y-2">
+              <div className="min-w-0 max-h-40 space-y-2 overflow-y-auto pr-1">
                 {signedFiles.map((file, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2">
+                  <div key={i} className="flex w-full min-w-0 items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
                     <File className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm text-foreground truncate flex-1">{file.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-foreground">{file.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
                     {!isUploading && (
-                      <button onClick={() => removeSignedFile(i)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                      <button onClick={() => setPendingSignedFileDeleteIndex(i)} className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     )}
@@ -535,9 +1000,36 @@ const ContractManager = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); }}>Cancel</Button>
-            <Button onClick={handleConfirmSigned} disabled={signedFiles.length === 0 || isUploading} className="gap-2">
-              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</> : <><CheckCircle2 className="h-4 w-4" /> Upload</>}
+            <Button variant="outline" disabled={isUploading} onClick={() => { setSignedDialogOpen(false); setPendingSignedJobId(null); setSignedFiles([]); setSignedJobNumber(""); setExistingSignedContractCount(0); }}>Cancel</Button>
+            <Button onClick={handleConfirmSigned} disabled={(!signedJobNumber.trim()) || isUploading || (loadingSignedContractDocs || (existingSignedContractCount === 0 && signedFiles.length === 0))} className="gap-2">
+              {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="h-4 w-4" /> Confirm Signed</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pendingSignedFileDeleteIndex !== null} onOpenChange={(open) => {
+        if (!open) setPendingSignedFileDeleteIndex(null);
+      }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove Uploaded File?</DialogTitle>
+            <DialogDescription>
+              This will remove the selected signed-contract file from the upload list.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingSignedFileDeleteIndex(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingSignedFileDeleteIndex !== null) removeSignedFile(pendingSignedFileDeleteIndex);
+                setPendingSignedFileDeleteIndex(null);
+              }}
+            >
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -570,8 +1062,19 @@ const ContractManager = () => {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (isDeleting) return;
+          setDeleteDialogOpen(open);
+          if (!open) setContractToDelete(null);
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-md"
+          onPointerDownOutside={(e) => { if (isDeleting) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isDeleting) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-destructive" />
@@ -582,12 +1085,16 @@ const ContractManager = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setContractToDelete(null); }}>
+            <Button
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => { setDeleteDialogOpen(false); setContractToDelete(null); }}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteJob} className="gap-2">
-              <Trash2 className="h-4 w-4" />
-              Delete
+            <Button variant="destructive" onClick={deleteJob} className="gap-2" disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -598,12 +1105,13 @@ const ContractManager = () => {
 
 /* ─── Kanban View ─── */
 const KanbanView = ({
-  stages, jobsByStage, moveContract, openDeleteDialog, getStageIndex, formatDate, router,
+  stages, jobsByStage, moveContract, openDeleteDialog, archiveContract, getStageIndex, formatDate, router,
 }: {
   stages: typeof PIPELINE_STAGES;
   jobsByStage: Record<ContractPipelineStatus, ContractListItem[]>;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   getStageIndex: (s: ContractPipelineStatus) => number;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
@@ -754,6 +1262,7 @@ const KanbanView = ({
                     <KanbanCard
                       key={job.id} job={job} stage={stage} stages={stages}
                       moveContract={moveContract} openDeleteDialog={openDeleteDialog}
+                      archiveContract={archiveContract}
                       getStageIndex={getStageIndex} formatDate={formatDate}
                       router={router}
                       setDragSourceStage={setDragSourceStage}
@@ -772,6 +1281,7 @@ const KanbanView = ({
 
 const KanbanCard = ({
   job, stage, stages, moveContract, openDeleteDialog, getStageIndex, formatDate, router,
+  archiveContract,
   setDragSourceStage, onDragEnd,
 }: {
   job: ContractListItem;
@@ -779,6 +1289,7 @@ const KanbanCard = ({
   stages: typeof PIPELINE_STAGES;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   getStageIndex: (s: ContractPipelineStatus) => number;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
@@ -837,7 +1348,7 @@ const KanbanCard = ({
           <p className="text-sm font-bold text-foreground uppercase leading-tight pr-2">
             {job.projectName || "Untitled Project"}
           </p>
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5 -mr-1 shrink-0">
                 <MoreHorizontal className="h-3 w-3" />
@@ -861,10 +1372,19 @@ const KanbanCard = ({
               {!isSigned && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
-                    <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Contract
-                  </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => openDeleteDialog(job)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Delete Contract
+                    </DropdownMenuItem>
+                </>
+              )}
+              {isSigned && (
+                <>
+                  <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => archiveContract(job)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Archive Contract
+                    </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -936,12 +1456,13 @@ const DottedRow = ({ label, value, highlight }: { label: string; value: string; 
 
 /* ─── List View ─── */
 const ListView = ({
-  pipelineJobs, getStatusBadge, moveContract, openDeleteDialog, formatDate, router, stages,
+  getStatusBadge, moveContract, openDeleteDialog, formatDate, router, stages, filteredJobs, archiveContract,
 }: {
-  pipelineJobs: ContractListItem[];
+  filteredJobs: ContractListItem[];
   getStatusBadge: (s: ContractPipelineStatus) => React.ReactNode;
   moveContract: (id: string, s: ContractPipelineStatus) => void;
   openDeleteDialog: (job: ContractListItem) => void;
+  archiveContract: (job: ContractListItem) => void;
   formatDate: (iso: string) => string;
   router: ReturnType<typeof useRouter>;
   stages: typeof PIPELINE_STAGES;
@@ -949,7 +1470,7 @@ const ListView = ({
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     stages.forEach((s) => { map[s.id] = []; });
-    pipelineJobs.forEach((j) => {
+    filteredJobs.forEach((j) => {
       const displayStage = mapToDisplayStage(j.contractStatus || "CONTRACT_RECEIPT");
       if (map[displayStage]) {
         map[displayStage].push(j);
@@ -958,7 +1479,7 @@ const ListView = ({
       }
     });
     return map as Record<ContractPipelineStatus, ContractListItem[]>;
-  }, [pipelineJobs, stages]);
+  }, [filteredJobs, stages]);
 
   const ContractTable = ({ stage, jobs }: { stage: typeof PIPELINE_STAGES[0]; jobs: ContractListItem[] }) => (
     <div className="rounded-lg border bg-card overflow-hidden mb-6">
@@ -1014,7 +1535,7 @@ const ListView = ({
                   <TableCell className="py-3 text-xs">{job.etcProjectManager || "—"}</TableCell>
                   <TableCell className="py-3 tabular-nums text-xs text-muted-foreground whitespace-nowrap">{formatDate(job.createdAt)}</TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
@@ -1036,9 +1557,18 @@ const ListView = ({
                         {!isSigned && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(job)}>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => openDeleteDialog(job)}>
                               <Trash2 className="h-3.5 w-3.5 mr-2" />
                               Delete Contract
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {isSigned && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => archiveContract(job)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Archive Contract
                             </DropdownMenuItem>
                           </>
                         )}
@@ -1054,12 +1584,12 @@ const ListView = ({
     </div>
   );
 
-  if (pipelineJobs.length === 0) {
+  if (filteredJobs.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-16 text-center">
+      <div className="rounded-lg border bg-card/90 p-16 text-center shadow-sm">
         <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-        <p className="text-muted-foreground font-medium">No contracts in pipeline</p>
-        <p className="text-sm text-muted-foreground mt-1">Create a new contract to get started.</p>
+        <p className="text-muted-foreground font-medium">No contracts match the current filters</p>
+        <p className="text-sm text-muted-foreground mt-1">Adjust the filters or create a new contract to get started.</p>
       </div>
     );
   }

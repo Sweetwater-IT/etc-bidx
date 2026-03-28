@@ -44,6 +44,31 @@ function fmtDate(d?: string | null): string {
   return `${dd}-${m}-${yy}`;
 }
 
+async function loadPublicLogoDataUrl(path: string): Promise<string> {
+  if (typeof window === "undefined") {
+    const { readFile } = await import("fs/promises");
+    const pathModule = await import("path");
+    const filePath = pathModule.join(process.cwd(), "public", path.replace(/^\//, ""));
+    const file = await readFile(filePath);
+    return `data:image/jpeg;base64,${file.toString("base64")}`;
+  }
+
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch logo image from ${path}: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read logo blob"));
+    reader.readAsDataURL(blob);
+  });
+
+  return dataUrl;
+}
+
 function addField(doc: jsPDF, label: string, value: string, x: number, y: number) {
   doc.setFontSize(6.5);
   doc.setFont("helvetica", "bold");
@@ -53,6 +78,43 @@ function addField(doc: jsPDF, label: string, value: string, x: number, y: number
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
   doc.text(value || "—", x, y + 4);
+}
+
+function drawProjectFooter(
+  doc: jsPDF,
+  items: Array<{ label: string; value?: string | null }>,
+  pageW: number,
+  pageH: number
+) {
+  const footerX = 14;
+  const footerY = pageH - 16;
+  const footerW = pageW - 28;
+  const footerH = 5.5;
+  const footerItems = items.slice(0, 8);
+  const colW = footerW / footerItems.length;
+  const fitInline = (label: string, value?: string | null) => {
+    const [line] = doc.splitTextToSize(`${label}: ${(value || "—").toString()}`, colW - 2);
+    return line || `${label}: —`;
+  };
+
+  doc.setDrawColor(210);
+  doc.setLineWidth(0.2);
+  doc.rect(footerX, footerY, footerW, footerH, "S");
+
+  for (let i = 1; i < footerItems.length; i++) {
+    const x = footerX + colW * i;
+    doc.line(x, footerY, x, footerY + footerH);
+  }
+
+  footerItems.forEach((item, index) => {
+    const x = footerX + colW * index + 1;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(80);
+    doc.text(fitInline(item.label, item.value), x, footerY + 3.6);
+  });
+
+  doc.setTextColor(0);
 }
 
 /** Get structure label from item metadata */
@@ -91,12 +153,13 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
   const ml = 14;
 
   // ── ETC Logo (top-right) ──
-  // Logo loading removed - using text fallback
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 64, 120);
-  doc.text("ETC", pageW - ml, 14, { align: "right" });
-  doc.setTextColor(0);
+  try {
+    const img = await loadPublicLogoDataUrl("/logo.jpg");
+    const logoH = 12;
+    const logoW = logoH * (1152 / 648);
+    doc.addImage(img, "JPEG", pageW - ml - logoW, 6, logoW, logoH);
+  } catch {
+  }
 
   // ── Title ──
   doc.setFontSize(14);
@@ -417,6 +480,31 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
         y += 12;
       }
     }
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  const footerItems = [
+    { label: "Job Name", value: data.projectName },
+    { label: "Project Owner", value: data.projectOwner },
+    { label: "Owner Job #", value: data.customerJobNumber },
+    { label: "County", value: data.county },
+    { label: "ETC PM", value: data.etcProjectManager },
+    { label: "ETC Job #", value: data.etcJobNumber },
+    { label: "Customer", value: data.customerName },
+    { label: "Customer Job #", value: data.customerJobNumber },
+  ];
+
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const pageLabel = `Page ${i} of ${totalPages}`;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140);
+    drawProjectFooter(doc, footerItems, pw, ph);
+    doc.text(pageLabel, pw / 2, ph - 18.5, { align: "center" });
+    doc.setTextColor(0);
   }
 
   doc.save(`Return_Inventory_${data.etcJobNumber || "report"}.pdf`);

@@ -1,6 +1,9 @@
 // app/api/workorders/from-takeoff/[takeoffId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster, type SovMasterItemRecord } from '@/lib/server/sov/masterItems';
+
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
 
 type SOVLookupItem = {
   id: number;
@@ -13,9 +16,9 @@ type SOVLookupItem = {
 
 const WORK_TYPE_GROUPS: Record<string, string[]> = {
   MPT: ['MPT'],
-  LANE_CLOSURE: ['LANE CLOSURE'],
+  LANE_CLOSURE: ['LANE_CLOSURE', 'LANE CLOSURE'],
   FLAGGING: ['FLAGGING'],
-  PERMANENT_SIGNS: ['PERMANENT SIGN'],
+  PERMANENT_SIGNS: ['PERMANENT_SIGNS', 'PERMANENT SIGN', 'PERMANENT SIGNS'],
   SERVICE: ['SERVICE'],
   DELIVERY: ['DELIVERY'],
   RENTAL: ['RENTAL'],
@@ -113,6 +116,13 @@ export async function POST(request: NextRequest) {
       pmNotes,
     } = requestBody;
 
+    if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer` },
+        { status: 400 }
+      );
+    }
+
     if (!userEmail) {
       console.log('🔍 [API] Missing userEmail, returning 400');
       return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
@@ -163,8 +173,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Parent work order is required for pickup creation' }, { status: 400 });
       }
 
-      if (!['MPT', 'RENTAL'].includes(String(takeoff.work_type || '').toUpperCase())) {
-        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT or RENTAL takeoffs' }, { status: 400 });
+      if (String(takeoff.work_type || '').toUpperCase() !== 'MPT') {
+        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT takeoffs' }, { status: 400 });
       }
 
       const { data: existingPickupWO } = await supabase
@@ -365,28 +375,59 @@ export async function POST(request: NextRequest) {
 
     const relevantWorkTypes = getRelevantWorkTypes(takeoffData.work_type);
 
-    // Fetch SOV items for this job and derive work order items directly from matching SOV entries.
-    const { data: sovEntries } = await supabase
+    // Fetch SOV entries for this job and hydrate master items separately because
+    // sov_entries.sov_item_id is not declared as a relational foreign key in Supabase.
+    const { data: sovEntries, error: sovEntriesError } = await supabase
       .from('sov_entries')
-      .select('quantity, sort_order, sov_items!inner(id, item_number, description, work_type, uom)')
+      .select('sov_item_id, custom_sov_item_id, quantity, sort_order')
       .eq('job_id', sourceTakeoff.job_id)
       .order('sort_order', { ascending: true });
 
-    const sovItems: SOVLookupItem[] = (sovEntries || [])
-      .map((entry: any) => ({
-        id: Number(entry?.sov_items?.id),
-        item_number: String(entry?.sov_items?.item_number || ''),
-        description: String(entry?.sov_items?.description || ''),
-        work_type: entry?.sov_items?.work_type ?? null,
-        uom: entry?.sov_items?.uom ?? null,
-        quantity: entry?.quantity ?? null,
-        sort_order: entry?.sort_order ?? null,
-      }))
-      .filter((s: any) => Boolean(s.id));
+    if (sovEntriesError) {
+      console.error('[WO from takeoff] Failed to fetch SOV entries', sovEntriesError);
+      return NextResponse.json({ error: 'Failed to fetch SOV entries' }, { status: 500 });
+    }
+
+    let masterMaps;
+    try {
+      masterMaps = await fetchSovMastersForEntries(sovEntries || []);
+    } catch (masterItemsError) {
+      console.error('[WO from takeoff] Failed to hydrate SOV master items', masterItemsError);
+      return NextResponse.json({ error: 'Failed to fetch SOV master items' }, { status: 500 });
+    }
+
+    const sovItems: SOVLookupItem[] = ((sovEntries || []) as Array<{ sov_item_id: number | null; custom_sov_item_id?: number | null; quantity?: number | null; sort_order?: number | null }>)
+      .reduce<SOVLookupItem[]>((acc, entry) => {
+        const master = resolveEntryMaster(entry, masterMaps) as SovMasterItemRecord | undefined;
+        if (!master) return acc;
+
+        acc.push({
+          id: Number(master.id),
+          item_number: String(master.item_number || ''),
+          description: String(master.display_name || master.description || ''),
+          work_type: master.work_type ?? null,
+          uom: getPrimaryUom(master),
+          quantity: entry?.quantity ?? null,
+        });
+        return acc;
+      }, []);
 
     const matchedSovItems = sovItems.filter((item) => {
       const itemWorkType = normalizeUpper(item.work_type);
       return relevantWorkTypes.length === 0 || relevantWorkTypes.includes(itemWorkType);
+    });
+
+    console.log('[WO from takeoff] SOV matching summary', {
+      takeoffId: workingTakeoffId,
+      workType: takeoffData.work_type,
+      relevantWorkTypes,
+      totalSovItems: sovItems.length,
+      matchedSovItems: matchedSovItems.map((item) => ({
+        id: item.id,
+        item_number: item.item_number,
+        work_type: item.work_type,
+        quantity: item.quantity,
+      })),
     });
 
     // Create work order items from SOV entries only.
@@ -425,14 +466,13 @@ export async function POST(request: NextRequest) {
 
       // Create work order items using calculated square footage
       matchedSovItems.forEach((item, index) => {
-        const contractQuantity = Number(item.quantity || 0);
-        const calculatedQuantity = itemTotals.get(item.item_number) || contractQuantity;
+        const calculatedQuantity = itemTotals.get(item.item_number) || Number(item.quantity || 0);
 
         workOrderItems.push({
           work_order_id: null,
           item_number: item.item_number,
           description: item.description,
-          contract_quantity: contractQuantity,
+          contract_quantity: calculatedQuantity,
           work_order_quantity: calculatedQuantity,
           uom: item.uom || 'SF', // Use SF (square feet) for permanent signs
           sort_order: index,
@@ -454,33 +494,12 @@ export async function POST(request: NextRequest) {
           sov_item_id: item.id,
         });
       });
-    }
 
-    // Add additional items from the takeoff that aren't in SOV
-    const additionalItems = sourceTakeoff.additional_items || [];
-    if (additionalItems.length > 0) {
-      const existingItemNumbers = new Set(workOrderItems.map(item => item.item_number.toLowerCase()));
-
-      additionalItems.forEach((additionalItem: any, index: number) => {
-        const itemNumber = String(additionalItem.name || additionalItem.item_number || additionalItem.itemNumber || '').trim();
-        if (itemNumber && !existingItemNumbers.has(itemNumber.toLowerCase())) {
-          workOrderItems.push({
-            work_order_id: null,
-            item_number: itemNumber,
-            description: String(additionalItem.description || additionalItem.itemDescription || ''),
-            contract_quantity: Number(additionalItem.quantity || additionalItem.contractQuantity || 0),
-            work_order_quantity: Number(additionalItem.quantity || additionalItem.contractQuantity || 0),
-            uom: String(additionalItem.uom || 'EA'),
-            sort_order: workOrderItems.length,
-            sov_item_id: null, // Additional items don't have SOV references
-          });
-        }
-      });
     }
 
     console.log('Generated work order items:', workOrderItems.map(i => ({
       item_number: i.item_number,
-      description: i.description.substring(0,50)+'...',
+      description: typeof i.description === 'string' ? `${i.description.substring(0, 50)}...` : '',
       qty: i.work_order_quantity,
       from_sov: i.sov_item_id !== null
     })));
