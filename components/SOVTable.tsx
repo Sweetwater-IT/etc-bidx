@@ -495,7 +495,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
         ...prev,
         itemNumber: master.item_number,
         displayItemNumber: getMasterDisplayItemNumber(master),
-        displayName: master.description || master.display_name || getMasterDisplayItemNumber(master),
+        displayName: master.display_name || master.description || getMasterDisplayItemNumber(master),
         sourceDescription: master.description || '',
         workType: master.work_type || '',
         uom: getFirstNonNullUom(master),
@@ -831,14 +831,17 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     if (!editorDraft?.itemNumber.trim()) return;
 
     const normalizedUom = editorDraft.uom.trim();
-    const normalizedDescription = (editorDraft.sourceDescription || editorDraft.displayName || editorDraft.itemNumber).trim();
+    const normalizedDisplayName = (editorDraft.displayName || editorDraft.sourceDescription || editorDraft.itemNumber).trim();
+    const normalizedSourceDescription = (editorDraft.sourceDescription || normalizedDisplayName || editorDraft.itemNumber).trim();
+    const displayNameOverride =
+      normalizedDisplayName !== normalizedSourceDescription ? normalizedDisplayName : undefined;
     const nextItem: ScheduleOfValuesItem = {
       id: editorDraft.rowId,
       itemNumber: editorDraft.itemNumber,
       displayItemNumber: editorDraft.displayItemNumber || editorDraft.itemNumber,
-      description: normalizedDescription,
-      sourceDescription: normalizedDescription,
-      displayNameOverride: undefined,
+      description: normalizedDisplayName,
+      sourceDescription: normalizedSourceDescription,
+      displayNameOverride,
       quantity: Math.max(1, editorDraft.quantity || 1),
       unitPrice: Math.max(0, editorDraft.unitPrice || 0),
       extendedPrice: Math.max(1, editorDraft.quantity || 1) * Math.max(0, editorDraft.unitPrice || 0),
@@ -1294,6 +1297,17 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
 
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="border-b pb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Display Name</p>
+                  </div>
+                  <Input
+                    className="max-w-2xl"
+                    value={editorDraft.displayName}
+                    onChange={(e) => setEditorDraft((prev) => prev ? { ...prev, displayName: e.target.value } : prev)}
+                    placeholder="How this item should appear on the contract"
+                  />
+                </div>
                 <div className="space-y-2">
                   <div className="border-b pb-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">UOM</p>
