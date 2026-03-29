@@ -621,6 +621,7 @@ export default function SignOrderContentSimple({
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
+            onImport={(signs) => dispatch({ type: 'COPY_MPT_RENTAL', payload: { ...mptRental, phases: [{ ...mptRental.phases[0], signs }] } })}
           />
           <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>

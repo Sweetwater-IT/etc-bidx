@@ -29,8 +29,9 @@ import {
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useEstimate } from "@/contexts/EstimateContext";
 import { fetchSignDesignations } from "@/lib/api-client";
-import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures } from '@/types/MPTEquipment';
+import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse } from '@/types/MPTEquipment';
 import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
+import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
 
 interface Props {
@@ -51,11 +52,16 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
 const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useEstimate();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
-    const [designationData, setDesignationData] = useState<SignDesignation[]>([]);
-    const [filteredDesignations, setFilteredDesignations] = useState<SignDesignation[]>([]);
+    const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
+    const [filteredSigns, setFilteredSigns] = useState<SignDesignation[]>([]);
+    const [filteredPataKits, setFilteredPataKits] = useState<PataKit[]>([]);
+    const [filteredPtsKits, setFilteredPtsKits] = useState<PtsKit[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
+    const [kitStepperOpen, setKitStepperOpen] = useState(false);
+    const [selectedKit, setSelectedKit] = useState<PataKit | PtsKit | null>(null);
+    const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
 
     const isSecondary = isSecondarySign(sign);
     // Get primary sign if this is a secondary sign
@@ -115,20 +121,27 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         const loadSignData = async () => {
             setIsLoading(true);
             try {
-                const data = await fetchSignDesignations();
-                if (data && Array.isArray(data) && data.length > 0) {
-                    const processedData = await processSignData(data);
-                    setDesignationData(processedData);
-                    setFilteredDesignations(processedData);
+                const response = await fetch('/api/signs');
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    setApiData(data.data);
+                    setFilteredSigns(data.data.signs || []);
+                    setFilteredPataKits(data.data.pataKits || []);
+                    setFilteredPtsKits(data.data.ptsKits || []);
                 } else {
-                    console.warn("No sign data returned from API or invalid format");
-                    setDesignationData([]);
-                    setFilteredDesignations([]);
+                    console.warn("No sign data returned from API");
+                    setApiData({ signs: [], pataKits: [], ptsKits: [] });
+                    setFilteredSigns([]);
+                    setFilteredPataKits([]);
+                    setFilteredPtsKits([]);
                 }
             } catch (error) {
                 console.error("Error fetching sign data:", error);
-                setDesignationData([]);
-                setFilteredDesignations([]);
+                setApiData({ signs: [], pataKits: [], ptsKits: [] });
+                setFilteredSigns([]);
+                setFilteredPataKits([]);
+                setFilteredPtsKits([]);
             } finally {
                 setIsLoading(false);
             }
@@ -147,27 +160,52 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     // Filter designations based on search term
     const filterDesignations = (searchTerm: string) => {
-        if (!Array.isArray(designationData)) {
-            setFilteredDesignations([]);
+        if (!apiData) {
+            setFilteredSigns([]);
+            setFilteredPataKits([]);
+            setFilteredPtsKits([]);
             return;
         }
 
         if (!searchTerm || searchTerm.length < 2) {
-            setFilteredDesignations(designationData);
+            setFilteredSigns(apiData.signs || []);
+            setFilteredPataKits(apiData.pataKits || []);
+            setFilteredPtsKits(apiData.ptsKits || []);
             return;
         }
 
+        const query = searchTerm.toLowerCase();
+
         try {
-            const filtered = designationData.filter(
-                (item) =>
-                    item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+            // Filter signs
+            const filteredSigns = (apiData.signs || []).filter(sign =>
+                sign.designation.toLowerCase().includes(query) ||
+                sign.description.toLowerCase().includes(query)
             );
 
-            setFilteredDesignations(filtered);
+            // Filter kits that contain signs matching the query
+            const signDesignations = new Set(filteredSigns.map(s => s.designation));
+
+            const filteredPataKits = (apiData.pataKits || []).filter(kit =>
+                kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
+                kit.code.toLowerCase().includes(query) ||
+                kit.description.toLowerCase().includes(query)
+            );
+
+            const filteredPtsKits = (apiData.ptsKits || []).filter(kit =>
+                kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
+                kit.code.toLowerCase().includes(query) ||
+                kit.description.toLowerCase().includes(query)
+            );
+
+            setFilteredSigns(filteredSigns);
+            setFilteredPataKits(filteredPataKits);
+            setFilteredPtsKits(filteredPtsKits);
         } catch (error) {
             console.error("Error filtering designations:", error);
-            setFilteredDesignations([]);
+            setFilteredSigns([]);
+            setFilteredPataKits([]);
+            setFilteredPtsKits([]);
         }
     };
 
@@ -250,11 +288,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const handleDimensionSelect = (value: string) => {
         try {
-            // Parse dimensions from format "width x height"
+            // Parse dimensions from format "widthxheight" (no spaces)
             const dimensionParts = value.split("x");
             if (dimensionParts.length === 2) {
-                const width = parseFloat(dimensionParts[0].trim());
-                const height = parseFloat(dimensionParts[1].trim());
+                const width = parseFloat(dimensionParts[0]);
+                const height = parseFloat(dimensionParts[1]);
 
                 if (!isNaN(width) && !isNaN(height)) {
                     setLocalSign({
@@ -271,7 +309,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const handleDesignationSelect = (designationValue: string) => {
         // Find the selected designation data
-        const selectedDesignation = designationData.find(
+        const selectedDesignation = filteredSigns.find(
             (d) => d.designation === designationValue
         );
 
@@ -297,12 +335,80 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }));
     };
 
+    const handleKitSelect = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+        setSelectedKit(kit);
+
+        // Initialize configurations for each sign in the kit
+        const configurations = kit.contents.map(content => {
+            // Find the sign data for this designation
+            const signData = apiData?.signs.find(s => s.designation === content.sign_designation);
+
+            return {
+                designation: content.sign_designation,
+                quantity: content.quantity,
+                width: signData?.dimensions[0]?.width || 0,
+                height: signData?.dimensions[0]?.height || 0,
+                sheeting: signData?.sheeting || 'DG',
+                substrate: 'Plastic' as const,
+                associatedStructure: 'none' as const,
+                displayStructure: 'LOOSE' as const,
+                bLights: 0,
+                cover: false,
+                stiffener: false,
+                description: signData?.description || '',
+                isCustom: false,
+            };
+        });
+
+        setKitSignConfigurations(configurations);
+        setKitStepperOpen(true);
+    };
+
+    const handleKitStepperComplete = () => {
+        if (!selectedKit || !kitSignConfigurations.length) return;
+
+        // Create all signs from the kit configurations
+        kitSignConfigurations.forEach(config => {
+            const newSign: PrimarySign = {
+                id: generateUniqueId(),
+                designation: config.designation,
+                width: config.width,
+                height: config.height,
+                quantity: config.quantity,
+                sheeting: config.sheeting,
+                associatedStructure: config.associatedStructure,
+                displayStructure: config.displayStructure,
+                bLights: config.bLights,
+                cover: config.cover,
+                isCustom: config.isCustom,
+                bLightsColor: undefined,
+                description: config.description,
+                substrate: config.substrate,
+                stiffener: config.stiffener,
+            };
+
+            dispatch({
+                type: 'ADD_MPT_SIGN',
+                payload: {
+                    phaseNumber: currentPhase,
+                    sign: newSign,
+                },
+            });
+        });
+
+        // Close the modal and reset
+        setKitStepperOpen(false);
+        setSelectedKit(null);
+        setKitSignConfigurations([]);
+        onOpenChange(false);
+    };
+
     // Get available dimensions for the selected designation
     const getAvailableDimensions = () => {
         try {
             if (!localSign || !localSign.designation) return [];
 
-            const designationInfo = designationData.find(
+            const designationInfo = filteredSigns.find(
                 (d) => d.designation === localSign.designation
             );
 
@@ -319,7 +425,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             console.error("Error getting available dimensions:", error);
             return [];
         }
-    };    
+    };
 
     const handleSave = () => {
         // For secondary signs, make sure the quantity matches the primary sign
@@ -354,6 +460,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     return (
+        <>
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
@@ -441,39 +548,100 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         />
                                         <CommandEmpty>No designation found.</CommandEmpty>
                                         <CommandList>
-                                            <CommandGroup>
-                                                {filteredDesignations.map((item) => (
-                                                    <CommandItem
-                                                        key={item.designation}
-                                                        value={item.designation}
-                                                        onSelect={() => {
-                                                            handleDesignationSelect(item.designation);
-                                                            setDesignationOpen(false);
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center w-full">
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    localSign.designation === item.designation
-                                                                        ? "opacity-100"
-                                                                        : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">
-                                                                    {item.designation}
-                                                                </span>
-                                                                {item.description && (
-                                                                    <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                        {item.description}
+                                            {/* MUTCD SIGNS Section */}
+                                            {filteredSigns.length > 0 && (
+                                                <CommandGroup heading="MUTCD SIGNS">
+                                                    {filteredSigns.map((item) => (
+                                                        <CommandItem
+                                                            key={item.designation}
+                                                            value={item.designation}
+                                                            onSelect={() => {
+                                                                handleDesignationSelect(item.designation);
+                                                                setDesignationOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center w-full">
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        localSign.designation === item.designation
+                                                                            ? "opacity-100"
+                                                                            : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">
+                                                                        {item.designation}
                                                                     </span>
-                                                                )}
+                                                                    {item.description && (
+                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                            {item.description}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            )}
+
+                                            {/* PATA Kits Section */}
+                                            {filteredPataKits.length > 0 && (
+                                                <CommandGroup heading="PATA Kits">
+                                                    {filteredPataKits.map((kit) => (
+                                                        <CommandItem
+                                                            key={kit.id}
+                                                            value={`pata-${kit.id}`}
+                                                            onSelect={() => {
+                                                                handleKitSelect(kit, 'pata');
+                                                                setDesignationOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center w-full">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">
+                                                                        {kit.code}
+                                                                    </span>
+                                                                    {kit.description && (
+                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                            {kit.description}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            )}
+
+                                            {/* PTS Kits Section */}
+                                            {filteredPtsKits.length > 0 && (
+                                                <CommandGroup heading="PTS Kits">
+                                                    {filteredPtsKits.map((kit) => (
+                                                        <CommandItem
+                                                            key={kit.id}
+                                                            value={`pts-${kit.id}`}
+                                                            onSelect={() => {
+                                                                handleKitSelect(kit, 'pts');
+                                                                setDesignationOpen(false);
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center w-full">
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">
+                                                                        {kit.code}
+                                                                    </span>
+                                                                    {kit.description && (
+                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                            {kit.description}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            )}
                                         </CommandList>
                                     </Command>
                                 </PopoverContent>
@@ -547,7 +715,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     value={
                                         (localSign.width && localSign.height && localSign.width > 0 && localSign.height > 0)
                                             ? `${localSign.width}x${localSign.height}`
-                                            : undefined
+                                            : ""
                                     }
                                     onValueChange={handleDimensionSelect}
                                     disabled={getAvailableDimensions().length === 1}
@@ -558,7 +726,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <SelectContent>
                                         {getAvailableDimensions().map((dim, index) => (
                                             <SelectItem key={index} value={`${dim.width}x${dim.height}`}>
-                                                {dim.width} x {dim.height}
+                                                {dim.width}&quot; &times; {dim.height}&quot;
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -617,15 +785,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             <SelectValue placeholder="Choose structure" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="4' T-III RIGHT">{`4'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="4' T-III LEFT">{`4'`} T-III LEFT</SelectItem>
-                                            <SelectItem value="6' T-III RIGHT">{`6'`} T-III RIGHT</SelectItem>
-                                            <SelectItem value="6' T-III LEFT">{`6'`} T-III LEFT</SelectItem>
+                                            <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
+                                            <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
+                                            <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
+                                            <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
                                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                            <SelectItem value="8' POST">{`8'`} POST</SelectItem>
-                                            <SelectItem value="10' POST">{`10'`} POST</SelectItem>
-                                            <SelectItem value="12' POST">{`12'`} POST</SelectItem>
-                                            <SelectItem value="14' POST">{`14'`} POST</SelectItem>
+                                            <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
+                                            <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
+                                            <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
+                                            <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
                                             <SelectItem value="LOOSE">LOOSE</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -717,7 +885,181 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 </div>
 
             </SheetContent>
+        </Sheet>,
+
+        {/* Kit Stepper Modal */}
+        <Sheet open={kitStepperOpen} onOpenChange={setKitStepperOpen}>
+            <SheetContent
+                side="right"
+                className="w-[800px] flex flex-col p-0 overflow-y-auto"
+            >
+                <div className="flex flex-col gap-2 relative z-10 bg-background">
+                    <SheetHeader className="pb-4 p-6">
+                        <SheetTitle>
+                            Configure {selectedKit?.code} Kit Signs
+                        </SheetTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Configure each sign in the kit with your preferred settings.
+                        </p>
+                    </SheetHeader>
+                    <Separator className="w-full -mt-2" />
+                </div>
+
+                <div className="space-y-6 p-6 flex-1">
+                    {kitSignConfigurations.map((config, index) => (
+                        <div key={index} className="border rounded-lg p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold">
+                                    Sign {index + 1}: {config.designation}
+                                </h3>
+                                <span className="text-sm text-muted-foreground">
+                                    Quantity: {config.quantity}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium mb-2 block">Structure</Label>
+                                    <Select
+                                        value={config.displayStructure}
+                                        onValueChange={(value) => {
+                                            const updatedConfigs = [...kitSignConfigurations];
+                                            updatedConfigs[index] = {
+                                                ...config,
+                                                displayStructure: value,
+                                                associatedStructure: structureMap[value]
+                                            };
+                                            setKitSignConfigurations(updatedConfigs);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Choose structure" />
+                                        </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
+                                                <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
+                                                <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
+                                                <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
+                                                <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                                <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
+                                                <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
+                                                <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
+                                                <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
+                                                <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                            </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div>
+                                    <Label className="text-sm font-medium mb-2 block">Substrate</Label>
+                                    <Select
+                                        value={config.substrate}
+                                        onValueChange={(value) => {
+                                            const updatedConfigs = [...kitSignConfigurations];
+                                            updatedConfigs[index] = { ...config, substrate: value };
+                                            setKitSignConfigurations(updatedConfigs);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select substrate" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                            <SelectItem value="Aluminum-Composite">Aluminum Composite</SelectItem>
+                                            <SelectItem value="Plastic">Plastic</SelectItem>
+                                            {isSignOrder && (
+                                                <>
+                                                    <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                    <SelectItem value="Face">Face</SelectItem>
+                                                </>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
+                                    <Select
+                                        value={config.sheeting}
+                                        onValueChange={(value) => {
+                                            const updatedConfigs = [...kitSignConfigurations];
+                                            updatedConfigs[index] = { ...config, sheeting: value };
+                                            setKitSignConfigurations(updatedConfigs);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="HI">HI</SelectItem>
+                                            <SelectItem value="DG">DG</SelectItem>
+                                            <SelectItem value="FYG">FYG</SelectItem>
+                                            <SelectItem value="TYPEXI">Type XI</SelectItem>
+                                            <SelectItem value="Special">Special</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        checked={config.cover}
+                                        onCheckedChange={(checked) => {
+                                            const updatedConfigs = [...kitSignConfigurations];
+                                            updatedConfigs[index] = { ...config, cover: checked };
+                                            setKitSignConfigurations(updatedConfigs);
+                                        }}
+                                        id={`cover-${index}`}
+                                    />
+                                    <Label htmlFor={`cover-${index}`} className="text-sm font-medium">
+                                        Include cover
+                                    </Label>
+                                </div>
+
+                                {isTakeoff && (
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            checked={config.stiffener}
+                                            onCheckedChange={(checked) => {
+                                                const updatedConfigs = [...kitSignConfigurations];
+                                                updatedConfigs[index] = { ...config, stiffener: checked };
+                                                setKitSignConfigurations(updatedConfigs);
+                                            }}
+                                            id={`stiffener-${index}`}
+                                        />
+                                        <Label htmlFor={`stiffener-${index}`} className="text-sm font-medium">
+                                            Include stiffener
+                                        </Label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                                Dimensions: {config.width}&quot; &times; {config.height}&quot;
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setKitStepperOpen(false);
+                            setSelectedKit(null);
+                            setKitSignConfigurations([]);
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button onClick={handleKitStepperComplete}>
+                        Add All Signs to Order
+                    </Button>
+                </div>
+            </SheetContent>
         </Sheet>
+        </>
     );
 };
 

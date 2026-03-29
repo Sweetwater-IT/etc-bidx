@@ -36,6 +36,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 interface NavItem {
@@ -76,7 +77,7 @@ export const data = {
         },
         {
           title: "Job List",
-          url: "/jobs/active-jobs",
+          url: "/l/jobs",
         },
       ],
     },
@@ -168,7 +169,7 @@ export const data = {
       }, */
     {
       title: "Contract Manager",
-      url: "/contracts",
+      url: "/l/contracts",
       icon: IconUsers,
     },
     /*   {
@@ -277,7 +278,7 @@ export const quickActions = [
   {
     label: "Job",
     icon: IconBuilding,
-    route: "/jobs/active-jobs",
+    route: "/l/jobs",
     withSeparator: true,
   },
   {
@@ -320,19 +321,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:!p-1.5 min-h-[2.5rem] overflow-visible"
             >
               <Link href="/">
-                <span className="text-base font-semibold">BidX</span>
+                <img src="/logo.jpg" alt="ETC Logo" className="h-8 w-auto" />
                 {/* <ModeToggle /> */}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <SidebarSeparator />
       <SidebarContent>
         <NavMain items={data.navMain} label={'Project Estimating'} />
         <NavMain items={data.navAdmin} label={'Project Admin'} />
         <NavMain items={data.navSignShop} label={'Sign Shop'} />
         {/* <NavDocuments items={data.documents} /> */}
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

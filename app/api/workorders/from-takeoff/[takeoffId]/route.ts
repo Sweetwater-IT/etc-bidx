@@ -1,0 +1,602 @@
+// app/api/workorders/from-takeoff/[takeoffId]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster, type SovMasterItemRecord } from '@/lib/server/sov/masterItems';
+
+const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
+
+type SOVLookupItem = {
+  id: number;
+  item_number: string;
+  description: string;
+  work_type?: string | null;
+  uom?: string | null;
+  quantity?: number | null;
+};
+
+const WORK_TYPE_GROUPS: Record<string, string[]> = {
+  MPT: ['MPT'],
+  LANE_CLOSURE: ['LANE_CLOSURE', 'LANE CLOSURE'],
+  FLAGGING: ['FLAGGING'],
+  PERMANENT_SIGNS: ['PERMANENT_SIGNS', 'PERMANENT SIGN', 'PERMANENT SIGNS'],
+  SERVICE: ['SERVICE'],
+  DELIVERY: ['DELIVERY'],
+  RENTAL: ['RENTAL'],
+  CUSTOM: ['CUSTOM'],
+};
+
+function getRelevantWorkTypes(workType: unknown): string[] {
+  const normalized = normalizeUpper(workType);
+  return WORK_TYPE_GROUPS[normalized] || (normalized ? [normalized] : []);
+}
+
+const normalize = (value: unknown): string => String(value || '').trim();
+const normalizeUpper = (value: unknown): string => normalize(value).toUpperCase();
+
+const VEHICLE_LABEL_BY_ID: Record<string, string> = {
+  pickup_truck: 'Pick Up Truck',
+  tma: 'TMA',
+  message_board: 'Message Board',
+  arrow_panel: 'Arrow Panel',
+  speed_trailer: 'Speed Trailer',
+};
+
+function resolveSov(
+  candidates: Array<unknown>,
+  sovItems: SOVLookupItem[]
+): { item_number: string; sov_item_id: number | null } {
+  const sovByItemNumber = new Map<string, SOVLookupItem>();
+  const sovByDescription = new Map<string, SOVLookupItem>();
+
+  for (const s of sovItems) {
+    const numKey = normalizeUpper(s.item_number);
+    if (numKey) sovByItemNumber.set(numKey, s);
+
+    const descKey = normalizeUpper(s.description);
+    if (descKey && !sovByDescription.has(descKey)) sovByDescription.set(descKey, s);
+  }
+
+  for (const candidate of candidates) {
+    const key = normalizeUpper(candidate);
+    if (!key) continue;
+
+    const byNum = sovByItemNumber.get(key);
+    if (byNum) {
+      return { item_number: byNum.item_number, sov_item_id: byNum.id };
+    }
+
+    const byDesc = sovByDescription.get(key);
+    if (byDesc) {
+      return { item_number: byDesc.item_number, sov_item_id: byDesc.id };
+    }
+  }
+
+  // Loose description contains fallback
+  const nonEmptyCandidates = candidates.map((c) => normalizeUpper(c)).filter(Boolean);
+  for (const candidate of nonEmptyCandidates) {
+    const found = sovItems.find((s) => {
+      const desc = normalizeUpper(s.description);
+      return desc.includes(candidate) || candidate.includes(desc);
+    });
+    if (found) return { item_number: found.item_number, sov_item_id: found.id };
+  }
+
+  return { item_number: '', sov_item_id: null };
+}
+
+export async function POST(request: NextRequest) {
+  console.log('🔍 [API] Starting work order creation from takeoff...');
+
+  // Log environment variables availability
+  console.log('🔍 [API] Environment variables check:', {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Present' : '❌ Missing',
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Present' : '❌ Missing',
+    NODE_ENV: process.env.NODE_ENV
+  });
+
+  try {
+    const requestBody = await request.json();
+    console.log('🔍 [API] Request body:', requestBody);
+
+    const {
+      userEmail,
+      is_pickup,
+      parentWorkOrderId,
+      title,
+      description,
+      notes,
+      scheduled_date,
+      assigned_to,
+      contracted_or_additional,
+      customer_poc_phone,
+      install_date,
+      pickup_date,
+      crewNotes,
+      buildShopNotes,
+      pmNotes,
+    } = requestBody;
+
+    if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer` },
+        { status: 400 }
+      );
+    }
+
+    if (!userEmail) {
+      console.log('🔍 [API] Missing userEmail, returning 400');
+      return NextResponse.json({ error: 'userEmail is required' }, { status: 400 });
+    }
+
+    const isPickup = Boolean(is_pickup);
+    console.log('🔍 [API] Parsed parameters:', {
+      userEmail,
+      isPickup,
+      parentWorkOrderId,
+      title
+    });
+
+    // Extract takeoffId from the URL path (bypasses params Promise entirely)
+    const url = new URL(request.url);
+    const segments = url.pathname.split('/').filter(Boolean); // remove empty parts
+    // Route is /api/workorders/from-takeoff/{takeoffId}
+    // So segments: ['api', 'workorders', 'from-takeoff', '{takeoffId}']
+    const takeoffId = segments[segments.length - 1]; // last segment = takeoffId
+
+    if (!takeoffId || takeoffId === 'from-takeoff') {
+      return NextResponse.json({ error: 'Missing or invalid takeoffId' }, { status: 400 });
+    }
+
+    console.log('Extracted takeoffId:', takeoffId); // ← add for debugging
+
+    // Fetch the takeoff
+    const { data: takeoff, error: takeoffError } = await supabase
+      .from('takeoffs_l')
+      .select('*')
+      .eq('id', takeoffId)
+      .single();
+
+    if (takeoffError || !takeoff) {
+      console.error('Takeoff fetch error:', takeoffError);
+      return NextResponse.json({ error: 'Takeoff not found' }, { status: 404 });
+    }
+
+    console.log('Takeoff:', { id: takeoff.id, job_id: takeoff.job_id, work_type: takeoff.work_type, isPickup });
+
+    let sourceTakeoff = takeoff;
+    let workingTakeoffId = takeoffId;
+    let parentTakeoffId: string | null = null;
+
+    if (isPickup) {
+      const resolvedParentWorkOrderId = parentWorkOrderId || takeoff.work_order_id || null;
+      if (!resolvedParentWorkOrderId) {
+        return NextResponse.json({ error: 'Parent work order is required for pickup creation' }, { status: 400 });
+      }
+
+      if (String(takeoff.work_type || '').toUpperCase() !== 'MPT') {
+        return NextResponse.json({ error: 'Pickup work orders are only supported for MPT takeoffs' }, { status: 400 });
+      }
+
+      const { data: existingPickupWO } = await supabase
+        .from('work_orders_l')
+        .select('id, takeoff_id, wo_number')
+        .eq('parent_work_order_id', resolvedParentWorkOrderId)
+        .eq('is_pickup', true)
+        .maybeSingle();
+
+      if (existingPickupWO?.id) {
+        return NextResponse.json(
+          {
+            error: 'Pickup work order already exists',
+            code: 'PICKUP_EXISTS',
+            existingWorkOrderId: existingPickupWO.id,
+            existingTakeoffId: existingPickupWO.takeoff_id,
+          },
+          { status: 409 }
+        );
+      }
+
+      parentTakeoffId = takeoff.id;
+
+      const pickupTakeoffPayload = {
+        job_id: takeoff.job_id,
+        work_type: takeoff.work_type,
+        title: title || `PU-${takeoff.title}`,
+        status: 'draft',
+        notes: notes || takeoff.notes || null,
+        install_date: null,
+        pickup_date: pickup_date || takeoff.pickup_date || null,
+        contracted_or_additional: contracted_or_additional || takeoff.contracted_or_additional || 'contracted',
+        needed_by_date: takeoff.needed_by_date || null,
+        revision_of_takeoff_id: null,
+        revision_number: 1,
+        chain_root_takeoff_id: null,
+        destination: takeoff.destination || null,
+        default_sign_material: takeoff.default_sign_material || null,
+        priority: takeoff.priority || 'standard',
+        crew_notes: crewNotes || takeoff.crew_notes || null,
+        build_shop_notes: buildShopNotes || takeoff.build_shop_notes || null,
+        canceled_at: null,
+        canceled_by: null,
+        cancel_reason: null,
+        cancel_notes: null,
+        active_sections: takeoff.active_sections || [],
+        sign_rows: takeoff.sign_rows || {},
+        pm_notes: pmNotes || takeoff.pm_notes || null,
+        is_multi_day_job: false,
+        end_date: null,
+        active_permanent_items: takeoff.active_permanent_items || [],
+        permanent_sign_rows: takeoff.permanent_sign_rows || {},
+        permanent_entry_rows: takeoff.permanent_entry_rows || {},
+        default_permanent_sign_material: takeoff.default_permanent_sign_material || 'ALUMINUM',
+        vehicle_items: takeoff.vehicle_items || [],
+        rolling_stock_items: takeoff.rolling_stock_items || [],
+        additional_items: takeoff.additional_items || [],
+        is_pickup: true,
+        parent_takeoff_id: parentTakeoffId,
+      };
+
+      const { data: pickupTakeoff, error: pickupTakeoffError } = await supabase
+        .from('takeoffs_l')
+        .insert(pickupTakeoffPayload)
+        .select()
+        .single();
+
+      if (pickupTakeoffError || !pickupTakeoff) {
+        console.error('Pickup takeoff insert error:', pickupTakeoffError);
+        return NextResponse.json({ error: 'Failed to create pickup takeoff', details: pickupTakeoffError }, { status: 500 });
+      }
+
+      sourceTakeoff = pickupTakeoff;
+      workingTakeoffId = pickupTakeoff.id;
+
+      // Create pickup takeoff entry and link items from parent takeoff
+      console.log('🔍 [PICKUP] Creating pickup takeoff entry...');
+      console.log('🔍 [PICKUP] Parent takeoff ID:', takeoffId);
+      console.log('🔍 [PICKUP] Regular takeoff ID:', pickupTakeoff.id);
+
+      // First, create the pickup takeoff entry (only the fields that exist in pickup_takeoffs_l)
+      console.log('🔍 [PICKUP] Creating pickup takeoff entry with minimal fields...');
+      const { data: pickupTakeoffEntry, error: pickupTakeoffEntryError } = await supabase
+        .from('pickup_takeoffs_l')
+        .insert({
+          parent_takeoff_id: takeoffId,
+          job_id: takeoff.job_id,
+          // Note: pickup_takeoffs_l only has these 3 fields + id + timestamps
+          // All detailed fields are stored in the regular takeoffs_l record with is_pickup = true
+        })
+        .select()
+        .single();
+
+      if (pickupTakeoffEntryError || !pickupTakeoffEntry) {
+        console.error('🔍 [PICKUP] Error creating pickup takeoff entry:', pickupTakeoffEntryError);
+        return NextResponse.json({ error: 'Failed to create pickup takeoff entry', details: pickupTakeoffEntryError }, { status: 500 });
+      }
+
+      console.log('🔍 [PICKUP] Created pickup takeoff entry:', pickupTakeoffEntry.id);
+
+      // Now link parent takeoff items to the pickup takeoff
+      const { data: parentItems, error: parentItemsError } = await supabase
+        .from('takeoff_items_l')
+        .select('*')
+        .eq('takeoff_id', takeoffId)
+        .is('deleted_at', null);
+
+      console.log('🔍 [PICKUP] Parent items query result:', {
+        error: parentItemsError,
+        itemCount: parentItems?.length || 0,
+        items: parentItems?.map(item => ({
+          id: item.id,
+          product_name: item.product_name,
+          quantity: item.quantity
+        })) || []
+      });
+
+      if (parentItemsError) {
+        console.error('🔍 [PICKUP] Error fetching parent takeoff items:', parentItemsError);
+        return NextResponse.json({ error: 'Failed to fetch parent takeoff items', details: parentItemsError }, { status: 500 });
+      }
+
+      if (parentItems && parentItems.length > 0) {
+        console.log('🔍 [PICKUP] Creating pickup takeoff items...');
+
+        const pickupItems = parentItems.map(item => ({
+          pickup_takeoff_id: pickupTakeoffEntry.id,
+          parent_item_id: item.id,
+          // Initialize pickup-specific fields
+          sign_condition: null,
+          structure_condition: null,
+          light_condition: null,
+          pickup_images: [],
+          return_details: {},
+          notes: null,
+        }));
+
+        console.log('🔍 [PICKUP] Prepared pickup items:', pickupItems.map(item => ({
+          pickup_takeoff_id: item.pickup_takeoff_id,
+          parent_item_id: item.parent_item_id
+        })));
+
+        const { data: insertedItems, error: insertItemsError } = await supabase
+          .from('pickup_takeoff_items_l')
+          .insert(pickupItems)
+          .select();
+
+        console.log('🔍 [PICKUP] Insert result:', {
+          error: insertItemsError,
+          insertedCount: insertedItems?.length || 0,
+          insertedItems: insertedItems?.map(item => ({
+            id: item.id,
+            pickup_takeoff_id: item.pickup_takeoff_id,
+            parent_item_id: item.parent_item_id
+          })) || []
+        });
+
+        if (insertItemsError) {
+          console.error('🔍 [PICKUP] Error creating pickup takeoff items:', insertItemsError);
+          return NextResponse.json({ error: 'Failed to create pickup takeoff items', details: insertItemsError }, { status: 500 });
+        }
+
+        console.log(`🔍 [PICKUP] Successfully created ${pickupItems.length} pickup takeoff items`);
+      } else {
+        console.log('🔍 [PICKUP] No parent items found to link');
+      }
+
+      // Create the pickup work order entry
+      console.log('🔍 [PICKUP] Creating pickup work order entry...');
+      const { data: pickupWorkOrder, error: pickupWorkOrderError } = await supabase
+        .from('pickup_work_orders_l')
+        .insert({
+          pickup_takeoff_id: pickupTakeoffEntry.id,
+          job_id: takeoff.job_id,
+        })
+        .select()
+        .single();
+
+      if (pickupWorkOrderError || !pickupWorkOrder) {
+        console.error('🔍 [PICKUP] Error creating pickup work order:', pickupWorkOrderError);
+        return NextResponse.json({ error: 'Failed to create pickup work order', details: pickupWorkOrderError }, { status: 500 });
+      }
+
+      console.log('🔍 [PICKUP] Created pickup work order:', pickupWorkOrder.id);
+    }
+
+    // Fetch takeoff data to determine which SOV work types should appear on the work order
+    const { data: takeoffData, error: takeoffDataError } = await supabase
+      .from('takeoffs_l')
+      .select('work_type')
+      .eq('id', workingTakeoffId)
+      .single();
+
+    if (takeoffDataError) {
+      console.error('Takeoff data fetch error:', takeoffDataError);
+      return NextResponse.json({ error: 'Failed to fetch takeoff data' }, { status: 500 });
+    }
+
+    const relevantWorkTypes = getRelevantWorkTypes(takeoffData.work_type);
+
+    // Fetch SOV entries for this job and hydrate master items separately because
+    // sov_entries.sov_item_id is not declared as a relational foreign key in Supabase.
+    const { data: sovEntries, error: sovEntriesError } = await supabase
+      .from('sov_entries')
+      .select('sov_item_id, custom_sov_item_id, quantity, sort_order')
+      .eq('job_id', sourceTakeoff.job_id)
+      .order('sort_order', { ascending: true });
+
+    if (sovEntriesError) {
+      console.error('[WO from takeoff] Failed to fetch SOV entries', sovEntriesError);
+      return NextResponse.json({ error: 'Failed to fetch SOV entries' }, { status: 500 });
+    }
+
+    let masterMaps;
+    try {
+      masterMaps = await fetchSovMastersForEntries(sovEntries || []);
+    } catch (masterItemsError) {
+      console.error('[WO from takeoff] Failed to hydrate SOV master items', masterItemsError);
+      return NextResponse.json({ error: 'Failed to fetch SOV master items' }, { status: 500 });
+    }
+
+    const sovItems: SOVLookupItem[] = ((sovEntries || []) as Array<{ sov_item_id: number | null; custom_sov_item_id?: number | null; quantity?: number | null; sort_order?: number | null }>)
+      .reduce<SOVLookupItem[]>((acc, entry) => {
+        const master = resolveEntryMaster(entry, masterMaps) as SovMasterItemRecord | undefined;
+        if (!master) return acc;
+
+        acc.push({
+          id: Number(master.id),
+          item_number: String(master.item_number || ''),
+          description: String(master.display_name || master.description || ''),
+          work_type: master.work_type ?? null,
+          uom: getPrimaryUom(master),
+          quantity: entry?.quantity ?? null,
+        });
+        return acc;
+      }, []);
+
+    const matchedSovItems = sovItems.filter((item) => {
+      const itemWorkType = normalizeUpper(item.work_type);
+      return relevantWorkTypes.length === 0 || relevantWorkTypes.includes(itemWorkType);
+    });
+
+    console.log('[WO from takeoff] SOV matching summary', {
+      takeoffId: workingTakeoffId,
+      workType: takeoffData.work_type,
+      relevantWorkTypes,
+      totalSovItems: sovItems.length,
+      matchedSovItems: matchedSovItems.map((item) => ({
+        id: item.id,
+        item_number: item.item_number,
+        work_type: item.work_type,
+        quantity: item.quantity,
+      })),
+    });
+
+    // Create work order items from SOV entries only.
+    const workOrderItems: Array<{
+      work_order_id: string | null;
+      item_number: string;
+      description: string;
+      contract_quantity: number;
+      work_order_quantity: number;
+      uom: string;
+      sort_order: number;
+      sov_item_id: number | null;
+    }> = [];
+
+    // For permanent signs, calculate total square footage from takeoff items
+    if (takeoffData.work_type === 'PERMANENT_SIGNS') {
+      // Fetch takeoff items to calculate total square footage per item number
+      const { data: takeoffItems, error: takeoffItemsError } = await supabase
+        .from('takeoff_items_l')
+        .select('product_name, total_sqft, quantity')
+        .eq('takeoff_id', workingTakeoffId)
+        .is('deleted_at', null);
+
+      if (takeoffItemsError) {
+        console.error('Error fetching takeoff items for permanent signs:', takeoffItemsError);
+        return NextResponse.json({ error: 'Failed to fetch takeoff items' }, { status: 500 });
+      }
+
+      // Group takeoff items by item number and calculate total square footage
+      const itemTotals = new Map<string, number>();
+      (takeoffItems || []).forEach((item: any) => {
+        const itemNumber = item.product_name || '';
+        const totalSqft = Number(item.total_sqft || 0);
+        itemTotals.set(itemNumber, (itemTotals.get(itemNumber) || 0) + totalSqft);
+      });
+
+      // Create work order items using calculated square footage
+      matchedSovItems.forEach((item, index) => {
+        const calculatedQuantity = itemTotals.get(item.item_number) || Number(item.quantity || 0);
+
+        workOrderItems.push({
+          work_order_id: null,
+          item_number: item.item_number,
+          description: item.description,
+          contract_quantity: calculatedQuantity,
+          work_order_quantity: calculatedQuantity,
+          uom: item.uom || 'SF', // Use SF (square feet) for permanent signs
+          sort_order: index,
+          sov_item_id: item.id,
+        });
+      });
+    } else {
+      // For other work types, use contract quantities as before
+      matchedSovItems.forEach((item, index) => {
+        const quantity = Number(item.quantity || 0);
+        workOrderItems.push({
+          work_order_id: null,
+          item_number: item.item_number,
+          description: item.description,
+          contract_quantity: quantity,
+          work_order_quantity: quantity,
+          uom: item.uom || 'EA',
+          sort_order: index,
+          sov_item_id: item.id,
+        });
+      });
+
+    }
+
+    console.log('Generated work order items:', workOrderItems.map(i => ({
+      item_number: i.item_number,
+      description: typeof i.description === 'string' ? `${i.description.substring(0, 50)}...` : '',
+      qty: i.work_order_quantity,
+      from_sov: i.sov_item_id !== null
+    })));
+
+    // Generate sequential work order number per takeoff
+    const { data: maxWO } = await supabase
+      .from('work_orders_l')
+      .select('wo_number')
+      .eq('takeoff_id', workingTakeoffId)
+      .order('wo_number', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextNumber = (maxWO?.wo_number || 0) + 1;
+    const workOrderNumber = nextNumber;
+
+    // Create the work order header
+    const { data: workOrder, error: insertError } = await supabase
+      .from('work_orders_l')
+      .insert({
+        job_id: sourceTakeoff.job_id,
+        takeoff_id: workingTakeoffId,
+        wo_number: workOrderNumber,
+        title: title || sourceTakeoff.title,
+        description: description || null,
+        notes: notes || null,
+        scheduled_date: scheduled_date || null,
+        assigned_to: assigned_to || null,
+        contracted_or_additional: contracted_or_additional || sourceTakeoff.contracted_or_additional || 'contracted',
+        customer_poc_phone: customer_poc_phone || null,
+        created_by: userEmail,
+        status: 'draft',
+        is_pickup: isPickup,
+        parent_work_order_id: isPickup ? (parentWorkOrderId || takeoff.work_order_id || null) : null,
+      })
+      .select()
+      .single();
+
+    if (insertError || !workOrder) {
+      console.error('Work order insert error:', insertError);
+      return NextResponse.json({ error: 'Failed to create work order', details: insertError }, { status: 500 });
+    }
+
+    // Update the takeoff with the work order number AND work order ID
+    const { error: updateTakeoffError } = await supabase
+      .from('takeoffs_l')
+      .update({
+        work_order_number: workOrderNumber,
+        work_order_id: workOrder.id
+      })
+      .eq('id', workingTakeoffId);
+
+    if (updateTakeoffError) {
+      console.error('Error updating takeoff with WO number:', updateTakeoffError);
+      // Don't fail, but log
+    }
+
+    // Create work order items
+    let itemsError: any = null;
+    if (workOrderItems.length > 0) {
+      const itemsWithWorkOrderId = workOrderItems.map(item => ({
+        ...item,
+        work_order_id: workOrder.id
+      }));
+
+      const result = await supabase
+        .from('work_order_items_l')
+        .insert(itemsWithWorkOrderId);
+
+      itemsError = result.error;
+
+      if (itemsError) {
+        console.error('Work order items insert error:', itemsError);
+        // Don't fail the whole request, but log the error
+      }
+    }
+
+    console.log('Items insert error:', itemsError);
+    console.log('Response itemCount:', workOrderItems.length);
+
+    return NextResponse.json({
+      success: true,
+      workOrder: {
+        id: workOrder.id,
+        title: workOrder.title,
+        workOrderNumber,
+        itemCount: workOrderItems.length,
+        isPickup,
+      },
+      takeoff: {
+        id: workingTakeoffId,
+        parentTakeoffId,
+        isPickup,
+      },
+    });
+  } catch (error) {
+    console.error('Unexpected error in work order generation:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

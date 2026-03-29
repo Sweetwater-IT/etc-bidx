@@ -1,11 +1,8 @@
 "use client";
 
-import { AppSidebar } from "../../../components/app-sidebar";
 import { SectionCards } from "../../../components/section-cards";
 import { Button } from "../../../components/ui/button";
 import { DataTable } from "../../../components/data-table";
-import { SidebarInset, SidebarProvider } from "../../../components/ui/sidebar";
-import { SiteHeader } from "../../../components/site-header";
 import { availableJobsColumns, AvailableJobServices } from "../../../data/available-jobs";
 import { FilterOption } from "../../../components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
@@ -358,6 +355,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
+    const [isTableLoading, setIsTableLoading] = useState(false);
     const { startLoading, stopLoading } = useLoading();
 
     const handleSegmentChange = (value: string) => {
@@ -388,7 +386,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
         try {
             console.log("Loading available jobs with activeSegment:", activeSegment);
-            startLoading();
+            setIsTableLoading(true);
 
             // Special handling for archived segment
             const options: any = {
@@ -514,9 +512,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading jobs:", error);
             toast.error("Failed to load jobs. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, startLoading, stopLoading, sortBy, sortOrder, activeFilters]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, sortBy, sortOrder, activeFilters]);
 
     // Load active bids data
     const handleJobNavigation = (direction: 'up' | 'down') => {
@@ -540,7 +538,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
     const loadActiveBids = useCallback(async () => {        
         try {
-            startLoading();
+            setIsTableLoading(true);
             const ops: any = {
                 limit: activeBidsTotalCount || 10000,
                 page: 1,
@@ -629,6 +627,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     },
                 branch: e.admin_data?.county?.branch ?? '',
                 estimator: e.admin_data.estimator || 'Unknown',
+                etcRep: e.admin_data.etcRep || 'Unknown',
                 status: e.status === 'won-pending' ? 'WON - PENDING' : e.status.toUpperCase(),
                 division: e.admin_data.division,
                 lettingDate: e.admin_data.lettingDate ? e.admin_data.lettingDate : "",
@@ -670,13 +669,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading active bids:", error);
             toast.error("Failed to load active bids. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, startLoading, stopLoading, customers, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, customers, activeFilters, sortBy, sortOrder]);
 
     const loadActiveJobs = useCallback(async () => {        
         try {
-            startLoading();
+            setIsTableLoading(true);
 
             const options: any = {
                 limit: activeJobsPageSize,
@@ -763,9 +762,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
             console.error("Error loading active jobs:", error);
             toast.error("Failed to load active jobs. Please try again.");
         } finally {
-            stopLoading();
+            setIsTableLoading(false);
         }
-    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, startLoading, stopLoading, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, activeFilters, sortBy, sortOrder]);
 
 
     const fetchNextJobNumber = useCallback(async () => {
@@ -2066,388 +2065,378 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-
-    return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col">
-                    <div className="@container/main flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <CardActions
-                                            createButtonLabel={createButtonLabel}
-                                            onCreateClick={handleCreateClick}
-                                            onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                            date={dateRange}
-                                            setDate={setDateRange}
-                                            importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                            onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
-                                            showFilterButton={false}
-                                            showFilters={showFilters}
-                                            setShowFilters={setShowFilters}
-                                            hideImport={isActiveBids}
-                                        />
-                                    </div>
-                                    {isActiveJobs && nextJobNumber && (
-                                        <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
-                                            <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => setEditJobNumberOpen(true)}
-                                            >
-                                                <PencilIcon className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
+    const content = (
+        <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+                <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <CardActions
+                                    createButtonLabel={createButtonLabel}
+                                    onCreateClick={handleCreateClick}
+                                    onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
+                                    date={dateRange}
+                                    setDate={setDateRange}
+                                    importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
+                                    onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
+                                    showFilterButton={false}
+                                    showFilters={showFilters}
+                                    setShowFilters={setShowFilters}
+                                    hideImport={isActiveBids}
+                                />
                             </div>
-
-                            <SectionCards data={cardData} />
-
-                            {isAvailableJobs ? (
-                                <DataTable<AvailableJob>
-                                    data={data as AvailableJob[]}
-                                    columns={columns}
-                                    segments={segments}
-                                    segmentValue={activeSegment}
-                                    segmentCounts={jobCounts}
-                                    onSegmentChange={handleSegmentChange}
-                                    onArchiveSelected={initiateArchiveJobs}
-                                    onDeleteSelected={initiateDeleteJobs}
-                                    tableRef={availableJobsTableRef}                           
-                                    enableSearch={true}  
-                                    searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
-                                    searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
-                                    onViewDetails={handleViewDetails}
-                                    onRowClick={handleViewDetails}
-                                    onEdit={handleEdit}
-                                    onArchive={initiateArchiveJobs}
-                                    onMarkAsBidJob={handleMarkAsBidJob}
-                                    handleMultiDelete={handleDeleteArchivedJobs}
-                                    setSelectedRows={setSelectedAvailableJobs}
-                                    allRowsSelected={allAvailableJobRowsSelected}
-                                    onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
-                                    selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
-                                    onUpdateStatus={(item, status: string) => {
-                                        // Map segment values to proper status values if needed
-                                        let statusValue: 'Bid' | 'No Bid' | 'Unset';
-
-                                        if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
-                                            statusValue = status as 'Bid' | 'No Bid' | 'Unset';
-                                        } else if (status === 'bid') {
-                                            statusValue = 'Bid';
-                                        } else if (status === 'no-bid') {
-                                            statusValue = 'No Bid';
-                                        } else if (status === 'unset') {
-                                            statusValue = 'Unset';
-                                        } else {
-                                            console.error('Invalid status value:', status);
-                                            return;
-                                        }
-
-                                        handleUpdateStatus(item, statusValue);
-                                    }}
-                                    stickyLastColumn
-                                    // Pagination props
-                                    pageCount={availableJobsPageCount}
-                                    pageIndex={availableJobsPageIndex}
-                                    pageSize={availableJobsPageSize}
-                                    onPageChange={setAvailableJobsPageIndex}
-                                    onPageSizeChange={setAvailableJobsPageSize}
-                                    totalCount={availableJobsTotalCount}
-                                    // Sorting props
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    onSortChange={handleSortChange}
-                                    // Filtering props
-                                    filterOptions={filterOptions}
-                                    branchOptions={branchOptions}
-                                    ownerOptions={ownerOptions}
-                                    countyOptions={countyOptions}
-                                    estimatorOptions={estimatorOptions}
-                                    activeFilters={activeFilters}
-                                    onFilterChange={handleFilterChange}
-                                    onReset={handleResetControls}
-                                    showFilters={showFilters}
-                                    setShowFilters={setShowFilters}
-                                    hideDropdown={true}
-                                    onUnarchive={handleUnarchiveAvailableJob}
-                                    onDeleteItem={onDeleteItems}
-                                />
-                            ) : isActiveBids ? (
-                                <DataTable<ActiveBid>
-                                    data={data as ActiveBid[]}
-                                    columns={columns}
-                                    enableSearch={true}
-                                    searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
-                                    searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
-                                    segments={segments}
-                                    segmentValue={activeSegment}
-                                    segmentCounts={activeBidCounts}
-                                    onSegmentChange={handleSegmentChange}
-                                    selectedItem={activeBidDetailsSheetOpen && selectedActiveBid ? selectedActiveBid : undefined}
-                                    stickyLastColumn
-                                    onArchiveSelected={initiateArchiveBids}
-                                    onDeleteSelected={initiateDeleteBids}
-                                    tableRef={activeBidsTableRef}
-                                    setSelectedRows={setSelectedActiveBids}
-                                    allRowsSelected={allActiveBidRowsSelected}
-                                    onAllRowsSelectedChange={setAllActiveBidRowsSelected}
-                                    handleMultiDelete={handleDeleteArchivedBids}
-                                    onViewDetails={handleActiveBidViewDetails}
-                                    onRowClick={handleActiveBidViewDetails}
-                                    onEdit={(item) => {
-                                        const params = new URLSearchParams;
-                                        params.append('bidId', item.id.toString());
-                                        params.append('tuckSidebar', 'true');
-                                        params.append('fullscreen', 'true');
-                                        params.append('defaultEditable', 'false');
-                                        router.push(`/active-bid/view?${params.toString()}`)
-                                    }}
-                                    onUpdateStatus={(item, status) => {
-                                        if ('lettingDate' in item) {
-                                            const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
-                                            handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
-                                        }
-                                    }}
-                                    // Pagination props
-                                    viewBidSummaryOpen={viewBidSummaryOpen}
-                                    onViewBidSummary={handleViewBidSummary}
-                                    pageCount={activeBidsPageCount}
-                                    pageIndex={activeBidsPageIndex}
-                                    pageSize={activeBidsPageSize}
-                                    onPageChange={setActiveBidsPageIndex}
-                                    onPageSizeChange={setActiveBidsPageSize}
-                                    totalCount={activeBidsTotalCount}
-                                    // Sorting props
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    onSortChange={handleSortChange}
-                                    // Filtering props
-                                    filterOptions={filterOptions}
-                                    branchOptions={branchOptions}
-                                    ownerOptions={ownerOptions}
-                                    countyOptions={countyOptions}
-                                    estimatorOptions={estimatorOptions}
-                                    activeFilters={activeFilters}
-                                    onFilterChange={handleFilterChange}
-                                    onReset={handleResetControls}
-                                    showFilters={showFilters}
-                                    setShowFilters={setShowFilters}
-                                    hideDropdown={true}
-                                    onUnarchive={handleUnarchiveActiveBid}
-                                    onDeleteItem={onDeleteItems}
-
-                                />
-                            ) : (
-                                <DataTable<ActiveJob>
-                                    data={data as ActiveJob[]}
-                                    columns={columns}
-                                    segments={segments}
-                                    segmentValue={activeSegment}
-                                    segmentCounts={{ ...filteredBranchCounts, archived: activeJobCounts.archived }}
-                                    onSegmentChange={handleSegmentChange}
-                                    stickyLastColumn
-                                    enableSearch={true}
-                                    searchPlaceholder="Search by job number, bid number, project status, contract number, contractor, location, or county..."
-                                    searchableColumns={["jobNumber", "bidNumber", "projectStatus", "contractNumber", "contractor", "location", "county"]}
-
-                                    onArchiveSelected={initiateArchiveActiveJobs}
-                                    onDeleteSelected={initiateDeleteActiveJobs}
-                                    tableRef={activeJobsTableRef}
-                                    selectedItem={activeJobDetailsSheetOpen && selectedActiveJob ? selectedActiveJob : undefined}
-                                    onViewDetails={(item) => {
-                                        if ('jobNumber' in item) {
-                                            handleActiveJobViewDetails(item as ActiveJob);
-                                        }
-                                    }}
-                                    onRowClick={(item) => {
-                                        if ('jobNumber' in item) {
-                                            handleActiveJobViewDetails(item as ActiveJob);
-                                        }
-                                    }}
-                                    onEdit={(item) => {
-                                        if ('jobNumber' in item) {
-                                            handleActiveJobEdit(item as ActiveJob);
-                                        }
-                                    }}
-                                    onArchive={handleArchiveActiveJob}
-                                    onUnarchive={handleUnarchiveActiveJob}
-                                    // Pagination props
-                                    pageCount={activeJobsPageCount}
-                                    pageIndex={activeJobsPageIndex}
-                                    pageSize={activeJobsPageSize}
-                                    onPageChange={setActiveJobsPageIndex}
-                                    onPageSizeChange={setActiveJobsPageSize}
-                                    totalCount={activeJobsTotalCount}
-                                    // Sorting props
-                                    sortBy={sortBy}
-                                    sortOrder={sortOrder}
-                                    onSortChange={handleSortChange}
-                                    // Filtering props
-                                    filterOptions={filterOptions}
-                                    branchOptions={branchOptions}
-                                    countyOptions={countyOptions}
-                                    contractorOptions={contractorOptions}
-                                    projectStatusOptions={projectStatusOptions}
-                                    billingStatusOptions={billingStatusOptions}
-                                    activeFilters={activeFilters}
-                                    onFilterChange={handleFilterChange}
-                                    onReset={handleResetControls}
-                                    showFilters={showFilters}
-                                    setShowFilters={setShowFilters}
-                                    hideDropdown={true}
-                                    onDeleteItem={onDeleteItems}
-                                />
+                            {isActiveJobs && nextJobNumber && (
+                                <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
+                                    <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={() => setEditJobNumberOpen(true)}
+                                    >
+                                        <PencilIcon className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             )}
-
-                            {isAvailableJobs && isCreatingAvailableJob ? (
-                                <OpenBidSheet
-                                    open={isCreatingAvailableJob}
-                                    onOpenChange={setIsCreatingAvailableJob}
-                                    onSuccess={() => {
-                                        loadAvailableJobs();
-                                        fetchAvailableJobCounts();
-                                    }}
-                                    job={undefined}
-                                />
-                            ) : isEditingAvailableJob ? <OpenBidSheet
-                                open={isEditingAvailableJob}
-                                onOpenChange={setIsEditingAvailableJob}
-                                onSuccess={() => {
-                                    loadAvailableJobs();
-                                    fetchAvailableJobCounts();
-                                }}
-                                job={selectedJob || undefined}
-                            /> : <JobDetailsSheet
-                                open={openBidSheetOpen}
-                                onOpenChange={setOpenBidSheetOpen}
-                                job={selectedJob || undefined}
-                                onEdit={handleEdit}
-                                onNavigate={handleJobNavigation}
-                            />}
-
-                            {isActiveBids && selectedActiveBid && (
-                                <>
-                                    <ActiveBidDetailsSheet
-                                        adminData={selectedActiveBid.adminData}
-                                        open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
-                                        onOpenChange={setActiveBidDetailsSheetOpen}
-                                        bid={selectedActiveBid}
-                                        onEdit={(item) => {
-                                            const params = new URLSearchParams;
-                                            params.append('bidId', item.id.toString());
-                                            params.append('tuckSidebar', 'true');
-                                            params.append('fullscreen', 'true');
-                                            params.append('defaultEditable', 'false');
-                                            router.push(`/active-bid/view?${params.toString()}`)
-                                        }}
-                                        onNavigate={handleActiveBidNavigation}
-                                        onRefresh={loadActiveBids}
-                                        onViewBidSummary={handleViewBidSummary}
-                                        onUpdateStatus={handleUpdateActiveBidStatus}
-                                    />
-
-                                    <EstimateProvider>
-                                        <BidSummaryDrawer defaultBid={allActiveBidsDetailed.find(abd => abd.id === selectedActiveBid.id)} open={viewBidSummaryOpen} onOpenChange={setViewBidSummaryOpen} />
-                                    </EstimateProvider>
-
-                                </>
-                            )}
-
-                            {isActiveJobs && (
-                                <>
-                                    <ActiveJobDetailsSheet
-                                        open={activeJobDetailsSheetOpen}
-                                        onOpenChange={setActiveJobDetailsSheetOpen}
-                                        job={selectedActiveJob || undefined}
-                                        onEdit={handleActiveJobEdit}
-                                        onNavigate={handleActiveJobNavigation}
-                                    />
-                                    <EditActiveJobSheet
-                                        open={editActiveJobSheetOpen}
-                                        onOpenChange={setEditActiveJobSheetOpen}
-                                        job={selectedActiveJob || undefined}
-                                        onSuccess={loadActiveJobs}
-                                    />
-                                </>
-                            )}
-
-                            {createJobSheetOpen &&
-                                <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} customSequentialNumber={jobNumberSequential} onSuccess={loadActiveJobs} />}
-
-                            <ConfirmArchiveDialog
-                                isOpen={showArchiveJobsDialog}
-                                onClose={() => setShowArchiveJobsDialog(false)}
-                                onConfirm={handleArchiveAvailableJobs}
-                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
-                                itemType="job"
-                            />
-
-
-                            <ConfirmArchiveDialog
-                                isOpen={showArchiveBidsDialog}
-                                onClose={() => setShowArchiveBidsDialog(false)}
-                                onConfirm={handleArchiveActiveBids}
-                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
-                                itemType="bid"
-                            />
-                            <ConfirmDeleteDialog
-                                isOpen={showDeleteJobsDialog}
-                                onClose={() => setShowDeleteJobsDialog(false)}
-                                onConfirm={handleDeleteArchivedJobs}
-                                itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
-                                itemType="job"
-                            />
-
-                            <ConfirmDeleteDialog
-                                isOpen={showDeleteBidsDialog}
-                                onClose={() => setShowDeleteBidsDialog(false)}
-                                onConfirm={handleDeleteArchivedBids}
-                                itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
-                                itemType="bid"
-                            />
-
-                            <ConfirmArchiveDialog
-                                isOpen={showArchiveActiveJobsDialog}
-                                onClose={() => setShowArchiveActiveJobsDialog(false)}
-                                onConfirm={handleArchiveActiveJobs}
-                                itemCount={selectedActiveJobsToArchive.length}
-                                itemType="job"
-                            />
-
-                            <ConfirmDeleteDialog
-                                isOpen={showDeleteActiveJobsDialog}
-                                onClose={() => setShowDeleteActiveJobsDialog(false)}
-                                onConfirm={handleDeleteActiveJobs}
-                                itemCount={selectedActiveJobsToDelete.length}
-                                itemType="job"
-                            />
-
-                            <EditJobNumberDialog
-                                isOpen={editJobNumberOpen}
-                                onClose={() => setEditJobNumberOpen(false)}
-                                currentSequential={jobNumberSequential}
-                                year={jobNumberYear}
-                                onSave={handleUpdateJobNumber}
-                            />
                         </div>
                     </div>
+
+                    <SectionCards data={cardData} />
+
+                    {isAvailableJobs ? (
+                        <DataTable<AvailableJob>
+                            data={data as AvailableJob[]}
+                            isLoading={isTableLoading}
+                            columns={columns}
+                            segments={segments}
+                            segmentValue={activeSegment}
+                            segmentCounts={jobCounts}
+                            onSegmentChange={handleSegmentChange}
+                            onArchiveSelected={initiateArchiveJobs}
+                            onDeleteSelected={initiateDeleteJobs}
+                            tableRef={availableJobsTableRef}                           
+                            enableSearch={true}  
+                            searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
+                            searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
+                            onViewDetails={handleViewDetails}
+                            onRowClick={handleViewDetails}
+                            onEdit={handleEdit}
+                            onArchive={initiateArchiveJobs}
+                            onMarkAsBidJob={handleMarkAsBidJob}
+                            handleMultiDelete={handleDeleteArchivedJobs}
+                            setSelectedRows={setSelectedAvailableJobs}
+                            allRowsSelected={allAvailableJobRowsSelected}
+                            onAllRowsSelectedChange={setAllAvailableJobRowsSelected}
+                            selectedItem={jobDetailsSheetOpen && selectedJob ? selectedJob : undefined}
+                            onUpdateStatus={(item, status: string) => {
+                                // Map segment values to proper status values if needed
+                                let statusValue: 'Bid' | 'No Bid' | 'Unset';
+
+                                if (status === 'Bid' || status === 'No Bid' || status === 'Unset') {
+                                    statusValue = status as 'Bid' | 'No Bid' | 'Unset';
+                                } else if (status === 'bid') {
+                                    statusValue = 'Bid';
+                                } else if (status === 'no-bid') {
+                                    statusValue = 'No Bid';
+                                } else if (status === 'unset') {
+                                    statusValue = 'Unset';
+                                } else {
+                                    console.error('Invalid status value:', status);
+                                    return;
+                                }
+
+                                handleUpdateStatus(item, statusValue);
+                            }}
+                            stickyLastColumn
+                            // Pagination props
+                            pageCount={availableJobsPageCount}
+                            pageIndex={availableJobsPageIndex}
+                            pageSize={availableJobsPageSize}
+                            onPageChange={setAvailableJobsPageIndex}
+                            onPageSizeChange={setAvailableJobsPageSize}
+                            totalCount={availableJobsTotalCount}
+                            // Sorting props
+                            sortBy={sortBy}
+                            sortOrder={sortOrder}
+                            onSortChange={handleSortChange}
+                            // Filtering props
+                            filterOptions={filterOptions}
+                            branchOptions={branchOptions}
+                            ownerOptions={ownerOptions}
+                            countyOptions={countyOptions}
+                            estimatorOptions={estimatorOptions}
+                            activeFilters={activeFilters}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetControls}
+                            showFilters={showFilters}
+                            setShowFilters={setShowFilters}
+                            hideDropdown={true}
+                            onUnarchive={handleUnarchiveAvailableJob}
+                            onDeleteItem={onDeleteItems}
+                        />
+                    ) : isActiveBids ? (
+                        <DataTable<ActiveBid>
+                            data={data as ActiveBid[]}
+                            isLoading={isTableLoading}
+                            columns={columns}
+                            enableSearch={true}
+                            searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
+                            searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
+                            segments={segments}
+                            segmentValue={activeSegment}
+                            segmentCounts={activeBidCounts}
+                            onSegmentChange={handleSegmentChange}
+                            selectedItem={activeBidDetailsSheetOpen && selectedActiveBid ? selectedActiveBid : undefined}
+                            stickyLastColumn
+                            onArchiveSelected={initiateArchiveBids}
+                            onDeleteSelected={initiateDeleteBids}
+                            tableRef={activeBidsTableRef}
+                            setSelectedRows={setSelectedActiveBids}
+                            allRowsSelected={allActiveBidRowsSelected}
+                            onAllRowsSelectedChange={setAllActiveBidRowsSelected}
+                            handleMultiDelete={handleDeleteArchivedBids}
+                            onViewDetails={handleActiveBidViewDetails}
+                            onRowClick={handleActiveBidViewDetails}
+                            onEdit={(item) => {
+                                const params = new URLSearchParams;
+                                params.append('bidId', item.id.toString());
+                                params.append('tuckSidebar', 'true');
+                                params.append('fullscreen', 'true');
+                                params.append('defaultEditable', 'false');
+                                router.push(`/active-bid/view?${params.toString()}`)
+                            }}
+                            onUpdateStatus={(item, status) => {
+                                if ('lettingDate' in item) {
+                                    const bidStatus = status as 'WON' | 'PENDING' | 'LOST' | 'DRAFT';
+                                    handleUpdateActiveBidStatus(item as ActiveBid, bidStatus);
+                                }
+                            }}
+                            // Pagination props
+                            viewBidSummaryOpen={viewBidSummaryOpen}
+                            onViewBidSummary={handleViewBidSummary}
+                            pageCount={activeBidsPageCount}
+                            pageIndex={activeBidsPageIndex}
+                            pageSize={activeBidsPageSize}
+                            onPageChange={setActiveBidsPageIndex}
+                            onPageSizeChange={setActiveBidsPageSize}
+                            totalCount={activeBidsTotalCount}
+                            // Sorting props
+                            sortBy={sortBy}
+                            sortOrder={sortOrder}
+                            onSortChange={handleSortChange}
+                            // Filtering props
+                            filterOptions={filterOptions}
+                            branchOptions={branchOptions}
+                            ownerOptions={ownerOptions}
+                            countyOptions={countyOptions}
+                            estimatorOptions={estimatorOptions}
+                            activeFilters={activeFilters}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetControls}
+                            showFilters={showFilters}
+                            setShowFilters={setShowFilters}
+                            hideDropdown={true}
+                            onUnarchive={handleUnarchiveActiveBid}
+                            onDeleteItem={onDeleteItems}
+
+                        />
+                    ) : (
+                        <DataTable<ActiveJob>
+                            data={data as ActiveJob[]}
+                            isLoading={isTableLoading}
+                            columns={columns}
+                            segments={segments}
+                            segmentValue={activeSegment}
+                            segmentCounts={{ ...filteredBranchCounts, archived: activeJobCounts.archived }}
+                            onSegmentChange={handleSegmentChange}
+                            stickyLastColumn
+                            enableSearch={true}
+                            searchPlaceholder="Search by job number, bid number, project status, contract number, contractor, location, or county..."
+                            searchableColumns={["jobNumber", "bidNumber", "projectStatus", "contractNumber", "contractor", "location", "county"]}
+
+                            onArchiveSelected={initiateArchiveActiveJobs}
+                            onDeleteSelected={initiateDeleteActiveJobs}
+                            tableRef={activeJobsTableRef}
+                            selectedItem={activeJobDetailsSheetOpen && selectedActiveJob ? selectedActiveJob : undefined}
+                            onViewDetails={(item) => {
+                                if ('jobNumber' in item) {
+                                    handleActiveJobViewDetails(item as ActiveJob);
+                                }
+                            }}
+                            onRowClick={(item) => {
+                                if ('jobNumber' in item) {
+                                    handleActiveJobViewDetails(item as ActiveJob);
+                                }
+                            }}
+                            onEdit={(item) => {
+                                if ('jobNumber' in item) {
+                                    handleActiveJobEdit(item as ActiveJob);
+                                }
+                            }}
+                            onArchive={handleArchiveActiveJob}
+                            onUnarchive={handleUnarchiveActiveJob}
+                            // Pagination props
+                            pageCount={activeJobsPageCount}
+                            pageIndex={activeJobsPageIndex}
+                            pageSize={activeJobsPageSize}
+                            onPageChange={setActiveJobsPageIndex}
+                            onPageSizeChange={setActiveJobsPageSize}
+                            totalCount={activeJobsTotalCount}
+                            // Sorting props
+                            sortBy={sortBy}
+                            sortOrder={sortOrder}
+                            onSortChange={handleSortChange}
+                            // Filtering props
+                            filterOptions={filterOptions}
+                            branchOptions={branchOptions}
+                            countyOptions={countyOptions}
+                            contractorOptions={contractorOptions}
+                            projectStatusOptions={projectStatusOptions}
+                            billingStatusOptions={billingStatusOptions}
+                            activeFilters={activeFilters}
+                            onFilterChange={handleFilterChange}
+                            onReset={handleResetControls}
+                            showFilters={showFilters}
+                            setShowFilters={setShowFilters}
+                            hideDropdown={true}
+                            onDeleteItem={onDeleteItems}
+                        />
+                    )}
+
+                    {isAvailableJobs && isCreatingAvailableJob ? (
+                        <OpenBidSheet
+                            open={isCreatingAvailableJob}
+                            onOpenChange={setIsCreatingAvailableJob}
+                            onSuccess={() => {
+                                loadAvailableJobs();
+                                fetchAvailableJobCounts();
+                            }}
+                            job={undefined}
+                        />
+                    ) : isEditingAvailableJob ? <OpenBidSheet
+                        open={isEditingAvailableJob}
+                        onOpenChange={setIsEditingAvailableJob}
+                        onSuccess={() => {
+                            loadAvailableJobs();
+                            fetchAvailableJobCounts();
+                        }}
+                        job={selectedJob || undefined}
+                    /> : <JobDetailsSheet
+                        open={openBidSheetOpen}
+                        onOpenChange={setOpenBidSheetOpen}
+                        job={selectedJob || undefined}
+                        onEdit={handleEdit}
+                        onNavigate={handleJobNavigation}
+                    />}
+
+                    {isActiveBids && selectedActiveBid && (
+                        <>
+                            <ActiveBidDetailsSheet
+                                adminData={selectedActiveBid.adminData}
+                                open={activeBidDetailsSheetOpen && !viewBidSummaryOpen}
+                                onOpenChange={setActiveBidDetailsSheetOpen}
+                                bid={selectedActiveBid}
+                                onEdit={(item) => {
+                                    const params = new URLSearchParams;
+                                    params.append('bidId', item.id.toString());
+                                    params.append('tuckSidebar', 'true');
+                                    params.append('fullscreen', 'true');
+                                    params.append('defaultEditable', 'false');
+                                    router.push(`/active-bid/view?${params.toString()}`)
+                                }}
+                                onNavigate={handleActiveBidNavigation}
+                                onRefresh={loadActiveBids}
+                                onViewBidSummary={handleViewBidSummary}
+                                onUpdateStatus={handleUpdateActiveBidStatus}
+                            />
+
+                            <EstimateProvider>
+                                <BidSummaryDrawer defaultBid={allActiveBidsDetailed.find(abd => abd.id === selectedActiveBid.id)} open={viewBidSummaryOpen} onOpenChange={setViewBidSummaryOpen} />
+                            </EstimateProvider>
+
+                        </>
+                    )}
+
+                    {isActiveJobs && (
+                        <>
+                            <ActiveJobDetailsSheet
+                                open={activeJobDetailsSheetOpen}
+                                onOpenChange={setActiveJobDetailsSheetOpen}
+                                job={selectedActiveJob || undefined}
+                                onEdit={handleActiveJobEdit}
+                                onNavigate={handleActiveJobNavigation}
+                            />
+                            <EditActiveJobSheet
+                                open={editActiveJobSheetOpen}
+                                onOpenChange={setEditActiveJobSheetOpen}
+                                job={selectedActiveJob || undefined}
+                                onSuccess={loadActiveJobs}
+                            />
+                        </>
+                    )}
+
+                    {createJobSheetOpen &&
+                        <CreateJobSheet open={createJobSheetOpen} onOpenChange={setCreateJobSheetOpen} customSequentialNumber={jobNumberSequential} onSuccess={loadActiveJobs} />}
+
+                    <ConfirmArchiveDialog
+                        isOpen={showArchiveJobsDialog}
+                        onClose={() => setShowArchiveJobsDialog(false)}
+                        onConfirm={handleArchiveAvailableJobs}
+                        itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
+                        itemType="job"
+                    />
+
+
+                    <ConfirmArchiveDialog
+                        isOpen={showArchiveBidsDialog}
+                        onClose={() => setShowArchiveBidsDialog(false)}
+                        onConfirm={handleArchiveActiveBids}
+                        itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
+                        itemType="bid"
+                    />
+                    <ConfirmDeleteDialog
+                        isOpen={showDeleteJobsDialog}
+                        onClose={() => setShowDeleteJobsDialog(false)}
+                        onConfirm={handleDeleteArchivedJobs}
+                        itemCount={allAvailableJobRowsSelected ? availableJobsTotalCount : selectedAvailableJobs.length}
+                        itemType="job"
+                    />
+
+                    <ConfirmDeleteDialog
+                        isOpen={showDeleteBidsDialog}
+                        onClose={() => setShowDeleteBidsDialog(false)}
+                        onConfirm={handleDeleteArchivedBids}
+                        itemCount={allActiveBidRowsSelected ? activeBidsTotalCount : selectedActiveBids.length}
+                        itemType="bid"
+                    />
+
+                    <ConfirmArchiveDialog
+                        isOpen={showArchiveActiveJobsDialog}
+                        onClose={() => setShowArchiveActiveJobsDialog(false)}
+                        onConfirm={handleArchiveActiveJobs}
+                        itemCount={selectedActiveJobsToArchive.length}
+                        itemType="job"
+                    />
+
+                    <ConfirmDeleteDialog
+                        isOpen={showDeleteActiveJobsDialog}
+                        onClose={() => setShowDeleteActiveJobsDialog(false)}
+                        onConfirm={handleDeleteActiveJobs}
+                        itemCount={selectedActiveJobsToDelete.length}
+                        itemType="job"
+                    />
+
+                    <EditJobNumberDialog
+                        isOpen={editJobNumberOpen}
+                        onClose={() => setEditJobNumberOpen(false)}
+                        currentSequential={jobNumberSequential}
+                        year={jobNumberYear}
+                        onSave={handleUpdateJobNumber}
+                    />
                 </div>
-            </SidebarInset>
-        </SidebarProvider>
+            </div>
+        </div>
     );
+    return content;
 }

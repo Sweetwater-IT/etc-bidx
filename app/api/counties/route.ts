@@ -4,6 +4,30 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
+    const namesOnly = searchParams.get('namesOnly') === 'true'
+
+    // Simple names-only endpoint for dropdowns
+    if (namesOnly) {
+      const { data, error } = await supabase
+        .from('counties')
+        .select('name')
+        .order('name')
+
+      if (error) {
+        console.error('Database error:', error)
+        return NextResponse.json(
+          { success: false, message: 'Failed to fetch counties', error: error.message },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: data.map(c => c.name)
+      })
+    }
+
+    // Full data endpoint with pagination
     const orderBy = searchParams.get('orderBy') || 'name'
     const ascending = searchParams.get('ascending') === 'true'
     const page = parseInt(searchParams.get('page') || '1')
