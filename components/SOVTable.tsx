@@ -795,7 +795,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
     }, 0);
   };
 
-  const saveCustomItem = () => {
+  const saveCustomItem = async () => {
     if (!customDraft || !customDraft.itemNumber.trim() || !customDraft.description.trim()) return;
     const quantity = Math.max(1, customDraft.quantity || 1);
     const unitPrice = Math.max(0, customDraft.unitPrice || 0);
@@ -804,35 +804,117 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
       ? clampNumber(customDraft.retainageValue || 0, 0, 100)
       : clampNumber(customDraft.retainageValue || 0, 0, extendedPrice);
     const nextUom = normalizeUom(customDraft.uom || customUomOptions[0] || 'EA');
+    const trimmedItemNumber = customDraft.itemNumber.trim();
+    const trimmedDescription = customDraft.description.trim();
+    const nextItem: ScheduleOfValuesItem = {
+      id: customDraft.rowId,
+      itemNumber: trimmedItemNumber,
+      displayItemNumber: trimmedItemNumber,
+      description: trimmedDescription,
+      sourceDescription: trimmedDescription,
+      displayNameOverride: trimmedDescription,
+      work_type: customDraft.workType,
+      uom: nextUom,
+      uomOverride: nextUom,
+      quantity,
+      unitPrice,
+      extendedPrice,
+      retainageType: customDraft.retainageType,
+      retainageValue,
+      retainageAmount: calcRetainageAmount(
+        extendedPrice,
+        customDraft.retainageType,
+        retainageValue
+      ),
+      notes: customDraft.notes || '',
+      is_custom: true,
+    };
 
-    updateItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === customDraft.rowId
-          ? {
-              ...item,
-              itemNumber: customDraft.itemNumber.trim(),
-              description: customDraft.description.trim(),
-              sourceDescription: customDraft.description.trim(),
-              work_type: customDraft.workType,
-              uom: nextUom,
-              uomOverride: nextUom,
-              quantity,
-              unitPrice,
-              extendedPrice,
-              retainageType: customDraft.retainageType,
-              retainageValue,
-              retainageAmount: calcRetainageAmount(
-                extendedPrice,
-                customDraft.retainageType,
-                retainageValue
-              ),
-              notes: customDraft.notes || '',
-              is_custom: true,
-            }
-          : item
-      )
-    );
-    closeCustomDialog(false);
+    const effectiveId = contractId || jobId;
+    if (!effectiveId) {
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === customDraft.rowId
+            ? { ...item, ...nextItem }
+            : item
+        )
+      );
+      closeCustomDialog(false);
+      return;
+    }
+
+    try {
+      const payload = {
+        sov_item_id: null,
+        custom_sov_item_id: null,
+        item_number: trimmedItemNumber,
+        description: trimmedDescription,
+        display_name_override: trimmedDescription,
+        work_type: customDraft.workType,
+        uom: nextUom,
+        uom_override: nextUom,
+        quantity,
+        unit_price: unitPrice,
+        retainage_type: customDraft.retainageType,
+        retainage_value: retainageValue,
+        notes: customDraft.notes || '',
+        sort_order: items.length + 1,
+      };
+
+      const apiEndpoint = contractId
+        ? `/api/l/contracts/${contractId}/sov-items`
+        : `/api/l/jobs/${jobId}/sov-items`;
+      const requestBody = contractId ? { items: [payload] } : payload;
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `Failed to create custom SOV item: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const createdItem = Array.isArray(result.data) && result.data.length > 0
+        ? result.data[0]
+        : result.data;
+
+      updateItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === customDraft.rowId
+            ? {
+                ...item,
+                id: createdItem.id,
+                itemNumber: createdItem.item_number || trimmedItemNumber,
+                displayItemNumber: createdItem.display_item_number || trimmedItemNumber,
+                description: createdItem.display_name || trimmedDescription,
+                sourceDescription: createdItem.description || trimmedDescription,
+                displayNameOverride: createdItem.display_name_override || trimmedDescription,
+                work_type: createdItem.work_type || customDraft.workType,
+                uom: createdItem.uom || nextUom,
+                uomOverride: createdItem.uom_override || nextUom,
+                quantity: createdItem.quantity || quantity,
+                unitPrice: createdItem.unit_price || unitPrice,
+                extendedPrice: createdItem.extended_price || extendedPrice,
+                retainageType: createdItem.retainage_type || customDraft.retainageType,
+                retainageValue: createdItem.retainage_value || retainageValue,
+                retainageAmount: createdItem.retainage_amount || 0,
+                notes: createdItem.notes || customDraft.notes || '',
+                custom_sov_item_id: createdItem.custom_sov_item_id ?? undefined,
+                is_custom: true,
+              }
+            : item
+        )
+      );
+
+      closeCustomDialog(false);
+    } catch (error) {
+      console.error('[SOVTable] Error creating custom SOV item:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create custom SOV item');
+    }
   };
 
   const saveEditorDraft = useCallback(() => {

@@ -1,1 +1,0 @@
-alter table sign_orders ADD COLUMN order_status VARCHAR(25);
