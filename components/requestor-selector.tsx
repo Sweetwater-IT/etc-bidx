@@ -10,8 +10,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
-  CommandList
+  CommandItem
 } from '@/components/ui/command'
 import {
   Popover,
@@ -163,7 +162,6 @@ export function RequestorSelector<TUser extends RequestorLike>({
           disabled={disabled}
           className={cn(
             'w-full justify-between',
-            !selectedRequestor && !selectedName && 'text-muted-foreground',
             buttonClassName
           )}
         >
@@ -172,51 +170,42 @@ export function RequestorSelector<TUser extends RequestorLike>({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className={cn('w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
+        className={cn('w-full p-0', contentClassName)}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup className='max-h-[240px] overflow-y-auto'>
-              {users.map(userOption => {
-                const optionKey = getRequestorKey(userOption)
-                const isSelected =
-                  selectedRequestor != null &&
-                  getRequestorKey(selectedRequestor) === optionKey
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          <CommandGroup>
+            {users.map(userOption => {
+              const optionKey = getRequestorKey(userOption)
+              const isSelected =
+                selectedRequestor != null &&
+                getRequestorKey(selectedRequestor) === optionKey
 
-                return (
-                  <CommandItem
-                    key={optionKey}
-                    value={`${userOption.name} ${userOption.email ?? ''}`.trim()}
-                    onSelect={() => {
-                      console.debug('[RequestorSelector] selected-requestor', {
-                        requestor: userOption.name,
-                        email: userOption.email ?? null
-                      })
-                      onSelect(userOption)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        isSelected ? 'opacity-100' : 'opacity-0'
-                      )}
-                    />
-                    <div className='min-w-0'>
-                      <div className='truncate'>{userOption.name}</div>
-                      {userOption.email ? (
-                        <div className='truncate text-xs text-muted-foreground'>
-                          {userOption.email}
-                        </div>
-                      ) : null}
-                    </div>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          </CommandList>
+              return (
+                <CommandItem
+                  key={optionKey}
+                  value={userOption.name}
+                  onSelect={() => {
+                    console.debug('[RequestorSelector] selected-requestor', {
+                      requestor: userOption.name,
+                      email: userOption.email ?? null
+                    })
+                    onSelect(userOption)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      isSelected ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  {userOption.name}
+                </CommandItem>
+              )
+            })}
+          </CommandGroup>
         </Command>
       </PopoverContent>
     </Popover>
