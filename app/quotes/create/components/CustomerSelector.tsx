@@ -94,8 +94,12 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             }
 
             addContact(createdContact);
-            // Auto-select the newly created contact
-            selectContact(createdContact.id.toString());
+            setData((prev: any) => ({
+                ...prev,
+                customer_contact: createdContact.name || "",
+                customer_email: createdContact.email || "",
+                customer_phone: createdContact.phone || "",
+            }));
         }
     };
 
