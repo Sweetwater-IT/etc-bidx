@@ -729,7 +729,28 @@ export function SignOrderDetailsSheet({
         onOpenChange={setCustomerModalOpen}
         customers={customers}
         selectedCustomer={localCustomer}
-        onSelectCustomer={setLocalCustomer}
+        onSelectCustomer={async customer => {
+          if (!customer) {
+            setLocalCustomer(null)
+            setLocalContact(null)
+            return
+          }
+
+          const hydratedCustomer = await fetchCustomerById(customer.id)
+          const nextCustomer = hydratedCustomer || customer
+          setLocalCustomer(nextCustomer)
+
+          setLocalContact(prevContact => {
+            if (
+              prevContact &&
+              Array.isArray(nextCustomer.contactIds) &&
+              nextCustomer.contactIds.includes(prevContact.id)
+            ) {
+              return prevContact
+            }
+            return null
+          })
+        }}
         onAddNewCustomer={() => {
           setCustomerModalOpen(false)
           setCustomerDrawerOpen(true)
