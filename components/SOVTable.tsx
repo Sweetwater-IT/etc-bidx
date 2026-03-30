@@ -1554,7 +1554,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           closeCustomDialog(true);
         }
       }}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="text-sm">Create Custom Line Item</DialogTitle>
             <DialogDescription>
@@ -1562,7 +1562,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             </DialogDescription>
           </DialogHeader>
           {customDraft && (
-            <div className="grid gap-3 py-2">
+            <div className="grid flex-1 gap-3 overflow-y-auto py-2 pr-1">
               <div className="grid gap-1.5">
                 <label className="text-xs">Item Number <span className="text-destructive">*</span></label>
                 <Input
@@ -1669,7 +1669,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t bg-background pt-4">
             <Button variant="outline" size="sm" onClick={() => closeCustomDialog(true)}>Cancel</Button>
             <Button
               size="sm"

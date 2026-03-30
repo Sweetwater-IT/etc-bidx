@@ -762,7 +762,14 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
       const result = await response.json();
       setDocuments((prev) => [...prev, ...result.documents]);
-      if (!associatedItemLabel) {
+      if (result.errors?.length) {
+        const uploadedCount = result.documents?.length || 0;
+        toast.warning(
+          uploadedCount > 0
+            ? `${uploadedCount} document(s) uploaded, ${result.errors.length} failed`
+            : `Upload failed: ${result.errors[0]?.error || 'Unknown error'}`
+        );
+      } else if (!associatedItemLabel) {
         toast.success(`${files.length} document(s) uploaded`);
       }
     } catch (err: any) {

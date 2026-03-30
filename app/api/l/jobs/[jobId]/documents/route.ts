@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+function sanitizeFileName(fileName: string): string {
+  const trimmed = fileName.trim();
+  const cleaned = trimmed.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return cleaned || "upload";
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
@@ -38,9 +44,11 @@ export async function POST(
     const associatedItemId = String(formData.get("associatedItemId") || "");
 
     const uploadedDocs: any[] = [];
+    const uploadErrors: Array<{ fileName: string; error: string }> = [];
 
     for (const file of files) {
-      const filePath = `jobs/${jobId}/${category}/${Date.now()}_${file.name}`;
+      const safeFileName = sanitizeFileName(file.name);
+      const filePath = `jobs/${jobId}/${category}/${Date.now()}_${safeFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("files")
@@ -48,6 +56,10 @@ export async function POST(
 
       if (uploadError) {
         console.error("Job document upload error:", uploadError);
+        uploadErrors.push({
+          fileName: file.name,
+          error: uploadError.message || "Storage upload failed",
+        });
         continue;
       }
 
@@ -65,6 +77,10 @@ export async function POST(
 
       if (insertError) {
         console.error("Job document insert error:", insertError);
+        uploadErrors.push({
+          fileName: file.name,
+          error: insertError.message || "Document record insert failed",
+        });
         continue;
       }
 
@@ -80,7 +96,17 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ success: true, documents: uploadedDocs });
+    if (uploadedDocs.length === 0) {
+      return NextResponse.json(
+        {
+          error: uploadErrors[0]?.error || "No documents were uploaded",
+          errors: uploadErrors,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true, documents: uploadedDocs, errors: uploadErrors });
   } catch (error) {
     console.error("Error in job documents POST:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
