@@ -383,13 +383,7 @@ const CustomersContent = () => {
     try {
       const [customerResponse, jobsResponse, quotesResponse, signOrdersResponse] =
         await Promise.all([
-          supabase
-            .from('contractors')
-            .select(
-              'id, name, display_name, main_phone, created, updated, payment_terms, web, address, city, state, zip, customer_number, would_like_to_apply_for_credit, bill_to_street, bill_to_city, bill_to_state, bill_to_zip, customer_contacts(id, contractor_id, name, phone, email, role, is_deleted)'
-            )
-            .eq('id', customerId)
-            .single(),
+          fetch(`/api/contractors/${customerId}`),
           supabase
             .from('jobs')
             .select('id, etc_job_number, project_name, contract_status, created_at')
@@ -406,8 +400,10 @@ const CustomersContent = () => {
             .order('created_at', { ascending: false }),
         ])
 
-      if (customerResponse.error) {
-        throw customerResponse.error
+      const customerResult = await customerResponse.json().catch(() => null)
+
+      if (!customerResponse.ok || !customerResult?.ok || !customerResult?.customer) {
+        throw new Error(customerResult?.error || 'Failed to load customer')
       }
 
       if (jobsResponse.error) {
@@ -422,7 +418,7 @@ const CustomersContent = () => {
         throw signOrdersResponse.error
       }
 
-      const customer = customerResponse.data as CustomerRecord
+      const customer = customerResult.customer as CustomerRecord
       const activeContacts = (customer.customer_contacts || [])
         .filter(contact => !contact.is_deleted)
         .sort((first, second) =>
