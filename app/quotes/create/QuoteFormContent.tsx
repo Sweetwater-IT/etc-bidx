@@ -237,6 +237,21 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [files, setFiles] = useState<any>([])
   const didInitRef = useRef(false);
 
+  useEffect(() => {
+    restorePointerEvents()
+
+    const handlePageShow = () => {
+      restorePointerEvents()
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+      restorePointerEvents()
+    }
+  }, [])
+
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
       ...prev,

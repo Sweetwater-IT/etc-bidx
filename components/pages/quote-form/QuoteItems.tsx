@@ -1,14 +1,18 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Loader2, Plus } from "lucide-react";
+
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
-import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useEffect, useState } from "react";
-import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
-import QuoteItemsList from "./QuoteItemsList";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { restorePointerEvents } from "@/lib/pointer-events-fix";
+import { QuoteItem } from "@/types/IQuoteItem";
+import { toast } from "sonner";
+
+import { QuoteItemEditorDialog } from "./QuoteItemEditorDialog";
+import QuoteItemsList from "./QuoteItemsList";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -20,13 +24,13 @@ enum UOM_TYPES {
   HR = "HR",
 }
 
-// --- Endpoints ---
 async function createQuoteItem(item: QuoteItem) {
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(item),
   });
+
   return res.json();
 }
 
@@ -47,40 +51,105 @@ async function updateQuoteItem(item: QuoteItem) {
 }
 
 async function deleteQuoteItem(itemId: string) {
-  const res = await fetch(`/api/quotes/quoteItems/${itemId}`, { method: "DELETE" });
+  const res = await fetch(`/api/quotes/quoteItems/${itemId}`, {
+    method: "DELETE",
+  });
+
   return res.json();
+}
+
+function createEmptyItem(quoteId: number | null): QuoteItem {
+  return {
+    itemNumber: "",
+    description: "",
+    uom: "",
+    quantity: 0,
+    unitPrice: 0,
+    discount: 0,
+    discountType: "dollar",
+    notes: "",
+    associatedItems: [],
+    is_tax_percentage: false,
+    tax: 0,
+    quote_id: quoteId,
+  };
+}
+
+function normalizeItemForSave(item: QuoteItem, quoteId: number | null): QuoteItem {
+  return {
+    ...item,
+    itemNumber: item.itemNumber.trim(),
+    description: item.description.trim(),
+    uom: item.uom.trim(),
+    notes: item.notes.trim(),
+    quantity: Math.max(0, Number(item.quantity) || 0),
+    unitPrice: Math.max(0, Number(item.unitPrice) || 0),
+    discount: Math.max(0, Number(item.discount) || 0),
+    tax: item.is_tax_percentage ? Math.max(0, Number(item.tax) || 0) : 0,
+    quote_id: quoteId,
+    associatedItems: item.associatedItems || [],
+  };
+}
+
+function isPlaceholderItem(item: QuoteItem) {
+  return (
+    !item.id &&
+    !item.itemNumber &&
+    !item.description &&
+    !item.uom &&
+    !item.notes &&
+    Number(item.quantity || 0) === 0 &&
+    Number(item.unitPrice || 0) === 0 &&
+    Number(item.discount || 0) === 0 &&
+    Number(item.tax || 0) === 0 &&
+    (!item.associatedItems || item.associatedItems.length === 0)
+  );
 }
 
 export function QuoteItems() {
   const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
-  const [applyToAll, setApplyToAll] = useState<boolean>(false);
 
-  // --- Price calculations ---
-  const calculateCompositeUnitPrice = (item: QuoteItem) => {
-    if (!item.associatedItems || item.associatedItems.length === 0) return item.unitPrice;
+  const [applyToAll, setApplyToAll] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorItem, setEditorItem] = useState<QuoteItem | null>(null);
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [savingEditor, setSavingEditor] = useState(false);
+
+  const visibleQuoteItems = useMemo(
+    () => quoteItems.filter((item) => !isPlaceholderItem(item)),
+    [quoteItems]
+  );
+
+  const calculateCompositeUnitPrice = useCallback((item: QuoteItem) => {
+    if (!item.associatedItems || item.associatedItems.length === 0) {
+      return item.unitPrice;
+    }
+
     return item.associatedItems.reduce(
-      (acc, associatedItem) => acc + associatedItem.quantity * associatedItem.unitPrice,
+      (sum, associatedItem) => sum + associatedItem.quantity * associatedItem.unitPrice,
       0
     );
-  };
+  }, []);
 
-  const calculateExtendedPrice = (item: QuoteItem) => {
-    const unitPrice = calculateCompositeUnitPrice(item);
-    const basePrice = item.quantity * unitPrice;
-    const discountAmount =
-      item.discountType === "dollar"
-        ? item.discount
-        : basePrice * (item.discount / 100);
-    return (basePrice - discountAmount).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  const calculateExtendedPrice = useCallback(
+    (item: QuoteItem) => {
+      const unitPrice = calculateCompositeUnitPrice(item);
+      const basePrice = item.quantity * unitPrice;
+      const discountAmount =
+        item.discountType === "dollar"
+          ? item.discount
+          : basePrice * (item.discount / 100);
 
-  const totalValueCalculation = () => {
-    return quoteItems
+      return (basePrice - discountAmount).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    },
+    [calculateCompositeUnitPrice]
+  );
+
+  const totalValueCalculation = useMemo(() => {
+    return visibleQuoteItems
       .reduce((sum, item) => {
         const unitPrice = calculateCompositeUnitPrice(item);
         const basePrice = (item.quantity || 0) * unitPrice;
@@ -88,252 +157,296 @@ export function QuoteItems() {
           item.discountType === "dollar"
             ? item.discount
             : basePrice * (item.discount / 100);
+
         return sum + (basePrice - discountAmount);
       }, 0)
-      .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+      .toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+  }, [calculateCompositeUnitPrice, visibleQuoteItems]);
 
-  const handleAddNewItem = async () => {
-    const newId = generateUniqueId();
-    const newItem: QuoteItem = {
-      quote_id: quoteId,
-      id: newId,
-      itemNumber: "",
-      description: "",
-      uom: "",
-      quantity: 0,
-      unitPrice: 0,
-      discount: 0,
-      discountType: "dollar",
-      notes: "",
-      associatedItems: [],
-      is_tax_percentage: false,
-      tax: 0,
-    };
+  const openEditorForItem = useCallback(
+    (item?: QuoteItem, product?: any) => {
+      const baseItem = item ? { ...item } : createEmptyItem(quoteId);
 
-    const response = await createQuoteItem(newItem);
-    if (response.success) {
-      setQuoteItems((prevItems) => [...prevItems, { ...response.item, created: false }]);
-      setEditingItemId(response.item.id);
-    }
-  };
+      const nextItem: QuoteItem = product
+        ? {
+            ...baseItem,
+            itemNumber: product.item_number || "",
+            description: product.description || "",
+            uom: product.uom || "",
+            notes: product.notes || "",
+          }
+        : baseItem;
 
-  const handleItemUpdate = async (
-    itemId: string | number,
-    field: keyof QuoteItem | "fullItem",
-    value: any
-  ) => {
-    let updatedItem: QuoteItem | undefined;
+      setEditorItem(nextItem);
+      setEditorOpen(true);
+      restorePointerEvents();
+    },
+    [quoteId]
+  );
 
-    const updatedItems = quoteItems.map((item) => {
-      if (item.id === itemId) {
-        const newItem = field === "fullItem" ? value : { ...item, [field]: value };
-        updatedItem = newItem as QuoteItem;
-        return newItem;
-      }
-      return item;
-    });
-
-    setQuoteItems(updatedItems);
-
-    const parsedId = Number(updatedItem?.id);
-    if (updatedItem && !isNaN(parsedId) && isFinite(parsedId)) {
-      await updateQuoteItem(updatedItem);
-    }
-
-    setEditingSubItemId(null);
-  };
-
-
-
-  const handleRemoveItem = async (itemId: string) => {
-    const parsedId = Number(itemId);
-
-    if (isNaN(parsedId)) {
-      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+  const handleSaveEditorItem = useCallback(async () => {
+    if (!editorItem) {
       return;
     }
 
-    const response = await deleteQuoteItem(itemId);
-    if (response.success) {
-      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+    const normalizedItem = normalizeItemForSave(editorItem, quoteId);
+
+    setSavingEditor(true);
+    setSavingItemId(editorItem.id ? String(editorItem.id) : "__new__");
+
+    try {
+      if (editorItem.id) {
+        const result = await updateQuoteItem(normalizedItem);
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to update quote item");
+        }
+
+        setQuoteItems((currentItems) =>
+          currentItems.map((currentItem) =>
+            currentItem.id === editorItem.id ? result.item : currentItem
+          )
+        );
+      } else {
+        const result = await createQuoteItem(normalizedItem);
+
+        if (!result.success) {
+          throw new Error(result.message || "Failed to create quote item");
+        }
+
+        setQuoteItems((currentItems) => [
+          ...currentItems.filter((currentItem) => !isPlaceholderItem(currentItem)),
+          result.item,
+        ]);
+      }
+
+      toast.success(editorItem.id ? "Quote item updated" : "Quote item added");
+      setEditorOpen(false);
+      setEditorItem(null);
+      restorePointerEvents();
+    } catch (error) {
+      console.error("Failed to save quote item:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save quote item");
+    } finally {
+      setSavingEditor(false);
+      setSavingItemId(null);
     }
-  };
+  }, [editorItem, quoteId, setQuoteItems]);
 
-  const handleAddCompositeItem = async (parentItem: QuoteItem) => {
-    const newSubItem: AssociatedItem = {
-      id: generateUniqueId(),
-      itemNumber: "",
-      description: "",
-      uom: "",
-      quantity: 0,
-      unitPrice: 0,
-      notes: '',
-    };
+  const handleRemoveItem = useCallback(async (itemId: string) => {
+    setSavingItemId(itemId);
 
-    setQuoteItems((prevItems: any[]) =>
-      prevItems.map((item) =>
-        item.id === parentItem.id
-          ? { ...item, associatedItems: [...(item.associatedItems || []), newSubItem] }
-          : item
-      )
+    try {
+      const response = await deleteQuoteItem(itemId);
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to delete quote item");
+      }
+
+      setQuoteItems((currentItems) => currentItems.filter((item) => String(item.id) !== itemId));
+      toast.success("Quote item removed");
+      restorePointerEvents();
+    } catch (error) {
+      console.error("Failed to remove quote item:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to remove quote item");
+    } finally {
+      setSavingItemId(null);
+    }
+  }, [setQuoteItems]);
+
+  const handleQuickQuantityUpdate = useCallback(async (item: QuoteItem, quantity: number) => {
+    if (!item.id) {
+      setEditorItem({
+        ...item,
+        quantity,
+      });
+      return;
+    }
+
+    const updatedItem = normalizeItemForSave(
+      {
+        ...item,
+        quantity,
+      },
+      quoteId
     );
 
-    const updatedParent = {
-      ...parentItem,
-      associatedItems: [...(parentItem.associatedItems || []), newSubItem],
-    };
+    setSavingItemId(String(item.id));
 
-    await updateQuoteItem(updatedParent as any);
-  };
+    try {
+      const result = await updateQuoteItem(updatedItem);
 
+      if (!result.success) {
+        throw new Error(result.message || "Failed to update quantity");
+      }
 
-  const handleCompositeItemUpdate = async (
-    parentItemId: string,
-    subItemId: string,
-    field: keyof AssociatedItem,
-    value: string | number
-  ) => {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === parentItemId
-          ? {
+      setQuoteItems((currentItems) =>
+        currentItems.map((currentItem) =>
+          String(currentItem.id) === String(item.id) ? result.item : currentItem
+        )
+      );
+      restorePointerEvents();
+    } catch (error) {
+      console.error("Failed to update item quantity:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update quantity");
+    } finally {
+      setSavingItemId(null);
+    }
+  }, [quoteId, setQuoteItems]);
+
+  const handleApplyTaxToAll = useCallback(async (checked: boolean) => {
+    const nextChecked = !!checked;
+    setApplyToAll(nextChecked);
+
+    const itemsToUpdate = visibleQuoteItems.filter((item) => item.id);
+    if (itemsToUpdate.length === 0) {
+      return;
+    }
+
+    setSavingItemId("__bulk__");
+
+    try {
+      const updatedItems = await Promise.all(
+        itemsToUpdate.map(async (item) => {
+          const updatedItem = {
             ...item,
-            associatedItems:
-              item.associatedItems?.map((ai) =>
-                ai.id === subItemId ? { ...ai, [field]: value } : ai
-              ) || [],
+            is_tax_percentage: nextChecked,
+            tax: nextChecked ? Number(quoteMetadata?.tax_rate ?? 6) : 0,
+          };
+
+          const result = await updateQuoteItem(updatedItem);
+          if (!result.success) {
+            throw new Error(result.message || "Failed to update tax settings");
           }
-          : item
-      )
-    );
 
-    const parentItem = quoteItems.find((i) => i.id === parentItemId);
-    if (parentItem) await updateQuoteItem(parentItem);
-  };
+          return result.item;
+        })
+      );
 
-  const handleDeleteComposite = async (parentItemId: string, subItemId: string) => {
-    setQuoteItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === parentItemId
-          ? {
-            ...item,
-            associatedItems: item.associatedItems?.filter((ai) => ai.id !== subItemId) || [],
-          }
-          : item
-      )
-    );
+      const updatedById = new Map(updatedItems.map((item) => [String(item.id), item]));
+      setQuoteItems((currentItems) =>
+        currentItems.map((item) => updatedById.get(String(item.id)) || item)
+      );
+      toast.success("Tax settings updated");
+      restorePointerEvents();
+    } catch (error) {
+      console.error("Failed to update tax settings:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update tax settings");
+    } finally {
+      setSavingItemId(null);
+    }
+  }, [quoteMetadata?.tax_rate, setQuoteItems, visibleQuoteItems]);
 
-    const parentItem = quoteItems.find((i) => i.id === parentItemId);
-    if (parentItem) await updateQuoteItem({ ...parentItem, associatedItems: parentItem.associatedItems?.filter((ai) => ai.id !== subItemId) || [] });
-  };
-
-  // --- Render ---
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
-      <div className="flex flex-col gap-4 border-b px-4 py-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Quote Items</h2>
+    <>
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <div className="flex flex-col gap-4 border-b px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Quote Items</h2>
 
-          <div className="flex items-center gap-[50px]">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
-              <Input
-                type="number"
-                min={1}
-                max={100}
-                value={quoteMetadata?.tax_rate ?? "6"}
-                onChange={(e) =>
-                  setQuoteMetadata((prev) => ({
-                    ...prev,
-                    tax_rate: Number(e.target.value),
-                  }))
-                }
-                className="h-9 w-16 text-sm"
-              />
-              <span className="text-sm font-medium">%</span>
+            <div className="flex items-center gap-[50px]">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={quoteMetadata?.tax_rate ?? "6"}
+                  onChange={(event) =>
+                    setQuoteMetadata((prev) => ({
+                      ...prev,
+                      tax_rate: Number(event.target.value),
+                    }))
+                  }
+                  className="h-9 w-16 text-sm"
+                />
+                <span className="text-sm font-medium">%</span>
+              </div>
 
-            </div>
-            <div className="flex flex-row items-center gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   className="shadow-sm"
-                  id="terms"
+                  id="quote-apply-tax-to-all"
                   checked={applyToAll}
-                  onCheckedChange={async (checked) => {
-                    const isChecked = !!checked;
-                    setApplyToAll(isChecked);
-
-                    const updatedItems = await Promise.all(
-                      quoteItems.map(async (item) => {
-                        if (!item.id) return item;
-
-                        const updatedItem = {
-                          ...item,
-                          is_tax_percentage: isChecked,
-                          tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
-                        };
-
-                        await updateQuoteItem(updatedItem);
-                        return updatedItem;
-                      })
-                    );
-
-                    setQuoteItems(updatedItems);
-                  }}
+                  disabled={savingItemId === "__bulk__"}
+                  onCheckedChange={handleApplyTaxToAll}
                 />
-
-
                 <p>Apply tax to all?</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="overflow-x-auto">
-        <div
-          className="grid min-w-[980px] gap-2 border-b bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-          style={{ gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px" }}
-        >
-          <div>Item # / SKU</div>
-          <div className="text-center">Description</div>
-          <div className="text-center">UOM</div>
-          <div className="text-center">Qty</div>
-          <div>Unit Price</div>
-          <div>Discount</div>
-          <div className="text-start">Tax?</div>
-          <div>Ext Price</div>
+        <div className="overflow-x-auto">
+          <div
+            className="grid min-w-[980px] gap-2 border-b bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+            style={{ gridTemplateColumns: "1.7fr 2.4fr 0.8fr 0.6fr 1fr 1fr 0.6fr 1fr 40px" }}
+          >
+            <div>Item # / SKU</div>
+            <div>Description</div>
+            <div className="text-center">UOM</div>
+            <div className="text-center">Qty</div>
+            <div>Unit Price</div>
+            <div>Discount</div>
+            <div>Tax</div>
+            <div>Ext Price</div>
+          </div>
+
+          {visibleQuoteItems.length === 0 ? (
+            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+              No quote items yet. Add one to get started.
+            </div>
+          ) : (
+            <QuoteItemsList
+              quoteItems={visibleQuoteItems}
+            savingItemId={savingItemId}
+            onSelectProduct={openEditorForItem}
+            onEditItem={(item) => openEditorForItem(item)}
+            onRemoveItem={handleRemoveItem}
+            onQuickQuantityUpdate={handleQuickQuantityUpdate}
+            calculateExtendedPrice={calculateExtendedPrice}
+          />
+        )}
         </div>
 
-        <QuoteItemsList
-          quoteItems={quoteItems}
-          editingItemId={editingItemId}
-          editingSubItemId={editingSubItemId}
-          setEditingItemId={setEditingItemId}
-          setEditingSubItemId={setEditingSubItemId}
-          handleItemUpdate={handleItemUpdate}
-          handleRemoveItem={handleRemoveItem}
-          handleAddCompositeItem={handleAddCompositeItem}
-          handleCompositeItemUpdate={handleCompositeItemUpdate}
-          handleDeleteComposite={handleDeleteComposite}
-          UOM_TYPES={UOM_TYPES}
-          calculateCompositeUnitPrice={calculateCompositeUnitPrice}
-          calculateExtendedPrice={calculateExtendedPrice}
-        />
-      </div>
+        <div className="flex items-center justify-between gap-4 border-t px-4 py-4">
+          <Button onClick={() => openEditorForItem()} disabled={savingEditor || savingItemId === "__bulk__"}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New Item
+          </Button>
 
-      <div className="flex items-center justify-between gap-4 border-t px-4 py-4">
-        <Button onClick={handleAddNewItem}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Item
-        </Button>
-
-        <div className="text-right text-sm">
-          <div>Total Items: {quoteItems.length}</div>
-          <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
+          <div className="text-right text-sm">
+            <div>Total Items: {visibleQuoteItems.length}</div>
+            <div className="font-medium">Total Value: ${totalValueCalculation}</div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <QuoteItemEditorDialog
+        open={editorOpen}
+        item={editorItem}
+        saving={savingEditor}
+        uomOptions={Object.values(UOM_TYPES)}
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          if (!open) {
+            setEditorItem(null);
+            restorePointerEvents();
+          }
+        }}
+        onItemChange={(nextItem) => setEditorItem(nextItem)}
+        onSave={handleSaveEditorItem}
+      />
+
+      {savingItemId === "__bulk__" ? (
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Updating tax settings...
+        </div>
+      ) : null}
+    </>
   );
 }

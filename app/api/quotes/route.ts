@@ -2,6 +2,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+function stripSystemManagedQuoteFields<T extends Record<string, any>>(input: T): T {
+  const copy = { ...input };
+  delete copy.user_created;
+  delete copy.user_sent;
+  delete copy.date_sent;
+  delete copy.created_at;
+  delete copy.updated_at;
+  return copy;
+}
+
 // --------------------
 // GET → listado con filtros, paginación, counts y nextNumber
 // -------------------- 
@@ -336,7 +346,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanRest = {
-      ...rest,
+      ...stripSystemManagedQuoteFields(rest),
       bid_date: bid_date || null,
       start_date: start_date || null,
       end_date: end_date || null,
@@ -514,7 +524,7 @@ export async function PATCH(request: NextRequest) {
       rental_agreements: include_terms?.["rental-agreements"] ?? false,
       equipment_sale: include_terms?.["equipment-sale"] ?? false,
       flagging_terms: include_terms?.["flagging-terms"] ?? false,
-      ...restQuote,
+      ...stripSystemManagedQuoteFields(restQuote),
     };
 
     if (status === 'Sent') {
