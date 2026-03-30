@@ -142,6 +142,23 @@ export function SignOrderDetailsSheet({
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const lastCreatedContactId = useRef<number | null>(null)
 
+  const restoreOverlayInteraction = useCallback(
+    (event: string, details: Record<string, unknown> = {}) => {
+      restorePointerEvents()
+      window.requestAnimationFrame(() => {
+        restorePointerEvents()
+      })
+      window.setTimeout(() => {
+        restorePointerEvents()
+      }, 0)
+      logSignOrderDebug(event, {
+        mode,
+        ...details
+      })
+    },
+    [mode]
+  )
+
   // Add this smarter effect instead:
   useEffect(() => {
     if (
@@ -215,7 +232,12 @@ export function SignOrderDetailsSheet({
       customerId: localCustomer?.id ?? null
     })
     onOpenChange(nextOpen)
-  }, [localCustomer?.id, localRequestor?.name, mode, onOpenChange])
+    if (!nextOpen) {
+      restoreOverlayInteraction('details_sheet_closed', {
+        customerId: localCustomer?.id ?? null
+      })
+    }
+  }, [localCustomer?.id, localRequestor?.name, mode, onOpenChange, restoreOverlayInteraction])
 
   const handleSave = async () => {
     if (mode === 'create') {
@@ -313,14 +335,41 @@ export function SignOrderDetailsSheet({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      restorePointerEvents()
-      logSignOrderDebug('details_sheet_pointer_events_restored', {
-        mode
+      restoreOverlayInteraction('details_sheet_pointer_events_restored')
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [open, restoreOverlayInteraction])
+
+  useEffect(() => {
+    if (
+      open ||
+      customerModalOpen ||
+      customerDrawerOpen ||
+      contactDialogOpen ||
+      openCustomerContact
+    ) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restoreOverlayInteraction('customer_overlay_chain_cleared', {
+        customerId: localCustomer?.id ?? null,
+        contactId: localContact?.id ?? null
       })
     })
 
     return () => window.cancelAnimationFrame(frameId)
-  }, [mode, open])
+  }, [
+    contactDialogOpen,
+    customerDrawerOpen,
+    customerModalOpen,
+    localContact?.id,
+    localCustomer?.id,
+    open,
+    openCustomerContact,
+    restoreOverlayInteraction
+  ])
 
   return (
     <>
@@ -432,7 +481,12 @@ export function SignOrderDetailsSheet({
                   </Label>
                   <Button
                     variant='outline'
-                    onClick={() => setCustomerModalOpen(true)}
+                    onClick={() => {
+                      setCustomerModalOpen(true)
+                      restoreOverlayInteraction('customer_modal_opened', {
+                        customerId: localCustomer?.id ?? null
+                      })
+                    }}
                     className='w-full justify-start text-left font-normal'
                   >
                     <span className='truncate'>
@@ -449,7 +503,13 @@ export function SignOrderDetailsSheet({
                   </Label>
                   <Popover
                     open={openCustomerContact}
-                    onOpenChange={setOpenCustomerContact}
+                    onOpenChange={nextOpen => {
+                      setOpenCustomerContact(nextOpen)
+                      restoreOverlayInteraction('contact_popover_changed', {
+                        open: nextOpen,
+                        customerId: localCustomer?.id ?? null
+                      })
+                    }}
                   >
                     <PopoverTrigger asChild>
                       <Button
@@ -467,7 +527,13 @@ export function SignOrderDetailsSheet({
                         <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
+                    <PopoverContent
+                      className='w-[var(--radix-popover-trigger-width)] p-0'
+                      onOpenAutoFocus={event => {
+                        event.preventDefault()
+                        restorePointerEvents()
+                      }}
+                    >
                       <Command>
                         <CommandInput placeholder='Search contact...' />
                         <CommandList>
@@ -477,6 +543,12 @@ export function SignOrderDetailsSheet({
                             <CommandItem
                               onSelect={() => {
                                 setOpenCustomerContact(false)
+                                restoreOverlayInteraction(
+                                  'contact_add_new_selected',
+                                  {
+                                    customerId: localCustomer?.id ?? null
+                                  }
+                                )
                                 if (!localCustomer) {
                                   toast.error(
                                     'Please select a customer before adding a contact.'
@@ -508,6 +580,13 @@ export function SignOrderDetailsSheet({
                                         role: localCustomer.roles[idx]
                                       })
                                       setOpenCustomerContact(false)
+                                      restoreOverlayInteraction(
+                                        'contact_selected',
+                                        {
+                                          customerId: localCustomer?.id ?? null,
+                                          contactId: id
+                                        }
+                                      )
                                     }}
                                   >
                                     <Check
@@ -686,11 +765,21 @@ export function SignOrderDetailsSheet({
       {/* CustomerDrawer for creating new customer */}
       <CustomerDrawer
         open={customerDrawerOpen}
-        onOpenChange={setCustomerDrawerOpen}
+        onOpenChange={nextOpen => {
+          setCustomerDrawerOpen(nextOpen)
+          if (!nextOpen) {
+            restoreOverlayInteraction('customer_drawer_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }
+        }}
         customer={null}
         isViewMode={false}
         onSuccess={async (newCustomerId?: number) => {
           setCustomerDrawerOpen(false)
+          restoreOverlayInteraction('customer_drawer_success', {
+            newCustomerId: newCustomerId ?? null
+          })
           if (newCustomerId) {
             lastCreatedCustomerId.current = newCustomerId
           }
@@ -712,9 +801,18 @@ export function SignOrderDetailsSheet({
           <CustomerContactForm
             customerId={localCustomer.id}
             isOpen={contactDialogOpen}
-            onClose={() => setContactDialogOpen(false)}
+            onClose={() => {
+              setContactDialogOpen(false)
+              restoreOverlayInteraction('contact_dialog_closed', {
+                customerId: localCustomer.id
+              })
+            }}
             onSuccess={async (newContactId?: number, newContactData?: any) => {
               setContactDialogOpen(false)
+              restoreOverlayInteraction('contact_dialog_success', {
+                customerId: localCustomer?.id ?? null,
+                contactId: newContactId ?? null
+              })
               if (localCustomer?.id && typeof newContactId === 'number' && newContactData) {
                 // Locally update the customer data with the new contact
                 const updatedCustomer: Customer = {
@@ -747,13 +845,21 @@ export function SignOrderDetailsSheet({
       {/* Customer Selection Modal */}
       <CustomerSelectionModal
         open={customerModalOpen}
-        onOpenChange={setCustomerModalOpen}
+        onOpenChange={nextOpen => {
+          setCustomerModalOpen(nextOpen)
+          if (!nextOpen) {
+            restoreOverlayInteraction('customer_modal_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }
+        }}
         customers={customers}
         selectedCustomer={localCustomer}
         onSelectCustomer={async customer => {
           if (!customer) {
             setLocalCustomer(null)
             setLocalContact(null)
+            restoreOverlayInteraction('customer_cleared')
             return
           }
 
@@ -771,10 +877,14 @@ export function SignOrderDetailsSheet({
             }
             return null
           })
+          restoreOverlayInteraction('customer_selected', {
+            customerId: nextCustomer.id
+          })
         }}
         onAddNewCustomer={() => {
           setCustomerModalOpen(false)
           setCustomerDrawerOpen(true)
+          restoreOverlayInteraction('customer_add_new_opened')
         }}
       />
     </>

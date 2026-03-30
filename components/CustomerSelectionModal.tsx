@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Customer } from "@/types/Customer"
 import {
   Dialog,
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Search, Plus, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 interface CustomerSelectionModalProps {
   open: boolean
@@ -33,6 +34,21 @@ export function CustomerSelectionModal({
 }: CustomerSelectionModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
 
+  useEffect(() => {
+    if (open) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents()
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      restorePointerEvents()
+    }
+  }, [open])
+
   const filteredCustomers = useMemo(() => {
     if (!searchQuery.trim()) return customers
 
@@ -48,12 +64,14 @@ export function CustomerSelectionModal({
     onSelectCustomer(customer)
     onOpenChange(false)
     setSearchQuery("")
+    restorePointerEvents()
   }
 
   const handleClearSelection = () => {
     onSelectCustomer(null)
     onOpenChange(false)
     setSearchQuery("")
+    restorePointerEvents()
   }
 
   const formatLastOrdered = (dateString: string | null | undefined) => {
@@ -71,8 +89,22 @@ export function CustomerSelectionModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[600px] flex flex-col p-0">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen)
+        if (!nextOpen) {
+          setSearchQuery("")
+          restorePointerEvents()
+        }
+      }}
+    >
+      <DialogContent
+        className="max-w-4xl h-[600px] flex flex-col p-0"
+        onCloseAutoFocus={() => {
+          restorePointerEvents()
+        }}
+      >
         <div className="flex flex-col gap-2 relative z-10 bg-background">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle>Select Customer</DialogTitle>
@@ -89,6 +121,7 @@ export function CustomerSelectionModal({
                 variant="outline"
                 onClick={() => {
                   onOpenChange(false)
+                  restorePointerEvents()
                   onAddNewCustomer()
                 }}
                 className="flex items-center gap-2"
@@ -193,11 +226,22 @@ export function CustomerSelectionModal({
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false)
+                restorePointerEvents()
+              }}
+            >
               Cancel
             </Button>
             {selectedCustomer && (
-              <Button onClick={() => onOpenChange(false)}>
+              <Button
+                onClick={() => {
+                  onOpenChange(false)
+                  restorePointerEvents()
+                }}
+              >
                 Select Customer
               </Button>
             )}

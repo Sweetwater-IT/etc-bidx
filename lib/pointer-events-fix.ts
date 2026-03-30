@@ -3,8 +3,12 @@
  * This fixes issues where pointer-events: none lingers after modal/dropdown closes
  */
 export function restorePointerEvents() {
-  // Remove any lingering pointer-events: none from body
-  document.body.style.pointerEvents = '';
-  // Also clean up any inert attributes if present
-  document.body.removeAttribute('inert');
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  for (const element of [document.body, document.documentElement]) {
+    element.style.removeProperty('pointer-events');
+    element.removeAttribute('inert');
+  }
 }
