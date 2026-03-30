@@ -4,9 +4,9 @@ import { SiteHeader } from "@/components/site-header";
 import CustomersContent from "./CustomersContent";
 
 export default function CustomersPage() {
-
     return (
         <SidebarProvider
+            className="h-svh overflow-hidden"
             style={
                 {
                     "--sidebar-width": "calc(var(--spacing) * 68)",
@@ -15,9 +15,9 @@ export default function CustomersPage() {
             }
         >
             <AppSidebar variant="inset" />
-            <SidebarInset>
+            <SidebarInset className="h-full min-h-0 overflow-hidden">
                 <SiteHeader customTitle="Customers" />
-                <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6">
+                <div className="@container/main flex min-h-0 flex-1 flex-col gap-2 overflow-hidden py-4 md:gap-6 md:py-6">
                     <CustomersContent />
                 </div>
             </SidebarInset>

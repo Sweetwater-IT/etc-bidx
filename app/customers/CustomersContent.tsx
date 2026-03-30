@@ -873,7 +873,7 @@ const CustomersContent = () => {
   }
 
   return (
-    <div className='flex flex-1 min-h-0 flex-col gap-4 px-6'>
+    <div className='flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6'>
       <div className='flex items-center justify-between rounded-lg border bg-card px-5 py-4'>
         <div className='flex items-center gap-3'>
           <div className='rounded bg-primary p-2'>
@@ -893,7 +893,7 @@ const CustomersContent = () => {
         </Button>
       </div>
 
-      <div className='grid min-h-0 flex-1 grid-cols-12 gap-4'>
+      <div className='grid min-h-0 flex-1 grid-cols-12 gap-4 overflow-hidden'>
         <div className='col-span-3 flex min-h-0 flex-col rounded-lg border bg-card'>
           <div className='shrink-0 border-b p-3'>
             <div className='relative'>
