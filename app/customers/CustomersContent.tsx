@@ -25,7 +25,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
@@ -873,7 +872,7 @@ const CustomersContent = () => {
             </div>
           </div>
 
-          <ScrollArea className='flex-1'>
+          <div className='flex-1 overflow-y-auto'>
             {loading ? (
               <div className='p-4 text-center text-sm text-muted-foreground'>
                 Loading customers...
@@ -917,7 +916,7 @@ const CustomersContent = () => {
                 })}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
 
         <div className='col-span-5 flex min-h-0 flex-col rounded-lg border bg-card'>
@@ -959,7 +958,7 @@ const CustomersContent = () => {
                 </div>
               </div>
 
-              <ScrollArea className='flex-1'>
+              <div className='flex-1 overflow-y-auto'>
                 <div className='space-y-5 p-4'>
                   <div className='space-y-3'>
                     <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
@@ -1122,7 +1121,7 @@ const CustomersContent = () => {
                     </div>
                   </div>
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
         </div>
@@ -1143,7 +1142,7 @@ const CustomersContent = () => {
             ) : null}
           </div>
 
-          <ScrollArea className='flex-1'>
+          <div className='flex-1 overflow-y-auto'>
             {!selectedCustomer ? (
               <div className='flex items-center justify-center p-8'>
                 <p className='text-sm text-muted-foreground'>
@@ -1208,7 +1207,7 @@ const CustomersContent = () => {
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
@@ -1218,7 +1217,7 @@ const CustomersContent = () => {
             <DialogTitle>Edit Customer</DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className='max-h-[calc(90vh-9rem)] pr-4'>
+          <div className='max-h-[calc(90vh-9rem)] overflow-y-auto pr-4'>
             <div className='space-y-6 py-2'>
               <div className='space-y-3'>
                 <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
@@ -1562,7 +1561,7 @@ const CustomersContent = () => {
                 </label>
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter>
             <Button variant='outline' onClick={() => setEditing(false)}>
