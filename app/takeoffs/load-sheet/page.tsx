@@ -588,6 +588,7 @@ export default function SignOrderPage() {
               data={quotes}
               isLoading={isTableLoading}
               columns={SIGN_ORDER_COLUMNS}
+              variant="job-list"
               segments={SEGMENTS}
               segmentValue={activeSegment}
               segmentCounts={branchCounts}

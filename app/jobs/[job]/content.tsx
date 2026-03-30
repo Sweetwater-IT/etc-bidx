@@ -2109,6 +2109,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             data={data as AvailableJob[]}
                             isLoading={isTableLoading}
                             columns={columns}
+                            variant="job-list"
                             segments={segments}
                             segmentValue={activeSegment}
                             segmentCounts={jobCounts}
@@ -2180,6 +2181,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             data={data as ActiveBid[]}
                             isLoading={isTableLoading}
                             columns={columns}
+                            variant="job-list"
                             enableSearch={true}
                             searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
                             searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
