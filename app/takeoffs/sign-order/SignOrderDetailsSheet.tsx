@@ -338,6 +338,7 @@ export function SignOrderDetailsSheet({
                     Requestor<span className='text-red-600'>*</span>
                   </Label>
                   <RequestorSelector
+                    source='sign-order-requestor'
                     users={allUsers}
                     selectedUser={localRequestor}
                     onSelect={user => {

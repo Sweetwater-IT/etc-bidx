@@ -569,6 +569,7 @@ export function OpenBidSheet({
                     Requestor <span className="text-red-500">*</span>
                   </Label>
                   <RequestorSelector
+                    source='open-bid-requestor'
                     users={users}
                     selectedName={requestor}
                     disabled={isLoading}
