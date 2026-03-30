@@ -1,10 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command'
 import {
   Popover,
   PopoverContent,
@@ -35,20 +43,42 @@ function getRequestorKey(user: RequestorLike) {
   return [user.id ?? '', user.email ?? '', user.name].join('::')
 }
 
-function isSameRequestor(a: RequestorLike | null | undefined, b: RequestorLike) {
-  if (!a) {
-    return false
+function findSelectedUser<TUser extends RequestorLike>(
+  users: TUser[],
+  selectedUser?: TUser | null,
+  selectedName?: string | null
+) {
+  if (selectedUser) {
+    const matchedById = users.find(user => {
+      if (selectedUser.id == null || user.id == null) {
+        return false
+      }
+      return String(user.id) === String(selectedUser.id)
+    })
+
+    if (matchedById) {
+      return matchedById
+    }
+
+    const matchedByEmail = users.find(
+      user => selectedUser.email && user.email && user.email === selectedUser.email
+    )
+
+    if (matchedByEmail) {
+      return matchedByEmail
+    }
+
+    const matchedByName = users.find(user => user.name === selectedUser.name)
+    if (matchedByName) {
+      return matchedByName
+    }
   }
 
-  if (a.id != null && b.id != null) {
-    return String(a.id) === String(b.id)
+  if (selectedName) {
+    return users.find(user => user.name === selectedName) ?? null
   }
 
-  if (a.email && b.email) {
-    return a.email === b.email
-  }
-
-  return a.name === b.name
+  return null
 }
 
 export function RequestorSelector<TUser extends RequestorLike>({
@@ -63,27 +93,68 @@ export function RequestorSelector<TUser extends RequestorLike>({
   buttonClassName,
   contentClassName
 }: RequestorSelectorProps<TUser>) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
+  const selectedRequestor = findSelectedUser(users, selectedUser, selectedName)
+  const autoDefaultRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!open) {
-      setSearch('')
+    console.debug('[RequestorSelector] render-state', {
+      options: users.length,
+      selectedName: selectedRequestor?.name ?? selectedName ?? null,
+      authEmail: user?.email ?? null
+    })
+  }, [selectedRequestor?.name, selectedName, user?.email, users.length])
+
+  useEffect(() => {
+    if (selectedRequestor || !users.length || !user) {
+      return
     }
-  }, [open])
 
-  const normalizedSearch = search.trim().toLowerCase()
-  const filteredUsers =
-    normalizedSearch.length === 0
-      ? users
-      : users.filter(user =>
-          `${user.name} ${user.email ?? ''}`.toLowerCase().includes(normalizedSearch)
-        )
+    const authEmail = user.email?.toLowerCase() ?? ''
+    const authName =
+      user.user_metadata?.full_name ??
+      user.user_metadata?.name ??
+      user.email ??
+      ''
 
-  const displayValue = selectedUser?.name ?? selectedName ?? placeholder
+    const matchedUser =
+      users.find(candidate => candidate.email?.toLowerCase() === authEmail) ??
+      users.find(candidate => candidate.name === authName)
+
+    if (!matchedUser) {
+      if (autoDefaultRef.current !== '__no-match__') {
+        console.warn('[RequestorSelector] no logged-in employee match found', {
+          authEmail,
+          authName,
+          options: users.length
+        })
+        autoDefaultRef.current = '__no-match__'
+      }
+      return
+    }
+
+    const matchedKey = getRequestorKey(matchedUser)
+    if (autoDefaultRef.current === matchedKey) {
+      return
+    }
+
+    autoDefaultRef.current = matchedKey
+    console.debug('[RequestorSelector] defaulting to logged-in user', {
+      requestor: matchedUser.name,
+      authEmail
+    })
+    onSelect(matchedUser)
+  }, [onSelect, selectedRequestor, user, users])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={nextOpen => {
+        setOpen(nextOpen)
+        console.debug('[RequestorSelector] popover-state', { open: nextOpen })
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant='outline'
@@ -92,64 +163,61 @@ export function RequestorSelector<TUser extends RequestorLike>({
           disabled={disabled}
           className={cn(
             'w-full justify-between',
-            !selectedUser && !selectedName && 'text-muted-foreground',
+            !selectedRequestor && !selectedName && 'text-muted-foreground',
             buttonClassName
           )}
         >
-          <span className='truncate'>{displayValue}</span>
+          {selectedRequestor?.name ?? selectedName ?? placeholder}
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        align='start'
         className={cn('w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
       >
-        <div className='border-b p-2'>
-          <Input
-            autoFocus
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder={searchPlaceholder}
-            className='h-9'
-          />
-        </div>
-        <div className='max-h-64 overflow-y-auto p-1'>
-          {filteredUsers.length === 0 ? (
-            <div className='py-6 text-center text-sm text-muted-foreground'>
-              {emptyMessage}
-            </div>
-          ) : (
-            filteredUsers.map(user => {
-              const selected = selectedUser
-                ? isSameRequestor(selectedUser, user)
-                : selectedName === user.name
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup className='max-h-[240px] overflow-y-auto'>
+              {users.map(userOption => {
+                const optionKey = getRequestorKey(userOption)
+                const isSelected =
+                  selectedRequestor != null &&
+                  getRequestorKey(selectedRequestor) === optionKey
 
-              return (
-                <button
-                  key={getRequestorKey(user)}
-                  type='button'
-                  onClick={() => {
-                    onSelect(user)
-                    setOpen(false)
-                  }}
-                  className='flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground'
-                >
-                  <Check
-                    className={cn('h-4 w-4 shrink-0', selected ? 'opacity-100' : 'opacity-0')}
-                  />
-                  <div className='min-w-0 flex-1'>
-                    <div className='truncate'>{user.name}</div>
-                    {user.email ? (
-                      <div className='truncate text-xs text-muted-foreground'>
-                        {user.email}
-                      </div>
-                    ) : null}
-                  </div>
-                </button>
-              )
-            })
-          )}
-        </div>
+                return (
+                  <CommandItem
+                    key={optionKey}
+                    value={`${userOption.name} ${userOption.email ?? ''}`.trim()}
+                    onSelect={() => {
+                      console.debug('[RequestorSelector] selected-requestor', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                      onSelect(userOption)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        isSelected ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <div className='min-w-0'>
+                      <div className='truncate'>{userOption.name}</div>
+                      {userOption.email ? (
+                        <div className='truncate text-xs text-muted-foreground'>
+                          {userOption.email}
+                        </div>
+                      ) : null}
+                    </div>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

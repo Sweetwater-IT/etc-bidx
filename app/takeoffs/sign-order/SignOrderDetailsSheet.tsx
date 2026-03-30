@@ -341,6 +341,11 @@ export function SignOrderDetailsSheet({
                     users={allUsers}
                     selectedUser={localRequestor}
                     onSelect={user => {
+                      console.debug('[SignOrderDetailsSheet] requestor-updated', {
+                        requestor: user.name,
+                        email: user.email ?? null,
+                        branch: user.branches?.name ?? null
+                      })
                       setLocalRequestor(user)
                       if (user.branches?.name) {
                         setLocalSelectedBranch(user.branches.name)
