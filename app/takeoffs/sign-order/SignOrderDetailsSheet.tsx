@@ -38,7 +38,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { IconBulb } from '@tabler/icons-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
 import { SignOrderAdminInformation, OrderTypes } from './SignOrderContentSimple'
@@ -50,6 +50,8 @@ import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
 import { RequestorSelector } from '@/components/requestor-selector'
+import { restorePointerEvents } from '@/lib/pointer-events-fix'
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -205,18 +207,44 @@ export function SignOrderDetailsSheet({
 
   // Remove the generateJobNumber function since we don't need it
 
+  const handleSheetOpenChange = useCallback((nextOpen: boolean) => {
+    logSignOrderDebug('details_sheet_open_changed', {
+      open: nextOpen,
+      mode,
+      requestor: localRequestor?.name ?? null,
+      customerId: localCustomer?.id ?? null
+    })
+    onOpenChange(nextOpen)
+  }, [localCustomer?.id, localRequestor?.name, mode, onOpenChange])
+
   const handleSave = async () => {
     if (mode === 'create') {
       // For new sign orders, validate required fields
       if (!localCustomer) {
+        logSignOrderDebug('details_sheet_save_blocked', {
+          reason: 'missing_customer',
+          mode
+        })
         toast.error('Customer is required')
         return
       }
       if (!localSelectedBranch) {
+        logSignOrderDebug('details_sheet_save_blocked', {
+          reason: 'missing_branch',
+          mode
+        })
         toast.error('Branch is required')
         return
       }
     }
+
+    logSignOrderDebug('details_sheet_saved', {
+      mode,
+      requestor: localRequestor?.name ?? null,
+      customerId: localCustomer?.id ?? null,
+      contractNumber: localContractNumber || null,
+      jobNumber: localJobNumber || null
+    })
 
     // Update admin info regardless of mode
     setAdminInfo(prev => ({
@@ -279,9 +307,24 @@ export function SignOrderDetailsSheet({
     return null
   }
 
+  useEffect(() => {
+    if (open) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents()
+      logSignOrderDebug('details_sheet_pointer_events_restored', {
+        mode
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [mode, open])
+
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={handleSheetOpenChange}>
         <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <SheetHeader className='p-6 pb-4'>
@@ -346,6 +389,12 @@ export function SignOrderDetailsSheet({
                         requestor: user.name,
                         email: user.email ?? null,
                         branch: user.branches?.name ?? null
+                      })
+                      logSignOrderDebug('requestor_updated', {
+                        requestor: user.name,
+                        email: user.email ?? null,
+                        branch: user.branches?.name ?? null,
+                        mode
                       })
                       setLocalRequestor(user)
                       if (user.branches?.name) {

@@ -39,6 +39,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
 import { usePDF } from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -105,6 +106,7 @@ export default function SignOrderContentSimple({
 
   const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const signCount = mptRental.phases[0]?.signs.length ?? 0
 
   const isOrderInvalid = (): boolean => {
     return (
@@ -253,6 +255,10 @@ export default function SignOrderContentSimple({
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
+    logSignOrderDebug('page_loaded', {
+      mode: initialSignOrderId ? 'edit' : 'create',
+      signOrderId: initialSignOrderId ?? null
+    })
     if (!initialSignOrderId) {
       dispatch({ type: 'ADD_MPT_PHASE' })
       return
@@ -260,6 +266,14 @@ export default function SignOrderContentSimple({
       fetchSignOrder()
     }
   }, [dispatch])
+
+  useEffect(() => {
+    logSignOrderDebug('sign_count_changed', {
+      signCount,
+      jobNumber: adminInfo.jobNumber || null,
+      contractNumber: adminInfo.contractNumber || null
+    })
+  }, [adminInfo.contractNumber, adminInfo.jobNumber, signCount])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -493,6 +507,13 @@ export default function SignOrderContentSimple({
     if (isOrderInvalid()) return
 
     try {
+      logSignOrderDebug('sign_order_save_requested', {
+        status,
+        signCount,
+        signOrderId,
+        requestor: adminInfo.requestor?.name ?? null,
+        contractNumber: adminInfo.contractNumber || null
+      })
       setAdminInfo(prev => ({ ...prev, isSubmitting: true }))
 
       const signOrderData = {
@@ -526,11 +547,21 @@ export default function SignOrderContentSimple({
         setSignOrderId(result.id)
       }
       setFirstSave(true)
+      logSignOrderDebug('sign_order_save_succeeded', {
+        status,
+        signCount,
+        signOrderId: result.id ?? signOrderId ?? null
+      })
 
       toast.success('Sign order saved successfully')
       router.push('/takeoffs/sign-order/view/' + (signOrderId || result.id))
     } catch (error) {
       console.error('Error saving sign order:', error)
+      logSignOrderDebug('sign_order_save_failed', {
+        status,
+        signCount,
+        error: error instanceof Error ? error.message : String(error)
+      })
       toast.error((error as string) || 'Failed to save sign order')
     } finally {
       setAdminInfo(prev => ({ ...prev, isSubmitting: false }))

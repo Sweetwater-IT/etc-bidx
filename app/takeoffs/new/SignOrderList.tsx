@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
 import SelectJobOrBid from './SelectJobOrBid';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -105,14 +106,37 @@ export function SignOrderList({
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [open, setOpen] = useState<boolean>(false);
+  const [designationSearchOpen, setDesignationSearchOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
+    logSignOrderDebug('sign_editor_closed', {
+      currentPhase,
+      mode,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+    });
     setLocalSign(undefined);
+    setDesignationSearchOpen(false);
     setOpen(false);
     setMode('create');
-  }, []);  
+  }, [currentPhase, localSign?.designation, localSign?.id, mode]);  
+
+  const handleDesignationSearchOpenChange = useCallback((nextOpen: boolean) => {
+    setDesignationSearchOpen(nextOpen);
+    logSignOrderDebug('designation_search_open_changed', {
+      currentPhase,
+      open: nextOpen,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+      mode,
+    });
+
+    if (!nextOpen && !open && localSign && !localSign.designation && !localSign.isCustom) {
+      setLocalSign(undefined);
+    }
+  }, [currentPhase, localSign, mode, open]);
 
   const getCurrentEquipmentQuantity = useCallback((equipmentType: EquipmentType): number => {
     const currentPhaseData = mptRental.phases[currentPhase];
@@ -190,12 +214,22 @@ export function SignOrderList({
         description: '',
         substrate: 'Plastic',
       };
+      logSignOrderDebug('add_new_sign_clicked', {
+        currentPhase,
+        existingSigns: mptRental.phases[currentPhase]?.signs.length ?? 0,
+        jobNumber: jobNumber ?? null,
+      });
       setLocalSign(defaultSign);
       setMode('create');
+      setDesignationSearchOpen(true);
     } catch (error) {
       console.error('Error in handleSignAddition:', error);
+      logSignOrderDebug('add_new_sign_failed', {
+        currentPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
-  }, [currentPhase]);
+  }, [currentPhase, jobNumber, mptRental.phases]);
 
   const handleDesignationSelected = useCallback((updatedSign: PrimarySign | SecondarySign) => {
     console.log('Designation selected:', updatedSign.designation, 'for phase:', currentPhase);
@@ -207,10 +241,21 @@ export function SignOrderList({
           sign: updatedSign,
         },
       });
+      logSignOrderDebug('sign_designation_selected', {
+        currentPhase,
+        signId: updatedSign.id,
+        designation: updatedSign.designation,
+        isSecondary: Object.hasOwn(updatedSign, 'primarySignId'),
+      });
+      setDesignationSearchOpen(false);
       setLocalSign(updatedSign);
       setOpen(true);
     } catch (error) {
       console.error('Error in handleDesignationSelected:', error);
+      logSignOrderDebug('sign_designation_select_failed', {
+        currentPhase,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }, [dispatch, currentPhase]);
 
@@ -266,6 +311,7 @@ export function SignOrderList({
       });
 
       // Reset local sign to allow adding more signs
+      setDesignationSearchOpen(false);
       setLocalSign(undefined);
       setOpen(false);
     } catch (error) {
@@ -291,6 +337,7 @@ export function SignOrderList({
       toast.success(`${kit.code} kit has been successfully added to your order`);
 
       // Reset local sign to allow adding more signs
+      setDesignationSearchOpen(false);
       setLocalSign(undefined);
       setOpen(false);
     } catch (error) {
@@ -393,11 +440,23 @@ export function SignOrderList({
     const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
     if (onlyTable && latestSign && latestSign.quantity === 0) {
       console.log('Opening SignEditingSheet for latest sign in onlyTable mode:', latestSign.id);
+      setDesignationSearchOpen(false);
       setLocalSign(latestSign);
       setMode('edit');
       setOpen(true);
     }
   }, [mptRental.phases, currentPhase, onlyTable]);
+
+  useEffect(() => {
+    logSignOrderDebug('sign_order_list_state_changed', {
+      currentPhase,
+      editorOpen: open,
+      designationSearchOpen,
+      mode,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+    });
+  }, [currentPhase, designationSearchOpen, localSign?.designation, localSign?.id, mode, open]);
 
 
 
@@ -649,6 +708,7 @@ export function SignOrderList({
                                               };
                                               setLocalSign({ ...defaultSecondary });
                                               setMode('create');
+                                              setDesignationSearchOpen(true);
                                               setOpen(false);
                                             }}
                                           >
@@ -680,7 +740,7 @@ export function SignOrderList({
                                                       };
                                                       handleDesignationSelected(duplicated);
                                                       setMode('create');
-                                                      setOpen(false);
+                                                      setDesignationSearchOpen(false);
                                                     }}
                                                   >
                                                     <div
@@ -742,13 +802,15 @@ export function SignOrderList({
         </Table>
       </div>
       <div className="space-y-4 mt-4">
-        {localSign && (
+        {localSign && designationSearchOpen && (
           <DesignationSearcher
             localSign={localSign}
             setLocalSign={setLocalSign}
             onDesignationSelected={handleDesignationSelected}
             onKitSelected={handleKitSelected}
             onKitSignsConfigured={handleKitSignsConfigured}
+            open={designationSearchOpen}
+            onOpenChange={handleDesignationSearchOpenChange}
           />
         )}
         {localSign && open && (
