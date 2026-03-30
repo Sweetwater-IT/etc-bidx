@@ -38,6 +38,7 @@ import {
 import { ClipboardList, Plus, Minus, Trash2, Check, ChevronsUpDown, MessageSquare, Pencil, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DollarPercentCurrencyInputField } from '@/components/ui/dollar-percent-currency-input-field';
+import { QuantityInput } from '@/components/ui/quantity-input';
 import { toast } from 'sonner';
 interface SovMasterItem {
   id: number;
@@ -1554,7 +1555,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
           closeCustomDialog(true);
         }
       }}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="text-sm">Create Custom Line Item</DialogTitle>
             <DialogDescription>
@@ -1562,7 +1563,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
             </DialogDescription>
           </DialogHeader>
           {customDraft && (
-            <div className="grid gap-3 py-2">
+            <div className="grid flex-1 gap-3 overflow-y-auto py-2 pr-1">
               <div className="grid gap-1.5">
                 <label className="text-xs">Item Number <span className="text-destructive">*</span></label>
                 <Input
@@ -1620,23 +1621,22 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="grid gap-1.5">
                   <label className="text-xs">Quantity</label>
-                  <Input
-                    className="h-8 text-sm"
-                    type="number"
-                    min="1"
-                    step="1"
+                  <QuantityInput
                     value={customDraft.quantity}
-                    onChange={(e) => setCustomDraft({ ...customDraft, quantity: Math.max(1, parseInt(e.target.value || '1', 10)) })}
+                    onChange={(quantity) => setCustomDraft({ ...customDraft, quantity: Math.max(1, quantity) })}
+                    min={1}
+                    className="h-9"
+                    inputClassName="h-9 w-14 text-sm"
                   />
                 </div>
                 <div className="grid gap-1.5">
                   <label className="text-xs">Unit Price</label>
-                  <div className="flex items-center h-8 rounded-md border bg-background">
-                    <span className="border-r px-2 text-xs text-muted-foreground">$</span>
+                  <div className="flex items-center h-9 max-w-[260px] rounded-md border bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+                    <span className="border-r px-3 text-sm text-muted-foreground">$</span>
                     <CurrencyInput
                       value={Math.round(customDraft.unitPrice * 100).toString()}
                       onChange={(digits) => setCustomDraft({ ...customDraft, unitPrice: parseInt(digits || '0', 10) / 100 })}
-                      className="h-8 w-full border-0 bg-transparent pr-2 text-right text-sm focus-visible:ring-0"
+                      className="h-9 w-full border-0 bg-transparent pr-3 text-right text-sm focus-visible:ring-0 cursor-text"
                     />
                   </div>
                 </div>
@@ -1669,7 +1669,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t bg-background pt-4">
             <Button variant="outline" size="sm" onClick={() => closeCustomDialog(true)}>Cancel</Button>
             <Button
               size="sm"

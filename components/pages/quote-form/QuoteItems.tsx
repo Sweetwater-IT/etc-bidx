@@ -230,79 +230,80 @@ export function QuoteItems() {
 
   // --- Render ---
   return (
-    <div className="rounded-lg">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Quote Items</h2>
+    <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="flex flex-col gap-4 border-b px-4 py-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Quote Items</h2>
 
-        <div className="flex items-center gap-[50px]">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
-            <Input
-              type="number"
-              min={1}
-              max={100}
-              value={quoteMetadata?.tax_rate ?? "6"}
-              onChange={(e) =>
-                setQuoteMetadata((prev) => ({
-                  ...prev,
-                  tax_rate: Number(e.target.value),
-                }))
-              }
-              className="w-16 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <span className="text-sm font-medium">%</span>
-
-          </div>
-          <div className="flex flex-row items-center gap-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                className="shadow-sm"
-                id="terms"
-                checked={applyToAll}
-                onCheckedChange={async (checked) => {
-                  const isChecked = !!checked;
-                  setApplyToAll(isChecked);
-
-                  const updatedItems = await Promise.all(
-                    quoteItems.map(async (item) => {
-                      if (!item.id) return item;
-
-                      const updatedItem = {
-                        ...item,
-                        is_tax_percentage: isChecked,
-                        tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
-                      };
-
-                      await updateQuoteItem(updatedItem);
-                      return updatedItem;
-                    })
-                  );
-
-                  setQuoteItems(updatedItems);
-                }}
+          <div className="flex items-center gap-[50px]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={quoteMetadata?.tax_rate ?? "6"}
+                onChange={(e) =>
+                  setQuoteMetadata((prev) => ({
+                    ...prev,
+                    tax_rate: Number(e.target.value),
+                  }))
+                }
+                className="h-9 w-16 text-sm"
               />
+              <span className="text-sm font-medium">%</span>
+
+            </div>
+            <div className="flex flex-row items-center gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  className="shadow-sm"
+                  id="terms"
+                  checked={applyToAll}
+                  onCheckedChange={async (checked) => {
+                    const isChecked = !!checked;
+                    setApplyToAll(isChecked);
+
+                    const updatedItems = await Promise.all(
+                      quoteItems.map(async (item) => {
+                        if (!item.id) return item;
+
+                        const updatedItem = {
+                          ...item,
+                          is_tax_percentage: isChecked,
+                          tax: isChecked ? (quoteMetadata?.tax_rate ?? 6) : 0,
+                        };
+
+                        await updateQuoteItem(updatedItem);
+                        return updatedItem;
+                      })
+                    );
+
+                    setQuoteItems(updatedItems);
+                  }}
+                />
 
 
-              <p>Apply tax to all?</p>
+                <p>Apply tax to all?</p>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
 
-      <div className="space-y-4">
+      <div className="overflow-x-auto">
         <div
-          className="grid text-sm font-medium text-muted-foreground border-b pb-2 mb-1 gap-2"
+          className="grid min-w-[980px] gap-2 border-b bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
           style={{ gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px" }}
         >
-          <div className="uppercase">Item # / SKU</div>
-          <div className="uppercase text-center">Description</div>
-          <div className="uppercase text-center">UOM</div>
-          <div className="uppercase text-center">Qty</div>
-          <div className="uppercase">Unit Price</div>
-          <div className="uppercase">Discount</div>
-          <div className="uppercase text-start">Tax?</div>
-          <div className="uppercase">Ext Price</div>
+          <div>Item # / SKU</div>
+          <div className="text-center">Description</div>
+          <div className="text-center">UOM</div>
+          <div className="text-center">Qty</div>
+          <div>Unit Price</div>
+          <div>Discount</div>
+          <div className="text-start">Tax?</div>
+          <div>Ext Price</div>
         </div>
 
         <QuoteItemsList
@@ -322,15 +323,13 @@ export function QuoteItems() {
         />
       </div>
 
-      <div className="mt-4">
+      <div className="flex items-center justify-between gap-4 border-t px-4 py-4">
         <Button onClick={handleAddNewItem}>
           <Plus className="h-4 w-4 mr-2" />
           Add New Item
         </Button>
-      </div>
 
-      <div className="mt-6 flex justify-end space-y-1 text-sm">
-        <div className="text-right">
+        <div className="text-right text-sm">
           <div>Total Items: {quoteItems.length}</div>
           <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
         </div>

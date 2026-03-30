@@ -119,6 +119,7 @@ const handleStatusVariant = (status: string) => {
 export interface DataTableProps<TData extends object> {
   columns: LegacyColumn[] | readonly LegacyColumn[]
   data: TData[]
+  variant?: 'default' | 'job-list'
   segments?: {
     label: string
     value: string
@@ -397,6 +398,7 @@ function isRowSelected<T extends object>(
 export function DataTable<TData extends object>({
   columns: legacyColumns,
   data,
+  variant = 'default',
   segments,
   segmentValue,
   segmentCounts,
@@ -453,6 +455,8 @@ export function DataTable<TData extends object>({
   searchableColumns,
   isLoading,
 }: DataTableProps<TData>) {
+  const isJobListVariant = variant === 'job-list'
+
   const columns = React.useMemo(() => {
     const cols: ExtendedColumn<TData>[] = legacyColumns.map(col => ({
       id: col.key,
@@ -811,7 +815,9 @@ export function DataTable<TData extends object>({
           )
         },
         className: stickyLastColumn
-          ? 'sticky right-0 bg-white dark:bg-background'
+          ? isJobListVariant
+            ? 'sticky right-0 bg-card'
+            : 'sticky right-0 bg-white dark:bg-background'
           : ''
       })
     }
@@ -892,9 +898,9 @@ export function DataTable<TData extends object>({
     segmentValue,
     segments,
     onSegmentChange,
-    onViewJobSummary
+    onViewJobSummary,
+    isJobListVariant
   ])
-
 
   // State for filter visibility
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -1103,12 +1109,20 @@ export function DataTable<TData extends object>({
       </div>
 
       <div className='px-6'>
-        <div className='rounded-md border'>
+        <div
+          className={cn(
+            'border',
+            isJobListVariant ? 'overflow-hidden rounded-lg bg-card' : 'rounded-md'
+          )}
+        >
           <div className='relative overflow-x-auto'>
             <Table>
-              <TableHeader className='bg-muted'>
+              <TableHeader className={cn(isJobListVariant ? 'bg-muted/30' : 'bg-muted')}>
                 {table.getHeaderGroups().map(headerGroup => (
-                  <TableRow key={headerGroup.id}>
+                  <TableRow
+                    key={headerGroup.id}
+                    className={cn(isJobListVariant && 'bg-muted/30 hover:bg-muted/30')}
+                  >
                     {headerGroup.headers.map(header => {
                       const isActions = header.column.id === 'actions'
                       return (
@@ -1117,9 +1131,13 @@ export function DataTable<TData extends object>({
                           className={cn(
                             // Use type assertion to handle the className property
                             (header.column.columnDef as any).className,
+                            isJobListVariant &&
+                              'text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap',
                             isActions && stickyLastColumn
-                              ? 'sticky right-0 bg-muted'
-                              : 'text-sm !font-medium'
+                              ? isJobListVariant
+                                ? 'sticky right-0 bg-muted/30'
+                                : 'sticky right-0 bg-muted'
+                              : !isJobListVariant && 'text-sm !font-medium'
                           )}
                         >
                           {header.isPlaceholder ||
@@ -1136,7 +1154,11 @@ export function DataTable<TData extends object>({
                                   variant='ghost'
                                   size='sm'
                                   role='combobox'
-                                  className='-ml-3 h-8 data-[state=open]:bg-accent'
+                                  className={cn(
+                                    '-ml-3 h-8 data-[state=open]:bg-accent',
+                                    isJobListVariant &&
+                                      '-ml-0 h-auto justify-start px-0 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-transparent hover:text-foreground data-[state=open]:bg-transparent'
+                                  )}
                                 >
                                   {flexRender(
                                     header.column.columnDef.header,
@@ -1144,12 +1166,12 @@ export function DataTable<TData extends object>({
                                   )}
                                   {header.column.getCanSort() &&
                                     (header.column.getIsSorted() === 'desc' ? (
-                                      <ArrowDown className='ml-2 h-4 w-4' />
+                                      <ArrowDown className={cn('ml-2 h-4 w-4', isJobListVariant && 'h-3 w-3 opacity-40')} />
                                     ) : header.column.getIsSorted() ===
                                       'asc' ? (
-                                      <ArrowUp className='ml-2 h-4 w-4' />
+                                      <ArrowUp className={cn('ml-2 h-4 w-4', isJobListVariant && 'h-3 w-3 opacity-40')} />
                                     ) : (
-                                      <ChevronsUpDown className='ml-2 h-4 w-4' />
+                                      <ChevronsUpDown className={cn('ml-2 h-4 w-4', isJobListVariant && 'h-3 w-3 opacity-40')} />
                                     ))}
                                 </Button>
                               </DropdownMenuTrigger>
@@ -1218,6 +1240,7 @@ export function DataTable<TData extends object>({
                       data-state={isRowSelected(row.original, selectedItem) ? 'selected' : ''}
                       className={cn(
                         'cursor-pointer',
+                        isJobListVariant && 'text-sm transition-colors hover:bg-muted/20',
                         isRowSelected(row.original, selectedItem) &&
                         'bg-muted/50'
                       )}
@@ -1239,8 +1262,11 @@ export function DataTable<TData extends object>({
                             key={cell.id}
                             className={cn(
                               (cell.column.columnDef as any).className,
+                              isJobListVariant && 'py-3',
                               isActions && stickyLastColumn
-                                ? 'sticky right-0 bg-white dark:bg-background'
+                                ? isJobListVariant
+                                  ? 'sticky right-0 bg-card'
+                                  : 'sticky right-0 bg-white dark:bg-background'
                                 : ''
                             )}
                           >

@@ -30,15 +30,20 @@ export const useCustomers = create<CustomersState>((set, get) => ({
 
             const lastOrderedMap: Record<number, string> = lastOrderedResult.data || {};
 
-            const customers: Customer[] = (customersResult.data || []).map((customer: any) => ({
+            const customers: Customer[] = (customersResult.data || []).map((customer: any) => {
+                const validContacts = Array.isArray(customer.customer_contacts)
+                    ? customer.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+                    : [];
+
+                return ({
                 id: customer.id,
                 name: customer.name,
                 displayName: customer.display_name?.trim() || customer.name,
-                emails: customer.customer_contacts?.map((c: any) => c.email || '') || [],
-                phones: customer.customer_contacts?.map((c: any) => c.phone || '') || [],
-                names: customer.customer_contacts?.map((c: any) => c.name || '') || [],
-                roles: customer.customer_contacts?.map((c: any) => c.role || '') || [],
-                contactIds: customer.customer_contacts?.map((c: any) => c.id || 0) || [],
+                emails: validContacts.map((c: any) => c.email || ''),
+                phones: validContacts.map((c: any) => c.phone || ''),
+                names: validContacts.map((c: any) => c.name || ''),
+                roles: validContacts.map((c: any) => c.role || ''),
+                contactIds: validContacts.map((c: any) => c.id || 0),
                 address: customer.address || '',
                 url: customer.web || '',
                 created: customer.created || '',
@@ -50,7 +55,7 @@ export const useCustomers = create<CustomersState>((set, get) => ({
                 mainPhone: customer.main_phone || '',
                 paymentTerms: customer.payment_terms || '',
                 lastOrdered: lastOrderedMap[customer.id] || null
-            }));
+            })});
 
             set({ customers, isLoading: false });
         } catch (error) {

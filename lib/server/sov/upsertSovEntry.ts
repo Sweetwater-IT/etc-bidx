@@ -61,6 +61,46 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
 
   let finalSovItemId = sov_item_id ?? null;
   let finalCustomSovItemId = custom_sov_item_id ?? null;
+  const createCustomClone = async (master: {
+    item_number: string;
+    display_item_number: string;
+    description: string;
+    display_name: string;
+    work_type: string;
+    uom_1: string | null;
+    uom_2: string | null;
+    uom_3: string | null;
+    uom_4: string | null;
+    uom_5: string | null;
+    uom_6: string | null;
+    uom_7: string | null;
+  }) => {
+    const visibleItemNumber = getVisibleSovItemNumber(master);
+    const { data: clone, error: cloneError } = await supabase
+      .from('custom_sov_items')
+      .insert({
+        job_id: jobId,
+        item_number: buildRepeatableCloneItemNumber(visibleItemNumber),
+        display_item_number: visibleItemNumber,
+        description: description ?? master.description ?? '',
+        display_name:
+          display_name_override ||
+          description ||
+          master.display_name ||
+          visibleItemNumber,
+        work_type: work_type ?? master.work_type ?? 'OTHER',
+        uom_1: uom ?? getPrimaryUom(master),
+      })
+      .select('id')
+      .single();
+
+    if (cloneError) {
+      throw new SovUpsertError('Failed to create duplicate SOV item clone', 500, cloneError);
+    }
+
+    finalSovItemId = null;
+    finalCustomSovItemId = clone.id;
+  };
 
   if (!finalSovItemId && !finalCustomSovItemId && item_number) {
     const normalizedItemNumber = String(item_number).trim();
@@ -91,25 +131,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
 
     if (existingItem) {
       if (isRepeatableSovItemNumber(existingItem.display_item_number || existingItem.item_number)) {
-        const { data: repeatableClone, error: cloneError } = await supabase
-          .from('custom_sov_items')
-          .insert({
-            job_id: jobId,
-            item_number: buildRepeatableCloneItemNumber(existingItem.display_item_number || existingItem.item_number),
-            display_item_number: existingItem.display_item_number || existingItem.item_number,
-            description: description ?? existingItem.description ?? '',
-            display_name: description || existingItem.display_name || existingItem.display_item_number || existingItem.item_number,
-            work_type: work_type ?? existingItem.work_type ?? 'OTHER',
-            uom_1: uom ?? getPrimaryUom(existingItem),
-          })
-          .select('id')
-          .single();
-
-        if (cloneError) {
-          throw new SovUpsertError('Failed to create repeatable SOV item clone', 500, cloneError);
-        }
-
-        finalCustomSovItemId = repeatableClone.id;
+        await createCustomClone(existingItem);
       } else {
         finalSovItemId = existingItem.id;
       }
@@ -167,7 +189,7 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
     finalSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
   }
 
-  const writePayload = {
+  let writePayload = {
     job_id: jobId,
     sov_item_id: finalSovItemId,
     custom_sov_item_id: finalCustomSovItemId,
@@ -246,7 +268,36 @@ export async function upsertSovEntry(input: UpsertSovEntryInput) {
   const duplicateStandard = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key');
   const duplicateCustom = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_custom_sov_item_id_key');
 
-  if (duplicateStandard || duplicateCustom) {
+  if (duplicateStandard && finalSovItemId && !finalCustomSovItemId) {
+    const { data: existingMaster, error: masterError } = await supabase
+      .from('sov_items')
+      .select(SOV_MASTER_SELECT_FIELDS)
+      .eq('id', finalSovItemId)
+      .single();
+
+    if (masterError || !existingMaster) {
+      throw new SovUpsertError('Failed to load standard SOV item for duplicate entry clone', 500, masterError);
+    }
+
+    await createCustomClone(existingMaster);
+
+    writePayload = {
+      ...writePayload,
+      sov_item_id: null,
+      custom_sov_item_id: finalCustomSovItemId,
+    };
+
+    const retryResult = await supabase
+      .from('sov_entries')
+      .insert(writePayload)
+      .select(selectEntryFields)
+      .single();
+
+    data = retryResult.data;
+    error = retryResult.error;
+  }
+
+  if (error && (duplicateStandard || duplicateCustom)) {
     const { sort_order: _ignoredSort, ...updatePayload } = writePayload;
     let updateQuery = supabase
       .from('sov_entries')
