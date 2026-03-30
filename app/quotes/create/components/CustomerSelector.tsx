@@ -84,15 +84,23 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
 
     const handleContactSuccess = (newContactId?: number, newContactData?: any) => {
         setIsContactFormOpen(false);
-        if (newContactData) {
-            addContact(newContactData);
+        if (typeof newContactId === 'number' && newContactData) {
+            const createdContact = {
+                id: newContactId,
+                name: newContactData.name || '',
+                role: newContactData.role || '',
+                email: newContactData.email || '',
+                phone: newContactData.phone || '',
+            }
+
+            addContact(createdContact);
             // Auto-select the newly created contact
-            selectContact(newContactData.id.toString());
+            selectContact(createdContact.id.toString());
         }
     };
 
     const handleContactClick = (contactId: string) => {
-        const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === contactId);
+        const contact = selectedCustomer?.customer_contacts?.find(c => c.id?.toString() === contactId);
         if (!contact) return;
 
         selectContact(contact.id.toString());
@@ -117,8 +125,8 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         if (!contactSearch) return selectedCustomer.customer_contacts
         return selectedCustomer.customer_contacts.filter(
             cc =>
-                cc.name.toLowerCase().includes(contactSearch) ||
-                cc.email.toLowerCase().includes(contactSearch)
+                (cc.name || '').toLowerCase().includes(contactSearch) ||
+                (cc.email || '').toLowerCase().includes(contactSearch)
         )
     }, [selectedCustomer, contactSearch])
 
@@ -263,7 +271,9 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                             ➕ Add new contact
                                         </CommandItem>
                                         {filteredContacts.length ? (
-                                            filteredContacts.map(cc => (
+                                            filteredContacts
+                                                .filter(cc => typeof cc.id === 'number')
+                                                .map(cc => (
                                                 <CommandItem
                                                     key={cc.id}
                                                     value={cc.id.toString()}
