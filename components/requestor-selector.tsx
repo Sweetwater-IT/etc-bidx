@@ -10,7 +10,8 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem
+  CommandItem,
+  CommandList
 } from '@/components/ui/command'
 import {
   Popover,
@@ -99,7 +100,7 @@ export function RequestorSelector<TUser extends RequestorLike>({
   const [open, setOpen] = useState(false)
   const selectedRequestor = findSelectedUser(users, selectedUser, selectedName)
   const autoDefaultRef = useRef<string | null>(null)
-  const interactionLogRef = useRef({ wheel: false, scroll: false })
+  const interactionLogRef = useRef({ wheel: false, scroll: false, touch: false })
 
   const logToVercel = useCallback(
     (event: string, details: Record<string, unknown> = {}) => {
@@ -203,7 +204,7 @@ export function RequestorSelector<TUser extends RequestorLike>({
       onOpenChange={nextOpen => {
         setOpen(nextOpen)
         restorePointerEvents()
-        interactionLogRef.current = { wheel: false, scroll: false }
+        interactionLogRef.current = { wheel: false, scroll: false, touch: false }
         console.debug('[RequestorSelector] popover-state', { open: nextOpen })
         logToVercel('popover_state', { open: nextOpen })
       }}
@@ -226,13 +227,18 @@ export function RequestorSelector<TUser extends RequestorLike>({
       <PopoverContent
         align='start'
         className={cn('z-[70] w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
+        onOpenAutoFocus={event => {
+          event.preventDefault()
+          restorePointerEvents()
+        }}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandEmpty>{emptyMessage}</CommandEmpty>
-          <CommandGroup
-            className='max-h-[240px] overflow-y-auto overscroll-contain'
+          <CommandList
+            className='max-h-[240px] overflow-y-auto overflow-x-hidden overscroll-contain'
             onWheelCapture={event => {
+              event.stopPropagation()
+              restorePointerEvents()
               if (!interactionLogRef.current.wheel) {
                 const target = event.currentTarget
                 interactionLogRef.current.wheel = true
@@ -245,6 +251,7 @@ export function RequestorSelector<TUser extends RequestorLike>({
               }
             }}
             onScrollCapture={event => {
+              event.stopPropagation()
               if (!interactionLogRef.current.scroll) {
                 const target = event.currentTarget
                 interactionLogRef.current.scroll = true
@@ -255,47 +262,63 @@ export function RequestorSelector<TUser extends RequestorLike>({
                 })
               }
             }}
+            onTouchMoveCapture={event => {
+              event.stopPropagation()
+              restorePointerEvents()
+              if (!interactionLogRef.current.touch) {
+                interactionLogRef.current.touch = true
+                logToVercel('list_touch_move', {
+                  touches: event.touches.length
+                })
+              }
+            }}
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {users.map(userOption => {
-              const optionKey = getRequestorKey(userOption)
-              const isSelected =
-                selectedRequestor != null &&
-                getRequestorKey(selectedRequestor) === optionKey
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {users.map(userOption => {
+                const optionKey = getRequestorKey(userOption)
+                const isSelected =
+                  selectedRequestor != null &&
+                  getRequestorKey(selectedRequestor) === optionKey
 
-              return (
-                <CommandItem
-                  key={optionKey}
-                  value={userOption.name}
-                  onPointerDownCapture={() => {
-                    logToVercel('item_pointer_down', {
-                      requestor: userOption.name
-                    })
-                  }}
-                  onSelect={() => {
-                    restorePointerEvents()
-                    console.debug('[RequestorSelector] selected-requestor', {
-                      requestor: userOption.name,
-                      email: userOption.email ?? null
-                    })
-                    logToVercel('selected_requestor', {
-                      requestor: userOption.name,
-                      email: userOption.email ?? null
-                    })
-                    onSelect(userOption)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      isSelected ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  {userOption.name}
-                </CommandItem>
-              )
-            })}
-          </CommandGroup>
+                return (
+                  <CommandItem
+                    key={optionKey}
+                    value={userOption.name}
+                    onPointerDownCapture={() => {
+                      restorePointerEvents()
+                      logToVercel('item_pointer_down', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                    }}
+                    onSelect={() => {
+                      restorePointerEvents()
+                      console.debug('[RequestorSelector] selected-requestor', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                      logToVercel('selected_requestor', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                      onSelect(userOption)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        isSelected ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    {userOption.name}
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
