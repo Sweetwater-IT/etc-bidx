@@ -49,6 +49,7 @@ import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
+import { RequestorSelector } from '@/components/requestor-selector'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -117,10 +118,6 @@ export function SignOrderDetailsSheet({
   )
   const [localStartDate, setLocalStartDate] = useState(adminInfo.startDate)
   const [localEndDate, setLocalEndDate] = useState(adminInfo.endDate)
-
-  // Popover states
-  const [openRequestor, setOpenRequestor] = useState(false)
-  const [openCustomer, setOpenCustomer] = useState(false)
 
   // Customer modal state
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
@@ -340,49 +337,16 @@ export function SignOrderDetailsSheet({
                   <Label>
                     Requestor<span className='text-red-600'>*</span>
                   </Label>
-                  <Popover open={openRequestor} onOpenChange={setOpenRequestor}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openRequestor}
-                        className='w-full justify-between'
-                      >
-                        {localRequestor
-                          ? localRequestor.name
-                          : 'Select requestor...'}
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search requestor...' />
-                        <CommandEmpty>No requestor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {allUsers.map(user => (
-                            <CommandItem
-                              key={user.id}
-                              value={user.name}
-                              onSelect={() => {
-                                setLocalRequestor(user)
-                                setOpenRequestor(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localRequestor?.id === user.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {user.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <RequestorSelector
+                    users={allUsers}
+                    selectedUser={localRequestor}
+                    onSelect={user => {
+                      setLocalRequestor(user)
+                      if (user.branches?.name) {
+                        setLocalSelectedBranch(user.branches.name)
+                      }
+                    }}
+                  />
                 </div>
 
                 {/* Branch */}
@@ -451,63 +415,65 @@ export function SignOrderDetailsSheet({
                     <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
                       <Command>
                         <CommandInput placeholder='Search contact...' />
-                        <CommandEmpty>No contact found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new contact button always visible */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomerContact(false)
-                              if (!localCustomer) {
-                                toast.error(
-                                  'Please select a customer before adding a contact.'
-                                )
-                                return
-                              }
-                              setContactDialogOpen(true)
-                            }}
-                            value='__add_new_contact__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new contact
-                          </CommandItem>
-                          {/* List contacts if a customer is selected */}
-                          {localCustomer &&
-                            Array.isArray(localCustomer.contactIds) &&
-                            localCustomer.contactIds.length > 0 &&
-                            localCustomer.contactIds.map(
-                              (id: number, idx: number) => (
-                                <CommandItem
-                                  key={id}
-                                  value={localCustomer.names[idx]}
-                                  onSelect={() => {
-                                    setLocalContact({
-                                      id,
-                                      name: localCustomer.names[idx],
-                                      email: localCustomer.emails[idx],
-                                      phone: localCustomer.phones[idx],
-                                      role: localCustomer.roles[idx]
-                                    })
-                                    setOpenCustomerContact(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      localContact?.id === id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
+                        <CommandList>
+                          <CommandEmpty>No contact found.</CommandEmpty>
+                          <CommandGroup className='max-h-[200px] overflow-y-auto'>
+                            {/* Add new contact button always visible */}
+                            <CommandItem
+                              onSelect={() => {
+                                setOpenCustomerContact(false)
+                                if (!localCustomer) {
+                                  toast.error(
+                                    'Please select a customer before adding a contact.'
+                                  )
+                                  return
+                                }
+                                setContactDialogOpen(true)
+                              }}
+                              value='__add_new_contact__'
+                              className='font-medium text-primary cursor-pointer'
+                            >
+                              + Add new contact
+                            </CommandItem>
+                            {/* List contacts if a customer is selected */}
+                            {localCustomer &&
+                              Array.isArray(localCustomer.contactIds) &&
+                              localCustomer.contactIds.length > 0 &&
+                              localCustomer.contactIds.map(
+                                (id: number, idx: number) => (
+                                  <CommandItem
+                                    key={id}
+                                    value={`${localCustomer.names[idx] || ''} ${localCustomer.emails[idx] || ''}`.trim()}
+                                    onSelect={() => {
+                                      setLocalContact({
+                                        id,
+                                        name: localCustomer.names[idx],
+                                        email: localCustomer.emails[idx],
+                                        phone: localCustomer.phones[idx],
+                                        role: localCustomer.roles[idx]
+                                      })
+                                      setOpenCustomerContact(false)
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        localContact?.id === id
+                                          ? 'opacity-100'
+                                          : 'opacity-0'
+                                      )}
+                                    />
+                                    {localCustomer.names[idx]}{' '}
+                                    {localCustomer.emails[idx] && (
+                                      <span className='text-xs text-muted-foreground ml-2'>
+                                        {localCustomer.emails[idx]}
+                                      </span>
                                     )}
-                                  />
-                                  {localCustomer.names[idx]}{' '}
-                                  {localCustomer.emails[idx] && (
-                                    <span className='text-xs text-muted-foreground ml-2'>
-                                      {localCustomer.emails[idx]}
-                                    </span>
-                                  )}
-                                </CommandItem>
-                              )
-                            )}
-                        </CommandGroup>
+                                  </CommandItem>
+                                )
+                              )}
+                          </CommandGroup>
+                        </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
