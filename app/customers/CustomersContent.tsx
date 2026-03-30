@@ -381,41 +381,12 @@ const CustomersContent = () => {
     setDetailLoading(true)
 
     try {
-      const [customerResponse, jobsResponse, quotesResponse, signOrdersResponse] =
-        await Promise.all([
-          fetch(`/api/contractors/${customerId}`),
-          supabase
-            .from('jobs')
-            .select('id, etc_job_number, project_name, contract_status, created_at')
-            .eq('contractor_id', customerId)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('quotes_customers')
-            .select('quote_id, quotes(id, quote_number, status, created_at)')
-            .eq('contractor_id', customerId),
-          supabase
-            .from('sign_orders')
-            .select('id, order_number, status, created_at')
-            .eq('contractor_id', customerId)
-            .order('created_at', { ascending: false }),
-        ])
+      const customerResponse = await fetch(`/api/contractors/${customerId}`)
 
       const customerResult = await customerResponse.json().catch(() => null)
 
       if (!customerResponse.ok || !customerResult?.ok || !customerResult?.customer) {
         throw new Error(customerResult?.error || 'Failed to load customer')
-      }
-
-      if (jobsResponse.error) {
-        throw jobsResponse.error
-      }
-
-      if (quotesResponse.error) {
-        throw quotesResponse.error
-      }
-
-      if (signOrdersResponse.error) {
-        throw signOrdersResponse.error
       }
 
       const customer = customerResult.customer as CustomerRecord
@@ -430,12 +401,80 @@ const CustomersContent = () => {
         customer_contacts: activeContacts,
       })
       setContacts(activeContacts)
-      setLinkedJobs((jobsResponse.data as JobDocument[]) || [])
-      setLinkedQuotes(normalizeQuoteRows(quotesResponse.data as any[]))
-      setLinkedSignOrders((signOrdersResponse.data as SignOrderDocument[]) || [])
 
       if (editing) {
         setEditing(false)
+      }
+
+      const [jobsResult, quotesResult, signOrdersResult] = await Promise.allSettled([
+        supabase
+          .from('jobs_l')
+          .select('id, etc_job_number, project_name, contract_status, created_at')
+          .eq('customer_id', customerId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('quotes_customers')
+          .select('quote_id, quotes(id, quote_number, status, created_at)')
+          .eq('contractor_id', customerId),
+        supabase
+          .from('sign_orders')
+          .select('id, order_number, status, created_at')
+          .eq('contractor_id', customerId)
+          .order('created_at', { ascending: false }),
+      ])
+
+      if (jobsResult.status === 'fulfilled') {
+        if (jobsResult.value.error) {
+          console.warn('[Customers] failed to load linked jobs', {
+            customerId,
+            message: jobsResult.value.error.message,
+          })
+          setLinkedJobs([])
+        } else {
+          setLinkedJobs((jobsResult.value.data as JobDocument[]) || [])
+        }
+      } else {
+        console.warn('[Customers] jobs query rejected', {
+          customerId,
+          reason: jobsResult.reason,
+        })
+        setLinkedJobs([])
+      }
+
+      if (quotesResult.status === 'fulfilled') {
+        if (quotesResult.value.error) {
+          console.warn('[Customers] failed to load linked quotes', {
+            customerId,
+            message: quotesResult.value.error.message,
+          })
+          setLinkedQuotes([])
+        } else {
+          setLinkedQuotes(normalizeQuoteRows(quotesResult.value.data as any[]))
+        }
+      } else {
+        console.warn('[Customers] quotes query rejected', {
+          customerId,
+          reason: quotesResult.reason,
+        })
+        setLinkedQuotes([])
+      }
+
+      if (signOrdersResult.status === 'fulfilled') {
+        if (signOrdersResult.value.error) {
+          console.warn('[Customers] failed to load linked sign orders', {
+            customerId,
+            message: signOrdersResult.value.error.message,
+          })
+          setLinkedSignOrders([])
+        } else {
+          setLinkedSignOrders((signOrdersResult.value.data as SignOrderDocument[]) || [])
+        }
+      } else {
+        console.warn('[Customers] sign orders query rejected', {
+          customerId,
+          reason: signOrdersResult.reason,
+        })
+        setLinkedSignOrders([])
       }
     } catch (error) {
       console.error('Failed to fetch customer details:', error)
