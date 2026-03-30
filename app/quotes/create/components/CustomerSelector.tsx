@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     Command,
     CommandInput,
@@ -9,20 +10,33 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
-import { Loader, Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 
 const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
-    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, loading } = useCustomerSelection();
+    const router = useRouter()
+    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, refreshCustomers, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
     const [isContactFormOpen, setIsContactFormOpen] = useState(false)
     const [openCustomer, setOpenCustomer] = useState(false)
     const [openContact, setOpenContact] = useState(false)
+    const [newCustomerDialogOpen, setNewCustomerDialogOpen] = useState(false)
+    const [newCustomerName, setNewCustomerName] = useState('')
+    const [creatingCustomer, setCreatingCustomer] = useState(false)
 
     useEffect(() => {
         if (!data.customer || customers.length === 0) return;
@@ -61,8 +75,11 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     const openModal = (type: 'customer' | 'contact') => {
         if (type === 'contact') {
             setIsContactFormOpen(true)
+            return
         }
-        // Customer creation modal logic removed - keeping for future use if needed
+
+        setOpenCustomer(false)
+        setNewCustomerDialogOpen(true)
     }
 
     const handleContactSuccess = (newContactId?: number, newContactData?: any) => {
@@ -105,6 +122,59 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         )
     }, [selectedCustomer, contactSearch])
 
+    const handleCustomerSuccess = async () => {
+        if (!newCustomerName.trim()) {
+            return
+        }
+
+        setCreatingCustomer(true)
+
+        try {
+            const response = await fetch('/api/customers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: newCustomerName.trim(),
+                    display_name: newCustomerName.trim(),
+                }),
+            })
+
+            const result = await response.json().catch(() => null)
+
+            if (!response.ok || !result?.ok || !result?.customer) {
+                throw new Error(result?.error || result?.message || 'Failed to create customer')
+            }
+
+            const refreshedCustomers = await refreshCustomers()
+            const createdCustomer =
+                refreshedCustomers.find(customer => customer.id === result.customer.id) ||
+                result.customer
+
+            addCustomer(createdCustomer)
+            setData((prev: any) => ({
+                ...prev,
+                customer: createdCustomer.id || '',
+                customer_name: createdCustomer.name || '',
+                customer_contact: '',
+                customer_email: '',
+                customer_phone: '',
+                customer_address: `${createdCustomer.address || ""} ${createdCustomer.city || ""}, ${createdCustomer.state || ""} ${createdCustomer.zip || ""}`.trim(),
+            }))
+
+            setNewCustomerName('')
+            setNewCustomerDialogOpen(false)
+            router.refresh()
+            toast.success('Customer created')
+        } catch (error) {
+            console.error('Failed to create customer from quote selector:', error)
+            toast.error('Failed to create customer')
+        } finally {
+            setCreatingCustomer(false)
+        }
+    }
+
     return (
         <div className="w-full">
             <div className={`flex ${direction === "row" ? "flex-row" : "flex-col"} justify-between gap-4 mb-4 flex-1`}>
@@ -121,6 +191,17 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-full p-0">
+                            <div className="border-b p-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-full justify-start gap-1.5 text-xs text-muted-foreground"
+                                    onClick={() => openModal("customer")}
+                                >
+                                    <Plus className="h-3 w-3" />
+                                    Add new customer
+                                </Button>
+                            </div>
                             <Command>
                                 <CommandInput
                                     value={customerSearch.toLocaleLowerCase()}
@@ -135,7 +216,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                                 key={c.id}
                                                 value={c.name.toString().toLocaleLowerCase()}
                                                 onSelect={() => {
-                                                    if (c.id.toString() === "__new__") return openModal("customer");
                                                     selectCustomer(c.id.toString());
                                                     setOpenCustomer(false);
                                                 }}
@@ -144,15 +224,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                                                 {c.name}
                                             </CommandItem>
                                         ))}
-                                        <CommandItem
-                                            value="__new__"
-                                            onSelect={() => {
-                                                openModal("customer");
-                                                setOpenCustomer(false);
-                                            }}
-                                        >
-                                            ➕ Add new customer
-                                        </CommandItem>
                                     </CommandGroup>
                                 </CommandList>
                             </Command>
@@ -257,6 +328,47 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                     />
                 </CustomerProvider>
             )}
+
+            <Dialog open={newCustomerDialogOpen} onOpenChange={setNewCustomerDialogOpen}>
+                <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>New Customer</DialogTitle>
+                        <DialogDescription>
+                            Create a customer with a company name, then it will be available in this quote.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-2">
+                        <label className="text-sm font-medium text-foreground">Company Name</label>
+                        <Input
+                            className="mt-1.5"
+                            value={newCustomerName}
+                            onChange={(event) => setNewCustomerName(event.target.value)}
+                            placeholder="Enter company name"
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    event.preventDefault()
+                                    void handleCustomerSuccess()
+                                }
+                            }}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setNewCustomerDialogOpen(false)}
+                            disabled={creatingCustomer}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => void handleCustomerSuccess()}
+                            disabled={!newCustomerName.trim() || creatingCustomer}
+                        >
+                            {creatingCustomer ? 'Creating...' : 'Create'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

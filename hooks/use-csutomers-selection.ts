@@ -12,6 +12,7 @@ interface CustomerContact {
 interface Customer {
     id: number;
     name: string;
+    display_name?: string | null;
     customer_contacts?: CustomerContact[];
     email: string;
     main_phone: string;
@@ -37,12 +38,15 @@ export const useCustomerSelection = () => {
                     a.name.localeCompare(b.name)
                 );
                 setCustomers(sorted);
+                return sorted;
             }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
         }
+
+        return [];
     };
 
     useEffect(() => {
@@ -94,4 +98,3 @@ export const useCustomerSelection = () => {
         loading,
     };
 };
-
