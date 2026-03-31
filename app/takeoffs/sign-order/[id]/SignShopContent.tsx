@@ -141,6 +141,17 @@ const SignShopContent = ({ id }: Props) => {
         },
         body: JSON.stringify({
           signs: signsObject,
+          requestor: signOrder.requestor,
+          contractor_id: signOrder.contractor_id,
+          contract_number: signOrder.contract_number,
+          order_date: signOrder.order_date || null,
+          need_date: signOrder.need_date || null,
+          start_date: signOrder.start_date || null,
+          end_date: signOrder.end_date || null,
+          sale: !!signOrder.sale,
+          rental: !!signOrder.rental,
+          perm_signs: !!signOrder.perm_signs,
+          contact_id: signOrder.contact?.id ?? null,
           shop_status: signOrder.shop_status || 'not-started',
           assigned_to: signOrder.assigned_to,
           target_date: signOrder.target_date
