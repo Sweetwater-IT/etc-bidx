@@ -426,6 +426,8 @@ const SignShopAdminInfo = ({
       return
     }
 
+    const selectedCustomer = draft.customer
+
     setSignOrder(previous =>
       previous
         ? {
@@ -433,9 +435,9 @@ const SignShopAdminInfo = ({
             requestor: draft.requestor?.name || '',
             branch: draft.selectedBranch,
             contract_number: draft.contractNumber.trim().toUpperCase(),
-            contractor_id: draft.customer.id,
+            contractor_id: selectedCustomer.id,
             contractors: {
-              name: draft.customer.displayName || draft.customer.name
+              name: selectedCustomer.displayName || selectedCustomer.name
             },
             contact_id: draft.contact?.id ?? null,
             contact: draft.contact,
