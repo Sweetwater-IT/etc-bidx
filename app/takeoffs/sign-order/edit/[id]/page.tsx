@@ -1,5 +1,4 @@
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import SignOrderContentSimple from "../../SignOrderContentSimple";
 
@@ -15,12 +14,12 @@ return (
             } as React.CSSProperties
         }
     >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-            <EstimateProvider>
-                <SignOrderContentSimple signOrderId={signId}/>
-            </EstimateProvider>
-        </SidebarInset>
+        <div className="flex h-screen w-screen flex-col">
+            <div className="flex-1 overflow-auto">
+                <EstimateProvider>
+                    <SignOrderContentSimple signOrderId={signId}/>
+                </EstimateProvider>
+            </div>
+        </div>
     </SidebarProvider>
 );}
-

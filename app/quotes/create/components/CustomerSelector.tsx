@@ -15,16 +15,7 @@ import { CustomerProvider } from '@/contexts/customer-context'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { toast } from 'sonner'
+import { SimpleCustomerCreateDialog } from '@/components/simple-customer-create-dialog'
 
 const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
     const router = useRouter()
@@ -35,8 +26,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     const [openCustomer, setOpenCustomer] = useState(false)
     const [openContact, setOpenContact] = useState(false)
     const [newCustomerDialogOpen, setNewCustomerDialogOpen] = useState(false)
-    const [newCustomerName, setNewCustomerName] = useState('')
-    const [creatingCustomer, setCreatingCustomer] = useState(false)
 
     useEffect(() => {
         if (!data.customer || customers.length === 0) return;
@@ -133,59 +122,6 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                 (cc.email || '').toLowerCase().includes(contactSearch)
         )
     }, [selectedCustomer, contactSearch])
-
-    const handleCustomerSuccess = async () => {
-        if (!newCustomerName.trim()) {
-            return
-        }
-
-        setCreatingCustomer(true)
-
-        try {
-            const response = await fetch('/api/customers', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: newCustomerName.trim(),
-                    display_name: newCustomerName.trim(),
-                }),
-            })
-
-            const result = await response.json().catch(() => null)
-
-            if (!response.ok || !result?.ok || !result?.customer) {
-                throw new Error(result?.error || result?.message || 'Failed to create customer')
-            }
-
-            const refreshedCustomers = await refreshCustomers()
-            const createdCustomer =
-                refreshedCustomers.find(customer => customer.id === result.customer.id) ||
-                result.customer
-
-            addCustomer(createdCustomer)
-            setData((prev: any) => ({
-                ...prev,
-                customer: createdCustomer.id || '',
-                customer_name: createdCustomer.name || '',
-                customer_contact: '',
-                customer_email: '',
-                customer_phone: '',
-                customer_address: `${createdCustomer.address || ""} ${createdCustomer.city || ""}, ${createdCustomer.state || ""} ${createdCustomer.zip || ""}`.trim(),
-            }))
-
-            setNewCustomerName('')
-            setNewCustomerDialogOpen(false)
-            router.refresh()
-            toast.success('Customer created')
-        } catch (error) {
-            console.error('Failed to create customer from quote selector:', error)
-            toast.error('Failed to create customer')
-        } finally {
-            setCreatingCustomer(false)
-        }
-    }
 
     return (
         <div className="w-full">
@@ -343,46 +279,40 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                 </CustomerProvider>
             )}
 
-            <Dialog open={newCustomerDialogOpen} onOpenChange={setNewCustomerDialogOpen}>
-                <DialogContent className="sm:max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>New Customer</DialogTitle>
-                        <DialogDescription>
-                            Create a customer with a company name, then it will be available in this quote.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-2">
-                        <label className="text-sm font-medium text-foreground">Company Name</label>
-                        <Input
-                            className="mt-1.5"
-                            value={newCustomerName}
-                            onChange={(event) => setNewCustomerName(event.target.value)}
-                            placeholder="Enter company name"
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                    event.preventDefault()
-                                    void handleCustomerSuccess()
-                                }
-                            }}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setNewCustomerDialogOpen(false)}
-                            disabled={creatingCustomer}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={() => void handleCustomerSuccess()}
-                            disabled={!newCustomerName.trim() || creatingCustomer}
-                        >
-                            {creatingCustomer ? 'Creating...' : 'Create'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <SimpleCustomerCreateDialog
+                open={newCustomerDialogOpen}
+                onOpenChange={setNewCustomerDialogOpen}
+                description="Create a customer with a company name, then it will be available in this quote."
+                onCreated={async (createdCustomer) => {
+                    const refreshedCustomers = await refreshCustomers()
+                    const normalizedCustomer =
+                        refreshedCustomers.find(customer => customer.id === createdCustomer.id) || {
+                            id: createdCustomer.id,
+                            name: createdCustomer.name || createdCustomer.display_name || '',
+                            display_name: createdCustomer.display_name || createdCustomer.name || '',
+                            customer_contacts: [],
+                            email: '',
+                            main_phone: createdCustomer.main_phone || '',
+                            address: createdCustomer.address || '',
+                            city: createdCustomer.city || '',
+                            state: createdCustomer.state || '',
+                            zip: createdCustomer.zip || '',
+                        }
+
+                    addCustomer(normalizedCustomer)
+                    setData((prev: any) => ({
+                        ...prev,
+                        customer: normalizedCustomer.id || '',
+                        customer_name: normalizedCustomer.name || '',
+                        customer_contact: '',
+                        customer_email: '',
+                        customer_phone: '',
+                        customer_address: `${normalizedCustomer.address || ""} ${normalizedCustomer.city || ""}, ${normalizedCustomer.state || ""} ${normalizedCustomer.zip || ""}`.trim(),
+                    }))
+
+                    router.refresh()
+                }}
+            />
         </div>
     )
 }

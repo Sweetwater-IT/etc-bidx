@@ -1,12 +1,26 @@
 "use client";
 
 import { EstimateProvider } from "@/contexts/EstimateContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import SignOrderContentSimple from "./SignOrderContentSimple";
 
 export default function CreateSignOrderPage() {
     return (
-        <EstimateProvider>
-            <SignOrderContentSimple />
-        </EstimateProvider>
+        <SidebarProvider
+            style={
+                {
+                    "--sidebar-width": "calc(var(--spacing) * 68)",
+                    "--header-height": "calc(var(--spacing) * 12)",
+                } as React.CSSProperties
+            }
+        >
+            <div className="flex h-screen w-screen flex-col">
+                <div className="flex-1 overflow-auto">
+                    <EstimateProvider>
+                        <SignOrderContentSimple />
+                    </EstimateProvider>
+                </div>
+            </div>
+        </SidebarProvider>
     );
 }

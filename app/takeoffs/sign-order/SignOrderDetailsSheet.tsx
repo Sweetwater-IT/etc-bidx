@@ -38,13 +38,12 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { IconBulb } from '@tabler/icons-react'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
 import { SignOrderAdminInformation, OrderTypes } from './SignOrderContentSimple'
 import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
-import { CustomerDrawer } from '@/components/customer-drawer'
 import { useCustomers } from '@/hooks/use-customers'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { CustomerContactForm } from '@/components/customer-contact-form'
@@ -52,6 +51,7 @@ import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
 import { RequestorSelector } from '@/components/requestor-selector'
 import { restorePointerEvents } from '@/lib/pointer-events-fix'
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
+import { SimpleCustomerCreateDialog } from '@/components/simple-customer-create-dialog'
 
 const BRANCHES = [
   { value: 'All', label: 'All' },
@@ -123,14 +123,8 @@ export function SignOrderDetailsSheet({
 
   // Customer modal state
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
-
-  // Add state for CustomerDrawer
-  const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
-  const [newCustomerId, setNewCustomerId] = useState<number | null>(null)
+  const [simpleCustomerDialogOpen, setSimpleCustomerDialogOpen] = useState(false)
   const { getCustomers } = useCustomers()
-
-  // Add a ref to store the last created customer id
-  const lastCreatedCustomerId = useRef<number | null>(null)
 
   // Add state for selected contact
   const [localContact, setLocalContact] = useState<any | null>(null)
@@ -140,8 +134,6 @@ export function SignOrderDetailsSheet({
 
   // Add state for contact creation dialog
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const lastCreatedContactId = useRef<number | null>(null)
-
   const restoreOverlayInteraction = useCallback(
     (event: string, details: Record<string, unknown> = {}) => {
       restorePointerEvents()
@@ -210,17 +202,6 @@ export function SignOrderDetailsSheet({
       setLocalSelectedBranch(localRequestor.branches.name)
     }
   }, [localRequestor])
-
-  // Effect: when newCustomerId is set, auto-select that customer
-  useEffect(() => {
-    if (newCustomerId && customers.length > 0) {
-      const created = customers.find(c => c.id === newCustomerId)
-      if (created) {
-        setLocalCustomer(created)
-        setNewCustomerId(null)
-      }
-    }
-  }, [newCustomerId, customers])
 
   // Remove the generateJobNumber function since we don't need it
 
@@ -345,7 +326,6 @@ export function SignOrderDetailsSheet({
     if (
       open ||
       customerModalOpen ||
-      customerDrawerOpen ||
       contactDialogOpen ||
       openCustomerContact
     ) {
@@ -362,7 +342,6 @@ export function SignOrderDetailsSheet({
     return () => window.cancelAnimationFrame(frameId)
   }, [
     contactDialogOpen,
-    customerDrawerOpen,
     customerModalOpen,
     localContact?.id,
     localCustomer?.id,
@@ -476,9 +455,25 @@ export function SignOrderDetailsSheet({
 
                 {/* Customer */}
                 <div className='space-y-2'>
-                  <Label>
-                    Customer <span className='text-red-600'>*</span>
-                  </Label>
+                  <div className='flex items-center justify-between gap-3'>
+                    <Label>
+                      Customer <span className='text-red-600'>*</span>
+                    </Label>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 px-2 text-xs'
+                      onClick={() => {
+                        setSimpleCustomerDialogOpen(true)
+                        restoreOverlayInteraction('customer_simple_add_opened', {
+                          customerId: localCustomer?.id ?? null
+                        })
+                      }}
+                    >
+                      Add New
+                    </Button>
+                  </div>
                   <Button
                     variant='outline'
                     onClick={() => {
@@ -762,37 +757,51 @@ export function SignOrderDetailsSheet({
           </div>
         </SheetContent>
       </Sheet>
-      {/* CustomerDrawer for creating new customer */}
-      <CustomerDrawer
-        open={customerDrawerOpen}
+      <SimpleCustomerCreateDialog
+        open={simpleCustomerDialogOpen}
         onOpenChange={nextOpen => {
-          setCustomerDrawerOpen(nextOpen)
+          setSimpleCustomerDialogOpen(nextOpen)
           if (!nextOpen) {
-            restoreOverlayInteraction('customer_drawer_closed', {
+            restoreOverlayInteraction('customer_simple_add_closed', {
               customerId: localCustomer?.id ?? null
             })
           }
         }}
-        customer={null}
-        isViewMode={false}
-        onSuccess={async (newCustomerId?: number) => {
-          setCustomerDrawerOpen(false)
-          restoreOverlayInteraction('customer_drawer_success', {
-            newCustomerId: newCustomerId ?? null
-          })
-          if (newCustomerId) {
-            lastCreatedCustomerId.current = newCustomerId
-          }
+        description='Create a customer with a company name, then it will be available in this sign order.'
+        onCreated={async createdCustomer => {
           await getCustomers()
-          if (lastCreatedCustomerId.current) {
-            const created = customers.find(
-              c => c.id === lastCreatedCustomerId.current
-            )
-            if (created) {
-              setLocalCustomer(created)
-            }
-            lastCreatedCustomerId.current = null
-          }
+          const hydratedCustomer = await fetchCustomerById(createdCustomer.id)
+          const nextCustomer =
+            hydratedCustomer ||
+            ({
+              id: createdCustomer.id,
+              name:
+                createdCustomer.name || createdCustomer.display_name || '',
+              displayName:
+                createdCustomer.display_name || createdCustomer.name || '',
+              emails: [],
+              address: createdCustomer.address || '',
+              phones: [],
+              roles: [],
+              names: [],
+              contactIds: [],
+              url: '',
+              created: '',
+              updated: '',
+              city: createdCustomer.city || '',
+              state: createdCustomer.state || '',
+              zip: createdCustomer.zip || '',
+              customerNumber: 0,
+              mainPhone: createdCustomer.main_phone || '',
+              paymentTerms: '',
+              lastOrdered: null
+            } satisfies Customer)
+
+          setLocalCustomer(nextCustomer)
+          setLocalContact(null)
+          restoreOverlayInteraction('customer_simple_add_created', {
+            customerId: nextCustomer.id
+          })
         }}
       />
       {/* Contact creation dialog: only render if localCustomer is defined */}
@@ -880,11 +889,6 @@ export function SignOrderDetailsSheet({
           restoreOverlayInteraction('customer_selected', {
             customerId: nextCustomer.id
           })
-        }}
-        onAddNewCustomer={() => {
-          setCustomerModalOpen(false)
-          setCustomerDrawerOpen(true)
-          restoreOverlayInteraction('customer_add_new_opened')
         }}
       />
     </>

@@ -611,7 +611,7 @@ export default function SignOrderContentSimple({
   };
 
   return mptRental.phases.length > 0 ? (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
       <PageHeaderWithSaving
         heading="Create Sign Order"
         handleSubmit={() => {
@@ -645,9 +645,9 @@ export default function SignOrderContentSimple({
           </div>
         }
       />
-      <div className="flex gap-6 p-6 max-w-full">
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-6 p-6 xl:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)]">
         {/* Main Form Column (3/4) */}
-        <div className="w-3/4 space-y-6">
+        <div className="min-w-0 space-y-6">
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
@@ -657,7 +657,7 @@ export default function SignOrderContentSimple({
           <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>
         {/* Right Column (1/4) */}
-        <div className="w-1/4 space-y-6">
+        <div className="min-w-0 space-y-6">
           <EquipmentTotalsAccordion />
           <div className="border rounded-lg p-4">
             <h2 className="mb-2 text-lg font-semibold">Files</h2>
