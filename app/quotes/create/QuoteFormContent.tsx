@@ -291,7 +291,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       body: emailBody,
       from_email: sender?.email || null,
       recipients: [
-        ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+        ...(pointOfContact ? [{
+          email: pointOfContact.email,
+          point_of_contact: true,
+          customer_contacts_id: pointOfContact.id ?? null,
+        }] : []),
         ...ccEmails.map((email) => ({ email, cc: true })),
         ...bccEmails.map((email) => ({ email, bcc: true })),
       ],
@@ -386,7 +390,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         body: emailBody,
         from_email: sender?.email || null,
         recipients: [
-          ...(pointOfContact ? [{ email: pointOfContact.email, point_of_contact: true }] : []),
+          ...(pointOfContact ? [{
+            email: pointOfContact.email,
+            point_of_contact: true,
+            customer_contacts_id: pointOfContact.id ?? null,
+          }] : []),
           ...ccEmails.map((email) => ({ email, cc: true })),
           ...bccEmails.map((email) => ({ email, bcc: true })),
         ],

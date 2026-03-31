@@ -141,6 +141,11 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
 
         if (point) {
           setPointOfContact({
+            id:
+              Array.isArray(point.customer_contacts) &&
+              point.customer_contacts.length > 0
+                ? point.customer_contacts[0].id
+                : undefined,
             name:
               point.customer_contacts?.name ??
               point.name ??

@@ -37,6 +37,7 @@ export type TermsNames =
   | "custom-terms";
 
 interface PointOfContact {
+  id?: number;
   name: string;
   email: string;
 }

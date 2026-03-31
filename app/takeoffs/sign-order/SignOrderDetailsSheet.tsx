@@ -880,7 +880,7 @@ export function SignOrderDetailsSheet({
                   <div className='space-y-4'>
                     <h3 className='text-lg font-semibold'>Order Details</h3>
 
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div className='space-y-4'>
                       <div className='space-y-2'>
                         <Label>
                           Requestor<span className='text-red-600'>*</span>
@@ -909,95 +909,99 @@ export function SignOrderDetailsSheet({
                         />
                       </div>
 
-                      <div className='space-y-2'>
-                        <Label>
-                          Customer <span className='text-red-600'>*</span>
-                        </Label>
-                        <Button
-                          variant='outline'
-                          onClick={openCustomerSelection}
-                          className='w-full justify-start text-left font-normal'
-                        >
-                          <span className='truncate'>
-                            {localCustomer
-                              ? localCustomer.displayName || localCustomer.name
-                              : 'Select customer...'}
-                          </span>
-                        </Button>
-                        {localCustomer && (
-                          <div className='text-xs text-muted-foreground'>
-                            {[localCustomer.address, localCustomer.city, localCustomer.state, localCustomer.zip]
-                              .filter(Boolean)
-                              .join(', ') || 'Customer selected'}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='space-y-2'>
-                        <Label>
-                          Contact <span className='text-red-600'>*</span>
-                        </Label>
-                        <Button
-                          variant='outline'
-                          onClick={openContactSelection}
-                          className='w-full justify-start text-left font-normal'
-                          disabled={!localCustomer}
-                        >
-                          <span className='truncate'>
-                            {localContact
-                              ? localContact.name
-                              : localCustomer
-                                ? 'Select contact...'
-                                : 'Select customer first'}
-                          </span>
-                        </Button>
-                        {localContact && (
-                          <div className='space-y-2'>
-                            <div className='space-y-1 text-xs text-muted-foreground'>
-                              {localContact.email && <div>{localContact.email}</div>}
-                              {localContact.phone && <div>{localContact.phone}</div>}
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <div className='space-y-2'>
+                          <Label>
+                            Customer <span className='text-red-600'>*</span>
+                          </Label>
+                          <Button
+                            variant='outline'
+                            onClick={openCustomerSelection}
+                            className='w-full justify-start text-left font-normal'
+                          >
+                            <span className='truncate'>
+                              {localCustomer
+                                ? localCustomer.displayName || localCustomer.name
+                                : 'Select customer...'}
+                            </span>
+                          </Button>
+                          {localCustomer && (
+                            <div className='text-xs text-muted-foreground'>
+                              {[localCustomer.address, localCustomer.city, localCustomer.state, localCustomer.zip]
+                                .filter(Boolean)
+                                .join(', ') || 'Customer selected'}
                             </div>
-                            <Button
-                              type='button'
-                              variant='ghost'
-                              size='sm'
-                              className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
-                              onClick={() => openContactEdit(localContact, 'details')}
-                            >
-                              Edit Contact
-                            </Button>
-                          </div>
-                        )}
+                          )}
+                        </div>
+
+                        <div className='space-y-2'>
+                          <Label>
+                            Contact <span className='text-red-600'>*</span>
+                          </Label>
+                          <Button
+                            variant='outline'
+                            onClick={openContactSelection}
+                            className='w-full justify-start text-left font-normal'
+                            disabled={!localCustomer}
+                          >
+                            <span className='truncate'>
+                              {localContact
+                                ? localContact.name
+                                : localCustomer
+                                  ? 'Select contact...'
+                                  : 'Select customer first'}
+                            </span>
+                          </Button>
+                          {localContact && (
+                            <div className='space-y-2'>
+                              <div className='space-y-1 text-xs text-muted-foreground'>
+                                {localContact.email && <div>{localContact.email}</div>}
+                                {localContact.phone && <div>{localContact.phone}</div>}
+                              </div>
+                              <Button
+                                type='button'
+                                variant='ghost'
+                                size='sm'
+                                className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
+                                onClick={() => openContactEdit(localContact, 'details')}
+                              >
+                                Edit Contact
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      <div className='space-y-2 mt-auto'>
-                        <Label>Order Date</Label>
-                        <Input
-                          type='date'
-                          placeholder='Select a date'
-                          value={localOrderDate.toISOString().split('T')[0]}
-                          onChange={e =>
-                            setLocalOrderDate(new Date(e.target.value))
-                          }
-                        />
-                      </div>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <div className='space-y-2 mt-auto'>
+                          <Label>Order Date</Label>
+                          <Input
+                            type='date'
+                            placeholder='Select a date'
+                            value={localOrderDate.toISOString().split('T')[0]}
+                            onChange={e =>
+                              setLocalOrderDate(new Date(e.target.value))
+                            }
+                          />
+                        </div>
 
-                      <div className='space-y-2'>
-                        <Label>
-                          Need Date <span className='text-red-600'>*</span>
-                        </Label>
-                        <Input
-                          type='date'
-                          value={
-                            localNeedDate
-                              ? localNeedDate.toISOString().split('T')[0]
-                              : ''
-                          }
-                          onChange={e =>
-                            setLocalNeedDate(new Date(e.target.value))
-                          }
-                          placeholder='Select a date'
-                        />
+                        <div className='space-y-2'>
+                          <Label>
+                            Need Date <span className='text-red-600'>*</span>
+                          </Label>
+                          <Input
+                            type='date'
+                            value={
+                              localNeedDate
+                                ? localNeedDate.toISOString().split('T')[0]
+                                : ''
+                            }
+                            onChange={e =>
+                              setLocalNeedDate(new Date(e.target.value))
+                            }
+                            placeholder='Select a date'
+                          />
+                        </div>
                       </div>
                     </div>
 

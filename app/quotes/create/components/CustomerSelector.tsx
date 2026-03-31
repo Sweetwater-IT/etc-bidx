@@ -13,12 +13,15 @@ import { Button } from '@/components/ui/button'
 import { CustomerContactForm } from '@/components/customer-contact-form'
 import { CustomerProvider } from '@/contexts/customer-context'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
+import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SimpleCustomerCreateDialog } from '@/components/simple-customer-create-dialog'
+import type { Customer as QuoteCustomer } from '@/types/Customer'
 
 const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
     const router = useRouter()
+    const { setSelectedCustomers, setPointOfContact } = useQuoteForm()
     const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, refreshCustomers, loading } = useCustomerSelection();
     const [customerSearch, setCustomerSearch] = useState('')
     const [contactSearch, setContactSearch] = useState('')
@@ -26,6 +29,38 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
     const [openCustomer, setOpenCustomer] = useState(false)
     const [openContact, setOpenContact] = useState(false)
     const [newCustomerDialogOpen, setNewCustomerDialogOpen] = useState(false)
+
+    const toQuoteCustomer = (customer: any): QuoteCustomer => ({
+        id: customer.id,
+        name: customer.name || customer.display_name || '',
+        displayName: customer.display_name || customer.displayName || customer.name || '',
+        emails: Array.isArray(customer.customer_contacts)
+            ? customer.customer_contacts.map((contact: any) => contact.email || '')
+            : [],
+        address: customer.address || '',
+        phones: Array.isArray(customer.customer_contacts)
+            ? customer.customer_contacts.map((contact: any) => contact.phone || '')
+            : [],
+        roles: Array.isArray(customer.customer_contacts)
+            ? customer.customer_contacts.map((contact: any) => contact.role || '')
+            : [],
+        names: Array.isArray(customer.customer_contacts)
+            ? customer.customer_contacts.map((contact: any) => contact.name || '')
+            : [],
+        contactIds: Array.isArray(customer.customer_contacts)
+            ? customer.customer_contacts.map((contact: any) => contact.id || 0)
+            : [],
+        url: customer.web || customer.url || '',
+        created: customer.created || '',
+        updated: customer.updated || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        zip: customer.zip || '',
+        customerNumber: customer.customer_number || customer.customerNumber || 0,
+        mainPhone: customer.main_phone || customer.mainPhone || '',
+        paymentTerms: customer.payment_terms || customer.paymentTerms || '',
+        lastOrdered: customer.lastOrdered || null,
+    })
 
     useEffect(() => {
         if (!data.customer || customers.length === 0) return;
@@ -61,6 +96,26 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         if (hasChanged) setData(newData);
     }, [selectedCustomer, selectedContact]);
 
+    useEffect(() => {
+        if (!selectedCustomer) {
+            setSelectedCustomers([])
+            setPointOfContact(undefined)
+            return
+        }
+
+        setSelectedCustomers([toQuoteCustomer(selectedCustomer)])
+
+        if (selectedContact?.email) {
+            setPointOfContact({
+                id: selectedContact.id,
+                name: selectedContact.name || '',
+                email: selectedContact.email,
+            })
+        } else {
+            setPointOfContact(undefined)
+        }
+    }, [selectedContact, selectedCustomer, setPointOfContact, setSelectedCustomers])
+
     const openModal = (type: 'customer' | 'contact') => {
         if (type === 'contact') {
             setIsContactFormOpen(true)
@@ -83,6 +138,11 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             }
 
             addContact(createdContact);
+            setPointOfContact({
+                id: createdContact.id,
+                name: createdContact.name,
+                email: createdContact.email,
+            })
             setData((prev: any) => ({
                 ...prev,
                 customer_contact: createdContact.name || "",
@@ -97,6 +157,11 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         if (!contact) return;
 
         selectContact(contact.id.toString());
+        setPointOfContact({
+            id: contact.id,
+            name: contact.name || '',
+            email: contact.email || '',
+        })
         setData((prev: any) => ({
             ...prev,
             customer_contact: contact.name || "",
