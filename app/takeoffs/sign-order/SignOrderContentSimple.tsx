@@ -1,6 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, type SetStateAction } from 'react'
 import { useSignOrderBuilder } from '@/contexts/SignOrderBuilderContext'
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel'
 import { SignOrderList } from '../new/SignOrderList'
@@ -33,11 +33,12 @@ import { FileMetadata } from '@/types/FileTypes'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthAdminApi } from '@supabase/supabase-js'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { useMemo } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
+import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -63,7 +64,7 @@ interface Props {
 
 interface SignOrderDraft {
   adminInfo: SignOrderAdminInformation
-  signs: SignItem[]
+  signs: (PrimarySign | SecondarySign)[]
   notes: Note[]
   files: FileMetadata[]
 }
@@ -128,6 +129,16 @@ export default function SignOrderContentSimple({
       adminInfo:
         typeof updater === 'function'
           ? (updater as (prev: SignOrderAdminInformation) => SignOrderAdminInformation)(prev.adminInfo)
+          : updater
+    }))
+  }
+
+  const setDraftFiles = (updater: SetStateAction<FileMetadata[]>) => {
+    setDraft(prev => ({
+      ...prev,
+      files:
+        typeof updater === 'function'
+          ? (updater as (prev: FileMetadata[]) => FileMetadata[])(prev.files)
           : updater
     }))
   }
@@ -301,7 +312,7 @@ export default function SignOrderContentSimple({
 
           setDraft(prev => ({
             ...prev,
-            signs: signItemsArray as SignItem[]
+            signs: signItemsArray as (PrimarySign | SecondarySign)[]
           }))
 
           dispatch({
@@ -347,7 +358,7 @@ export default function SignOrderContentSimple({
   }, [dispatch])
 
   useEffect(() => {
-    const nextSigns = (mptRental.phases[0]?.signs || []).map(normalizeSign)
+    const nextSigns = (mptRental.phases[0]?.signs || []) as (PrimarySign | SecondarySign)[]
     setDraft(prev =>
       isEqual(prev.signs, nextSigns)
         ? prev
@@ -502,12 +513,7 @@ export default function SignOrderContentSimple({
 
   const fetchFiles = () => {
     if (!signOrderId) return
-    fetchAssociatedFiles(signOrderId, 'sign-orders', files =>
-      setDraft(prev => ({
-        ...prev,
-        files
-      }))
-    )
+    fetchAssociatedFiles(signOrderId, 'sign-orders', setDraftFiles)
   }
 
   useEffect(() => {
@@ -791,7 +797,7 @@ export default function SignOrderContentSimple({
   );
 }
 
-const normalizeSign = (sign: any): SignItem => ({
+const normalizeSign = (sign: any): WorksheetSignItem => ({
   designation: sign.designation || '',
   description: sign.description || '',
   quantity: sign.quantity || 0,
