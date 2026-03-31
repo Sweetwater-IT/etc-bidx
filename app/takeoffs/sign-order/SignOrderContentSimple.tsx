@@ -142,11 +142,50 @@ export default function SignOrderContentSimple({
       }
 
       const users = await fetchReferenceData('users')
+      const matchedRequestor =
+        users.find((u: User) => u.name === data.data.requestor) || null
+
+      let hydratedCustomer: Customer | null = null
+      if (data.data.contractor_id) {
+        try {
+          const customerResponse = await fetch(
+            `/api/contractors/${data.data.contractor_id}`
+          )
+          const customerResult = await customerResponse.json()
+
+          if (customerResponse.ok && customerResult?.customer) {
+            const customer = customerResult.customer
+            hydratedCustomer = {
+              id: customer.id,
+              name: customer.name,
+              displayName: customer.display_name || customer.displayName || customer.name,
+              emails: customer.emails || [],
+              address: customer.address || '',
+              phones: customer.phones || [],
+              paymentTerms: customer.payment_terms || customer.paymentTerms || '',
+              mainPhone: customer.main_phone || customer.mainPhone || '',
+              zip: customer.zip || '',
+              roles: customer.roles || [],
+              names: customer.names || [],
+              contactIds: customer.contactIds || [],
+              url: customer.web || customer.url || '',
+              created: customer.created || '',
+              updated: customer.updated || '',
+              city: customer.city || '',
+              state: customer.state || '',
+              customerNumber:
+                customer.customer_number || customer.customerNumber || 1,
+              lastOrdered: customer.lastOrdered || null
+            }
+          }
+        } catch (customerError) {
+          console.error('Error hydrating sign order customer:', customerError)
+        }
+      }
 
       const orderWithBranch = {
         ...data.data,
-        branch:
-          users.find(u => u.name === data.data.requestor)?.branches?.name || ''
+        branch: matchedRequestor?.branches?.name || ''
       }
 
       const ordersData: OrderTypes[] = []
@@ -162,7 +201,7 @@ export default function SignOrderContentSimple({
 
       setAdminInfo({
         contractNumber: data.data.contract_number,
-        requestor: {
+        requestor: matchedRequestor || {
           name: data.data.requestor,
           email: '',
           role: ''
@@ -185,29 +224,35 @@ export default function SignOrderContentSimple({
             ? new Date(formatDate(data.data.end_date))
             : undefined,
         selectedBranch: orderWithBranch.branch,
-        customer: {
-          id: data.data.contractor_id,
-          name: data.data.contractors?.name,
-          displayName: data.data.contractors?.name,
-          emails: [],
-          address: '',
-          phones: [],
-          paymentTerms: '',
-          mainPhone: '',
-          zip: '',
-          roles: [],
-          names: [],
-          contactIds: [],
-          url: '',
-          created: '',
-          updated: '',
-          city: '',
-          state: '',
-          customerNumber: 1
-        },
+        customer:
+          hydratedCustomer ||
+          (data.data.contractor_id
+            ? {
+                id: data.data.contractor_id,
+                name: data.data.contractors?.name || '',
+                displayName: data.data.contractors?.name || '',
+                emails: [],
+                address: '',
+                phones: [],
+                paymentTerms: '',
+                mainPhone: '',
+                zip: '',
+                roles: [],
+                names: [],
+                contactIds: [],
+                url: '',
+                created: '',
+                updated: '',
+                city: '',
+                state: '',
+                customerNumber: 1,
+                lastOrdered: null
+              }
+            : null),
         isSubmitting: false,
         orderType: ordersData,
-        orderNumber: data.data.order_number || undefined
+        orderNumber: data.data.order_number || undefined,
+        contact: data.data.contact || null
       })
 
       if (data.data.order_status === 'SUBMITTED') {
