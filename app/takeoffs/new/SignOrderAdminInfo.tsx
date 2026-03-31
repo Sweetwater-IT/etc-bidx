@@ -30,8 +30,9 @@ export function SignOrderAdminInfo({
     adminInfo,
     setAdminInfo,
     showInitialAdminState,
-    onImport
-}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>, showInitialAdminState: boolean, onImport?: (signs: any[]) => void }) {
+    onImport,
+    onDetailsSaved
+}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>, showInitialAdminState: boolean, onImport?: (signs: any[]) => void, onDetailsSaved?: (nextAdminInfo: SignOrderAdminInformation) => Promise<void> | void }) {
     const { customers, getCustomers } = useCustomers();
 
     // State for local UI management
@@ -219,6 +220,7 @@ export function SignOrderAdminInfo({
                 customers={customers}
                 mode={sheetMode}
                 onJobCreated={handleJobCreated}
+                onSaved={onDetailsSaved}
             />
         </div>
     );

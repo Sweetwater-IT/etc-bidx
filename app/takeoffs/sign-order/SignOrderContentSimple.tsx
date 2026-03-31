@@ -342,6 +342,49 @@ export default function SignOrderContentSimple({
     }
   }
 
+  const handleAdminInfoSaved = async (
+    nextAdminInfo: SignOrderAdminInformation
+  ) => {
+    if (!initialSignOrderId && !signOrderId) {
+      return
+    }
+
+    const currentId = signOrderId || initialSignOrderId
+    if (!currentId) {
+      return
+    }
+
+    const signOrderData = {
+      id: currentId,
+      requestor: nextAdminInfo.requestor ? nextAdminInfo.requestor : undefined,
+      contractor_id: nextAdminInfo.customer ? nextAdminInfo.customer.id : undefined,
+      contract_number: nextAdminInfo.contractNumber,
+      order_date: new Date(nextAdminInfo.orderDate).toISOString(),
+      need_date: nextAdminInfo.needDate
+        ? new Date(nextAdminInfo.needDate).toISOString()
+        : undefined,
+      start_date: nextAdminInfo.startDate
+        ? new Date(nextAdminInfo.startDate).toISOString()
+        : '',
+      end_date: nextAdminInfo.endDate
+        ? new Date(nextAdminInfo.endDate).toISOString()
+        : '',
+      order_type: nextAdminInfo.orderType,
+      job_number: nextAdminInfo.jobNumber,
+      signs: draft.signs || [],
+      status: alreadySubmitted ? ('SUBMITTED' as const) : ('DRAFT' as const),
+      order_number: nextAdminInfo.orderNumber,
+      contact: nextAdminInfo.contact
+    }
+
+    const result = await saveSignOrder(signOrderData)
+    if (result.id && !signOrderId) {
+      setSignOrderId(result.id)
+    }
+
+    await fetchSignOrder()
+  }
+
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
@@ -743,6 +786,7 @@ export default function SignOrderContentSimple({
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
             onImport={(signs) => dispatch({ type: 'COPY_MPT_RENTAL', payload: { ...mptRental, phases: [{ ...mptRental.phases[0], signs }] } })}
+            onDetailsSaved={handleAdminInfoSaved}
           />
           <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>

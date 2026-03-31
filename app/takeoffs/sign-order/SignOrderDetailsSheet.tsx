@@ -38,7 +38,8 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { IconBulb } from '@tabler/icons-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react'
+import { flushSync } from 'react-dom'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
 import { SignOrderAdminInformation, OrderTypes } from './SignOrderContentSimple'
@@ -80,13 +81,14 @@ interface SignOrderDetailsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   adminInfo: SignOrderAdminInformation
-  setAdminInfo: (
-    updater: (prev: SignOrderAdminInformation) => SignOrderAdminInformation
-  ) => void
+  setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>
   allUsers: User[]
   customers: Customer[]
   mode: 'edit' | 'create'
   onJobCreated?: (job: Job) => void // Add this callback
+  onSaved?: (
+    nextAdminInfo: SignOrderAdminInformation
+  ) => Promise<void> | void
 }
 
 function normalizeCustomer(customer: any): Customer {
@@ -142,7 +144,8 @@ export function SignOrderDetailsSheet({
   allUsers,
   customers,
   mode,
-  onJobCreated
+  onJobCreated,
+  onSaved
 }: SignOrderDetailsSheetProps) {
   // Local state for form fields
   const [localRequestor, setLocalRequestor] = useState<User | null>(
@@ -179,6 +182,7 @@ export function SignOrderDetailsSheet({
 
   // Add state for contact creation dialog
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
+  const [isSavingDetails, setIsSavingDetails] = useState(false)
   const restoreOverlayInteraction = useCallback(
     (event: string, details: Record<string, unknown> = {}) => {
       restorePointerEvents()
@@ -282,6 +286,10 @@ export function SignOrderDetailsSheet({
   )
 
   const handleSave = async () => {
+    if (isSavingDetails) {
+      return
+    }
+
     if (mode === 'create') {
       // For new sign orders, validate required fields
       if (!localCustomer) {
@@ -310,9 +318,8 @@ export function SignOrderDetailsSheet({
       jobNumber: localJobNumber || null
     })
 
-    // Update admin info regardless of mode
-    setAdminInfo(prev => ({
-      ...prev,
+    const nextAdminInfo: SignOrderAdminInformation = {
+      ...adminInfo,
       requestor: localRequestor,
       customer: localCustomer,
       orderDate: localOrderDate,
@@ -324,7 +331,24 @@ export function SignOrderDetailsSheet({
       startDate: localStartDate,
       endDate: localEndDate,
       contact: localContact
-    }))
+    }
+
+    setIsSavingDetails(true)
+
+    try {
+      // Commit the new admin info into the page before closing.
+      flushSync(() => {
+        setAdminInfo(() => nextAdminInfo)
+      })
+
+      await onSaved?.(nextAdminInfo)
+    } catch (error) {
+      console.error('Error saving sign order details:', error)
+      toast.error('Failed to save sign order details')
+      return
+    } finally {
+      setIsSavingDetails(false)
+    }
 
     if (mode === 'create' && onJobCreated) {
       const newJob: Job = {
@@ -831,15 +855,20 @@ export function SignOrderDetailsSheet({
                       contactId: localContact?.id ?? null
                     })
                   }
+                  disabled={isSavingDetails}
                 >
                   Cancel
                 </Button>
                 <Button
-                  disabled={!areAllRequiredFieldsFilled()}
+                  disabled={!areAllRequiredFieldsFilled() || isSavingDetails}
                   onClick={handleSave}
                   variant='default'
                 >
-                  {isCreateMode ? 'Create Sign Order' : 'Save Changes'}
+                  {isSavingDetails
+                    ? 'Saving...'
+                    : isCreateMode
+                      ? 'Create Sign Order'
+                      : 'Save Changes'}
                 </Button>
               </div>
             </div>
