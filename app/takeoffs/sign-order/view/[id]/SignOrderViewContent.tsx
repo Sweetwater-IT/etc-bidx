@@ -8,7 +8,7 @@ import { SiteHeader } from '@/components/site-header'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table'
 import EquipmentTotalsAccordion from './EquipmentTotalsAccordion'
-import { useEstimate } from '@/contexts/EstimateContext'
+import { useSignOrderBuilder } from '@/contexts/SignOrderBuilderContext'
 import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import { formatDate } from '@/lib/formatUTCDate'
 import { User } from '@/types/User'
@@ -94,7 +94,7 @@ const determineBranch = (id: number): string => {
 export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
-  const { dispatch, mptRental } = useEstimate()
+  const { dispatch, mptRental } = useSignOrderBuilder()
   const [signOrder, setSignOrder] = useState<SignOrder | null>(null)
   const [signItems, setSignItems] = useState<SignItem[]>([])
   const [loading, setLoading] = useState(true)

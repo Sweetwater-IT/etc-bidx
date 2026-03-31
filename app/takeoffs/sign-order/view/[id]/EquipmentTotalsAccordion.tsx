@@ -15,7 +15,7 @@ import {
 import { MoreHorizontal, MoreVertical, Pencil } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { EquipmentType, labelMapping, lightAndDrumList, standardEquipmentList } from "@/types/MPTEquipment";
-import { useEstimate } from "@/contexts/EstimateContext";
+import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
 import { safeNumber } from "@/lib/safe-number";
 
@@ -30,7 +30,7 @@ interface AssociatedSignTotals {
 
 const EquipmentTotalsAccordion = () => {
 
-  const { mptRental, dispatch } = useEstimate();
+  const { mptRental, dispatch } = useSignRuntime();
 
   const [editingMode, setEditingMode] = useState<boolean>(false);
   const [equipmentTotals, setEquipmentTotals] = useState<AssociatedSignTotals>({

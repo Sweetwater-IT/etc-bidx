@@ -7,7 +7,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { DynamicEquipmentInfo, EquipmentType, PrimarySign, SecondarySign } from "@/types/MPTEquipment";
-import { useEstimate } from "@/contexts/EstimateContext";
+import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { sortSignsBySecondary } from "@/lib/sortSignsBySecondary";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +54,7 @@ const formatLabel = (key: string) => {
 
 
 const SignOrderSummary = ({ currentPhase }: SignSummaryAccordionProps) => {
-    const { mptRental, dispatch } = useEstimate();
+    const { mptRental, dispatch } = useSignRuntime();
     const [value, setValue] = useState<string[]>(['item-1']);
 
     const signs: (PrimarySign | SecondarySign)[] =

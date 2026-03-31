@@ -1,5 +1,5 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { EstimateProvider } from "@/contexts/EstimateContext";
+import { SignOrderBuilderProvider } from "@/contexts/SignOrderBuilderContext";
 import SignOrderContentSimple from "../../SignOrderContentSimple";
 
 export default async function EditSignOrderPage({ params} : {params: any}) {const resolvedParams = await params;
@@ -16,9 +16,9 @@ return (
     >
         <div className="flex h-screen w-screen flex-col">
             <div className="flex-1 overflow-auto">
-                <EstimateProvider>
+                <SignOrderBuilderProvider>
                     <SignOrderContentSimple signOrderId={signId}/>
-                </EstimateProvider>
+                </SignOrderBuilderProvider>
             </div>
         </div>
     </SidebarProvider>

@@ -17,7 +17,7 @@ import {
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id'
 import { SignOrder } from '@/types/TSignOrder'
 import { toast } from 'sonner'
-import { useEstimate } from '@/contexts/EstimateContext'
+import { useSignOrderBuilder } from '@/contexts/SignOrderBuilderContext'
 import {
   defaultMPTObject,
   defaultPhaseObject
@@ -58,7 +58,7 @@ interface Props {
 }
 
 const SignShopContent = ({ id }: Props) => {
-  const { mptRental, dispatch } = useEstimate()
+  const { mptRental, dispatch } = useSignOrderBuilder()
   const router = useRouter()
 
   const [signOrder, setSignOrder] = useState<SignOrder>()

@@ -27,7 +27,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
-import { useEstimate } from "@/contexts/EstimateContext";
+import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { fetchSignDesignations } from "@/lib/api-client";
 import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse } from '@/types/MPTEquipment';
 import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
@@ -50,7 +50,7 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
 };
 
 const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
-    const { dispatch, mptRental } = useEstimate();
+    const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
     const [filteredSigns, setFilteredSigns] = useState<SignDesignation[]>([]);

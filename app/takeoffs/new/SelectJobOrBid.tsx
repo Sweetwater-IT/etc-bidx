@@ -1,7 +1,7 @@
 'use client'
 
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
-import { useEstimate } from "@/contexts/EstimateContext";
+import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { Copy, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -21,7 +21,7 @@ interface ISelectJobOrBid {
 
 
 const SelectJobOrBid = ({ currentPhase, jobNumber, needJobNumber = false, currentJob = null }: ISelectJobOrBid) => {
-    const { dispatch , mptRental} = useEstimate();
+    const { dispatch , mptRental} = useSignRuntime();
     const [selectedPhases, setSelectedPhases] = useState<any[]>([]);
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);

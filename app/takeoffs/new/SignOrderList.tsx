@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { useEstimate } from '@/contexts/EstimateContext';
+import { useSignRuntime } from '@/hooks/use-sign-runtime';
 import { toast } from 'sonner';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
@@ -102,7 +102,7 @@ export function SignOrderList({
   jobNumber,
   needJobNumber = false
 }: Props) {
-  const { mptRental, dispatch } = useEstimate();
+  const { mptRental, dispatch } = useSignRuntime();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [open, setOpen] = useState<boolean>(false);
