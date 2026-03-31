@@ -98,6 +98,9 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
 
     useEffect(() => {
         if (!selectedCustomer) {
+            if (data.customer) {
+                return
+            }
             setSelectedCustomers([])
             setPointOfContact(undefined)
             return
@@ -111,10 +114,13 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
                 name: selectedContact.name || '',
                 email: selectedContact.email,
             })
-        } else {
+            return
+        }
+
+        if (!data.customer_contact) {
             setPointOfContact(undefined)
         }
-    }, [selectedContact, selectedCustomer, setPointOfContact, setSelectedCustomers])
+    }, [data.customer, data.customer_contact, selectedContact, selectedCustomer, setPointOfContact, setSelectedCustomers])
 
     const openModal = (type: 'customer' | 'contact') => {
         if (type === 'contact') {

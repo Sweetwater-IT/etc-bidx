@@ -140,20 +140,16 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           [];
 
         if (point) {
+          const pointContact =
+            Array.isArray(point.customer_contacts) &&
+            point.customer_contacts.length > 0
+              ? point.customer_contacts[0]
+              : null;
+
           setPointOfContact({
-            id:
-              Array.isArray(point.customer_contacts) &&
-              point.customer_contacts.length > 0
-                ? point.customer_contacts[0].id
-                : undefined,
-            name:
-              point.customer_contacts?.name ??
-              point.name ??
-              "",
-            email:
-              point.email ??
-              point.customer_contacts?.email ??
-              "",
+            id: pointContact?.id,
+            name: pointContact?.name ?? point.name ?? "",
+            email: point.email ?? pointContact?.email ?? "",
           });
         } else {
           setPointOfContact(undefined);
