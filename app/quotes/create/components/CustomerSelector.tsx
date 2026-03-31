@@ -68,13 +68,13 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         const cust = customers.find(c => c.id.toString() === data.customer.toString());
         if (!cust) return;
 
-        selectCustomer(cust.id.toString());
+        const contact =
+            data.customer_contact && cust.customer_contacts?.length
+                ? cust.customer_contacts.find(c => c.name === data.customer_contact) || null
+                : null;
 
-        if (data.customer_contact && cust.customer_contacts?.length) {
-            const contact = cust.customer_contacts.find(c => c.name === data.customer_contact);
-            if (contact) selectContact(contact.id.toString());
-        }
-    }, [data.customer, data.customer_contact, customers]);
+        selectCustomer(cust.id.toString(), contact?.id?.toString());
+    }, [data.customer, data.customer_contact, customers, selectCustomer]);
 
     useEffect(() => {
         if (!selectedCustomer) return;
@@ -83,10 +83,10 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
             ...data,
             customer: selectedCustomer.id || "",
             customer_name: selectedCustomer.name || "",
-            customer_email: selectedContact?.email || "",
-            customer_phone: selectedContact?.phone || "",
+            customer_email: selectedContact?.email || data.customer_email || "",
+            customer_phone: selectedContact?.phone || data.customer_phone || "",
             customer_address: `${selectedCustomer.address || ""} ${selectedCustomer.city || ""}, ${selectedCustomer.state || ""} ${selectedCustomer.zip || ""}`,
-            customer_contact: selectedContact?.name || "",
+            customer_contact: selectedContact?.name || data.customer_contact || "",
         };
 
         const hasChanged = Object.keys(newData).some(
@@ -94,7 +94,7 @@ const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle,
         );
 
         if (hasChanged) setData(newData);
-    }, [selectedCustomer, selectedContact]);
+    }, [data, selectedCustomer, selectedContact]);
 
     useEffect(() => {
         if (!selectedCustomer) {

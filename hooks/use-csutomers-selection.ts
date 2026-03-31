@@ -53,9 +53,21 @@ export const useCustomerSelection = () => {
         getCustomers();
     }, []);
 
-    const selectCustomer = (id: string) => {
+    const selectCustomer = (id: string, contactId?: string) => {
         const customer = customers.find(c => c.id.toString() === id) || null;
         setSelectedCustomer(customer);
+        if (!customer) {
+            setSelectedContact(null);
+            return;
+        }
+
+        if (contactId) {
+            const contact =
+                customer.customer_contacts?.find(c => c.id.toString() === contactId) || null;
+            setSelectedContact(contact);
+            return;
+        }
+
         setSelectedContact(null); // Don't auto-select first contact
     };
 
