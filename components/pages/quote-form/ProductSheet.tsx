@@ -21,7 +21,6 @@ import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
-import { restorePointerEvents } from "@/lib/pointer-events-fix";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -157,31 +156,8 @@ export function ProductSheet({
     setNewProduct,
   ]);
 
-  useEffect(() => {
-    if (open) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      restorePointerEvents();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      restorePointerEvents();
-    };
-  }, [open]);
-
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
-        if (!nextOpen) {
-          restorePointerEvents();
-        }
-      }}
-    >
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex flex-col h-full">
         <SheetHeader className="p-0 pt-6">
           <SheetTitle className="text-[16px] ml-6">Add New Product</SheetTitle>
@@ -397,10 +373,7 @@ export function ProductSheet({
               type="button"
               variant="outline"
               className="flex-1 text-sm rounded-md"
-              onClick={() => {
-                onOpenChange(false);
-                restorePointerEvents();
-              }}
+              onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
@@ -411,7 +384,6 @@ export function ProductSheet({
               className=" text-white py-2 flex-1 text-sm  transition rounded-md"
               onClick={async () => {
                 onOpenChange(false);
-                restorePointerEvents();
                 let needAddItem = true;
                 if (editingSubItemId) {
                   const subItemData = {
@@ -507,8 +479,6 @@ export function ProductSheet({
                   setNewProduct(baseItem);
                   setQuoteItems((prev) => ([...prev, baseItem]))
                 }
-
-                restorePointerEvents();
               }}
 
             >

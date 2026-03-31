@@ -1,47 +1,50 @@
 import { useProductsSearch } from "@/hooks/useProductsSearch";
-import { QuoteItem } from "@/types/IQuoteItem";
-
 import QuoteItemRow from "./QuoteItemRow";
+import { QuoteItem, AssociatedItem } from "@/types/IQuoteItem";
 
 interface QuoteItemsListProps {
   quoteItems: QuoteItem[];
-  savingItemId: string | null;
-  onSelectProduct: (item: QuoteItem, product?: any) => void;
-  onEditItem: (item: QuoteItem) => void;
-  onRemoveItem: (itemId: string) => void;
-  onQuickQuantityUpdate: (item: QuoteItem, quantity: number) => Promise<void> | void;
+  editingItemId: string | null;
+  editingSubItemId: string | null;
+  setEditingItemId: (id: string | null) => void;
+  setEditingSubItemId: (id: string | null) => void;
+  handleItemUpdate: (
+    itemId: string,
+    field: keyof QuoteItem,
+    value: any
+  ) => void;
+  handleRemoveItem: (itemId: string) => void;
+  handleAddCompositeItem: (parentItem: QuoteItem) => void;
+  handleCompositeItemUpdate: (
+    parentItemId: string,
+    subItemId: string,
+    field: keyof AssociatedItem,
+    value: any
+  ) => void;
+  handleDeleteComposite: (parentItemId: string, subItemId: string) => void;
+  UOM_TYPES: any;
+  calculateCompositeUnitPrice: (item: QuoteItem) => number;
   calculateExtendedPrice: (item: QuoteItem) => string;
 }
 
-const QuoteItemsList = ({
-  quoteItems,
-  savingItemId,
-  onSelectProduct,
-  onEditItem,
-  onRemoveItem,
-  onQuickQuantityUpdate,
-  calculateExtendedPrice,
-}: QuoteItemsListProps) => {
-  const { products, loading } = useProductsSearch("");
-
+// QuoteItemsList
+const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListProps) => {
+  const { products, loading } = useProductsSearch(""); // fetch global
   return (
     <>
-      {quoteItems.map((item) => (
+      {quoteItems.map((item, ix) => (
         <QuoteItemRow
-          key={item.id ?? `${item.itemNumber}-${item.description}`}
+          key={ix}
           item={item}
+          isEditing={editingItemId === item.id}
           products={products}
           loading={loading}
-          saving={savingItemId === String(item.id)}
-          onSelectProduct={onSelectProduct}
-          onEditItem={onEditItem}
-          onRemoveItem={onRemoveItem}
-          onQuickQuantityUpdate={onQuickQuantityUpdate}
-          calculateExtendedPrice={calculateExtendedPrice}
+          {...rest}
         />
       ))}
     </>
   );
 };
+
 
 export default QuoteItemsList;
