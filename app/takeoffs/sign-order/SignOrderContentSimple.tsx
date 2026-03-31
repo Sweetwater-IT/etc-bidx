@@ -155,12 +155,17 @@ export default function SignOrderContentSimple({
     )
   }
 
-  const fetchSignOrder = async () => {
+  const fetchSignOrder = async (requestedId?: number | null) => {
+    const resolvedId = requestedId ?? signOrderId ?? initialSignOrderId ?? null
+    if (!resolvedId) {
+      return
+    }
+
     try {
       startLoading()
       setLoadingNotes(true)
-      console.log(`Fetching sign order with ID: ${initialSignOrderId}`)
-      const response = await fetch(`/api/sign-orders/${initialSignOrderId}`)
+      console.log(`Fetching sign order with ID: ${resolvedId}`)
+      const response = await fetch(`/api/sign-orders/${resolvedId}`)
       const data = await response.json()
 
       if (!response.ok) {
@@ -378,11 +383,12 @@ export default function SignOrderContentSimple({
     }
 
     const result = await saveSignOrder(signOrderData)
+    const nextId = result.id || currentId
     if (result.id && !signOrderId) {
       setSignOrderId(result.id)
     }
 
-    await fetchSignOrder()
+    await fetchSignOrder(nextId)
   }
 
   // Initialize MPT rental data
@@ -396,7 +402,7 @@ export default function SignOrderContentSimple({
       dispatch({ type: 'ADD_MPT_PHASE' })
       return
     } else {
-      fetchSignOrder()
+      fetchSignOrder(initialSignOrderId)
     }
   }, [dispatch])
 
