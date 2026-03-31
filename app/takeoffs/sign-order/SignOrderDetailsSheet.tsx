@@ -17,7 +17,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AlertCircle, ArrowLeft, Check, Search } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, Edit, Search } from 'lucide-react'
 import { cn, formatPhoneNumber } from '@/lib/utils'
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react'
 import { flushSync } from 'react-dom'
@@ -67,6 +67,7 @@ type DrawerView =
   | 'customer-create'
   | 'contact-selection'
   | 'contact-create'
+  | 'contact-edit'
 
 const CONTACT_ROLE_OPTIONS = [
   'ESTIMATOR',
@@ -160,6 +161,10 @@ export function SignOrderDetailsSheet({
   const [newCustomerName, setNewCustomerName] = useState('')
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
   const [localContact, setLocalContact] = useState<any | null>(null)
+  const [editingContact, setEditingContact] = useState<IContact | null>(null)
+  const [contactEditorReturnView, setContactEditorReturnView] = useState<
+    'details' | 'contact-selection'
+  >('contact-selection')
   const [contactFormData, setContactFormData] = useState({
     name: '',
     role: '',
@@ -292,6 +297,8 @@ export function SignOrderDetailsSheet({
       setCustomerSearchQuery('')
       setContactSearchQuery('')
       setNewCustomerName('')
+      setEditingContact(null)
+      setContactEditorReturnView('contact-selection')
       setContactFormData({
         name: '',
         role: '',
@@ -481,6 +488,8 @@ export function SignOrderDetailsSheet({
           ? 'Select Contact'
           : drawerView === 'contact-create'
             ? 'Add New Contact'
+            : drawerView === 'contact-edit'
+              ? 'Edit Contact'
             : isCreateMode
               ? 'Create New Sign Order'
               : 'Edit Sign Order Details'
@@ -503,6 +512,8 @@ export function SignOrderDetailsSheet({
       setCustomerSearchQuery('')
       setContactSearchQuery('')
       setNewCustomerName('')
+      setEditingContact(null)
+      setContactEditorReturnView('contact-selection')
       setContactFormData({
         name: '',
         role: '',
@@ -550,6 +561,8 @@ export function SignOrderDetailsSheet({
     }
 
     setDrawerView('contact-create')
+    setEditingContact(null)
+    setContactEditorReturnView('contact-selection')
     setContactFormData({
       name: '',
       role: '',
@@ -560,6 +573,31 @@ export function SignOrderDetailsSheet({
       customerId: localCustomer.id
     })
   }, [localCustomer, restoreOverlayInteraction])
+
+  const openContactEdit = useCallback(
+    (contact: IContact, returnView: 'details' | 'contact-selection' = 'contact-selection') => {
+      const normalizedRole = CONTACT_ROLE_OPTIONS.includes(
+        (contact.role || 'OTHER') as (typeof CONTACT_ROLE_OPTIONS)[number]
+      )
+        ? ((contact.role || 'OTHER') as (typeof CONTACT_ROLE_OPTIONS)[number])
+        : 'OTHER'
+
+      setEditingContact(contact)
+      setContactEditorReturnView(returnView)
+      setDrawerView('contact-edit')
+      setContactFormData({
+        name: contact.name || '',
+        role: normalizedRole,
+        email: contact.email || '',
+        phone: contact.phone || ''
+      })
+      restoreOverlayInteraction('contact_edit_view_opened', {
+        customerId: localCustomer?.id ?? null,
+        contactId: contact.id
+      })
+    },
+    [localCustomer?.id, restoreOverlayInteraction]
+  )
 
   const handleSelectCustomer = useCallback(
     async (customer: Customer) => {
@@ -667,7 +705,7 @@ export function SignOrderDetailsSheet({
     []
   )
 
-  const handleCreateContact = useCallback(async () => {
+  const handleSubmitContact = useCallback(async () => {
     if (!localCustomer) {
       toast.error('Please select a customer before adding a contact.')
       return
@@ -681,42 +719,68 @@ export function SignOrderDetailsSheet({
     setIsSubmittingContact(true)
 
     try {
-      const response = await fetch('/api/customer-contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contractor_id: localCustomer.id,
-          name: contactFormData.name,
-          role: contactFormData.role,
-          email: contactFormData.email,
-          phone: contactFormData.phone
-        })
-      })
+      const response = await fetch(
+        editingContact
+          ? `/api/customer-contacts/${editingContact.id}`
+          : '/api/customer-contacts',
+        {
+          method: editingContact ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contractor_id: localCustomer.id,
+            name: contactFormData.name,
+            role: contactFormData.role,
+            email: contactFormData.email,
+            phone: contactFormData.phone
+          })
+        }
+      )
 
       const result = await response.json().catch(() => null)
 
-      if (!response.ok || !result?.data) {
-        throw new Error(result?.error || 'Failed to create contact')
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to save contact')
       }
 
-      const newContact: IContact = {
-        id: result.data.id,
-        name: result.data.name || '',
-        role: result.data.role || '',
-        email: result.data.email || '',
-        phone: result.data.phone || ''
+      const savedContact: IContact = {
+        id: editingContact ? editingContact.id : result.data.id,
+        name: contactFormData.name.trim(),
+        role: contactFormData.role || '',
+        email: contactFormData.email || '',
+        phone: contactFormData.phone || ''
       }
 
-      const updatedCustomer: Customer = {
-        ...localCustomer,
-        contactIds: [...(localCustomer.contactIds || []), newContact.id],
-        names: [...(localCustomer.names || []), newContact.name],
-        emails: [...(localCustomer.emails || []), newContact.email],
-        phones: [...(localCustomer.phones || []), newContact.phone],
-        roles: [...(localCustomer.roles || []), newContact.role]
-      }
+      const existingIndex = (localCustomer.contactIds || []).findIndex(
+        contactId => contactId === savedContact.id
+      )
+
+      const updatedCustomer: Customer =
+        existingIndex === -1
+          ? {
+              ...localCustomer,
+              contactIds: [...(localCustomer.contactIds || []), savedContact.id],
+              names: [...(localCustomer.names || []), savedContact.name],
+              emails: [...(localCustomer.emails || []), savedContact.email],
+              phones: [...(localCustomer.phones || []), savedContact.phone],
+              roles: [...(localCustomer.roles || []), savedContact.role]
+            }
+          : {
+              ...localCustomer,
+              names: (localCustomer.names || []).map((value, index) =>
+                index === existingIndex ? savedContact.name : value
+              ),
+              emails: (localCustomer.emails || []).map((value, index) =>
+                index === existingIndex ? savedContact.email : value
+              ),
+              phones: (localCustomer.phones || []).map((value, index) =>
+                index === existingIndex ? savedContact.phone : value
+              ),
+              roles: (localCustomer.roles || []).map((value, index) =>
+                index === existingIndex ? savedContact.role : value
+              )
+            }
 
       setLocalCustomer(updatedCustomer)
       setCustomerOptions(prevCustomers =>
@@ -724,19 +788,29 @@ export function SignOrderDetailsSheet({
           customer.id === updatedCustomer.id ? updatedCustomer : customer
         )
       )
-      setLocalContact(newContact)
-      toast.success('Contact created successfully')
-      returnToDetailsView('contact_created_in_drawer', {
-        customerId: updatedCustomer.id,
-        contactId: newContact.id
-      })
+      setLocalContact(savedContact)
+      toast.success(
+        editingContact
+          ? 'Contact updated successfully'
+          : 'Contact created successfully'
+      )
+      returnToDetailsView(
+        editingContact ? 'contact_updated_in_drawer' : 'contact_created_in_drawer',
+        {
+          customerId: updatedCustomer.id,
+          contactId: savedContact.id
+        }
+      )
     } catch (error) {
-      console.error('Error creating contact:', error)
-      toast.error('Failed to create contact')
+      console.error(
+        editingContact ? 'Error updating contact:' : 'Error creating contact:',
+        error
+      )
+      toast.error(editingContact ? 'Failed to update contact' : 'Failed to create contact')
     } finally {
       setIsSubmittingContact(false)
     }
-  }, [contactFormData, localCustomer, returnToDetailsView])
+  }, [contactFormData, editingContact, localCustomer, returnToDetailsView])
 
   useEffect(() => {
     if (open) {
@@ -878,9 +952,20 @@ export function SignOrderDetailsSheet({
                           </span>
                         </Button>
                         {localContact && (
-                          <div className='space-y-1 text-xs text-muted-foreground'>
-                            {localContact.email && <div>{localContact.email}</div>}
-                            {localContact.phone && <div>{localContact.phone}</div>}
+                          <div className='space-y-2'>
+                            <div className='space-y-1 text-xs text-muted-foreground'>
+                              {localContact.email && <div>{localContact.email}</div>}
+                              {localContact.phone && <div>{localContact.phone}</div>}
+                            </div>
+                            <Button
+                              type='button'
+                              variant='ghost'
+                              size='sm'
+                              className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
+                              onClick={() => openContactEdit(localContact, 'details')}
+                            >
+                              Edit Contact
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -1292,27 +1377,43 @@ export function SignOrderDetailsSheet({
                 ) : (
                   <div className='space-y-2'>
                     {filteredContacts.map(contact => (
-                      <button
+                      <div
                         key={contact.id}
-                        type='button'
-                        onClick={() => handleSelectContact(contact)}
                         className={cn(
-                          'w-full rounded-md border px-4 py-3 text-left transition-colors hover:bg-muted/50',
+                          'flex items-start gap-2 rounded-md border px-4 py-3 transition-colors hover:bg-muted/50',
                           localContact?.id === contact.id && 'border-primary bg-primary/5'
                         )}
                       >
-                        <div className='flex items-center gap-2'>
-                          <span className='font-medium text-sm'>{contact.name || 'Unnamed Contact'}</span>
-                          {localContact?.id === contact.id && (
-                            <Check className='h-4 w-4 text-primary' />
-                          )}
-                        </div>
-                        <div className='mt-1 space-y-1 text-xs text-muted-foreground'>
-                          {contact.role && <div>{contact.role}</div>}
-                          {contact.email && <div>{contact.email}</div>}
-                          {contact.phone && <div>{contact.phone}</div>}
-                        </div>
-                      </button>
+                        <button
+                          type='button'
+                          onClick={() => handleSelectContact(contact)}
+                          className='flex-1 text-left'
+                        >
+                          <div className='flex items-center gap-2'>
+                            <span className='font-medium text-sm'>
+                              {contact.name || 'Unnamed Contact'}
+                            </span>
+                            {localContact?.id === contact.id && (
+                              <Check className='h-4 w-4 text-primary' />
+                            )}
+                          </div>
+                          <div className='mt-1 space-y-1 text-xs text-muted-foreground'>
+                            {contact.role && <div>{contact.role}</div>}
+                            {contact.email && <div>{contact.email}</div>}
+                            {contact.phone && <div>{contact.phone}</div>}
+                          </div>
+                        </button>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          aria-label='Edit contact'
+                          className='h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground'
+                          onClick={() => openContactEdit(contact, 'contact-selection')}
+                        >
+                          <Edit className='h-4 w-4' />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1346,7 +1447,8 @@ export function SignOrderDetailsSheet({
             </>
           )}
 
-          {drawerView === 'contact-create' && localCustomer && (
+          {(drawerView === 'contact-create' || drawerView === 'contact-edit') &&
+            localCustomer && (
             <>
               <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
                 <div className='space-y-4'>
@@ -1355,10 +1457,12 @@ export function SignOrderDetailsSheet({
                     variant='outline'
                     size='sm'
                     className='gap-2'
-                    onClick={() => setDrawerView('contact-selection')}
+                    onClick={() => setDrawerView(contactEditorReturnView)}
                   >
                     <ArrowLeft className='h-4 w-4' />
-                    Back to Contacts
+                    {contactEditorReturnView === 'details'
+                      ? 'Back to Details'
+                      : 'Back to Contacts'}
                   </Button>
 
                   <div className='border rounded-md p-4 bg-muted/20 space-y-2'>
@@ -1450,16 +1554,22 @@ export function SignOrderDetailsSheet({
               <div className='flex justify-end gap-2 p-4 px-6'>
                 <Button
                   variant='outline'
-                  onClick={() => setDrawerView('contact-selection')}
+                  onClick={() => setDrawerView(contactEditorReturnView)}
                   disabled={isSubmittingContact}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => void handleCreateContact()}
+                  onClick={() => void handleSubmitContact()}
                   disabled={isSubmittingContact}
                 >
-                  {isSubmittingContact ? 'Creating...' : 'Create Contact'}
+                  {isSubmittingContact
+                    ? drawerView === 'contact-edit'
+                      ? 'Saving...'
+                      : 'Creating...'
+                    : drawerView === 'contact-edit'
+                      ? 'Save Contact'
+                      : 'Create Contact'}
                 </Button>
               </div>
             </>

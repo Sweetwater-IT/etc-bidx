@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { formatPhoneNumber } from '@/lib/utils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -349,6 +350,10 @@ const CustomersContent = () => {
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const [creatingContact, setCreatingContact] = useState(false)
   const [newContact, setNewContact] = useState({ ...EMPTY_CONTACT_FORM })
+  const [editingContact, setEditingContact] = useState<CustomerContactRecord | null>(null)
+  const [editContactDialogOpen, setEditContactDialogOpen] = useState(false)
+  const [savingEditedContact, setSavingEditedContact] = useState(false)
+  const [editContactForm, setEditContactForm] = useState({ ...EMPTY_CONTACT_FORM })
   const [deleteCustomerConfirm, setDeleteCustomerConfirm] = useState(false)
   const [deleteContactConfirm, setDeleteContactConfirm] = useState<number | null>(null)
   const [deletingContact, setDeletingContact] = useState(false)
@@ -844,6 +849,68 @@ const CustomersContent = () => {
     }
   }
 
+  const openEditContactDialog = (contact: CustomerContactRecord) => {
+    const normalizedRole = CONTACT_ROLE_OPTIONS.includes(
+      (contact.role || 'OTHER') as ContactRole
+    )
+      ? ((contact.role || 'OTHER') as ContactRole)
+      : 'OTHER'
+
+    setEditingContact(contact)
+    setEditContactForm({
+      name: contact.name || '',
+      phone: contact.phone || '',
+      email: contact.email || '',
+      role: normalizedRole,
+    })
+    setEditContactDialogOpen(true)
+  }
+
+  const closeEditContactDialog = () => {
+    setEditContactDialogOpen(false)
+    setEditingContact(null)
+    setEditContactForm({ ...EMPTY_CONTACT_FORM })
+  }
+
+  const handleSaveEditedContact = async () => {
+    if (!selectedId || !editingContact || !editContactForm.name.trim()) {
+      return
+    }
+
+    setSavingEditedContact(true)
+
+    try {
+      const response = await fetch(`/api/customer-contacts/${editingContact.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractor_id: selectedId,
+          name: editContactForm.name.trim(),
+          phone: editContactForm.phone.trim() || null,
+          email: editContactForm.email.trim() || null,
+          role: editContactForm.role,
+        }),
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to update contact')
+      }
+
+      toast.success('Contact updated')
+      closeEditContactDialog()
+      await fetchCustomerDetails(selectedId)
+    } catch (error) {
+      console.error('Failed to update contact:', error)
+      toast.error('Failed to update contact')
+    } finally {
+      setSavingEditedContact(false)
+    }
+  }
+
   const handleDeleteContact = async (contactId: number) => {
     setDeletingContact(true)
 
@@ -1208,14 +1275,24 @@ const CustomersContent = () => {
                         </div>
                       </div>
 
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-6 w-6 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100'
-                        onClick={() => setDeleteContactConfirm(contact.id)}
-                      >
-                        <Trash2 className='h-3 w-3' />
-                      </Button>
+                      <div className='flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100'>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-6 w-6 text-muted-foreground hover:text-foreground'
+                          onClick={() => openEditContactDialog(contact)}
+                        >
+                          <Edit className='h-3 w-3' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='h-6 w-6 text-muted-foreground hover:text-destructive'
+                          onClick={() => setDeleteContactConfirm(contact.id)}
+                        >
+                          <Trash2 className='h-3 w-3' />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className='mt-2 space-y-1'>
@@ -1677,7 +1754,7 @@ const CustomersContent = () => {
                   onChange={event =>
                     setNewContact(current => ({
                       ...current,
-                      phone: event.target.value,
+                      phone: formatPhoneNumber(event.target.value),
                     }))
                   }
                 />
@@ -1731,6 +1808,106 @@ const CustomersContent = () => {
               disabled={!newContact.name.trim() || creatingContact}
             >
               {creatingContact ? 'Adding...' : 'Add Contact'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editContactDialogOpen}
+        onOpenChange={open => {
+          if (!open) {
+            closeEditContactDialog()
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-sm'>
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+          </DialogHeader>
+
+          <div className='space-y-3 py-2'>
+            <div>
+              <label className='text-sm font-medium'>Name</label>
+              <Input
+                className='mt-1'
+                value={editContactForm.name}
+                onChange={event =>
+                  setEditContactForm(current => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className='grid grid-cols-2 gap-3'>
+              <div>
+                <label className='text-sm font-medium'>Phone</label>
+                <Input
+                  className='mt-1'
+                  value={editContactForm.phone}
+                  onChange={event =>
+                    setEditContactForm(current => ({
+                      ...current,
+                      phone: formatPhoneNumber(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className='text-sm font-medium'>Email</label>
+                <Input
+                  className='mt-1'
+                  value={editContactForm.email}
+                  onChange={event =>
+                    setEditContactForm(current => ({
+                      ...current,
+                      email: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className='text-sm font-medium'>Role</label>
+              <Select
+                value={editContactForm.role}
+                onValueChange={value =>
+                  setEditContactForm(current => ({
+                    ...current,
+                    role: value as ContactRole,
+                  }))
+                }
+              >
+                <SelectTrigger className='mt-1'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_ROLE_OPTIONS.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={closeEditContactDialog}
+              disabled={savingEditedContact}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEditedContact}
+              disabled={!editContactForm.name.trim() || savingEditedContact}
+            >
+              {savingEditedContact ? 'Saving...' : 'Save Contact'}
             </Button>
           </DialogFooter>
         </DialogContent>
