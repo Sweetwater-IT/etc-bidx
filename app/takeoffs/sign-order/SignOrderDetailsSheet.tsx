@@ -273,6 +273,14 @@ export function SignOrderDetailsSheet({
     }
   }, [localCustomer?.id, localRequestor?.name, mode, onOpenChange, restoreOverlayInteraction])
 
+  const closeSheet = useCallback(
+    (reason: string, details: Record<string, unknown> = {}) => {
+      restoreOverlayInteraction(reason, details)
+      handleSheetOpenChange(false)
+    },
+    [handleSheetOpenChange, restoreOverlayInteraction]
+  )
+
   const handleSave = async () => {
     if (mode === 'create') {
       // For new sign orders, validate required fields
@@ -329,7 +337,10 @@ export function SignOrderDetailsSheet({
       onJobCreated(newJob)
     }
 
-    onOpenChange(false)
+    closeSheet('details_sheet_save_closed', {
+      customerId: localCustomer?.id ?? null,
+      contactId: localContact?.id ?? null
+    })
   }
 
   const handleOrderTypeChange = (orderType: OrderTypes, checked: boolean) => {
@@ -408,7 +419,25 @@ export function SignOrderDetailsSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={handleSheetOpenChange}>
-        <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
+        <SheetContent
+          className='w-[500px] sm:max-w-[600px] p-0'
+          onCloseAutoFocus={event => {
+            event.preventDefault()
+            restoreOverlayInteraction('details_sheet_close_auto_focus', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+          onEscapeKeyDown={() => {
+            restoreOverlayInteraction('details_sheet_escape_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+          onPointerDownOutside={() => {
+            restoreOverlayInteraction('details_sheet_outside_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+        >
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <SheetHeader className='p-6 pb-4'>
               <SheetTitle>
@@ -796,7 +825,12 @@ export function SignOrderDetailsSheet({
                 <Button
                   variant='outline'
                   className='flex-1'
-                  onClick={() => onOpenChange(false)}
+                  onClick={() =>
+                    closeSheet('details_sheet_cancel_closed', {
+                      customerId: localCustomer?.id ?? null,
+                      contactId: localContact?.id ?? null
+                    })
+                  }
                 >
                   Cancel
                 </Button>
