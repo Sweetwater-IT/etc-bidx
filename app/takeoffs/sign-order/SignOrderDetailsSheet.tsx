@@ -352,7 +352,7 @@ export function SignOrderDetailsSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleSheetOpenChange}>
+      <Sheet modal={false} open={open} onOpenChange={handleSheetOpenChange}>
         <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <SheetHeader className='p-6 pb-4'>

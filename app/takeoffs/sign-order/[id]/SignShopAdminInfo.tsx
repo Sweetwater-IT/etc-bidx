@@ -89,7 +89,7 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id, files, setFiles }: Pro
                             <h2 className='text-xl font-semibold mb-4'>
                                 Customer Information
                             </h2>
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <button className="p-2 rounded hover:bg-muted focus:outline-none">
                                         <MoreVertical className="w-5 h-5" />

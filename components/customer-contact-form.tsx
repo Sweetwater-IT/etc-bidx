@@ -199,6 +199,7 @@ export function CustomerContactForm({
 
   return (
     <Dialog
+      modal={false}
       open={isOpen}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {

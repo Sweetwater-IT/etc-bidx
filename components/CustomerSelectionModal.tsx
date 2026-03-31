@@ -90,6 +90,7 @@ export function CustomerSelectionModal({
 
   return (
     <Dialog
+      modal={false}
       open={open}
       onOpenChange={(nextOpen) => {
         onOpenChange(nextOpen)
