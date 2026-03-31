@@ -89,6 +89,51 @@ interface SignOrderDetailsSheetProps {
   onJobCreated?: (job: Job) => void // Add this callback
 }
 
+function normalizeCustomer(customer: any): Customer {
+  const displayName =
+    customer.displayName ||
+    customer.display_name ||
+    customer.name ||
+    `Customer #${customer.id}`
+
+  const validContacts = Array.isArray(customer.customer_contacts)
+    ? customer.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+    : []
+
+  return {
+    id: customer.id,
+    name: customer.name || displayName,
+    displayName,
+    emails:
+      customer.emails ||
+      validContacts.map((contact: any) => contact.email || ''),
+    address: customer.address || '',
+    phones:
+      customer.phones ||
+      validContacts.map((contact: any) => contact.phone || ''),
+    roles:
+      customer.roles ||
+      validContacts.map((contact: any) => contact.role || ''),
+    names:
+      customer.names ||
+      validContacts.map((contact: any) => contact.name || ''),
+    contactIds:
+      customer.contactIds ||
+      validContacts.map((contact: any) => contact.id || 0),
+    url: customer.url || customer.web || '',
+    created: customer.created || '',
+    updated: customer.updated || '',
+    city: customer.city || '',
+    state: customer.state || '',
+    zip: customer.zip || '',
+    customerNumber:
+      customer.customerNumber || customer.customer_number || 0,
+    mainPhone: customer.mainPhone || customer.main_phone || '',
+    paymentTerms: customer.paymentTerms || customer.payment_terms || '',
+    lastOrdered: customer.lastOrdered || null
+  }
+}
+
 export function SignOrderDetailsSheet({
   open,
   onOpenChange,
@@ -151,6 +196,12 @@ export function SignOrderDetailsSheet({
     [mode]
   )
 
+  const applyCustomerSelection = useCallback((customer: Customer | null) => {
+    setLocalCustomer(customer)
+    setLocalContact(null)
+    setOpenCustomerContact(false)
+  }, [])
+
   // Add this smarter effect instead:
   useEffect(() => {
     if (
@@ -172,6 +223,7 @@ export function SignOrderDetailsSheet({
         // Reset form for new job creation
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(null)
+        setLocalContact(null)
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -184,6 +236,7 @@ export function SignOrderDetailsSheet({
         // Edit mode - populate with existing data
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(adminInfo.customer)
+        setLocalContact(adminInfo.contact ?? null)
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -305,7 +358,9 @@ export function SignOrderDetailsSheet({
     const res = await fetch(`/api/contractors/${id}`)
     if (res.ok) {
       const data = await res.json()
-      return data.customer // The contractors API returns { customer, ok: true }
+      if (data?.customer) {
+        return normalizeCustomer(data.customer)
+      }
     }
     return null
   }
@@ -352,7 +407,7 @@ export function SignOrderDetailsSheet({
 
   return (
     <>
-      <Sheet modal={false} open={open} onOpenChange={handleSheetOpenChange}>
+      <Sheet open={open} onOpenChange={handleSheetOpenChange}>
         <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <SheetHeader className='p-6 pb-4'>
@@ -773,32 +828,9 @@ export function SignOrderDetailsSheet({
           const hydratedCustomer = await fetchCustomerById(createdCustomer.id)
           const nextCustomer =
             hydratedCustomer ||
-            ({
-              id: createdCustomer.id,
-              name:
-                createdCustomer.name || createdCustomer.display_name || '',
-              displayName:
-                createdCustomer.display_name || createdCustomer.name || '',
-              emails: [],
-              address: createdCustomer.address || '',
-              phones: [],
-              roles: [],
-              names: [],
-              contactIds: [],
-              url: '',
-              created: '',
-              updated: '',
-              city: createdCustomer.city || '',
-              state: createdCustomer.state || '',
-              zip: createdCustomer.zip || '',
-              customerNumber: 0,
-              mainPhone: createdCustomer.main_phone || '',
-              paymentTerms: '',
-              lastOrdered: null
-            } satisfies Customer)
+            normalizeCustomer(createdCustomer)
 
-          setLocalCustomer(nextCustomer)
-          setLocalContact(null)
+          applyCustomerSelection(nextCustomer)
           restoreOverlayInteraction('customer_simple_add_created', {
             customerId: nextCustomer.id
           })
@@ -866,26 +898,14 @@ export function SignOrderDetailsSheet({
         selectedCustomer={localCustomer}
         onSelectCustomer={async customer => {
           if (!customer) {
-            setLocalCustomer(null)
-            setLocalContact(null)
+            applyCustomerSelection(null)
             restoreOverlayInteraction('customer_cleared')
             return
           }
 
           const hydratedCustomer = await fetchCustomerById(customer.id)
-          const nextCustomer = hydratedCustomer || customer
-          setLocalCustomer(nextCustomer)
-
-          setLocalContact(prevContact => {
-            if (
-              prevContact &&
-              Array.isArray(nextCustomer.contactIds) &&
-              nextCustomer.contactIds.includes(prevContact.id)
-            ) {
-              return prevContact
-            }
-            return null
-          })
+          const nextCustomer = hydratedCustomer || normalizeCustomer(customer)
+          applyCustomerSelection(nextCustomer)
           restoreOverlayInteraction('customer_selected', {
             customerId: nextCustomer.id
           })

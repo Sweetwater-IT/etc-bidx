@@ -95,7 +95,6 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
 
     return (
         <Sheet
-            modal={false}
             open={open}
             onOpenChange={(nextOpen) => {
                 handleOpenChange(nextOpen);
