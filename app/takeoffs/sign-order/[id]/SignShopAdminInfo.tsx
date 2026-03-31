@@ -66,8 +66,8 @@ const SignShopAdminInfo = ({ signOrder, setSignOrder, id, files, setFiles }: Pro
         fetchFiles();
     }, [id])
 
-    const handleOpenChange = () => {
-        setOpen(!open);
+    const handleOpenChange = (nextOpen?: boolean) => {
+        setOpen(prevOpen => typeof nextOpen === 'boolean' ? nextOpen : !prevOpen);
     };
 
 

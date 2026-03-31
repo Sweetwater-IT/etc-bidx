@@ -455,25 +455,9 @@ export function SignOrderDetailsSheet({
 
                 {/* Customer */}
                 <div className='space-y-2'>
-                  <div className='flex items-center justify-between gap-3'>
-                    <Label>
-                      Customer <span className='text-red-600'>*</span>
-                    </Label>
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='sm'
-                      className='h-7 px-2 text-xs'
-                      onClick={() => {
-                        setSimpleCustomerDialogOpen(true)
-                        restoreOverlayInteraction('customer_simple_add_opened', {
-                          customerId: localCustomer?.id ?? null
-                        })
-                      }}
-                    >
-                      Add New
-                    </Button>
-                  </div>
+                  <Label>
+                    Customer <span className='text-red-600'>*</span>
+                  </Label>
                   <Button
                     variant='outline'
                     onClick={() => {
@@ -490,6 +474,22 @@ export function SignOrderDetailsSheet({
                         : 'Select customer...'}
                     </span>
                   </Button>
+                  <div className='flex justify-start'>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
+                      onClick={() => {
+                        setSimpleCustomerDialogOpen(true)
+                        restoreOverlayInteraction('customer_simple_add_opened', {
+                          customerId: localCustomer?.id ?? null
+                        })
+                      }}
+                    >
+                      Add New Customer
+                    </Button>
+                  </div>
                 </div>
                 {/* Contact dropdown, always shown, next to customer dropdown */}
                 <div className='space-y-2'>
