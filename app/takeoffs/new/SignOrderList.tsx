@@ -107,6 +107,8 @@ export function SignOrderList({
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
+  // The sign editor is intentionally a single sheet flow on sign orders.
+
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
     logSignOrderDebug('sign_editor_closed', {
