@@ -621,6 +621,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         (d) => d.designation === localSign.designation
     );
     const availableDimensions = getAvailableDimensions();
+    const totalMutcdCount = apiData?.signs?.length ?? 0;
+    const totalPataCount = apiData?.pataKits?.length ?? 0;
+    const totalPtsCount = apiData?.ptsKits?.length ?? 0;
 
     const handleSave = () => {
         logSignOrderDebug('sign_configuration_save_clicked', {
@@ -707,9 +710,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <Tabs value={activePickerTab} onValueChange={(value) => setActivePickerTab(value as 'mutcd' | 'pata' | 'pts')} className="flex flex-col gap-4">
                             <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="mutcd">MUTCD Signs</TabsTrigger>
-                                <TabsTrigger value="pata">PATA Kits</TabsTrigger>
-                                <TabsTrigger value="pts">PTS Kits</TabsTrigger>
+                                <TabsTrigger value="mutcd">MUTCD Signs ({totalMutcdCount})</TabsTrigger>
+                                <TabsTrigger value="pata">PATA Kits ({totalPataCount})</TabsTrigger>
+                                <TabsTrigger value="pts">PTS Kits ({totalPtsCount})</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="mutcd" className="space-y-4">
