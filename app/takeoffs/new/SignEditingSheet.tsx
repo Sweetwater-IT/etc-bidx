@@ -33,6 +33,7 @@ import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignatio
 import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
+import { QuantityInput } from '@/components/ui/quantity-input';
 
 interface Props {
     open: boolean;
@@ -542,7 +543,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         variant="outline"
                                         role="combobox"
                                         className="w-full justify-between"
-                                        disabled={Object.hasOwn(localSign, 'associatedStructure')}
                                     >
                                         <span className="truncate">
                                             {localSign.designation || "Select designation..."}
@@ -768,14 +768,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                            <Input
-                                type="number"
-                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || ""}
-                                onChange={(e) =>
-                                    handleSignUpdate("quantity", parseInt(e.target.value) || 0)
-                                }
+                            <QuantityInput
+                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 0}
+                                onChange={(value) => handleSignUpdate("quantity", value)}
                                 min={0}
-                                className="w-full"
                                 disabled={isSecondary}
                             />
                         </div>
