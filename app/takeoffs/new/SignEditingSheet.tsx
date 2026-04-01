@@ -52,6 +52,22 @@ const isSecondarySign = (sign: PrimarySign | SecondarySign): sign is SecondarySi
     return 'primarySignId' in sign;
 };
 
+const SIGN_ORDER_STRUCTURE_OPTIONS: DisplayStructures[] = [
+    "4' T-III RIGHT",
+    "4' T-III LEFT",
+    "6' T-III RIGHT",
+    "6' T-III LEFT",
+    "H-FOOT",
+    "8' POST",
+    "10' POST",
+    "12' POST",
+    "14' POST",
+    "LOOSE",
+];
+
+const SIGN_ORDER_SHEETING_OPTIONS = ["HI", "DG", "FYG", "TYPEXI", "Special"] as const;
+const SIGN_ORDER_SUBSTRATE_OPTIONS = ["Aluminum", "Aluminum-Composite", "Plastic", "Roll Up", "Face"] as const;
+
 const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
@@ -1089,46 +1105,87 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         {!isSecondary && (
                             <div>
                                 <Label className="text-sm font-medium mb-2 block">Structure</Label>
-                                <Select
-                                    value={(localSign as PrimarySign).displayStructure}
-                                    onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Choose structure" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
-                                        <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
-                                        <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
-                                        <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
-                                        <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                        <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
-                                        <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
-                                        <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
-                                        <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
-                                        <SelectItem value="LOOSE">LOOSE</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                {isSignOrderFlow ? (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {SIGN_ORDER_STRUCTURE_OPTIONS.map((option) => {
+                                            const selected = (localSign as PrimarySign).displayStructure === option;
+                                            return (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() => handleSignUpdate('displayStructure', option)}
+                                                    className={cn(
+                                                        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                        selected
+                                                            ? "border-primary bg-primary/10 text-primary"
+                                                            : "border-border hover:bg-muted/50"
+                                                    )}
+                                                >
+                                                    {option}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <Select
+                                        value={(localSign as PrimarySign).displayStructure}
+                                        onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Choose structure" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SIGN_ORDER_STRUCTURE_OPTIONS.map((option) => (
+                                                <SelectItem key={option} value={option}>
+                                                    {option}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
                             </div>
                         )}
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                            <Select
-                                value={localSign.sheeting || "HI"}
-                                onValueChange={(value) => handleSignUpdate("sheeting", value)}
-                                disabled={!localSign.isCustom && !isSignOrder}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="HI">HI</SelectItem>
-                                    <SelectItem value="DG">DG</SelectItem>
-                                    <SelectItem value="FYG">FYG</SelectItem>
-                                    <SelectItem value="TYPEXI">Type XI</SelectItem>
-                                    <SelectItem value="Special">Special</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {isSignOrderFlow ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {SIGN_ORDER_SHEETING_OPTIONS.map((option) => {
+                                        const selected = (localSign.sheeting || "HI") === option;
+                                        return (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                onClick={() => handleSignUpdate("sheeting", option)}
+                                                className={cn(
+                                                    "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                    selected
+                                                        ? "border-primary bg-primary/10 text-primary"
+                                                        : "border-border hover:bg-muted/50"
+                                                )}
+                                            >
+                                                {option === "TYPEXI" ? "Type XI" : option}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <Select
+                                    value={localSign.sheeting || "HI"}
+                                    onValueChange={(value) => handleSignUpdate("sheeting", value)}
+                                    disabled={!localSign.isCustom && !isSignOrder}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {SIGN_ORDER_SHEETING_OPTIONS.map((option) => (
+                                            <SelectItem key={option} value={option}>
+                                                {option === "TYPEXI" ? "Type XI" : option}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                     </div>
 
@@ -1199,27 +1256,53 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                         <Label className="text-sm font-medium mb-2 block">
                                             Substrate
                                         </Label>
-                                        <Select
-                                            value={localSign.substrate}
-                                            onValueChange={(value) => handleSignUpdate("substrate", value)}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select substrate" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Aluminum">Aluminum</SelectItem>
-                                                <SelectItem value="Aluminum-Composite">
-                                                    Aluminum Composite
-                                                </SelectItem>
-                                                <SelectItem value="Plastic">Plastic</SelectItem>
-                                                {isSignOrder && (
-                                                    <>
-                                                        <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                                        <SelectItem value="Face">Face</SelectItem>
-                                                    </>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        {isSignOrderFlow ? (
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
+                                                    if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
+                                                        return null;
+                                                    }
+                                                    const selected = localSign.substrate === option;
+                                                    return (
+                                                        <button
+                                                            key={option}
+                                                            type="button"
+                                                            onClick={() => handleSignUpdate("substrate", option)}
+                                                            className={cn(
+                                                                "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                                selected
+                                                                    ? "border-primary bg-primary/10 text-primary"
+                                                                    : "border-border hover:bg-muted/50"
+                                                            )}
+                                                        >
+                                                            {option === "Aluminum-Composite" ? "Aluminum Composite" : option}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <Select
+                                                value={localSign.substrate}
+                                                onValueChange={(value) => handleSignUpdate("substrate", value)}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select substrate" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                                    <SelectItem value="Aluminum-Composite">
+                                                        Aluminum Composite
+                                                    </SelectItem>
+                                                    <SelectItem value="Plastic">Plastic</SelectItem>
+                                                    {isSignOrder && (
+                                                        <>
+                                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                            <SelectItem value="Face">Face</SelectItem>
+                                                        </>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                     </div>
                                     <div className="flex items-end gap-6 pb-2">
                                         <div className="flex items-center gap-2">
