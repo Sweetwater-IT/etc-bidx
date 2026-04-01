@@ -65,6 +65,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
 
     const isSecondary = isSecondarySign(sign);
+    const isSignOrderConfigOnly = Boolean(isSignOrder && !isSecondary && !isCustom);
+    const showSubstrateField = Boolean(isTakeoff || isSignOrder);
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
@@ -502,162 +504,179 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     </div>
 
                     {/* Designation Section */}
-                    <div>
-                        <Label className="text-base font-semibold mb-2.5 block">
-                            Designation
-                        </Label>
-                        {isCustom ? (
-                            <div className="grid grid-cols-1 gap-4">
+                    {isSignOrderConfigOnly ? (
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <Label className="text-base font-semibold mb-2.5 block">
+                                Sign Selection
+                            </Label>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        Designation Code
-                                    </Label>
-                                    <Input
-                                        value={localSign.designation || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("designation", e.target.value)
-                                        }
-                                        placeholder="Enter custom designation"
-                                    />
+                                    <div className="text-muted-foreground">Designation</div>
+                                    <div className="font-medium">{localSign.designation || '-'}</div>
                                 </div>
                                 <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        Description
-                                    </Label>
-                                    <Input
-                                        value={localSign.description || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("description", e.target.value)
-                                        }
-                                        placeholder="Enter description"
-                                    />
+                                    <div className="text-muted-foreground">Dimensions</div>
+                                    <div className="font-medium">
+                                        {localSign.width > 0 && localSign.height > 0
+                                            ? `${localSign.width}" x ${localSign.height}"`
+                                            : '-'}
+                                    </div>
                                 </div>
                             </div>
-                        ) : (
-                            <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className="w-full justify-between"
-                                    >
-                                        <span className="truncate">
-                                            {localSign.designation || "Select designation..."}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0" align="start">
-                                    <Command shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search designation..."
-                                            onValueChange={filterDesignations}
+                        </div>
+                    ) : (
+                        <div>
+                            <Label className="text-base font-semibold mb-2.5 block">
+                                Designation
+                            </Label>
+                            {isCustom ? (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Designation Code
+                                        </Label>
+                                        <Input
+                                            value={localSign.designation || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("designation", e.target.value)
+                                            }
+                                            placeholder="Enter custom designation"
                                         />
-                                        <CommandEmpty>No designation found.</CommandEmpty>
-                                        <CommandList>
-                                            {/* MUTCD SIGNS Section */}
-                                            {filteredSigns.length > 0 && (
-                                                <CommandGroup heading="MUTCD SIGNS">
-                                                    {filteredSigns.map((item) => (
-                                                        <CommandItem
-                                                            key={item.designation}
-                                                            value={item.designation}
-                                                            onSelect={() => {
-                                                                handleDesignationSelect(item.designation);
-                                                                setDesignationOpen(false);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center w-full">
-                                                                <Check
-                                                                    className={cn(
-                                                                        "mr-2 h-4 w-4",
-                                                                        localSign.designation === item.designation
-                                                                            ? "opacity-100"
-                                                                            : "opacity-0"
-                                                                    )}
-                                                                />
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-medium">
-                                                                        {item.designation}
-                                                                    </span>
-                                                                    {item.description && (
-                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                            {item.description}
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Description
+                                        </Label>
+                                        <Input
+                                            value={localSign.description || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("description", e.target.value)
+                                            }
+                                            placeholder="Enter description"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className="w-full justify-between"
+                                        >
+                                            <span className="truncate">
+                                                {localSign.designation || "Select designation..."}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0" align="start">
+                                        <Command shouldFilter={false}>
+                                            <CommandInput
+                                                placeholder="Search designation..."
+                                                onValueChange={filterDesignations}
+                                            />
+                                            <CommandEmpty>No designation found.</CommandEmpty>
+                                            <CommandList>
+                                                {filteredSigns.length > 0 && (
+                                                    <CommandGroup heading="MUTCD SIGNS">
+                                                        {filteredSigns.map((item) => (
+                                                            <CommandItem
+                                                                key={item.designation}
+                                                                value={item.designation}
+                                                                onSelect={() => {
+                                                                    handleDesignationSelect(item.designation);
+                                                                    setDesignationOpen(false);
+                                                                }}
+                                                            >
+                                                                <div className="flex items-center w-full">
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            localSign.designation === item.designation
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">
+                                                                            {item.designation}
                                                                         </span>
-                                                                    )}
+                                                                        {item.description && (
+                                                                            <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                                {item.description}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            )}
-
-                                            {/* PATA Kits Section */}
-                                            {filteredPataKits.length > 0 && (
-                                                <CommandGroup heading="PATA Kits">
-                                                    {filteredPataKits.map((kit) => (
-                                                        <CommandItem
-                                                            key={kit.id}
-                                                            value={`pata-${kit.id}`}
-                                                            onSelect={() => {
-                                                                handleKitSelect(kit, 'pata');
-                                                                setDesignationOpen(false);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center w-full">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-medium">
-                                                                        {kit.code}
-                                                                    </span>
-                                                                    {kit.description && (
-                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                            {kit.description}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                )}
+                                                {filteredPataKits.length > 0 && (
+                                                    <CommandGroup heading="PATA Kits">
+                                                        {filteredPataKits.map((kit) => (
+                                                            <CommandItem
+                                                                key={kit.id}
+                                                                value={`pata-${kit.id}`}
+                                                                onSelect={() => {
+                                                                    handleKitSelect(kit, 'pata');
+                                                                    setDesignationOpen(false);
+                                                                }}
+                                                            >
+                                                                <div className="flex items-center w-full">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">
+                                                                            {kit.code}
                                                                         </span>
-                                                                    )}
+                                                                        {kit.description && (
+                                                                            <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                                {kit.description}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            )}
-
-                                            {/* PTS Kits Section */}
-                                            {filteredPtsKits.length > 0 && (
-                                                <CommandGroup heading="PTS Kits">
-                                                    {filteredPtsKits.map((kit) => (
-                                                        <CommandItem
-                                                            key={kit.id}
-                                                            value={`pts-${kit.id}`}
-                                                            onSelect={() => {
-                                                                handleKitSelect(kit, 'pts');
-                                                                setDesignationOpen(false);
-                                                            }}
-                                                        >
-                                                            <div className="flex items-center w-full">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-medium">
-                                                                        {kit.code}
-                                                                    </span>
-                                                                    {kit.description && (
-                                                                        <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                                                                            {kit.description}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                )}
+                                                {filteredPtsKits.length > 0 && (
+                                                    <CommandGroup heading="PTS Kits">
+                                                        {filteredPtsKits.map((kit) => (
+                                                            <CommandItem
+                                                                key={kit.id}
+                                                                value={`pts-${kit.id}`}
+                                                                onSelect={() => {
+                                                                    handleKitSelect(kit, 'pts');
+                                                                    setDesignationOpen(false);
+                                                                }}
+                                                            >
+                                                                <div className="flex items-center w-full">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">
+                                                                            {kit.code}
                                                                         </span>
-                                                                    )}
+                                                                        {kit.description && (
+                                                                            <span className="text-muted-foreground text-xs truncate max-w-[200px]">
+                                                                                {kit.description}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            )}
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                    </div>
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                )}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                        </div>
+                    )}
 
-                    {/* Substrate (only for takeoff mode) */}
-                    {isTakeoff && (
+                    {/* Substrate */}
+                    {showSubstrateField && (
                         <div>
                             <Label className="text-base font-semibold mb-2.5 block">
                                 Substrate
@@ -715,6 +734,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     />
                                 </div>
                             </>
+                        ) : isSignOrderConfigOnly ? (
+                            <div className="col-span-2">
+                                <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
+                                <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm font-medium">
+                                    {localSign.width > 0 && localSign.height > 0
+                                        ? `${localSign.width}" x ${localSign.height}"`
+                                        : 'No dimensions selected'}
+                                </div>
+                            </div>
                         ) : (
                             <div className="col-span-2">
                                 <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
@@ -748,7 +776,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             <Select
                                 value={localSign.sheeting || "HI"}
                                 onValueChange={(value) => handleSignUpdate("sheeting", value)}
-                                disabled={!localSign.isCustom}
+                                disabled={!localSign.isCustom && !isSignOrder}
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select" />
