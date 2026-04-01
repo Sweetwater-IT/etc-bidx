@@ -794,7 +794,7 @@ export default function SignOrderContentSimple({
             onImport={(signs) => dispatch({ type: 'COPY_MPT_RENTAL', payload: { ...mptRental, phases: [{ ...mptRental.phases[0], signs }] } })}
             onDetailsSaved={handleAdminInfoSaved}
           />
-          <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
+          <SignOrderList isSignOrder={true} needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>
         {/* Right Column (1/4) */}
         <div className="min-w-0 space-y-6">

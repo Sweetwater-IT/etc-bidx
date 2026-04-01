@@ -569,6 +569,7 @@ const SignShopContent = ({ id }: Props) => {
                     currentPhase={0}
                     onlyTable={true}
                     shopMode={true}
+                    isSignOrder={true}
                     // shopSigns={shopSigns}
                     updateShopTracking={updateShopTracking}
                     adjustShopValue={adjustShopValue}
