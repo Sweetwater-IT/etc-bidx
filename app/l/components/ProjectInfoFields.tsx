@@ -37,6 +37,7 @@ import { addDays, format } from "date-fns";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
 import { cn, formatPhoneNumber } from "@/lib/utils";
 import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
+import { CaptionProps, useNavigation } from "react-day-picker";
 
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
@@ -117,6 +118,79 @@ const RateField = ({
         aria-label={label}
         className="h-8"
       />
+    </div>
+  );
+};
+
+const ContractCalendarCaption = ({
+  displayMonth,
+  fromYear,
+  toYear,
+}: CaptionProps & {
+  fromYear: number;
+  toYear: number;
+}) => {
+  const { previousMonth, nextMonth, goToMonth } = useNavigation();
+  const years = useMemo(() => {
+    const values: number[] = [];
+    for (let year = fromYear; year <= toYear; year += 1) {
+      values.push(year);
+    }
+    return values;
+  }, [fromYear, toYear]);
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-2 pt-1">
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-6 w-6 bg-transparent p-0 opacity-70 hover:opacity-100"
+          onClick={() => previousMonth && goToMonth(previousMonth)}
+          disabled={!previousMonth}
+        >
+          <span className="sr-only">Previous month</span>
+          <CalendarIcon className="hidden" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-6 w-6 bg-transparent p-0 opacity-70 hover:opacity-100"
+          onClick={() => nextMonth && goToMonth(nextMonth)}
+          disabled={!nextMonth}
+        >
+          <span className="sr-only">Next month</span>
+          <CalendarIcon className="hidden" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </Button>
+      </div>
+
+      <div className="min-w-0 flex-1 text-center text-sm font-medium">
+        {format(displayMonth, "MMMM")}
+      </div>
+
+      <Select
+        value={String(displayMonth.getFullYear())}
+        onValueChange={(year) => goToMonth(new Date(Number(year), displayMonth.getMonth(), 1))}
+      >
+        <SelectTrigger className="h-7 w-[84px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          {years.map((year) => (
+            <SelectItem key={year} value={String(year)}>
+              {year}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };
@@ -761,9 +835,18 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  captionLayout="dropdown"
                   fromYear={calendarFromYear}
                   toYear={calendarToYear}
+                  classNames={{ caption: "pt-1", month: "flex flex-col gap-3" }}
+                  components={{
+                    Caption: (props) => (
+                      <ContractCalendarCaption
+                        {...props}
+                        fromYear={calendarFromYear}
+                        toYear={calendarToYear}
+                      />
+                    ),
+                  }}
                   selected={parseDateValue(projectInfo.projectStartDate)}
                   onSelect={(date) => {
                     if (!date) {
@@ -806,9 +889,18 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  captionLayout="dropdown"
                   fromYear={calendarFromYear}
                   toYear={calendarToYear}
+                  classNames={{ caption: "pt-1", month: "flex flex-col gap-3" }}
+                  components={{
+                    Caption: (props) => (
+                      <ContractCalendarCaption
+                        {...props}
+                        fromYear={calendarFromYear}
+                        toYear={calendarToYear}
+                      />
+                    ),
+                  }}
                   selected={parseDateValue(projectInfo.projectEndDate)}
                   defaultMonth={endCalendarDefaultMonth}
                   onSelect={(date) => {
