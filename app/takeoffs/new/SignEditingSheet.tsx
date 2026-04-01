@@ -271,27 +271,36 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     const filterKits = (searchTerm: string, kitType: 'pata' | 'pts') => {
-        const allKits = kitType === 'pata' ? (apiData?.pataKits || []) : (apiData?.ptsKits || []);
-        if (!searchTerm.trim()) {
-            if (kitType === 'pata') {
-                setFilteredPataKits(allKits);
-            } else {
-                setFilteredPtsKits(allKits);
-            }
-            return;
-        }
-
-        const query = searchTerm.toLowerCase();
-        const filtered = allKits.filter((kit) =>
-            kit.code.toLowerCase().includes(query) ||
-            (kit.description || '').toLowerCase().includes(query) ||
-            kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
-        );
-
         if (kitType === 'pata') {
-            setFilteredPataKits(filtered);
+            const allPataKits = apiData?.pataKits || [];
+            if (!searchTerm.trim()) {
+                setFilteredPataKits(allPataKits);
+                return;
+            }
+
+            const query = searchTerm.toLowerCase();
+            const filteredPata = allPataKits.filter((kit) =>
+                kit.code.toLowerCase().includes(query) ||
+                (kit.description || '').toLowerCase().includes(query) ||
+                kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
+            );
+
+            setFilteredPataKits(filteredPata);
         } else {
-            setFilteredPtsKits(filtered);
+            const allPtsKits = apiData?.ptsKits || [];
+            if (!searchTerm.trim()) {
+                setFilteredPtsKits(allPtsKits);
+                return;
+            }
+
+            const query = searchTerm.toLowerCase();
+            const filteredPts = allPtsKits.filter((kit) =>
+                kit.code.toLowerCase().includes(query) ||
+                (kit.description || '').toLowerCase().includes(query) ||
+                kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
+            );
+
+            setFilteredPtsKits(filteredPts);
         }
     };
 
