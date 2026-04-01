@@ -140,8 +140,8 @@ const ContractCalendarCaption = ({
   }, [fromYear, toYear]);
 
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 pt-1">
-      <div className="flex items-center gap-1 justify-self-start">
+    <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-2 pt-1">
+      <div className="flex items-center justify-center gap-1 min-w-0">
         <Button
           type="button"
           variant="outline"
@@ -156,6 +156,9 @@ const ContractCalendarCaption = ({
             <path d="m15 18-6-6 6-6" />
           </svg>
         </Button>
+        <div className="min-w-[72px] truncate text-center text-sm font-medium">
+          {format(displayMonth, "MMMM")}
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -170,10 +173,6 @@ const ContractCalendarCaption = ({
             <path d="m9 18 6-6-6-6" />
           </svg>
         </Button>
-      </div>
-
-      <div className="min-w-0 truncate text-center text-sm font-medium">
-        {format(displayMonth, "MMMM")}
       </div>
 
       <Select
