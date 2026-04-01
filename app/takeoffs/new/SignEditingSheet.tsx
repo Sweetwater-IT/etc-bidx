@@ -76,6 +76,9 @@ const SIGN_ORDER_B_LIGHT_OPTIONS = [
     { quantity: 2, color: 'Red' as const, label: '2 Red' },
 ] as const;
 
+const SIGN_ORDER_SELECTED_CARD_CLASSES = "border-emerald-500/20 bg-emerald-500/5 text-emerald-700";
+const SIGN_ORDER_UNSELECTED_CARD_CLASSES = "border-border hover:bg-muted/50";
+
 const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
@@ -1127,134 +1130,133 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {!isSecondary && (
-                            <div>
-                                <Label className="text-sm font-medium mb-2 block">Structure</Label>
-                                {isSignOrderFlow ? (
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-                                            {SIGN_ORDER_STRUCTURE_OPTIONS.slice(0, 4).map((option) => {
-                                                const selected = (localSign as PrimarySign).displayStructure === option;
-                                                return (
-                                                    <button
-                                                        key={option}
-                                                        type="button"
-                                                        onClick={() => handleSignUpdate('displayStructure', option)}
-                                                        className={cn(
-                                                            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                            selected
-                                                                ? "border-primary bg-primary/10 text-primary"
-                                                                : "border-border hover:bg-muted/50"
-                                                        )}
-                                                    >
-                                                        {option}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-                                            {SIGN_ORDER_STRUCTURE_OPTIONS.slice(5, 9).map((option) => {
-                                                const selected = (localSign as PrimarySign).displayStructure === option;
-                                                return (
-                                                    <button
-                                                        key={option}
-                                                        type="button"
-                                                        onClick={() => handleSignUpdate('displayStructure', option)}
-                                                        className={cn(
-                                                            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                            selected
-                                                                ? "border-primary bg-primary/10 text-primary"
-                                                                : "border-border hover:bg-muted/50"
-                                                        )}
-                                                    >
-                                                        {option}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[SIGN_ORDER_STRUCTURE_OPTIONS[4], SIGN_ORDER_STRUCTURE_OPTIONS[9]].map((option) => {
-                                                const selected = (localSign as PrimarySign).displayStructure === option;
-                                                return (
-                                                    <button
-                                                        key={option}
-                                                        type="button"
-                                                        onClick={() => handleSignUpdate('displayStructure', option)}
-                                                        className={cn(
-                                                            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                            selected
-                                                                ? "border-primary bg-primary/10 text-primary"
-                                                                : "border-border hover:bg-muted/50"
-                                                        )}
-                                                    >
-                                                        {option}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <Select
-                                        value={(localSign as PrimarySign).displayStructure}
-                                        onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Choose structure" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {SIGN_ORDER_STRUCTURE_OPTIONS.map((option) => (
-                                                <SelectItem key={option} value={option}>
-                                                    {option}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
-                        )}
+                    {!isSecondary && (
                         <div>
-                            <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
+                            <Label className="text-sm font-medium mb-2 block">Structure</Label>
                             {isSignOrderFlow ? (
-                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                                    {SIGN_ORDER_SHEETING_OPTIONS.map((option) => {
-                                        const selected = (localSign.sheeting || "HI") === option;
-                                        return (
-                                            <button
-                                                key={option}
-                                                type="button"
-                                                onClick={() => handleSignUpdate("sheeting", option)}
-                                                className={cn(
-                                                    "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                    selected
-                                                        ? "border-primary bg-primary/10 text-primary"
-                                                        : "border-border hover:bg-muted/50"
-                                                )}
-                                            >
-                                                {option === "TYPEXI" ? "Type XI" : option}
-                                            </button>
-                                        );
-                                    })}
+                                <div className="space-y-2">
+                                    <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                                        {SIGN_ORDER_STRUCTURE_OPTIONS.slice(0, 4).map((option) => {
+                                            const selected = (localSign as PrimarySign).displayStructure === option;
+                                            return (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() => handleSignUpdate('displayStructure', option)}
+                                                    className={cn(
+                                                        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                        selected
+                                                            ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                            : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                                    )}
+                                                >
+                                                    {option}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                                        {SIGN_ORDER_STRUCTURE_OPTIONS.slice(5, 9).map((option) => {
+                                            const selected = (localSign as PrimarySign).displayStructure === option;
+                                            return (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() => handleSignUpdate('displayStructure', option)}
+                                                    className={cn(
+                                                        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                        selected
+                                                            ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                            : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                                    )}
+                                                >
+                                                    {option}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[SIGN_ORDER_STRUCTURE_OPTIONS[4], SIGN_ORDER_STRUCTURE_OPTIONS[9]].map((option) => {
+                                            const selected = (localSign as PrimarySign).displayStructure === option;
+                                            return (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    onClick={() => handleSignUpdate('displayStructure', option)}
+                                                    className={cn(
+                                                        "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                        selected
+                                                            ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                            : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                                    )}
+                                                >
+                                                    {option}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ) : (
                                 <Select
-                                    value={localSign.sheeting || "HI"}
-                                    onValueChange={(value) => handleSignUpdate("sheeting", value)}
-                                    disabled={!localSign.isCustom && !isSignOrder}
+                                    value={(localSign as PrimarySign).displayStructure}
+                                    onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select" />
+                                        <SelectValue placeholder="Choose structure" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {SIGN_ORDER_SHEETING_OPTIONS.map((option) => (
+                                        {SIGN_ORDER_STRUCTURE_OPTIONS.map((option) => (
                                             <SelectItem key={option} value={option}>
-                                                {option === "TYPEXI" ? "Type XI" : option}
+                                                {option}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             )}
                         </div>
+                    )}
+
+                    <div>
+                        <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
+                        {isSignOrderFlow ? (
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                                {SIGN_ORDER_SHEETING_OPTIONS.map((option) => {
+                                    const selected = (localSign.sheeting || "HI") === option;
+                                    return (
+                                        <button
+                                            key={option}
+                                            type="button"
+                                            onClick={() => handleSignUpdate("sheeting", option)}
+                                            className={cn(
+                                                "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                selected
+                                                    ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                    : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                            )}
+                                        >
+                                            {option === "TYPEXI" ? "Type XI" : option}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <Select
+                                value={localSign.sheeting || "HI"}
+                                onValueChange={(value) => handleSignUpdate("sheeting", value)}
+                                disabled={!localSign.isCustom && !isSignOrder}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SIGN_ORDER_SHEETING_OPTIONS.map((option) => (
+                                        <SelectItem key={option} value={option}>
+                                            {option === "TYPEXI" ? "Type XI" : option}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
 
                     {/* Dimensions and Core Properties */}
@@ -1319,91 +1321,92 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     {!isSecondary && (
                         <>
                             {showSubstrateField && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-sm font-medium mb-2 block">
-                                            Substrate
+                                <div>
+                                    <Label className="text-sm font-medium mb-2 block">
+                                        Substrate
+                                    </Label>
+                                    {isSignOrderFlow ? (
+                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                                            {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
+                                                if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
+                                                    return null;
+                                                }
+                                                const selected = localSign.substrate === option;
+                                                return (
+                                                    <button
+                                                        key={option}
+                                                        type="button"
+                                                        onClick={() => handleSignUpdate("substrate", option)}
+                                                        className={cn(
+                                                            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                            selected
+                                                                ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                                : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                                        )}
+                                                    >
+                                                        {option === "Aluminum-Composite" ? "Aluminum Composite" : option}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <Select
+                                            value={localSign.substrate}
+                                            onValueChange={(value) => handleSignUpdate("substrate", value)}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select substrate" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                                <SelectItem value="Aluminum-Composite">
+                                                    Aluminum Composite
+                                                </SelectItem>
+                                                <SelectItem value="Plastic">Plastic</SelectItem>
+                                                {isSignOrder && (
+                                                    <>
+                                                        <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                        <SelectItem value="Face">Face</SelectItem>
+                                                    </>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </div>
+                            )}
+
+                            {showSubstrateField && (
+                                <div className="flex flex-wrap items-end gap-6 pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            onCheckedChange={(checked) =>
+                                                handleSignUpdate("cover", checked)
+                                            }
+                                            checked={(localSign as PrimarySign).cover || false}
+                                            id="cover-checkbox"
+                                        />
+                                        <Label
+                                            htmlFor="cover-checkbox"
+                                            className="text-sm font-medium"
+                                        >
+                                            Include cover
                                         </Label>
-                                        {isSignOrderFlow ? (
-                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                                                {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
-                                                    if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
-                                                        return null;
-                                                    }
-                                                    const selected = localSign.substrate === option;
-                                                    return (
-                                                        <button
-                                                            key={option}
-                                                            type="button"
-                                                            onClick={() => handleSignUpdate("substrate", option)}
-                                                            className={cn(
-                                                                "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                                selected
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border hover:bg-muted/50"
-                                                            )}
-                                                        >
-                                                            {option === "Aluminum-Composite" ? "Aluminum Composite" : option}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <Select
-                                                value={localSign.substrate}
-                                                onValueChange={(value) => handleSignUpdate("substrate", value)}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select substrate" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Aluminum">Aluminum</SelectItem>
-                                                    <SelectItem value="Aluminum-Composite">
-                                                        Aluminum Composite
-                                                    </SelectItem>
-                                                    <SelectItem value="Plastic">Plastic</SelectItem>
-                                                    {isSignOrder && (
-                                                        <>
-                                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                                            <SelectItem value="Face">Face</SelectItem>
-                                                        </>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
                                     </div>
-                                    <div className="flex flex-wrap items-end gap-6 pb-2">
+                                    {isTakeoff && (
                                         <div className="flex items-center gap-2">
                                             <Checkbox
-                                                onCheckedChange={(checked) =>
-                                                    handleSignUpdate("cover", checked)
-                                                }
-                                                checked={(localSign as PrimarySign).cover || false}
-                                                id="cover-checkbox"
+                                                onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+                                                checked={localSign.stiffener || false}
+                                                id="stiffener-checkbox"
                                             />
                                             <Label
-                                                htmlFor="cover-checkbox"
+                                                htmlFor="stiffener-checkbox"
                                                 className="text-sm font-medium"
                                             >
-                                                Include cover
+                                                Include stiffener
                                             </Label>
                                         </div>
-                                        {isTakeoff && (
-                                            <div className="flex items-center gap-2">
-                                                <Checkbox
-                                                    onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
-                                                    checked={localSign.stiffener || false}
-                                                    id="stiffener-checkbox"
-                                                />
-                                                <Label
-                                                    htmlFor="stiffener-checkbox"
-                                                    className="text-sm font-medium"
-                                                >
-                                                    Include stiffener
-                                                </Label>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1434,8 +1437,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                                             className={cn(
                                                                 "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
                                                                 selected
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border hover:bg-muted/50"
+                                                                    ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                                    : SIGN_ORDER_UNSELECTED_CARD_CLASSES
                                                             )}
                                                         >
                                                             {option.label}
@@ -1454,8 +1457,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                                             className={cn(
                                                                 "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
                                                                 selected
-                                                                    ? "border-primary bg-primary/10 text-primary"
-                                                                    : "border-border hover:bg-muted/50"
+                                                                    ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                                    : SIGN_ORDER_UNSELECTED_CARD_CLASSES
                                                             )}
                                                         >
                                                             {option.label}
