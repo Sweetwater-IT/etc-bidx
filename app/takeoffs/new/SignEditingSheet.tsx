@@ -34,6 +34,7 @@ import { processSignData } from '@/components/pages/active-bid/signs/process-sig
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
 interface Props {
     open: boolean;
@@ -160,6 +161,34 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         setLocalSign({ ...sign });
         setIsCustom(sign.isCustom || false);
     }, [sign]);
+
+    useEffect(() => {
+        logSignOrderDebug('sign_configuration_modal_state', {
+            open,
+            mode,
+            currentPhase,
+            signId: localSign?.id ?? null,
+            designation: localSign?.designation ?? null,
+            width: localSign?.width ?? null,
+            height: localSign?.height ?? null,
+            quantity: localSign?.quantity ?? null,
+            displayStructure: 'displayStructure' in localSign ? localSign.displayStructure ?? null : null,
+            substrate: localSign?.substrate ?? null,
+            sheeting: localSign?.sheeting ?? null,
+        });
+    }, [
+        currentPhase,
+        localSign?.designation,
+        localSign?.height,
+        localSign?.id,
+        localSign?.quantity,
+        localSign?.sheeting,
+        localSign?.substrate,
+        localSign?.width,
+        mode,
+        open,
+        'displayStructure' in localSign ? localSign.displayStructure : null,
+    ]);
 
     // Filter designations based on search term
     const filterDesignations = (searchTerm: string) => {
@@ -431,6 +460,18 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     };
 
     const handleSave = () => {
+        logSignOrderDebug('sign_configuration_save_clicked', {
+            mode,
+            currentPhase,
+            signId: localSign?.id ?? null,
+            designation: localSign?.designation ?? null,
+            width: localSign?.width ?? null,
+            height: localSign?.height ?? null,
+            quantity: localSign?.quantity ?? null,
+            displayStructure: 'displayStructure' in localSign ? localSign.displayStructure ?? null : null,
+            substrate: localSign?.substrate ?? null,
+            sheeting: localSign?.sheeting ?? null,
+        });
         // For secondary signs, make sure the quantity matches the primary sign
         let signToSave = localSign;
         if (isSecondary && primarySign) {
@@ -469,6 +510,12 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const handleCancel = () => {
         setIsCustom(sign.isCustom || false);
+        logSignOrderDebug('sign_configuration_cancel_clicked', {
+            mode,
+            currentPhase,
+            signId: localSign?.id ?? null,
+            designation: localSign?.designation ?? null,
+        });
         onOpenChange(false);
     };
 

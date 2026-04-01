@@ -29,6 +29,7 @@ import React, {
 import { createClient } from '@supabase/supabase-js';
 import KitConfigurationTable from './KitConfigurationTable';
 import { generateUniqueId } from './generate-stable-id';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
 interface Props {
   localSign: PrimarySign | SecondarySign;
@@ -82,6 +83,38 @@ const DesignationSearcher = ({
   const [kitConfigurationModalOpen, setKitConfigurationModalOpen] = useState(false);
   const [selectedKitForConfiguration, setSelectedKitForConfiguration] = useState<PataKit | PtsKit | null>(null);
   const [kitConfigurationType, setKitConfigurationType] = useState<'pata' | 'pts' | null>(null);
+
+  useEffect(() => {
+    logSignOrderDebug('sign_designation_modal_state', {
+      open,
+      dimensionModalOpen,
+      kitPreviewModalOpen,
+      variantSelectionModalOpen,
+      kitConfigurationModalOpen,
+      activeTab,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+      width: localSign?.width ?? null,
+      height: localSign?.height ?? null,
+      selectedDesignation: selectedDesignation?.designation ?? null,
+      selectedKitCode: selectedKitForConfiguration?.code ?? selectedKitForPreview?.code ?? selectedKitForVariant?.code ?? null,
+    });
+  }, [
+    activeTab,
+    dimensionModalOpen,
+    kitConfigurationModalOpen,
+    kitPreviewModalOpen,
+    localSign?.designation,
+    localSign?.height,
+    localSign?.id,
+    localSign?.width,
+    open,
+    selectedDesignation?.designation,
+    selectedKitForConfiguration?.code,
+    selectedKitForPreview?.code,
+    selectedKitForVariant?.code,
+    variantSelectionModalOpen,
+  ]);
 
   // Fetch all data once on mount
   useEffect(() => {
@@ -198,12 +231,23 @@ const DesignationSearcher = ({
   }, [ptsKits, ptsSearch]);
 
   const handleSelectDesignation = (designation: SignDesignation) => {
+    logSignOrderDebug('sign_designation_clicked', {
+      designation: designation.designation,
+      dimensions: designation.dimensions?.length ?? 0,
+      signId: localSign?.id ?? null,
+    });
     setSelectedDesignation(designation);
     setDimensionModalOpen(true);
   };
 
   const handleSelectDimension = (width: number, height: number) => {
     if (!selectedDesignation) return;
+    logSignOrderDebug('sign_dimension_selected', {
+      designation: selectedDesignation.designation,
+      width,
+      height,
+      signId: localSign?.id ?? null,
+    });
     const updatedSign = {
       ...localSign,
       designation: selectedDesignation.designation,
@@ -221,6 +265,9 @@ const DesignationSearcher = ({
   };
 
   const handleCustomDesignation = () => {
+    logSignOrderDebug('sign_custom_designation_selected', {
+      signId: localSign?.id ?? null,
+    });
     const updatedSign = {
       ...localSign,
       designation: '',
@@ -237,6 +284,11 @@ const DesignationSearcher = ({
   };
 
   const handleSelectKit = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+    logSignOrderDebug('sign_kit_selected_direct', {
+      kitCode: kit.code,
+      kitType,
+      signId: localSign?.id ?? null,
+    });
     if (onKitSelected) onKitSelected(kit, kitType);
     setOpen(false);
     if (kitType === 'pata') setPataSearch('');
@@ -244,6 +296,12 @@ const DesignationSearcher = ({
   };
 
   const handleSelectKitForPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+    logSignOrderDebug('sign_kit_preview_requested', {
+      kitCode: kit.code,
+      kitType,
+      hasVariants: Boolean(kit.has_variants && kit.variants?.length > 0),
+      signId: localSign?.id ?? null,
+    });
     if (kit.has_variants && kit.variants?.length > 0) {
       setSelectedKitForVariant(kit);
       setKitVariantType(kitType);
@@ -285,6 +343,12 @@ const DesignationSearcher = ({
 
   const handleVariantSelected = async (variant: any) => {
     if (!selectedKitForVariant || !kitVariantType) return;
+    logSignOrderDebug('sign_kit_variant_selected', {
+      kitCode: selectedKitForVariant.code,
+      kitType: kitVariantType,
+      variant: variant?.name ?? variant?.code ?? null,
+      signId: localSign?.id ?? null,
+    });
     // Variants use base kit contents for now
     await showKitPreview(selectedKitForVariant, kitVariantType);
     setVariantSelectionModalOpen(false);
@@ -293,6 +357,11 @@ const DesignationSearcher = ({
   };
 
   const handleConfirmKitSelection = () => {
+    logSignOrderDebug('sign_kit_preview_confirmed', {
+      kitCode: selectedKitForPreview?.code ?? null,
+      kitType: kitPreviewType,
+      signId: localSign?.id ?? null,
+    });
     if (selectedKitForPreview && kitPreviewType && onKitSelected) {
       onKitSelected(selectedKitForPreview, kitPreviewType);
     }
@@ -305,6 +374,12 @@ const DesignationSearcher = ({
   };
 
   const handleKitConfigurationSave = (configurations: any[]) => {
+    logSignOrderDebug('sign_kit_configuration_saved', {
+      kitCode: selectedKitForConfiguration?.code ?? null,
+      kitType: kitConfigurationType,
+      signsCount: configurations.length,
+      signId: localSign?.id ?? null,
+    });
     // Convert configurations to PrimarySign objects
     const configuredSigns: PrimarySign[] = configurations.map(config => ({
       id: generateUniqueId(),
@@ -338,6 +413,10 @@ const DesignationSearcher = ({
   };
 
   const closeModals = () => {
+    logSignOrderDebug('sign_designation_flow_closed', {
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+    });
     setOpen(false);
     setDimensionModalOpen(false);
     setKitPreviewModalOpen(false);
