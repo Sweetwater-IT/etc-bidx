@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Check, ChevronsUpDown } from "lucide-react";
+import { AlertCircle, Check, ChevronsUpDown, Search, Plus, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Popover,
@@ -26,6 +26,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { fetchSignDesignations } from "@/lib/api-client";
@@ -65,6 +66,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [selectedKit, setSelectedKit] = useState<PataKit | PtsKit | null>(null);
     const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
     const [signOrderStep, setSignOrderStep] = useState<'designation' | 'dimension' | 'configuration'>('designation');
+    const [activePickerTab, setActivePickerTab] = useState<'mutcd' | 'pata' | 'pts'>('mutcd');
+    const [mutcdSearch, setMutcdSearch] = useState('');
+    const [pataSearch, setPataSearch] = useState('');
+    const [ptsSearch, setPtsSearch] = useState('');
 
     const isSecondary = isSecondarySign(sign);
     const isSignOrderFlow = Boolean(isSignOrder && !isSecondary);
@@ -262,6 +267,31 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             setFilteredSigns([]);
             setFilteredPataKits([]);
             setFilteredPtsKits([]);
+        }
+    };
+
+    const filterKits = (searchTerm: string, kitType: 'pata' | 'pts') => {
+        const allKits = kitType === 'pata' ? (apiData?.pataKits || []) : (apiData?.ptsKits || []);
+        if (!searchTerm.trim()) {
+            if (kitType === 'pata') {
+                setFilteredPataKits(allKits);
+            } else {
+                setFilteredPtsKits(allKits);
+            }
+            return;
+        }
+
+        const query = searchTerm.toLowerCase();
+        const filtered = allKits.filter((kit) =>
+            kit.code.toLowerCase().includes(query) ||
+            (kit.description || '').toLowerCase().includes(query) ||
+            kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
+        );
+
+        if (kitType === 'pata') {
+            setFilteredPataKits(filtered);
+        } else {
+            setFilteredPtsKits(filtered);
         }
     };
 
@@ -622,33 +652,150 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 </div>
                 {isSignOrderFlow && signOrderStep === 'designation' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                        <Input
-                            placeholder="Search sign designation..."
-                            onChange={(e) => filterDesignations(e.target.value)}
-                            autoFocus
-                        />
-                        {filteredSigns.length === 0 ? (
-                            <div className="text-sm text-muted-foreground">No designations found.</div>
-                        ) : (
-                            filteredSigns.map((designation) => (
+                        <Tabs value={activePickerTab} onValueChange={(value) => setActivePickerTab(value as 'mutcd' | 'pata' | 'pts')} className="flex flex-col gap-4">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="mutcd">MUTCD Signs</TabsTrigger>
+                                <TabsTrigger value="pata">PATA Kits</TabsTrigger>
+                                <TabsTrigger value="pts">PTS Kits</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="mutcd" className="space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        value={mutcdSearch}
+                                        placeholder="Search MUTCD designations..."
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setMutcdSearch(value);
+                                            filterDesignations(value);
+                                        }}
+                                        className="pl-10"
+                                        autoFocus
+                                    />
+                                </div>
                                 <button
-                                    key={designation.designation}
                                     type="button"
-                                    onClick={() => handleSignOrderDesignationSelect(designation)}
-                                    className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                    onClick={() => {
+                                        setIsCustom(true);
+                                        setLocalSign((prev) => ({
+                                            ...prev,
+                                            designation: '',
+                                            width: 0,
+                                            height: 0,
+                                            description: '',
+                                            isCustom: true,
+                                        }));
+                                        setSignOrderStep('configuration');
+                                    }}
+                                    className="w-full rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4 text-left transition-colors hover:bg-primary/10"
                                 >
-                                    <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <Plus className="mt-0.5 h-5 w-5 text-primary" />
                                         <div>
-                                            <div className="font-medium">{designation.designation}</div>
-                                            <div className="text-sm text-muted-foreground">{designation.description || '-'}</div>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {designation.dimensions?.length || 0} size{designation.dimensions?.length === 1 ? '' : 's'}
+                                            <div className="font-medium text-primary">Custom Sign</div>
+                                            <div className="text-sm text-muted-foreground">Create a custom sign designation not in the database</div>
                                         </div>
                                     </div>
                                 </button>
-                            ))
-                        )}
+                                {filteredSigns.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">No designations found.</div>
+                                ) : (
+                                    filteredSigns.map((designation) => (
+                                        <button
+                                            key={designation.designation}
+                                            type="button"
+                                            onClick={() => handleSignOrderDesignationSelect(designation)}
+                                            className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <div className="font-medium">{designation.designation}</div>
+                                                    <div className="text-sm text-muted-foreground">{designation.description || '-'}</div>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {designation.dimensions?.length || 0} size{designation.dimensions?.length === 1 ? '' : 's'}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="pata" className="space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        value={pataSearch}
+                                        placeholder="Search PATA kits..."
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setPataSearch(value);
+                                            filterKits(value, 'pata');
+                                        }}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                {filteredPataKits.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">No PATA kits found.</div>
+                                ) : (
+                                    filteredPataKits.map((kit) => (
+                                        <button
+                                            key={kit.id}
+                                            type="button"
+                                            onClick={() => handleKitSelect(kit, 'pata')}
+                                            className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <Package className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{kit.code}</div>
+                                                    <div className="text-sm text-muted-foreground">{kit.description || '-'}</div>
+                                                    <div className="mt-1 text-xs text-muted-foreground">{kit.contents.length} sign{kit.contents.length === 1 ? '' : 's'}</div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="pts" className="space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        value={ptsSearch}
+                                        placeholder="Search PTS kits..."
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setPtsSearch(value);
+                                            filterKits(value, 'pts');
+                                        }}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                {filteredPtsKits.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">No PTS kits found.</div>
+                                ) : (
+                                    filteredPtsKits.map((kit) => (
+                                        <button
+                                            key={kit.id}
+                                            type="button"
+                                            onClick={() => handleKitSelect(kit, 'pts')}
+                                            className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <Package className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                                                <div className="flex-1">
+                                                    <div className="font-medium">{kit.code}</div>
+                                                    <div className="text-sm text-muted-foreground">{kit.description || '-'}</div>
+                                                    <div className="mt-1 text-xs text-muted-foreground">{kit.contents.length} sign{kit.contents.length === 1 ? '' : 's'}</div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 )}
                 {isSignOrderFlow && signOrderStep === 'dimension' && (
