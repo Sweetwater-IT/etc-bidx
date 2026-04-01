@@ -65,7 +65,7 @@ interface ContractSaveDocumentProps {
   onAddDocuments: (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => void;
   onRemoveDocument: (id: string) => void;
   onUpdateCategory: (id: string, category: DocumentCategory) => void;
-  onRenameDocument: (id: string, name: string) => Promise<boolean>;
+  onRenameDocument?: (id: string, name: string) => Promise<boolean>;
   readOnly?: boolean;
 }
 
@@ -117,6 +117,10 @@ export const ContractSaveDocument = ({
 
   const handleRenameSave = async () => {
     if (!documentBeingRenamed) return;
+    if (!onRenameDocument) {
+      toast.error("Rename is not available");
+      return;
+    }
 
     const nextName = renameValue.trim();
     if (!nextName) {
