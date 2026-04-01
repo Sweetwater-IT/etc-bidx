@@ -482,9 +482,19 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     const handleSignOrderBLightSelect = (quantity: 1 | 2, color: 'White' | 'Yellow' | 'Red') => {
         const isSelected = (localSign as PrimarySign).bLights === quantity && localSign.bLightsColor === color;
+        const nextBLights = isSelected ? 0 : quantity;
+        const nextBLightsColor = isSelected ? undefined : color;
+        const updatedSign = {
+            ...localSign,
+            bLights: nextBLights,
+            bLightsColor: nextBLightsColor,
+        };
 
-        handleSignUpdate("bLights", isSelected ? 0 : quantity);
-        handleSignUpdate("bLightsColor", isSelected ? undefined : color);
+        if (!isSecondary) {
+            handleBLightsChange(nextBLights, updatedSign.quantity);
+        }
+
+        setLocalSign(updatedSign);
     };
 
     const handleDesignationSelect = (designationValue: string) => {
@@ -978,6 +988,38 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     </div>
                                 </div>
                             </div>
+                            <div className="mt-4 flex flex-wrap items-end gap-6 border-t border-border/60 pt-4">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        onCheckedChange={(checked) =>
+                                            handleSignUpdate("cover", checked)
+                                        }
+                                        checked={(localSign as PrimarySign).cover || false}
+                                        id="cover-checkbox"
+                                    />
+                                    <Label
+                                        htmlFor="cover-checkbox"
+                                        className="text-sm font-medium"
+                                    >
+                                        Include cover
+                                    </Label>
+                                </div>
+                                {isTakeoff && (
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+                                            checked={localSign.stiffener || false}
+                                            id="stiffener-checkbox"
+                                        />
+                                        <Label
+                                            htmlFor="stiffener-checkbox"
+                                            className="text-sm font-medium"
+                                        >
+                                            Include stiffener
+                                        </Label>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div>
@@ -1375,7 +1417,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 </div>
                             )}
 
-                            {showSubstrateField && (
+                            {showSubstrateField && !isSignOrderConfigOnly && (
                                 <div className="flex flex-wrap items-end gap-6 pb-2">
                                     <div className="flex items-center gap-2">
                                         <Checkbox
