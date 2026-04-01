@@ -234,13 +234,6 @@ export function SignOrderList({
   const handleDesignationSelected = useCallback((updatedSign: PrimarySign | SecondarySign) => {
     console.log('Designation selected:', updatedSign.designation, 'for phase:', currentPhase);
     try {
-      dispatch({
-        type: 'ADD_MPT_SIGN',
-        payload: {
-          phaseNumber: currentPhase,
-          sign: updatedSign,
-        },
-      });
       logSignOrderDebug('sign_designation_selected', {
         currentPhase,
         signId: updatedSign.id,
@@ -249,7 +242,9 @@ export function SignOrderList({
       });
       setDesignationSearchOpen(false);
       setLocalSign(updatedSign);
-      setOpen(true);
+      window.requestAnimationFrame(() => {
+        setOpen(true);
+      });
     } catch (error) {
       console.error('Error in handleDesignationSelected:', error);
       logSignOrderDebug('sign_designation_select_failed', {
@@ -257,7 +252,7 @@ export function SignOrderList({
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [dispatch, currentPhase]);
+  }, [currentPhase]);
 
   const handleKitSelected = useCallback(async (kit: any, kitType: 'pata' | 'pts') => {
     console.log('Kit selected:', kit.code, 'type:', kitType, 'for phase:', currentPhase);

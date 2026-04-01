@@ -437,20 +437,30 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             };
         }
 
-        // Update the sign in the context using UPDATE_MPT_SIGN
-        Object.entries(signToSave).forEach(([key, value]) => {
-            if (key !== "id" && key !== "primarySignId") {
-                dispatch({
-                    type: "UPDATE_MPT_SIGN",
-                    payload: {
-                        phase: currentPhase,
-                        signId: sign.id,
-                        key: key as keyof PrimarySign,
-                        value,
-                    },
-                });
-            }
-        });
+        if (mode === 'create') {
+            dispatch({
+                type: 'ADD_MPT_SIGN',
+                payload: {
+                    phaseNumber: currentPhase,
+                    sign: signToSave,
+                },
+            });
+        } else {
+            // Update the sign in the context using UPDATE_MPT_SIGN
+            Object.entries(signToSave).forEach(([key, value]) => {
+                if (key !== "id" && key !== "primarySignId") {
+                    dispatch({
+                        type: "UPDATE_MPT_SIGN",
+                        payload: {
+                            phase: currentPhase,
+                            signId: sign.id,
+                            key: key as keyof PrimarySign,
+                            value,
+                        },
+                    });
+                }
+            });
+        }
         onOpenChange(false);
     };
 
