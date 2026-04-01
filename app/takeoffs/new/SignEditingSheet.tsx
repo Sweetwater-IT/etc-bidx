@@ -641,9 +641,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     return (
         <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-2xl flex flex-col p-0 overflow-y-auto max-h-[90vh]">
-                <div className="flex flex-col gap-2 relative z-10 bg-background">
-                    <DialogHeader className="pb-4 p-6 text-left">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                <div className="relative z-10 shrink-0 bg-background">
+                    <DialogHeader className="p-6 pb-4 text-left">
                         <DialogTitle>
                             {isSignOrderFlow && signOrderStep === 'designation'
                                 ? 'Select Sign Designation'
@@ -657,7 +657,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             </div>
                         )}
                     </DialogHeader>
-                    <Separator className="w-full -mt-2" />
+                    <Separator className="w-full" />
                 </div>
                 {isSignOrderFlow && signOrderStep === 'designation' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -693,6 +693,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             width: 0,
                                             height: 0,
                                             description: '',
+                                            quantity: prev.quantity && prev.quantity > 0 ? prev.quantity : 1,
                                             isCustom: true,
                                         }));
                                         setSignOrderStep('configuration');
@@ -718,9 +719,24 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
                                         >
                                             <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <div className="font-medium">{designation.designation}</div>
-                                                    <div className="text-sm text-muted-foreground">{designation.description || '-'}</div>
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded border bg-muted flex-shrink-0">
+                                                        {designation.image_url ? (
+                                                            <img
+                                                                src={designation.image_url}
+                                                                alt={designation.designation}
+                                                                className="h-full w-full object-contain p-1"
+                                                            />
+                                                        ) : (
+                                                            <span className="text-xs font-medium text-muted-foreground">
+                                                                {designation.designation.substring(0, 2).toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-medium">{designation.designation}</div>
+                                                        <div className="text-sm text-muted-foreground">{designation.description || '-'}</div>
+                                                    </div>
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
                                                     {designation.dimensions?.length || 0} size{designation.dimensions?.length === 1 ? '' : 's'}
@@ -756,7 +772,17 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
                                         >
                                             <div className="flex items-start gap-3">
-                                                <Package className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded border bg-muted flex-shrink-0">
+                                                    {kit.image_url ? (
+                                                        <img
+                                                            src={kit.image_url}
+                                                            alt={kit.code}
+                                                            className="h-full w-full object-contain p-1"
+                                                        />
+                                                    ) : (
+                                                        <Package className="h-5 w-5 text-muted-foreground" />
+                                                    )}
+                                                </div>
                                                 <div className="flex-1">
                                                     <div className="font-medium">{kit.code}</div>
                                                     <div className="text-sm text-muted-foreground">{kit.description || '-'}</div>
@@ -793,7 +819,17 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                             className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
                                         >
                                             <div className="flex items-start gap-3">
-                                                <Package className="mt-0.5 h-5 w-5 text-muted-foreground" />
+                                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded border bg-muted flex-shrink-0">
+                                                    {kit.image_url ? (
+                                                        <img
+                                                            src={kit.image_url}
+                                                            alt={kit.code}
+                                                            className="h-full w-full object-contain p-1"
+                                                        />
+                                                    ) : (
+                                                        <Package className="h-5 w-5 text-muted-foreground" />
+                                                    )}
+                                                </div>
                                                 <div className="flex-1">
                                                     <div className="font-medium">{kit.code}</div>
                                                     <div className="text-sm text-muted-foreground">{kit.description || '-'}</div>
@@ -810,8 +846,25 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 {isSignOrderFlow && signOrderStep === 'dimension' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <div className="rounded-lg border bg-muted/30 p-4">
-                            <div className="font-medium">{localSign.designation || '-'}</div>
-                            <div className="text-sm text-muted-foreground">{selectedDesignationInfo?.description || localSign.description || '-'}</div>
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded border bg-background flex-shrink-0">
+                                    {selectedDesignationInfo?.image_url ? (
+                                        <img
+                                            src={selectedDesignationInfo.image_url}
+                                            alt={localSign.designation || 'Selected sign'}
+                                            className="h-full w-full object-contain p-1"
+                                        />
+                                    ) : (
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            {(localSign.designation || '').substring(0, 2).toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="font-medium">{localSign.designation || '-'}</div>
+                                    <div className="text-sm text-muted-foreground">{selectedDesignationInfo?.description || localSign.description || '-'}</div>
+                                </div>
+                            </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {availableDimensions.map((dim) => (
@@ -829,8 +882,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     </div>
                 )}
                 {(!isSignOrderFlow || signOrderStep === 'configuration') && (
-                <div className="space-y-6 p-6">
+                <div className="flex-1 overflow-y-auto space-y-6 px-6 py-4">
                     {/* Custom Sign Toggle */}
+                    {!isSignOrderFlow && (
                     <div className="flex items-center gap-2">
                         <Switch
                             id="custom-sign"
@@ -842,6 +896,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         />
                         <Label htmlFor="custom-sign">Custom Sign</Label>
                     </div>
+                    )}
 
                     {/* Designation Section */}
                     {isSignOrderConfigOnly ? (
@@ -849,17 +904,32 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             <Label className="text-base font-semibold mb-2.5 block">
                                 Sign Selection
                             </Label>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <div className="text-muted-foreground">Designation</div>
-                                    <div className="font-medium">{localSign.designation || '-'}</div>
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded border bg-background flex-shrink-0">
+                                    {selectedDesignationInfo?.image_url ? (
+                                        <img
+                                            src={selectedDesignationInfo.image_url}
+                                            alt={localSign.designation || 'Selected sign'}
+                                            className="h-full w-full object-contain p-1"
+                                        />
+                                    ) : (
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            {(localSign.designation || '').substring(0, 2).toUpperCase()}
+                                        </span>
+                                    )}
                                 </div>
-                                <div>
-                                    <div className="text-muted-foreground">Dimensions</div>
-                                    <div className="font-medium">
-                                        {localSign.width > 0 && localSign.height > 0
-                                            ? `${localSign.width}" x ${localSign.height}"`
-                                            : '-'}
+                                <div className="grid grid-cols-2 gap-4 text-sm flex-1">
+                                    <div>
+                                        <div className="text-muted-foreground">Designation</div>
+                                        <div className="font-medium">{localSign.designation || '-'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-muted-foreground">Dimensions</div>
+                                        <div className="font-medium">
+                                            {localSign.width > 0 && localSign.height > 0
+                                                ? `${localSign.width}" x ${localSign.height}"`
+                                                : '-'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1015,35 +1085,52 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         </div>
                     )}
 
-                    {/* Substrate */}
-                    {showSubstrateField && (
+                    <div className="grid grid-cols-2 gap-4">
+                        {!isSecondary && (
+                            <div>
+                                <Label className="text-sm font-medium mb-2 block">Structure</Label>
+                                <Select
+                                    value={(localSign as PrimarySign).displayStructure}
+                                    onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Choose structure" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
+                                        <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
+                                        <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
+                                        <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
+                                        <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                        <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
+                                        <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
+                                        <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
+                                        <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
+                                        <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <div>
-                            <Label className="text-base font-semibold mb-2.5 block">
-                                Substrate
-                            </Label>
+                            <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
                             <Select
-                                value={localSign.substrate}
-                                onValueChange={(value) => handleSignUpdate("substrate", value)}
+                                value={localSign.sheeting || "HI"}
+                                onValueChange={(value) => handleSignUpdate("sheeting", value)}
+                                disabled={!localSign.isCustom && !isSignOrder}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select substrate" />
+                                    <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Aluminum">Aluminum</SelectItem>
-                                    <SelectItem value="Aluminum-Composite">
-                                        Aluminum Composite
-                                    </SelectItem>
-                                    <SelectItem value="Plastic">Plastic</SelectItem>
-                                    {isSignOrder && (
-                                        <>
-                                            <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                            <SelectItem value="Face">Face</SelectItem>
-                                        </>
-                                    )}
+                                    <SelectItem value="HI">HI</SelectItem>
+                                    <SelectItem value="DG">DG</SelectItem>
+                                    <SelectItem value="FYG">FYG</SelectItem>
+                                    <SelectItem value="TYPEXI">Type XI</SelectItem>
+                                    <SelectItem value="Special">Special</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                    )}
+                    </div>
 
                     {/* Dimensions and Core Properties */}
                     <div className="grid grid-cols-2 gap-4">
@@ -1075,14 +1162,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 </div>
                             </>
                         ) : isSignOrderConfigOnly ? (
-                            <div className="col-span-2">
-                                <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
-                                <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm font-medium">
-                                    {localSign.width > 0 && localSign.height > 0
-                                        ? `${localSign.width}" x ${localSign.height}"`
-                                        : 'No dimensions selected'}
-                                </div>
-                            </div>
+                            <></>
                         ) : (
                             <div className="col-span-2">
                                 <Label className="text-sm font-medium mb-2 block">Dimensions</Label>
@@ -1110,78 +1190,90 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                            <Select
-                                value={localSign.sheeting || "HI"}
-                                onValueChange={(value) => handleSignUpdate("sheeting", value)}
-                                disabled={!localSign.isCustom && !isSignOrder}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="HI">HI</SelectItem>
-                                    <SelectItem value="DG">DG</SelectItem>
-                                    <SelectItem value="FYG">FYG</SelectItem>
-                                    <SelectItem value="TYPEXI">Type XI</SelectItem>
-                                    <SelectItem value="Special">Special</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div>
-                            <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                            <QuantityInput
-                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 0}
-                                onChange={(value) => handleSignUpdate("quantity", value)}
-                                min={0}
-                                disabled={isSecondary}
-                            />
-                        </div>
-                    </div>
-
                     {/* Primary Sign Specific Fields */}
                     {!isSecondary && (
                         <>
+                            {showSubstrateField && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Substrate
+                                        </Label>
+                                        <Select
+                                            value={localSign.substrate}
+                                            onValueChange={(value) => handleSignUpdate("substrate", value)}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select substrate" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                                <SelectItem value="Aluminum-Composite">
+                                                    Aluminum Composite
+                                                </SelectItem>
+                                                <SelectItem value="Plastic">Plastic</SelectItem>
+                                                {isSignOrder && (
+                                                    <>
+                                                        <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                        <SelectItem value="Face">Face</SelectItem>
+                                                    </>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="flex items-end gap-6 pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                onCheckedChange={(checked) =>
+                                                    handleSignUpdate("cover", checked)
+                                                }
+                                                checked={(localSign as PrimarySign).cover || false}
+                                                id="cover-checkbox"
+                                            />
+                                            <Label
+                                                htmlFor="cover-checkbox"
+                                                className="text-sm font-medium"
+                                            >
+                                                Include cover
+                                            </Label>
+                                        </div>
+                                        {isTakeoff && (
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox
+                                                    onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
+                                                    checked={localSign.stiffener || false}
+                                                    id="stiffener-checkbox"
+                                                />
+                                                <Label
+                                                    htmlFor="stiffener-checkbox"
+                                                    className="text-sm font-medium"
+                                                >
+                                                    Include stiffener
+                                                </Label>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label className="text-sm font-medium mb-2 block">Structure</Label>
-                                    <Select
-                                        value={(localSign as PrimarySign).displayStructure}
-                                        onValueChange={(value: DisplayStructures) => handleSignUpdate('displayStructure', value)}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Choose structure" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="4&apos; T-III RIGHT">4&apos; T-III RIGHT</SelectItem>
-                                            <SelectItem value="4&apos; T-III LEFT">4&apos; T-III LEFT</SelectItem>
-                                            <SelectItem value="6&apos; T-III RIGHT">6&apos; T-III RIGHT</SelectItem>
-                                            <SelectItem value="6&apos; T-III LEFT">6&apos; T-III LEFT</SelectItem>
-                                            <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                            <SelectItem value="8&apos; POST">8&apos; POST</SelectItem>
-                                            <SelectItem value="10&apos; POST">10&apos; POST</SelectItem>
-                                            <SelectItem value="12&apos; POST">12&apos; POST</SelectItem>
-                                            <SelectItem value="14&apos; POST">14&apos; POST</SelectItem>
-                                            <SelectItem value="LOOSE">LOOSE</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                                    <QuantityInput
+                                        value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 0}
+                                        onChange={(value) => handleSignUpdate("quantity", value)}
+                                        min={0}
+                                        disabled={isSecondary}
+                                    />
                                 </div>
-
                                 <div>
                                     <Label className="text-sm font-medium mb-2 block">
                                         B Light Quantity
                                     </Label>
-                                    <Input
-                                        type="number"
-                                        value={(localSign as PrimarySign).bLights || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("bLights", parseInt(e.target.value) || 0)
-                                        }
+                                    <QuantityInput
+                                        value={(localSign as PrimarySign).bLights || 0}
+                                        onChange={(value) => handleSignUpdate("bLights", value)}
                                         min={0}
-                                        className="w-full"
                                     />
                                 </div>
                             </div>
@@ -1203,39 +1295,6 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 </div>
                             )}
 
-                            {/* Covers and Stiffener */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        onCheckedChange={(checked) =>
-                                            handleSignUpdate("cover", checked)
-                                        }
-                                        checked={(localSign as PrimarySign).cover || false}
-                                        id="cover-checkbox"
-                                    />
-                                    <Label
-                                        htmlFor="cover-checkbox"
-                                        className="text-sm font-medium"
-                                    >
-                                        Include cover
-                                    </Label>
-                                </div>
-                                {isTakeoff && (
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            onCheckedChange={(checked) => handleSignUpdate('stiffener', checked)}
-                                            checked={localSign.stiffener || false}
-                                            id="stiffener-checkbox"
-                                        />
-                                        <Label
-                                            htmlFor="stiffener-checkbox"
-                                            className="text-sm font-medium"
-                                        >
-                                            Include stiffener
-                                        </Label>
-                                    </div>
-                                )}
-                            </div>
                         </>
                     )}
                 </div>
@@ -1247,7 +1306,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         Please fill out all necessary fields before saving.
                     </span>
                 </div>}
-                <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
+                <div className="flex shrink-0 justify-end space-x-3 border-t bg-background px-6 py-4">
                     {isSignOrderFlow && signOrderStep !== 'designation' && (
                         <Button
                             variant="outline"
@@ -1277,9 +1336,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
         {/* Kit Stepper Modal */}
         <Dialog open={kitStepperOpen} onOpenChange={setKitStepperOpen}>
-            <DialogContent className="w-[95vw] max-w-5xl flex flex-col p-0 overflow-y-auto max-h-[90vh]">
-                <div className="flex flex-col gap-2 relative z-10 bg-background">
-                    <DialogHeader className="pb-4 p-6 text-left">
+            <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                <div className="relative z-10 shrink-0 bg-background">
+                    <DialogHeader className="p-6 pb-4 text-left">
                         <DialogTitle>
                             Configure {selectedKit?.code} Kit Signs
                         </DialogTitle>
@@ -1287,10 +1346,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             Configure each sign in the kit with your preferred settings.
                         </p>
                     </DialogHeader>
-                    <Separator className="w-full -mt-2" />
+                    <Separator className="w-full" />
                 </div>
 
-                <div className="space-y-6 p-6 flex-1">
+                <div className="flex-1 overflow-y-auto space-y-6 p-6">
                     {kitSignConfigurations.map((config, index) => (
                         <div key={index} className="border rounded-lg p-4 space-y-4">
                             <div className="flex items-center justify-between">
@@ -1427,7 +1486,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     ))}
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
+                <div className="flex shrink-0 justify-end space-x-3 border-t bg-background px-6 py-4">
                     <Button
                         variant="outline"
                         onClick={() => {

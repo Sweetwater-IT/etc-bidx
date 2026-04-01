@@ -188,7 +188,7 @@ export function SignOrderList({
         width: 0,
         height: 0,
         sheeting: 'DG',
-        quantity: 0,
+        quantity: 1,
         associatedStructure: 'none',
         displayStructure: 'LOOSE',
         bLights: 0,
