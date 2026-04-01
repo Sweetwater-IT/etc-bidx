@@ -64,8 +64,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [kitStepperOpen, setKitStepperOpen] = useState(false);
     const [selectedKit, setSelectedKit] = useState<PataKit | PtsKit | null>(null);
     const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
+    const [signOrderStep, setSignOrderStep] = useState<'designation' | 'dimension' | 'configuration'>('designation');
 
     const isSecondary = isSecondarySign(sign);
+    const isSignOrderFlow = Boolean(isSignOrder && !isSecondary);
     const isSignOrderConfigOnly = Boolean(isSignOrder && !isSecondary && !isCustom);
     const showSubstrateField = Boolean(isTakeoff || isSignOrder);
     // Get primary sign if this is a secondary sign
@@ -161,6 +163,28 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         setLocalSign({ ...sign });
         setIsCustom(sign.isCustom || false);
     }, [sign]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        if (!isSignOrderFlow) {
+            setSignOrderStep('configuration');
+            return;
+        }
+
+        const hasCompleteSelection = Boolean(sign.designation && sign.width > 0 && sign.height > 0);
+        const hasDesignation = Boolean(sign.designation);
+
+        if (mode === 'edit' || sign.isCustom || hasCompleteSelection) {
+            setSignOrderStep('configuration');
+        } else if (hasDesignation) {
+            setSignOrderStep('dimension');
+        } else {
+            setSignOrderStep('designation');
+        }
+    }, [isSignOrderFlow, mode, open, sign]);
 
     useEffect(() => {
         logSignOrderDebug('sign_configuration_modal_state', {
@@ -339,6 +363,57 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }
     };
 
+    const handleSignOrderDesignationSelect = (designation: SignDesignation) => {
+        logSignOrderDebug('sign_order_step_designation_selected', {
+            currentPhase,
+            signId: localSign?.id ?? null,
+            designation: designation.designation,
+            dimensions: designation.dimensions?.length ?? 0,
+        });
+
+        const nextBase = {
+            ...localSign,
+            designation: designation.designation,
+            sheeting: designation.sheeting,
+            description: designation.description,
+            isCustom: false,
+        };
+
+        if (designation.dimensions?.length === 1) {
+            const [dimension] = designation.dimensions;
+            setLocalSign({
+                ...nextBase,
+                width: dimension.width,
+                height: dimension.height,
+            });
+            setSignOrderStep('configuration');
+            return;
+        }
+
+        setLocalSign({
+            ...nextBase,
+            width: 0,
+            height: 0,
+        });
+        setSignOrderStep('dimension');
+    };
+
+    const handleSignOrderDimensionPicked = (width: number, height: number) => {
+        logSignOrderDebug('sign_order_step_dimension_selected', {
+            currentPhase,
+            signId: localSign?.id ?? null,
+            designation: localSign?.designation ?? null,
+            width,
+            height,
+        });
+        setLocalSign((prev) => ({
+            ...prev,
+            width,
+            height,
+        }));
+        setSignOrderStep('configuration');
+    };
+
     const handleDesignationSelect = (designationValue: string) => {
         // Find the selected designation data
         const selectedDesignation = filteredSigns.find(
@@ -459,6 +534,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }
     };
 
+    const selectedDesignationInfo = filteredSigns.find(
+        (d) => d.designation === localSign.designation
+    );
+    const availableDimensions = getAvailableDimensions();
+
     const handleSave = () => {
         logSignOrderDebug('sign_configuration_save_clicked', {
             mode,
@@ -526,7 +606,11 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 <div className="flex flex-col gap-2 relative z-10 bg-background">
                     <DialogHeader className="pb-4 p-6 text-left">
                         <DialogTitle>
-                            {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
+                            {isSignOrderFlow && signOrderStep === 'designation'
+                                ? 'Select Sign Designation'
+                                : isSignOrderFlow && signOrderStep === 'dimension'
+                                    ? `Select Size for ${localSign.designation || 'Sign'}`
+                                    : `${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
                         </DialogTitle>
                         {isSecondary && primarySign && (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
@@ -536,6 +620,59 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     </DialogHeader>
                     <Separator className="w-full -mt-2" />
                 </div>
+                {isSignOrderFlow && signOrderStep === 'designation' && (
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                        <Input
+                            placeholder="Search sign designation..."
+                            onChange={(e) => filterDesignations(e.target.value)}
+                            autoFocus
+                        />
+                        {filteredSigns.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">No designations found.</div>
+                        ) : (
+                            filteredSigns.map((designation) => (
+                                <button
+                                    key={designation.designation}
+                                    type="button"
+                                    onClick={() => handleSignOrderDesignationSelect(designation)}
+                                    className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <div className="font-medium">{designation.designation}</div>
+                                            <div className="text-sm text-muted-foreground">{designation.description || '-'}</div>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {designation.dimensions?.length || 0} size{designation.dimensions?.length === 1 ? '' : 's'}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                )}
+                {isSignOrderFlow && signOrderStep === 'dimension' && (
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <div className="font-medium">{localSign.designation || '-'}</div>
+                            <div className="text-sm text-muted-foreground">{selectedDesignationInfo?.description || localSign.description || '-'}</div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {availableDimensions.map((dim) => (
+                                <button
+                                    key={`${dim.width}x${dim.height}`}
+                                    type="button"
+                                    onClick={() => handleSignOrderDimensionPicked(dim.width, dim.height)}
+                                    className="rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                >
+                                    <div className="font-medium">{dim.width}&quot; x {dim.height}&quot;</div>
+                                    <div className="text-xs text-muted-foreground mt-1">{localSign.sheeting || selectedDesignationInfo?.sheeting || '-'}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {(!isSignOrderFlow || signOrderStep === 'configuration') && (
                 <div className="space-y-6 p-6">
                     {/* Custom Sign Toggle */}
                     <div className="flex items-center gap-2">
@@ -946,20 +1083,37 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         </>
                     )}
                 </div>
+                )}
                 {/* Action Buttons */}
-                {(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
+                {(!isSignOrderFlow || signOrderStep === 'configuration') && (localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
                     <AlertCircle size={14} />
                     <span>
                         Please fill out all necessary fields before saving.
                     </span>
                 </div>}
                 <div className="flex justify-end space-x-3 pt-4 px-6 border-t">
+                    {isSignOrderFlow && signOrderStep !== 'designation' && (
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                if (signOrderStep === 'configuration') {
+                                    setSignOrderStep(availableDimensions.length > 1 ? 'dimension' : 'designation');
+                                } else {
+                                    setSignOrderStep('designation');
+                                }
+                            }}
+                        >
+                            Back
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
-                        Save Sign
-                    </Button>
+                    {(!isSignOrderFlow || signOrderStep === 'configuration') && (
+                        <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
+                            Save Sign
+                        </Button>
+                    )}
                 </div>
 
             </DialogContent>
