@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MoreVertical, Import } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -7,15 +7,6 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ImportSignsModal } from "./ImportSignsModal";
-import { ImportFromTakeoffModal } from "./ImportFromTakeoffModal";
 
 interface Estimate {
   contract_number: string;
@@ -103,8 +94,6 @@ export function SignOrderJobSelector({
   onImport
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importFromTakeoffModalOpen, setImportFromTakeoffModalOpen] = useState(false);
   const inputRef = useRef(null);
 
   const handleBlur = (e) => {
@@ -326,25 +315,6 @@ export function SignOrderJobSelector({
           )}
         </div>
       )}
-
-      {(hasSelection || showInitialAdminState) && (
-        <div className="flex justify-end gap-2 mb-4">
-          <Button variant="outline" onClick={() => setImportFromTakeoffModalOpen(true)}>
-            <Import className="w-4 h-4 mr-2" />Import from Takeoff
-          </Button>
-          <Button variant="outline" onClick={() => setImportModalOpen(true)}>
-            <Import className="w-4 h-4 mr-2" />Import Signs
-          </Button>
-        </div>
-      )}
-
-      <AlertDialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-        <ImportSignsModal open={importModalOpen} onOpenChange={setImportModalOpen} jobId={jobId} onImport={onImport || (() => {})} />
-      </AlertDialog>
-
-      <AlertDialog open={importFromTakeoffModalOpen} onOpenChange={setImportFromTakeoffModalOpen}>
-        <ImportFromTakeoffModal open={importFromTakeoffModalOpen} onOpenChange={setImportFromTakeoffModalOpen} jobId={jobId} onImport={onImport || (() => {})} />
-      </AlertDialog>
     </div>
   );
 }

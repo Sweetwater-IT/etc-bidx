@@ -29,13 +29,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
-import { fetchSignDesignations } from "@/lib/api-client";
 import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse } from '@/types/MPTEquipment';
-import { processSignData } from '@/components/pages/active-bid/signs/process-sign-data';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
+import { createClient } from '@supabase/supabase-js';
 
 interface Props {
     open: boolean;
@@ -78,6 +77,10 @@ const SIGN_ORDER_B_LIGHT_OPTIONS = [
 
 const SIGN_ORDER_SELECTED_CARD_CLASSES = "border-emerald-500/20 bg-emerald-500/5 text-emerald-700";
 const SIGN_ORDER_UNSELECTED_CARD_CLASSES = "border-border hover:bg-muted/50";
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
     const { dispatch, mptRental } = useSignRuntime();
@@ -159,23 +162,135 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         const loadSignData = async () => {
             setIsLoading(true);
             try {
-                const response = await fetch('/api/signs');
-                const data = await response.json();
+                logSignOrderDebug('sign_picker_fetch_started', {
+                    open,
+                    currentPhase,
+                });
 
-                if (data.success && data.data) {
-                    setApiData(data.data);
-                    setFilteredSigns(data.data.signs || []);
-                    setFilteredPataKits(data.data.pataKits || []);
-                    setFilteredPtsKits(data.data.ptsKits || []);
-                } else {
-                    console.warn("No sign data returned from API");
-                    setApiData({ signs: [], pataKits: [], ptsKits: [] });
-                    setFilteredSigns([]);
-                    setFilteredPataKits([]);
-                    setFilteredPtsKits([]);
+                const { data: signsDataRaw, error: signsError } = await supabase
+                    .from('signs_all')
+                    .select('id, designation, description, category, sizes, sheeting, image_url')
+                    .order('designation');
+
+                if (signsError) {
+                    throw new Error(`Failed to fetch MUTCD signs: ${signsError.message}`);
                 }
+
+                const signsData: SignDesignation[] = (signsDataRaw || []).map((sign: any) => {
+                    const dimensions = (sign.sizes || []).map((sizeStr: string) => {
+                        const [widthStr, heightStr] = sizeStr.split(' x ');
+                        const width = parseFloat(widthStr);
+                        const height = parseFloat(heightStr);
+                        return !isNaN(width) && !isNaN(height) ? { width, height } : null;
+                    }).filter((dim): dim is { width: number; height: number } => dim !== null);
+
+                    return {
+                        ...sign,
+                        dimensions: dimensions.length > 0 ? dimensions : [{ width: 0, height: 0 }],
+                    };
+                });
+
+                logSignOrderDebug('sign_picker_fetch_signs_success', {
+                    count: signsData.length,
+                });
+
+                const { data: pataKitsData, error: pataKitsError } = await supabase
+                    .from('pata_kits')
+                    .select('id, code, description, image_url, finished, reviewed, has_variants')
+                    .order('code');
+
+                if (pataKitsError) {
+                    throw new Error(`Failed to fetch PATA kits: ${pataKitsError.message}`);
+                }
+
+                logSignOrderDebug('sign_picker_fetch_pata_kits_success', {
+                    count: pataKitsData?.length ?? 0,
+                });
+
+                const pataKitsWithContents = await Promise.all(
+                    (pataKitsData || []).map(async (kit) => {
+                        const { data: contents, error: contentsError } = await supabase
+                            .from('pata_kit_contents')
+                            .select('sign_designation, quantity, blight_quantity')
+                            .eq('pata_kit_code', kit.code);
+
+                        if (contentsError) {
+                            throw new Error(`Failed to fetch PATA kit contents for ${kit.code}: ${contentsError.message}`);
+                        }
+
+                        return {
+                            ...kit,
+                            contents: contents || [],
+                            signCount: contents?.length || 0,
+                            variants: [],
+                        };
+                    })
+                );
+
+                logSignOrderDebug('sign_picker_fetch_pata_contents_success', {
+                    count: pataKitsWithContents.length,
+                    populatedCount: pataKitsWithContents.filter((kit) => (kit.contents?.length ?? 0) > 0).length,
+                });
+
+                const { data: ptsKitsData, error: ptsKitsError } = await supabase
+                    .from('pts_kits')
+                    .select('id, code, description, image_url, finished, reviewed, has_variants')
+                    .order('code');
+
+                if (ptsKitsError) {
+                    throw new Error(`Failed to fetch PTS kits: ${ptsKitsError.message}`);
+                }
+
+                logSignOrderDebug('sign_picker_fetch_pts_kits_success', {
+                    count: ptsKitsData?.length ?? 0,
+                });
+
+                const ptsKitsWithContents = await Promise.all(
+                    (ptsKitsData || []).map(async (kit) => {
+                        const { data: contents, error: contentsError } = await supabase
+                            .from('pts_kit_contents')
+                            .select('sign_designation, quantity')
+                            .eq('pts_kit_code', kit.code);
+
+                        if (contentsError) {
+                            throw new Error(`Failed to fetch PTS kit contents for ${kit.code}: ${contentsError.message}`);
+                        }
+
+                        return {
+                            ...kit,
+                            contents: contents || [],
+                            signCount: contents?.length || 0,
+                            variants: [],
+                        };
+                    })
+                );
+
+                logSignOrderDebug('sign_picker_fetch_pts_contents_success', {
+                    count: ptsKitsWithContents.length,
+                    populatedCount: ptsKitsWithContents.filter((kit) => (kit.contents?.length ?? 0) > 0).length,
+                });
+
+                const nextApiData = {
+                    signs: signsData,
+                    pataKits: pataKitsWithContents,
+                    ptsKits: ptsKitsWithContents,
+                };
+
+                setApiData(nextApiData as SignsApiResponse);
+                setFilteredSigns(signsData);
+                setFilteredPataKits(pataKitsWithContents);
+                setFilteredPtsKits(ptsKitsWithContents);
+
+                logSignOrderDebug('sign_picker_fetch_complete', {
+                    signsCount: signsData.length,
+                    pataCount: pataKitsWithContents.length,
+                    ptsCount: ptsKitsWithContents.length,
+                });
             } catch (error) {
                 console.error("Error fetching sign data:", error);
+                logSignOrderDebug('sign_picker_fetch_failed', {
+                    error: error instanceof Error ? error.message : String(error),
+                });
                 setApiData({ signs: [], pataKits: [], ptsKits: [] });
                 setFilteredSigns([]);
                 setFilteredPataKits([]);
