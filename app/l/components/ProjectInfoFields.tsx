@@ -233,6 +233,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
   const [counties, setCounties] = useState<Array<{ name: string; branch: string | null }>>([]);
   const [projectManagers, setProjectManagers] = useState<Array<{ id: string; branch_id: number | null; full_name: string }>>([]);
+  const calendarStartMonth = useMemo(() => new Date(2000, 0), []);
+  const calendarEndMonth = useMemo(() => new Date(new Date().getFullYear() + 10, 11), []);
 
   useEffect(() => {
     const fetchBranchesAndCounties = async () => {
@@ -759,6 +761,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
+                  captionLayout="dropdown"
+                  startMonth={calendarStartMonth}
+                  endMonth={calendarEndMonth}
                   selected={parseDateValue(projectInfo.projectStartDate)}
                   onSelect={(date) => {
                     if (!date) {
@@ -801,6 +806,9 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
+                  captionLayout="dropdown"
+                  startMonth={calendarStartMonth}
+                  endMonth={calendarEndMonth}
                   selected={parseDateValue(projectInfo.projectEndDate)}
                   defaultMonth={endCalendarDefaultMonth}
                   onSelect={(date) => {
