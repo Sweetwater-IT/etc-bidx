@@ -140,13 +140,13 @@ const ContractCalendarCaption = ({
   }, [fromYear, toYear]);
 
   return (
-    <div className="flex items-center justify-between gap-2 px-2 pt-1">
-      <div className="flex items-center gap-1">
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 pt-1">
+      <div className="flex items-center gap-1 justify-self-start">
         <Button
           type="button"
           variant="outline"
           size="icon"
-          className="h-6 w-6 bg-transparent p-0 opacity-70 hover:opacity-100"
+          className="h-5 w-5 bg-transparent p-0 opacity-70 hover:opacity-100"
           onClick={() => previousMonth && goToMonth(previousMonth)}
           disabled={!previousMonth}
         >
@@ -160,7 +160,7 @@ const ContractCalendarCaption = ({
           type="button"
           variant="outline"
           size="icon"
-          className="h-6 w-6 bg-transparent p-0 opacity-70 hover:opacity-100"
+          className="h-5 w-5 bg-transparent p-0 opacity-70 hover:opacity-100"
           onClick={() => nextMonth && goToMonth(nextMonth)}
           disabled={!nextMonth}
         >
@@ -172,7 +172,7 @@ const ContractCalendarCaption = ({
         </Button>
       </div>
 
-      <div className="min-w-0 flex-1 text-center text-sm font-medium">
+      <div className="min-w-0 truncate text-center text-sm font-medium">
         {format(displayMonth, "MMMM")}
       </div>
 
@@ -180,7 +180,7 @@ const ContractCalendarCaption = ({
         value={String(displayMonth.getFullYear())}
         onValueChange={(year) => goToMonth(new Date(Number(year), displayMonth.getMonth(), 1))}
       >
-        <SelectTrigger className="h-7 w-[84px] text-xs">
+        <SelectTrigger className="h-7 !w-auto min-w-0 justify-end gap-1 px-2 pr-1 text-xs font-medium justify-self-end">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="max-h-60">
