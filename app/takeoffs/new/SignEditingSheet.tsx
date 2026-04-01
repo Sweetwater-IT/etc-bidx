@@ -44,6 +44,7 @@ interface Props {
     currentPhase?: number;
     isTakeoff?: boolean;
     isSignOrder?: boolean;
+    useSegmentedPicker?: boolean;
 }
 
 // Type guard to check if sign is SecondarySign
@@ -82,7 +83,7 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder }: Props) => {
+const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder, useSegmentedPicker = false }: Props) => {
     const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
@@ -102,8 +103,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [ptsSearch, setPtsSearch] = useState('');
 
     const isSecondary = isSecondarySign(sign);
-    const isSignOrderFlow = Boolean(isSignOrder && !isSecondary);
-    const isSignOrderConfigOnly = Boolean(isSignOrder && !isSecondary && !isCustom);
+    const isSegmentedPickerFlow = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary);
+    const isSegmentedPickerConfigOnly = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary && !isCustom);
     const showSubstrateField = Boolean(isTakeoff || isSignOrder);
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
@@ -316,7 +317,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             return;
         }
 
-        if (!isSignOrderFlow) {
+        if (!isSegmentedPickerFlow) {
             setSignOrderStep('configuration');
             return;
         }
@@ -331,7 +332,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         } else {
             setSignOrderStep('designation');
         }
-    }, [isSignOrderFlow, mode, open, sign]);
+    }, [isSegmentedPickerFlow, mode, open, sign]);
 
     useEffect(() => {
         logSignOrderDebug('sign_configuration_modal_state', {
@@ -807,9 +808,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 <div className="relative z-10 shrink-0 bg-background">
                     <DialogHeader className="p-6 pb-4 text-left">
                         <DialogTitle>
-                            {isSignOrderFlow && signOrderStep === 'designation'
+                            {isSegmentedPickerFlow && signOrderStep === 'designation'
                                 ? 'Select Sign Designation'
-                                : isSignOrderFlow && signOrderStep === 'dimension'
+                                : isSegmentedPickerFlow && signOrderStep === 'dimension'
                                     ? `Select Size for ${localSign.designation || 'Sign'}`
                                     : `${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
                         </DialogTitle>
@@ -821,7 +822,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     </DialogHeader>
                     <Separator className="w-full" />
                 </div>
-                {isSignOrderFlow && signOrderStep === 'designation' && (
+                {isSegmentedPickerFlow && signOrderStep === 'designation' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <Tabs value={activePickerTab} onValueChange={(value) => setActivePickerTab(value as 'mutcd' | 'pata' | 'pts')} className="flex flex-col gap-4">
                             <TabsList className="grid w-full grid-cols-3">
@@ -1005,7 +1006,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         </Tabs>
                     </div>
                 )}
-                {isSignOrderFlow && signOrderStep === 'dimension' && (
+                {isSegmentedPickerFlow && signOrderStep === 'dimension' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <div className="rounded-lg border bg-muted/30 p-4">
                             <div className="flex items-start gap-3">
@@ -1043,10 +1044,10 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         </div>
                     </div>
                 )}
-                {(!isSignOrderFlow || signOrderStep === 'configuration') && (
+                {(!isSegmentedPickerFlow || signOrderStep === 'configuration') && (
                 <div className="flex-1 overflow-y-auto space-y-6 px-6 py-4">
                     {/* Custom Sign Toggle */}
-                    {!isSignOrderFlow && (
+                    {!isSegmentedPickerFlow && (
                     <div className="flex items-center gap-2">
                         <Switch
                             id="custom-sign"
@@ -1061,7 +1062,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     )}
 
                     {/* Designation Section */}
-                    {isSignOrderConfigOnly ? (
+                    {isSegmentedPickerConfigOnly ? (
                         <div className="rounded-lg border bg-muted/30 p-4">
                             <Label className="text-base font-semibold mb-2.5 block">
                                 Sign Selection
@@ -1293,7 +1294,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     {!isSecondary && (
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Structure</Label>
-                            {isSignOrderFlow ? (
+                            {isSegmentedPickerFlow ? (
                                 <div className="space-y-2">
                                     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                                         {SIGN_ORDER_STRUCTURE_OPTIONS.slice(0, 4).map((option) => {
@@ -1378,7 +1379,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
                     <div>
                         <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
-                        {isSignOrderFlow ? (
+                        {isSegmentedPickerFlow ? (
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                                 {SIGN_ORDER_SHEETING_OPTIONS.map((option) => {
                                     const selected = (localSign.sheeting || "HI") === option;
@@ -1448,7 +1449,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     />
                                 </div>
                             </>
-                        ) : isSignOrderConfigOnly ? (
+                        ) : isSegmentedPickerConfigOnly ? (
                             <></>
                         ) : (
                             <div className="col-span-2">
@@ -1485,7 +1486,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                     <Label className="text-sm font-medium mb-2 block">
                                         Substrate
                                     </Label>
-                                    {isSignOrderFlow ? (
+                                    {isSegmentedPickerFlow ? (
                                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
                                             {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
                                                 if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
@@ -1535,7 +1536,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 </div>
                             )}
 
-                            {showSubstrateField && !isSignOrderConfigOnly && (
+                            {showSubstrateField && !isSegmentedPickerConfigOnly && (
                                 <div className="flex flex-wrap items-end gap-6 pb-2">
                                     <div className="flex items-center gap-2">
                                         <Checkbox
@@ -1570,9 +1571,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                                 </div>
                             )}
 
-                            {isSignOrderFlow ? (
+                            {isSegmentedPickerFlow ? (
                                 <div className="space-y-4">
-                                    {!isSignOrderConfigOnly && (
+                                    {!isSegmentedPickerConfigOnly && (
                                         <div>
                                             <Label className="text-sm font-medium mb-2 block">Quantity</Label>
                                             <QuantityInput
@@ -1677,14 +1678,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                 </div>
                 )}
                 {/* Action Buttons */}
-                {(!isSignOrderFlow || signOrderStep === 'configuration') && (localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
+                {(!isSegmentedPickerFlow || signOrderStep === 'configuration') && (localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1) && <div className="px-6 py-2 flex items-center text-sm gap-2 text-muted-foreground bg-amber-200">
                     <AlertCircle size={14} />
                     <span>
                         Please fill out all necessary fields before saving.
                     </span>
                 </div>}
                 <div className="flex shrink-0 justify-end space-x-3 border-t bg-background px-6 py-4">
-                    {isSignOrderFlow && signOrderStep !== 'designation' && (
+                    {isSegmentedPickerFlow && signOrderStep !== 'designation' && (
                         <Button
                             variant="outline"
                             onClick={() => {
@@ -1701,7 +1702,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
-                    {(!isSignOrderFlow || signOrderStep === 'configuration') && (
+                    {(!isSegmentedPickerFlow || signOrderStep === 'configuration') && (
                         <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
                             Save Sign
                         </Button>

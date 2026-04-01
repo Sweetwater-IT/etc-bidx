@@ -70,6 +70,7 @@ interface Props {
   updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void;
   adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void;
   isSignOrder?: boolean;
+  useSegmentedPicker?: boolean;
   jobNumber?: any;
   needJobNumber?: boolean;
 }
@@ -98,6 +99,7 @@ export function SignOrderList({
   updateShopTracking,
   adjustShopValue,
   isSignOrder,
+  useSegmentedPicker = false,
   jobNumber,
   needJobNumber = false
 }: Props) {
@@ -677,6 +679,7 @@ export function SignOrderList({
             sign={localSign}
             currentPhase={currentPhase}
             isSignOrder={isSignOrder}
+            useSegmentedPicker={useSegmentedPicker}
           />
         )}
       </div>

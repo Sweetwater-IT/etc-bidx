@@ -55,6 +55,7 @@ const SignList = ({ currentPhase, isSignOrder }: SignListProps) => {
 
         currentPhase={currentPhase}
         isSignOrder={isSignOrder}
+        useSegmentedPicker={true}
 
       />
     </div>
