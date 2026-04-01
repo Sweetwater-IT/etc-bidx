@@ -279,20 +279,34 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { documentId, category } = await request.json();
+    const { documentId, category, fileName } = await request.json();
 
-    if (!documentId || !category) {
-      return NextResponse.json({ error: 'Document ID and category are required' }, { status: 400 });
+    if (!documentId) {
+      return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
+    }
+
+    const updates: { file_type?: string; file_name?: string } = {};
+
+    if (typeof category === "string" && category.trim()) {
+      updates.file_type = category;
+    }
+
+    if (typeof fileName === "string" && fileName.trim()) {
+      updates.file_name = fileName.trim();
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'At least one document update is required' }, { status: 400 });
     }
 
     const { error } = await supabase
       .from("documents_l")
-      .update({ file_type: category })
+      .update(updates)
       .eq("id", documentId);
 
     if (error) {
-      console.error('Error updating document category:', error);
-      return NextResponse.json({ error: 'Failed to update document category' }, { status: 500 });
+      console.error('Error updating document metadata:', error);
+      return NextResponse.json({ error: 'Failed to update document' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

@@ -816,6 +816,33 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
   };
 
+  const handleRenameDocument = async (id: string, name: string) => {
+    try {
+      await sovTableRef.current?.flushPendingSave();
+
+      const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: id, fileName: name }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Failed to rename document: ${error.error}`);
+        return false;
+      }
+
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, name } : d))
+      );
+      toast.success("Document renamed");
+      return true;
+    } catch (err: any) {
+      toast.error(`Failed to rename document: ${err.message}`);
+      return false;
+    }
+  };
+
   // Change order handlers
   const handleChangeOrderApproved = async (method: "document" | "admin_approval", details: {
     coNumber?: string;
@@ -1001,6 +1028,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           onAddDocuments={handleAddDocuments}
           onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
+          onRenameDocument={handleRenameDocument}
           readOnly={forceReadOnly}
         />
 

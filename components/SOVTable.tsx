@@ -1081,7 +1081,7 @@ const SOVTableComponent = forwardRef<SOVTableHandle, SOVTableProps>(({
                 {showPricingColumns && <TableHead className="w-[110px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Extended</TableHead>}
                 {showPricingColumns && <TableHead className="w-[320px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Retainage</TableHead>}
                 {showPricingColumns && <TableHead className="w-[100px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Ret. Amt</TableHead>}
-                <TableHead className="w-[40px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">Notes</TableHead>
+                <TableHead className="w-[40px] text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">PM Notes</TableHead>
                 <TableHead className="w-[40px]" />
               </TableRow>
             </TableHeader>
