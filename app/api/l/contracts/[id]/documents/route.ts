@@ -37,8 +37,122 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const formData = await request.formData();
     const { id: jobId } = await params;
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const body = await request.json();
+
+      if (body.action === 'createSignedUploadUrl') {
+        const fileName = typeof body.fileName === 'string' ? body.fileName : '';
+        const category = typeof body.category === 'string' ? body.category : 'other';
+
+        if (!fileName) {
+          return NextResponse.json({ error: 'File name is required' }, { status: 400 });
+        }
+
+        const safeFileName = sanitizeFileName(fileName);
+        const filePath = `contracts/${jobId}/${category}/${Date.now()}_${safeFileName}`;
+        const { data, error } = await supabase.storage
+          .from('files')
+          .createSignedUploadUrl(filePath);
+
+        if (error || !data?.token) {
+          console.error('Signed upload URL error:', error);
+          return NextResponse.json(
+            { error: error?.message || 'Failed to prepare signed upload URL' },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          path: filePath,
+          token: data.token,
+        });
+      }
+
+      if (body.action === 'saveMetadata') {
+        const associatedItemId =
+          typeof body.associatedItemId === 'string' ? body.associatedItemId : '';
+        const category = typeof body.category === 'string' ? body.category : 'other';
+        const uploads = Array.isArray(body.uploads) ? body.uploads : [];
+
+        if (uploads.length === 0) {
+          return NextResponse.json({ error: 'No uploads were provided' }, { status: 400 });
+        }
+
+        const uploadedDocs: any[] = [];
+        const uploadErrors: Array<{ fileName: string; error: string }> = [];
+
+        for (const upload of uploads) {
+          const fileName = typeof upload.fileName === 'string' ? upload.fileName : '';
+          const filePath = typeof upload.filePath === 'string' ? upload.filePath : '';
+          const fileSize = typeof upload.fileSize === 'number' ? upload.fileSize : 0;
+          const mimeType = typeof upload.mimeType === 'string' ? upload.mimeType : '';
+
+          if (!fileName || !filePath) {
+            uploadErrors.push({
+              fileName: fileName || 'unknown',
+              error: 'Missing file metadata',
+            });
+            continue;
+          }
+
+          const { data: docRow, error: docErr } = await supabase
+            .from("documents_l")
+            .insert({
+              job_id: jobId,
+              file_name: fileName,
+              file_path: filePath,
+              file_size: fileSize,
+              file_type: category,
+            })
+            .select("*")
+            .single();
+
+          if (docErr) {
+            console.error('Document insert error:', docErr);
+            uploadErrors.push({
+              fileName,
+              error: docErr.message || 'Document record insert failed',
+            });
+            continue;
+          }
+
+          uploadedDocs.push({
+            id: docRow.id,
+            name: fileName,
+            size: fileSize,
+            type: mimeType,
+            category,
+            associatedItemId,
+            uploadedAt: new Date().toISOString(),
+            filePath,
+          });
+        }
+
+        if (uploadedDocs.length === 0) {
+          return NextResponse.json(
+            {
+              error: uploadErrors[0]?.error || 'No documents were uploaded',
+              errors: uploadErrors,
+            },
+            { status: 400 }
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          documents: uploadedDocs,
+          errors: uploadErrors,
+        });
+      }
+
+      return NextResponse.json({ error: 'Unsupported upload action' }, { status: 400 });
+    }
+
+    const formData = await request.formData();
 
     const files = formData.getAll('files') as File[];
     const associatedItemId = formData.get('associatedItemId') as string;

@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
 import type { ContractListItem } from "@/types/contract";
+import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -468,22 +469,17 @@ const ContractManager = () => {
 
     try {
       if (hasNewUpload) {
-        const formData = new FormData();
-        signedFiles.forEach(file => formData.append('files', file));
-        formData.append('contractId', pendingSignedJobId);
-        formData.append('category', 'contract');
-
-        const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
-          method: 'POST',
-          body: formData,
+        const uploadResult = await uploadContractDocuments({
+          contractId: pendingSignedJobId,
+          files: signedFiles,
+          category: 'contract',
         });
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || 'Failed to upload files');
+        if (uploadResult.errors.length > 0 && uploadResult.documents.length === 0) {
+          throw new Error(uploadResult.errors[0].error || 'Failed to upload files');
         }
 
-        setExistingSignedContractCount((prev) => prev + signedFiles.length);
+        setExistingSignedContractCount((prev) => prev + uploadResult.documents.length);
       }
 
       setUploadProgress(100);
