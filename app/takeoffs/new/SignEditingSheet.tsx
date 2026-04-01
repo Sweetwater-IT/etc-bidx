@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetClose, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -472,22 +472,19 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
     return (
         <>
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="right"
-                className="w-[400px] sm:w-[600px] flex flex-col p-0 overflow-y-auto"
-            >
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="w-[95vw] max-w-2xl flex flex-col p-0 overflow-y-auto max-h-[90vh]">
                 <div className="flex flex-col gap-2 relative z-10 bg-background">
-                    <SheetHeader className="pb-4 p-6">
-                        <SheetTitle>
+                    <DialogHeader className="pb-4 p-6 text-left">
+                        <DialogTitle>
                             {`${mode === 'create' ? 'Add' : 'Edit'} ${isCustom ? 'Custom sign' : (localSign.designation || 'Sign')} details`}
-                        </SheetTitle>
+                        </DialogTitle>
                         {isSecondary && primarySign && (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
                                 Secondary sign associated with primary sign: {primarySign.designation || "Unknown"}
                             </div>
                         )}
-                    </SheetHeader>
+                    </DialogHeader>
                     <Separator className="w-full -mt-2" />
                 </div>
                 <div className="space-y-6 p-6">
@@ -890,24 +887,21 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     </Button>
                 </div>
 
-            </SheetContent>
-        </Sheet>,
+            </DialogContent>
+        </Dialog>,
 
         {/* Kit Stepper Modal */}
-        <Sheet open={kitStepperOpen} onOpenChange={setKitStepperOpen}>
-            <SheetContent
-                side="right"
-                className="w-[800px] flex flex-col p-0 overflow-y-auto"
-            >
+        <Dialog open={kitStepperOpen} onOpenChange={setKitStepperOpen}>
+            <DialogContent className="w-[95vw] max-w-5xl flex flex-col p-0 overflow-y-auto max-h-[90vh]">
                 <div className="flex flex-col gap-2 relative z-10 bg-background">
-                    <SheetHeader className="pb-4 p-6">
-                        <SheetTitle>
+                    <DialogHeader className="pb-4 p-6 text-left">
+                        <DialogTitle>
                             Configure {selectedKit?.code} Kit Signs
-                        </SheetTitle>
+                        </DialogTitle>
                         <p className="text-sm text-muted-foreground">
                             Configure each sign in the kit with your preferred settings.
                         </p>
-                    </SheetHeader>
+                    </DialogHeader>
                     <Separator className="w-full -mt-2" />
                 </div>
 
@@ -1063,8 +1057,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                         Add All Signs to Order
                     </Button>
                 </div>
-            </SheetContent>
-        </Sheet>
+            </DialogContent>
+        </Dialog>
         </>
     );
 };
