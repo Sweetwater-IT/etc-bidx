@@ -40,6 +40,7 @@ import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
 import type { ContractListItem } from "@/types/contract";
 import { uploadContractDocuments } from "@/lib/upload-contract-documents";
+import { cn } from "@/lib/utils";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
