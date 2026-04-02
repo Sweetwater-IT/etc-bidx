@@ -92,26 +92,17 @@ const CustomerSelect = ({
     setData((prev: any) => {
       if (!selectedCustomer) {
         if (
-          !prev.customer &&
-          !prev.customer_name &&
-          !prev.customer_contact &&
-          !prev.customer_email &&
-          !prev.customer_phone &&
-          !prev.customer_address
+          prev.customer ||
+          prev.customer_name ||
+          prev.customer_contact ||
+          prev.customer_email ||
+          prev.customer_phone ||
+          prev.customer_address
         ) {
           return prev
         }
 
-        return {
-          ...prev,
-          customer: '',
-          customer_name: '',
-          customer_contact_id: '',
-          customer_contact: '',
-          customer_email: '',
-          customer_phone: '',
-          customer_address: '',
-        }
+        return prev
       }
 
       const customerChanged = prev.customer?.toString() !== selectedCustomer.id.toString()
