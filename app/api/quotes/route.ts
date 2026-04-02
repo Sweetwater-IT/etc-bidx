@@ -9,6 +9,7 @@ function stripSystemManagedQuoteFields<T extends Record<string, any>>(input: T):
   delete copy.date_sent;
   delete copy.created_at;
   delete copy.updated_at;
+  delete copy.customer_contact_id;
   return copy;
 }
 
