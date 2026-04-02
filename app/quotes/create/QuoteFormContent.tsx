@@ -229,7 +229,18 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [secondCounter, setSecondCounter] = useState(0)
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState(false)
-  const prevStateRef = useRef({ quoteItems, adminData, notes, quoteData: quoteMetadata || quoteMetadata })
+  const prevStateRef = useRef({
+    quoteItems,
+    adminData,
+    notes,
+    quoteData: quoteMetadata || quoteMetadata,
+    pointOfContact,
+    selectedCustomers,
+    ccEmails,
+    bccEmails,
+    subject,
+    emailBody,
+  })
   const numericQuoteId = useNumericQuoteId(quoteId)
   const [userBranch, setUserBranch] = useState<any>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
@@ -410,7 +421,18 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       if (!res.ok) throw new Error(await res.text());
 
-      prevStateRef.current = { quoteItems, adminData, notes, quoteData: quoteMetadata };
+      prevStateRef.current = {
+        quoteItems,
+        adminData,
+        notes,
+        quoteData: quoteMetadata,
+        pointOfContact,
+        selectedCustomers,
+        ccEmails,
+        bccEmails,
+        subject,
+        emailBody,
+      };
       setSecondCounter(1);
       if (!firstSave) setFirstSave(true);
 
@@ -433,6 +455,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       !isEqual(adminData, prevStateRef.current.adminData) ||
       !isEqual(notes, prevStateRef.current.notes) ||
       !isEqual(quoteMetadata, prevStateRef.current.quoteData) ||
+      !isEqual(pointOfContact, prevStateRef.current.pointOfContact) ||
+      !isEqual(selectedCustomers, prevStateRef.current.selectedCustomers) ||
+      !isEqual(ccEmails, prevStateRef.current.ccEmails) ||
+      !isEqual(bccEmails, prevStateRef.current.bccEmails) ||
+      !isEqual(subject, prevStateRef.current.subject) ||
+      !isEqual(emailBody, prevStateRef.current.emailBody) ||
       !isEqual(
         [quoteMetadata?.selectedfilesids, quoteMetadata?.aditionalFiles, quoteMetadata?.aditionalTerms, quoteMetadata?.aditionalExclusions],
         [prevStateRef.current.quoteData?.selectedfilesids,
@@ -451,7 +479,19 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [adminData, notes, quoteMetadata, numericQuoteId, autosave]);
+  }, [
+    adminData,
+    notes,
+    quoteMetadata,
+    pointOfContact,
+    selectedCustomers,
+    ccEmails,
+    bccEmails,
+    subject,
+    emailBody,
+    numericQuoteId,
+    autosave
+  ]);
 
   const secondCounterRef = useRef(0);
 
