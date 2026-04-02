@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { useJobsList } from "@/hooks/useJobsList";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,6 +26,7 @@ import {
   Check,
   ChevronsUpDown,
   X,
+  ExternalLink,
 } from "lucide-react";
 import {
   Select,
@@ -67,6 +74,22 @@ interface ContractorOption {
 
 interface ProjectOwnerOption {
   name: string;
+}
+
+function escapeCsvValue(value: string | null | undefined) {
+  const normalized = value ?? "";
+  const escaped = String(normalized).replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
+function downloadCsv(content: string, fileName: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  window.URL.revokeObjectURL(url);
 }
 
 const JobList = () => {
@@ -324,6 +347,54 @@ const JobList = () => {
     </span>
   );
 
+  const handleExportJobList = async () => {
+    if (sortedJobs.length === 0) {
+      return;
+    }
+
+    const headers = [
+      "ETC Job Number",
+      "Project Name",
+      "Project Owner",
+      "Contract Number",
+      "Customer",
+      "Customer PM",
+      "Project Manager",
+      "Branch",
+      "County",
+      "Project Status",
+      "Billing Status",
+      "Project Start Date",
+      "Project End Date",
+      "Created At",
+    ];
+
+    const rows = sortedJobs.map((job) => [
+      job.etcJobNumber,
+      job.projectName,
+      job.projectOwner,
+      job.contractNumber,
+      job.customerName,
+      job.customerPM,
+      job.etcProjectManager,
+      job.etcBranch,
+      job.county,
+      job.projectStatus,
+      job.billingStatus,
+      job.projectStartDate,
+      job.projectEndDate,
+      job.createdAt,
+    ]);
+
+    const csvContent = [
+      headers.map(escapeCsvValue).join(","),
+      ...rows.map((row) => row.map(escapeCsvValue).join(",")),
+    ].join("\n");
+
+    const timestamp = new Date().toISOString().split("T")[0];
+    downloadCsv(csvContent, `job_list_${timestamp}.csv`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -337,6 +408,30 @@ const JobList = () => {
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
           <main className="w-full px-6 py-6">
+            <header className="mb-6 rounded-lg border bg-card/80 shadow-sm">
+              <div className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Review signed jobs and export the current list for Salesforce workflows.
+                  </p>
+                </div>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]">
+                      <ExternalLink className="h-4 w-4" />
+                      Export Job List
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleExportJobList}>
+                      Export Job List
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </header>
+
             {/* PM Selector */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">

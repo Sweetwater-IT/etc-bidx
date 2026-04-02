@@ -29,13 +29,10 @@ import { DateRange } from "react-day-picker";
 import { useCustomers } from "@/hooks/use-customers";
 import { exportAvailableJobsToExcel } from "@/lib/exportAvailableJobsToExcel";
 import { EstimateData, exportBidsToExcel } from "@/lib/exportBidsToExcel";
-import { exportActiveJobsToExcel } from "@/lib/exportActiveJobsToExcel";
 import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDate } from "@/lib/formatUTCDate";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ExternalLink } from "lucide-react";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -1976,77 +1973,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
     };
 
-    const fetchAllFilteredActiveJobs = async () => {
-        const options: any = {
-            limit: activeJobsTotalCount || 10000,
-            page: 1,
-        };
-
-        if (activeSegment === "archived") {
-            options.archived = true;
-        } else if (activeSegment !== "all") {
-            options.archived = false;
-            options.branch = activeSegment;
-        } else {
-            options.archived = false;
-        }
-
-        if (Object.keys(activeFilters).length > 0) {
-            options.filters = JSON.stringify(activeFilters);
-        }
-
-        if (sortBy) {
-            options.sortBy = sortBy;
-            options.sortOrder = sortOrder;
-        }
-
-        const response = await fetch(`/api/jobs?${new URLSearchParams(options).toString()}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch jobs for export');
-        }
-
-        const result = await response.json();
-        return result.data.map((job: any) => ({
-            id: job.id,
-            jobNumber: job.jobNumber,
-            bidNumber: job.bidNumber || "",
-            projectStatus: job.projectStatus,
-            billingStatus: job.billingStatus,
-            contractNumber: job.contractNumber,
-            cpr: job.cpr,
-            location: job.location,
-            county: (job.county.trim() === '' || job.county === 'Choose County') ? '-' : { main: job.countyJson.name, secondary: job.countyJson.branch },
-            countyJson: job.countyJson,
-            branch: job.countyJson.branch,
-            contractor: job.contractor,
-            startDate: job.startDate,
-            endDate: job.endDate,
-            createdAt: job.createdAt ? job.createdAt : "",
-            wonBidItems: job.wonBidItems,
-            archived: job.archived
-        }));
-    };
-
-    const handleExportJobList = async () => {
-        try {
-            startLoading();
-            const allJobs = await fetchAllFilteredActiveJobs();
-
-            if (allJobs.length === 0) {
-                toast.error('No jobs to export');
-                return;
-            }
-
-            await exportActiveJobsToExcel(allJobs);
-            toast.success(`Exported ${allJobs.length} jobs to Excel`);
-        } catch (error) {
-            console.error('Error exporting job list:', error);
-            toast.error('Failed to export job list. Please try again.');
-        } finally {
-            stopLoading();
-        }
-    };
-
     const handleUnarchiveActiveJob = async (item: ActiveJob) => {
         try {
             startLoading();
@@ -2145,47 +2071,21 @@ export function JobPageContent({ job }: JobPageContentProps) {
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-2">
-                            {isActiveJobs ? (
-                                <header className="rounded-lg border bg-card/80 shadow-sm">
-                                    <div className="flex items-center justify-between px-6 py-4">
-                                        <div>
-                                            <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                Export active jobs for Salesforce import workflows.
-                                            </p>
-                                        </div>
-                                        <DropdownMenu modal={false}>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]">
-                                                    <ExternalLink className="h-4 w-4" />
-                                                    Export Job List
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={handleExportJobList}>
-                                                    Export Job List
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </header>
-                            ) : (
-                                <div className="flex items-center justify-between">
-                                    <CardActions
-                                        createButtonLabel={createButtonLabel}
-                                        onCreateClick={handleCreateClick}
-                                        onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                        date={dateRange}
-                                        setDate={setDateRange}
-                                        importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                        onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
-                                        showFilterButton={false}
-                                        showFilters={showFilters}
-                                        setShowFilters={setShowFilters}
-                                        hideImport={isActiveBids}
-                                    />
-                                </div>
-                            )}
+                            <div className="flex items-center justify-between">
+                                <CardActions
+                                    createButtonLabel={createButtonLabel}
+                                    onCreateClick={handleCreateClick}
+                                    onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
+                                    date={dateRange}
+                                    setDate={setDateRange}
+                                    importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
+                                    onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
+                                    showFilterButton={false}
+                                    showFilters={showFilters}
+                                    setShowFilters={setShowFilters}
+                                    hideImport={isActiveBids}
+                                />
+                            </div>
                             {isActiveJobs && nextJobNumber && (
                                 <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
                                     <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
