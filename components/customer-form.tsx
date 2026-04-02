@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { Label } from "@/components/ui/label"
@@ -11,8 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { createCustomer } from "@/hooks/use-customers-swr"
 
 interface CustomerFormProps {
-  onSuccess: () => void
+  onSuccess: (customer?: { id: number; name?: string; display_name?: string }) => void
   onCancel?: () => void
+  mode?: "create" | "edit"
+  customerId?: number
+  initialData?: any
 }
 
 type FormData = {
@@ -56,23 +59,193 @@ type FormData = {
   would_like_to_apply_for_credit: boolean
 }
 
-export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
+const EMPTY_FORM_VALUES: FormData = {
+  name: '',
+  display_name: '',
+  customer_number: '',
+  url: '',
+  main_phone: '',
+  address: '',
+  city: '',
+  state: '',
+  zip: '',
+  bill_to_street_address: '',
+  bill_to_city: '',
+  bill_to_state: '',
+  bill_to_zip_code: '',
+  billToSameAsMain: false,
+  personOrderingName: '',
+  personOrderingTitle: '',
+  primaryContactName: '',
+  primaryContactPhone: '',
+  primaryContactEmail: '',
+  primaryContactSameAsPersonOrdering: false,
+  projectManagerName: '',
+  projectManagerPhone: '',
+  projectManagerEmail: '',
+  payment_terms: '',
+  would_like_to_apply_for_credit: false,
+}
+
+function buildInitialValues(initialData?: any): FormData {
+  if (!initialData) {
+    return EMPTY_FORM_VALUES
+  }
+
+  const contacts = Array.isArray(initialData.customer_contacts)
+    ? initialData.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+    : []
+
+  const findRole = (role: string) =>
+    contacts.find((contact: any) => (contact.role || "").toUpperCase() === role)
+
+  const personOrdering = findRole("PERSON ORDERING")
+  const primaryContact = findRole("PRIMARY CONTACT")
+  const projectManager = findRole("PROJECT MANAGER")
+
+  const billToStreet = initialData.bill_to_street || ''
+  const billToCity = initialData.bill_to_city || ''
+  const billToState = initialData.bill_to_state || ''
+  const billToZip = initialData.bill_to_zip || ''
+  const mainAddress = initialData.address || ''
+  const mainCity = initialData.city || ''
+  const mainState = initialData.state || ''
+  const mainZip = initialData.zip || ''
+  const billToSameAsMain =
+    billToStreet === mainAddress &&
+    billToCity === mainCity &&
+    billToState === mainState &&
+    billToZip === mainZip
+
+  const resolvedPersonOrderingName = personOrdering?.name || ''
+  const resolvedPrimaryContactName = primaryContact?.name || ''
+
+  return {
+    name: initialData.name || '',
+    display_name: initialData.display_name || initialData.displayName || '',
+    customer_number: String(initialData.customer_number || initialData.customerNumber || ''),
+    url: initialData.web || initialData.url || '',
+    main_phone: initialData.main_phone || initialData.mainPhone || '',
+    address: mainAddress,
+    city: mainCity,
+    state: mainState,
+    zip: mainZip,
+    bill_to_street_address: billToStreet,
+    bill_to_city: billToCity,
+    bill_to_state: billToState,
+    bill_to_zip_code: billToZip,
+    billToSameAsMain,
+    personOrderingName: resolvedPersonOrderingName,
+    personOrderingTitle: personOrdering?.role && personOrdering.role !== 'PERSON ORDERING'
+      ? personOrdering.role
+      : '',
+    primaryContactName: resolvedPrimaryContactName,
+    primaryContactPhone: primaryContact?.phone || '',
+    primaryContactEmail: primaryContact?.email || '',
+    primaryContactSameAsPersonOrdering:
+      !!resolvedPersonOrderingName && resolvedPrimaryContactName === resolvedPersonOrderingName,
+    projectManagerName: projectManager?.name || '',
+    projectManagerPhone: projectManager?.phone || '',
+    projectManagerEmail: projectManager?.email || '',
+    payment_terms: initialData.payment_terms || initialData.paymentTerms || '',
+    would_like_to_apply_for_credit:
+      !!(initialData.would_like_to_apply_for_credit ?? initialData.wouldLikeToApplyForCredit),
+  }
+}
+
+async function saveLegacyContact({
+  contractorId,
+  contactId,
+  name,
+  role,
+  email,
+  phone,
+}: {
+  contractorId: number
+  contactId: number | null
+  name: string
+  role: string
+  email?: string
+  phone?: string
+}) {
+  const trimmedName = name.trim()
+  const trimmedRole = role.trim()
+  const trimmedEmail = email?.trim() || null
+  const trimmedPhone = phone?.trim() || null
+  const hasValues = !!trimmedName || !!trimmedEmail || !!trimmedPhone
+
+  if (!hasValues) {
+    if (contactId) {
+      const deleteResponse = await fetch(`/api/customer-contacts/${contactId}`, {
+        method: 'DELETE',
+      })
+
+      if (!deleteResponse.ok) {
+        const errorResult = await deleteResponse.json().catch(() => null)
+        throw new Error(errorResult?.error || 'Failed to remove customer contact')
+      }
+    }
+
+    return
+  }
+
+  const payload = {
+    contractor_id: contractorId,
+    name: trimmedName || null,
+    role: trimmedRole || null,
+    email: trimmedEmail,
+    phone: trimmedPhone,
+  }
+
+  if (contactId) {
+    const updateResponse = await fetch(`/api/customer-contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!updateResponse.ok) {
+      const errorResult = await updateResponse.json().catch(() => null)
+      throw new Error(errorResult?.error || 'Failed to update customer contact')
+    }
+
+    return
+  }
+
+  const createResponse = await fetch('/api/customer-contacts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const createResult = await createResponse.json().catch(() => null)
+
+  if (!createResponse.ok || !createResult?.success) {
+    throw new Error(createResult?.error || 'Failed to create customer contact')
+  }
+}
+
+export function CustomerForm({
+  onSuccess,
+  onCancel,
+  mode = "create",
+  customerId,
+  initialData,
+}: CustomerFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isEditMode = mode === "edit"
   
   const { register, handleSubmit, setValue, formState: { errors }, reset, watch } = useForm<FormData>({
-    defaultValues: {
-      name: '',
-      display_name: '',
-      customer_number: '',
-      url: '',
-      main_phone: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      payment_terms: ''
-    }
+    defaultValues: buildInitialValues(initialData)
   })
+
+  useEffect(() => {
+    reset(buildInitialValues(initialData))
+  }, [initialData, reset])
 
   const states = [
     { value: 'AL', label: 'Alabama' },
@@ -178,14 +351,101 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     console.log('Submitting customer data:', data)
 
     try {
+      if (isEditMode) {
+        if (!customerId) {
+          throw new Error("Customer ID is required for editing")
+        }
+
+        const resolvedBillToStreet = data.billToSameAsMain ? data.address : data.bill_to_street_address
+        const resolvedBillToCity = data.billToSameAsMain ? data.city : data.bill_to_city
+        const resolvedBillToState = data.billToSameAsMain ? data.state : data.bill_to_state
+        const resolvedBillToZip = data.billToSameAsMain ? data.zip : data.bill_to_zip_code
+        const resolvedPrimaryContactName = data.primaryContactSameAsPersonOrdering
+          ? data.personOrderingName
+          : data.primaryContactName
+
+        if (data.primaryContactSameAsPersonOrdering && !data.personOrderingName.trim()) {
+          throw new Error("Add a person ordering name before using same as person ordering")
+        }
+
+        const updateResponse = await fetch(`/api/contractors/${customerId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: data.name,
+            display_name: data.display_name,
+            customer_number: data.customer_number,
+            main_phone: data.main_phone,
+            web: data.url,
+            address: data.address,
+            city: data.city,
+            state: data.state,
+            zip: data.zip,
+            bill_to_street: resolvedBillToStreet,
+            bill_to_city: resolvedBillToCity,
+            bill_to_state: resolvedBillToState,
+            bill_to_zip: resolvedBillToZip,
+            payment_terms: data.payment_terms,
+            would_like_to_apply_for_credit: data.would_like_to_apply_for_credit,
+          }),
+        })
+
+        const updateResult = await updateResponse.json()
+
+        if (!updateResponse.ok || !updateResult.ok) {
+          throw new Error(updateResult.error || 'Failed to update customer')
+        }
+
+        const contacts = Array.isArray(initialData?.customer_contacts)
+          ? initialData.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+          : []
+        const findRole = (role: string) =>
+          contacts.find((contact: any) => (contact.role || "").toUpperCase() === role)
+
+        const personOrdering = findRole("PERSON ORDERING")
+        const primaryContact = findRole("PRIMARY CONTACT")
+        const projectManager = findRole("PROJECT MANAGER")
+
+        await Promise.all([
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: personOrdering?.id ?? null,
+            name: data.personOrderingName,
+            role: data.personOrderingTitle || 'PERSON ORDERING',
+          }),
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: primaryContact?.id ?? null,
+            name: resolvedPrimaryContactName,
+            role: 'PRIMARY CONTACT',
+            phone: data.primaryContactPhone,
+            email: data.primaryContactEmail,
+          }),
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: projectManager?.id ?? null,
+            name: data.projectManagerName,
+            role: 'PROJECT MANAGER',
+            phone: data.projectManagerPhone,
+            email: data.projectManagerEmail,
+          }),
+        ])
+
+        toast.success('Customer updated successfully!')
+        onSuccess({ id: customerId, name: data.name, display_name: data.display_name })
+        return
+      }
+
       const result = await createCustomer(data)
       console.log('Customer creation result:', result)
       toast.success('Customer created successfully!')
-      reset()
-      onSuccess()
+      reset(EMPTY_FORM_VALUES)
+      onSuccess(result.customer)
     } catch (error: any) {
       console.error('Customer creation error:', error)
-      toast.error(`Error creating customer: ${error.message}`)
+      toast.error(`Error ${isEditMode ? 'updating' : 'creating'} customer: ${error.message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -563,7 +823,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
             }`}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating...' : 'Create'}
+            {isSubmitting ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save' : 'Create')}
           </Button>
         </div>
       </div>

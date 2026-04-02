@@ -82,6 +82,25 @@ export const useCustomerSelection = () => {
         setSelectedContact(customer.customer_contacts?.[0] || null);
     };
 
+    const upsertCustomer = (customer: Customer) => {
+        setCustomers(prev => {
+            const existingIndex = prev.findIndex(c => c.id === customer.id);
+            if (existingIndex === -1) {
+                return [...prev, customer];
+            }
+
+            return prev.map(c => (c.id === customer.id ? customer : c));
+        });
+
+        setSelectedCustomer(customer);
+
+        if (selectedContact) {
+            const refreshedContact =
+                customer.customer_contacts?.find(c => c.id === selectedContact.id) || null;
+            setSelectedContact(refreshedContact);
+        }
+    };
+
     const addContact = (contact: CustomerContact) => {
         if (!selectedCustomer) return;
         const updatedCustomer = {
@@ -105,6 +124,7 @@ export const useCustomerSelection = () => {
         selectCustomer,
         selectContact,
         addCustomer,
+        upsertCustomer,
         addContact,
         refreshCustomers: getCustomers,
         loading,
