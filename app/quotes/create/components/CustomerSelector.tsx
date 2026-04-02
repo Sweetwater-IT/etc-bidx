@@ -138,18 +138,16 @@ const CustomerSelect = ({
 
     setSelectedCustomers([toQuoteCustomer(selectedCustomer)])
 
-    if (selectedContact?.email) {
+    if (selectedContact) {
       setPointOfContact({
         id: selectedContact.id,
         name: selectedContact.name || '',
-        email: selectedContact.email,
+        email: selectedContact.email || '',
       })
       return
     }
 
-    if (!data.customer_contact) {
-      setPointOfContact(undefined)
-    }
+    setPointOfContact(undefined)
   }, [data.customer, data.customer_contact, selectedContact, selectedCustomer, setPointOfContact, setSelectedCustomers])
 
   const handleContactClick = (contactId: string) => {

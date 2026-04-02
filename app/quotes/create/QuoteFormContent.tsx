@@ -247,6 +247,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
   const didInitRef = useRef(false);
+  const didRunImmediateRelationshipSaveRef = useRef(false);
 
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
@@ -445,6 +446,37 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     numericQuoteId, adminData, notes, quoteMetadata, estimateId, jobId,
     subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
     includeTerms, customTerms, paymentTerms, firstSave, quoteItems
+  ]);
+
+  useEffect(() => {
+    if (!numericQuoteId || !canAutosave || loadingMetadata) return;
+
+    const relationshipChanged =
+      !isEqual(pointOfContact, prevStateRef.current.pointOfContact) ||
+      !isEqual(selectedCustomers, prevStateRef.current.selectedCustomers);
+
+    if (!relationshipChanged) {
+      return;
+    }
+
+    if (!didRunImmediateRelationshipSaveRef.current) {
+      didRunImmediateRelationshipSaveRef.current = true;
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    void autosave();
+  }, [
+    autosave,
+    canAutosave,
+    loadingMetadata,
+    numericQuoteId,
+    pointOfContact,
+    selectedCustomers
   ]);
 
 
