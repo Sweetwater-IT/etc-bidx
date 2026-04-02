@@ -7,14 +7,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -209,7 +201,7 @@ export function QuoteCustomerSheet({
   }
 
   const renderHeader = () => (
-    <SheetHeader className="border-b px-6 py-4">
+    <SheetHeader className="border-b bg-background px-6 py-4">
       <div className="flex items-center gap-3">
         {view !== "select-customer" && view !== "select-contact" && (
           <Button
@@ -228,8 +220,8 @@ export function QuoteCustomerSheet({
   )
 
   const renderCustomerList = () => (
-    <>
-      <div className="px-6 py-4 space-y-4 border-b">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"
@@ -240,7 +232,9 @@ export function QuoteCustomerSheet({
             Add New Customer
           </Button>
         </div>
+      </div>
 
+      <div className="border-b px-6 py-4">
         <div className="relative">
           <Input
             autoFocus
@@ -273,7 +267,8 @@ export function QuoteCustomerSheet({
                   className="cursor-pointer border-b transition-colors hover:bg-muted/40"
                   onClick={() => {
                     onSelectCustomer(customer.id.toString())
-                    onOpenChange(false)
+                    setContactSearch("")
+                    setView("select-contact")
                   }}
                 >
                   <td className="px-4 py-3 text-sm font-medium">
@@ -291,12 +286,12 @@ export function QuoteCustomerSheet({
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   )
 
   const renderContactList = () => (
-    <>
-      <div className="px-6 py-4 space-y-4 border-b">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between gap-2">
           <Button
             type="button"
@@ -317,7 +312,9 @@ export function QuoteCustomerSheet({
             Add New Contact
           </Button>
         </div>
+      </div>
 
+      <div className="border-b px-6 py-4">
         <div className="relative">
           <Input
             autoFocus
@@ -368,7 +365,7 @@ export function QuoteCustomerSheet({
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   )
 
   const renderContactForm = () => (
@@ -442,7 +439,7 @@ export function QuoteCustomerSheet({
       <SheetContent side="right" className="flex h-full w-[560px] flex-col p-0 sm:max-w-[560px]">
         {renderHeader()}
 
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           {view === "select-customer" && renderCustomerList()}
           {view === "select-contact" && renderContactList()}
           {view === "add-contact" && renderContactForm()}

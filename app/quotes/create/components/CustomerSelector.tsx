@@ -33,6 +33,11 @@ const CustomerSelect = ({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetView, setSheetView] = useState<'select-customer' | 'select-contact'>('select-customer')
 
+  const buildCustomerAddress = (customer: any) =>
+    [customer?.address || '', customer?.city || '', customer?.state || '', customer?.zip || '']
+      .filter(Boolean)
+      .join(', ')
+
   const toQuoteCustomer = (customer: any): QuoteCustomer => ({
     id: customer.id,
     name: customer.name || customer.display_name || '',
@@ -80,28 +85,45 @@ const CustomerSelect = ({
   }, [customers, data.customer, data.customer_contact, selectCustomer])
 
   useEffect(() => {
-    if (!selectedCustomer) return
+    setData((prev: any) => {
+      if (!selectedCustomer) {
+        if (
+          !prev.customer &&
+          !prev.customer_name &&
+          !prev.customer_contact &&
+          !prev.customer_email &&
+          !prev.customer_phone &&
+          !prev.customer_address
+        ) {
+          return prev
+        }
 
-    const nextAddress = [selectedCustomer.address || '', selectedCustomer.city || '', selectedCustomer.state || '', selectedCustomer.zip || '']
-      .filter(Boolean)
-      .join(', ')
+        return {
+          ...prev,
+          customer: '',
+          customer_name: '',
+          customer_contact: '',
+          customer_email: '',
+          customer_phone: '',
+          customer_address: '',
+        }
+      }
 
-    const newData = {
-      ...data,
-      customer: selectedCustomer.id || '',
-      customer_name: selectedCustomer.name || '',
-      customer_email: selectedContact?.email || data.customer_email || '',
-      customer_phone: selectedContact?.phone || data.customer_phone || '',
-      customer_address: nextAddress,
-      customer_contact: selectedContact?.name || data.customer_contact || '',
-    }
+      const customerChanged = prev.customer?.toString() !== selectedCustomer.id.toString()
+      const nextData = {
+        ...prev,
+        customer: selectedCustomer.id || '',
+        customer_name: selectedCustomer.name || '',
+        customer_address: buildCustomerAddress(selectedCustomer),
+        customer_contact: selectedContact?.name || (customerChanged ? '' : prev.customer_contact || ''),
+        customer_email: selectedContact?.email || (customerChanged ? '' : prev.customer_email || ''),
+        customer_phone: selectedContact?.phone || (customerChanged ? '' : prev.customer_phone || ''),
+      }
 
-    const hasChanged = Object.keys(newData).some(key => newData[key] !== data[key])
-
-    if (hasChanged) {
-      setData(newData)
-    }
-  }, [data, selectedCustomer, selectedContact, setData])
+      const hasChanged = Object.keys(nextData).some(key => nextData[key] !== prev[key])
+      return hasChanged ? nextData : prev
+    })
+  }, [selectedCustomer, selectedContact, setData])
 
   useEffect(() => {
     if (!selectedCustomer) {
