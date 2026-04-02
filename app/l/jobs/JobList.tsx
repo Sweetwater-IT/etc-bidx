@@ -5,12 +5,6 @@ import { useRouter } from "next/navigation";
 import { useJobsList } from "@/hooks/useJobsList";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCell,
@@ -27,6 +21,7 @@ import {
   ChevronsUpDown,
   X,
   ExternalLink,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -220,6 +215,33 @@ const JobList = () => {
     return list;
   }, [signedJobs, activeTab, currentPM, ownerFilter, customerFilter, customerPmFilter, jobStatusFilter]);
 
+  const exportableAllJobs = useMemo(() => {
+    let list = signedJobs;
+
+    if (ownerFilter !== "all") {
+      list = list.filter((j) => j.projectOwner === ownerFilter);
+    }
+
+    if (customerFilter !== "all") {
+      list = list.filter((j) => j.customerName === customerFilter);
+    }
+
+    if (customerPmFilter !== "all") {
+      list = list.filter((j) => j.customerPM === customerPmFilter);
+    }
+
+    if (jobStatusFilter !== "all") {
+      list = list.filter((j) => j.projectStatus === jobStatusFilter);
+    }
+
+    return [...list].sort((a, b) => {
+      const aVal = sortField === "actionItems" ? "" : ((a as any)[sortField] || "");
+      const bVal = sortField === "actionItems" ? "" : ((b as any)[sortField] || "");
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [signedJobs, ownerFilter, customerFilter, customerPmFilter, jobStatusFilter, sortField, sortDir]);
+
   // Sort
   const sortedJobs = useMemo(() => {
     const sorted = [...filteredJobs].sort((a, b) => {
@@ -348,7 +370,7 @@ const JobList = () => {
   );
 
   const handleExportJobList = async () => {
-    if (sortedJobs.length === 0) {
+    if (exportableAllJobs.length === 0) {
       return;
     }
 
@@ -369,7 +391,7 @@ const JobList = () => {
       "Created At",
     ];
 
-    const rows = sortedJobs.map((job) => [
+    const rows = exportableAllJobs.map((job) => [
       job.etcJobNumber,
       job.projectName,
       job.projectOwner,
@@ -404,35 +426,33 @@ const JobList = () => {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <main className="w-full px-6 py-6">
-            <header className="mb-6 rounded-lg border bg-card/80 shadow-sm">
-              <div className="flex items-center justify-between px-6 py-4">
-                <div>
-                  <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Review signed jobs and export the current list for Salesforce workflows.
-                  </p>
-                </div>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]">
-                      <ExternalLink className="h-4 w-4" />
-                      Export Job List
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleExportJobList}>
-                      Export Job List
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </header>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
+      <header className="shrink-0 border-b bg-card">
+        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded bg-primary">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {signedJobs.length} signed job{signedJobs.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <Button
+            className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            onClick={handleExportJobList}
+          >
+            <ExternalLink className="h-4 w-4" />
+            Export Job List
+          </Button>
+        </div>
+      </header>
 
-            {/* PM Selector */}
+      <div className="@container/main flex flex-1 min-h-0 flex-col overflow-auto">
+        <div className="max-w-[1600px] mx-auto w-full px-6 py-6">
+          <main className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
@@ -455,7 +475,6 @@ const JobList = () => {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-1 border rounded-md bg-card p-0.5">
                 {tabs.map((tab) => (
