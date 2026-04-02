@@ -1279,7 +1279,14 @@ const KanbanView = ({
                   }
                   onClick={(e) => e.stopPropagation()}
                   placeholder={`Search ${stage.shortLabel.toLowerCase()}...`}
-                  className="h-8 bg-background/90 text-xs"
+                  className={cn(
+                    "h-8 border text-xs shadow-none transition-colors",
+                    "placeholder:text-muted-foreground/65",
+                    "focus-visible:ring-1 focus-visible:ring-[#16335A]/20 focus-visible:border-[#16335A]/25",
+                    stage.id === "CONTRACT_RECEIPT" && "border-blue-900/10 bg-blue-950/[0.035] text-blue-950",
+                    stage.id === "RETURNED_TO_CUSTOMER" && "border-amber-700/10 bg-amber-500/[0.045] text-amber-950",
+                    stage.id === "CONTRACT_SIGNED" && "border-emerald-700/10 bg-emerald-500/[0.045] text-emerald-950"
+                  )}
                 />
               </div>
             </div>
