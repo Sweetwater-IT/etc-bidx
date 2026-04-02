@@ -166,6 +166,36 @@ const CustomerSelect = ({
     }))
   }
 
+  const handleCustomerClick = (customerId: string) => {
+    const nextCustomer = customers.find(customer => customer.id.toString() === customerId) || null
+    const isSameCustomer = selectedCustomer?.id?.toString() === customerId
+    const preservedContactId = isSameCustomer ? selectedContact?.id?.toString() : undefined
+
+    selectCustomer(customerId, preservedContactId)
+
+    if (!nextCustomer) {
+      return
+    }
+
+    if (isSameCustomer) {
+      setSelectedCustomers([toQuoteCustomer(nextCustomer)])
+      return
+    }
+
+    setPointOfContact(undefined)
+    setSelectedCustomers([toQuoteCustomer(nextCustomer)])
+    setData((prev: any) => ({
+      ...prev,
+      customer: nextCustomer.id || '',
+      customer_name: nextCustomer.name || '',
+      customer_address: buildCustomerAddress(nextCustomer),
+      customer_contact_id: '',
+      customer_contact: '',
+      customer_email: '',
+      customer_phone: '',
+    }))
+  }
+
   return (
     <div className="w-full">
       <div className={`flex ${direction === 'row' ? 'flex-row' : 'flex-col'} justify-between gap-4 mb-4 flex-1`}>
@@ -215,7 +245,7 @@ const CustomerSelect = ({
         selectedCustomer={selectedCustomer}
         selectedContact={selectedContact}
         loading={loading}
-        onSelectCustomer={selectCustomer}
+        onSelectCustomer={handleCustomerClick}
         onSelectContact={handleContactClick}
         onCustomerUpsert={(customer) => upsertCustomer(customer as any)}
         refreshCustomers={refreshCustomers}
