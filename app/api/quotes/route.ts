@@ -612,6 +612,14 @@ export async function PATCH(request: NextRequest) {
         customer_contacts_id: r.customer_contacts_id ?? null,
       }));
       if (recipientsToInsert.length > 0) await supabase.from("quote_recipients").insert(recipientsToInsert);
+
+      console.info("[QuoteDraftSave]", {
+        quoteId: numericId,
+        customerIds: Array.isArray(customers)
+          ? customers.map((customer: any) => customer.id ?? customer.contractor_id ?? null)
+          : [],
+        pointOfContactRecipient: recipientsToInsert.find((recipient: any) => recipient.point_of_contact) || null,
+      });
     }
 
     return NextResponse.json({ success: true, message: "Quote draft saved" });

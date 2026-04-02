@@ -122,6 +122,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           etc_poc_phone_number: data.etc_poc_phone_number,
           etc_branch: data.etc_branch,
           customer: hydratedCustomer?.id || data.customer,
+          customer_contact_id: hydratedPointContact?.id || "",
           customer_contact:
             hydratedPointContact?.name ||
             data.customer_contact,

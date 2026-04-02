@@ -265,5 +265,16 @@ export async function GET(
     ...quote
   };
 
+  console.info("[QuoteEditHydration]", {
+    quoteId,
+    customerId: response.customers?.[0]?.id ?? null,
+    customerContactId:
+      Array.isArray(response.recipients) &&
+      response.recipients.find((recipient: any) => recipient.point_of_contact)
+        ?.customer_contacts?.[0]?.id ?? null,
+    customerName: response.customer_name ?? null,
+    customerContact: response.contact?.name ?? null,
+  });
+
   return NextResponse.json(response);
 }

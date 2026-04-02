@@ -273,6 +273,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
   useEffect(() => {
     if (loadingMetadata) return;
+    if (edit || numericQuoteId || quoteMetadata?.id) return;
 
     const shouldCreate =
       (quoteMetadata?.type_quote === "straight_sale" && quoteMetadata?.customer && quoteMetadata.customer_name) ||
@@ -290,9 +291,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   }, [
     quoteMetadata?.type_quote,
     quoteMetadata?.customer,
+    quoteMetadata?.id,
     quoteMetadata?.job_id,
     quoteMetadata?.estimate_id,
-    loadingMetadata
+    loadingMetadata,
+    edit,
+    numericQuoteId
   ]);
 
   const createQuoteBase = async (status: "DRAFT" | "NOT SENT") => {

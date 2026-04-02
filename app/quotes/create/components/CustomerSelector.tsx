@@ -77,12 +77,16 @@ const CustomerSelect = ({
     if (!customer) return
 
     const contact =
-      data.customer_contact && customer.customer_contacts?.length
-        ? customer.customer_contacts.find(c => c.name === data.customer_contact) || null
+      customer.customer_contacts?.length
+        ? customer.customer_contacts.find(c =>
+            c.id?.toString() === data.customer_contact_id?.toString()
+          ) ||
+          customer.customer_contacts.find(c => c.name === data.customer_contact) ||
+          null
         : null
 
     selectCustomer(customer.id.toString(), contact?.id?.toString())
-  }, [customers, data.customer, data.customer_contact, selectCustomer])
+  }, [customers, data.customer, data.customer_contact, data.customer_contact_id, selectCustomer])
 
   useEffect(() => {
     setData((prev: any) => {
@@ -102,6 +106,7 @@ const CustomerSelect = ({
           ...prev,
           customer: '',
           customer_name: '',
+          customer_contact_id: '',
           customer_contact: '',
           customer_email: '',
           customer_phone: '',
@@ -115,6 +120,7 @@ const CustomerSelect = ({
         customer: selectedCustomer.id || '',
         customer_name: selectedCustomer.name || '',
         customer_address: buildCustomerAddress(selectedCustomer),
+        customer_contact_id: selectedContact?.id || (customerChanged ? '' : prev.customer_contact_id || ''),
         customer_contact: selectedContact?.name || (customerChanged ? '' : prev.customer_contact || ''),
         customer_email: selectedContact?.email || (customerChanged ? '' : prev.customer_email || ''),
         customer_phone: selectedContact?.phone || (customerChanged ? '' : prev.customer_phone || ''),
@@ -162,6 +168,7 @@ const CustomerSelect = ({
     })
     setData((prev: any) => ({
       ...prev,
+      customer_contact_id: contact.id || '',
       customer_contact: contact.name || '',
       customer_email: contact.email || '',
       customer_phone: contact.phone || '',
@@ -182,7 +189,7 @@ const CustomerSelect = ({
             }}
           >
             <span className="truncate text-left">
-              {loading ? 'Loading...' : selectedCustomer?.name || 'Select Customer'}
+              {loading ? 'Loading...' : selectedCustomer?.name || data.customer_name || 'Select Customer'}
             </span>
             <Users className="ml-2 h-4 w-4 opacity-60" />
           </Button>
@@ -202,7 +209,7 @@ const CustomerSelect = ({
             <span className="truncate text-left">
               {loading
                 ? 'Loading...'
-                : selectedContact?.name || (selectedCustomer ? 'Please select contact' : 'Select Contact')}
+                : selectedContact?.name || data.customer_contact || (selectedCustomer || data.customer ? 'Please select contact' : 'Select Contact')}
             </span>
             <Pencil className="ml-2 h-4 w-4 opacity-60" />
           </Button>
