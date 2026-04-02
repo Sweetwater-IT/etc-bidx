@@ -1139,6 +1139,8 @@ const KanbanView = ({
         job.customerName,
         job.contractNumber,
         job.etcJobNumber,
+        job.county,
+        job.etcProjectManager,
         job.projectOwner,
       ]
         .filter(Boolean)
