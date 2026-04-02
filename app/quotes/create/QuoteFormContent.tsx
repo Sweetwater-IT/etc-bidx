@@ -874,7 +874,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
             </div>
           ) : (
             <div className="flex w-1/2 flex-col overflow-y-auto px-2">
-              <div className="flex flex-row gap-4 mb-4 w-full">
+              <div className="mb-4 w-full space-y-4">
                 <div className="w-1/2 gap-4">
                   <p className="font-semibold mb-1">Quote Type</p>
                   <Select onValueChange={handleQuoteTypeChange} value={quoteMetadata?.type_quote || ""}>
@@ -890,7 +890,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
                 </div>
 
                 {quoteMetadata?.type_quote === "straight_sale" && quoteMetadata && (
-                  <div className='w-1/2'>
+                  <div className='w-full'>
                     <CustomerSelect
                       data={quoteMetadata as any}
                       setData={setQuoteMetadata}

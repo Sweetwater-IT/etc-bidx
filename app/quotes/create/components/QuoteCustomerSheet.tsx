@@ -18,8 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Check, Pencil, Plus } from "lucide-react"
+import { ArrowLeft, Check } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { CustomerForm } from "@/components/customer-form"
@@ -54,17 +53,15 @@ type QuoteContact = {
 }
 
 type SheetView =
-  | "root"
   | "select-customer"
   | "add-customer"
-  | "edit-customer"
   | "select-contact"
   | "add-contact"
-  | "edit-contact"
 
 interface QuoteCustomerSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialView: SheetView
   customers: QuoteCustomer[]
   selectedCustomer: QuoteCustomer | null
   selectedContact: QuoteContact | null
@@ -85,6 +82,7 @@ const EMPTY_CONTACT_FORM = {
 export function QuoteCustomerSheet({
   open,
   onOpenChange,
+  initialView,
   customers,
   selectedCustomer,
   selectedContact,
@@ -94,38 +92,28 @@ export function QuoteCustomerSheet({
   onCustomerUpsert,
   refreshCustomers,
 }: QuoteCustomerSheetProps) {
-  const [view, setView] = useState<SheetView>("root")
+  const [view, setView] = useState<SheetView>(initialView)
   const [customerSearch, setCustomerSearch] = useState("")
   const [contactSearch, setContactSearch] = useState("")
   const [contactForm, setContactForm] = useState(EMPTY_CONTACT_FORM)
   const [savingContact, setSavingContact] = useState(false)
-  const [editCustomerData, setEditCustomerData] = useState<QuoteCustomer | null>(null)
 
   useEffect(() => {
-    if (!open) {
-      setView("root")
+    if (open) {
+      setView(initialView)
       setCustomerSearch("")
       setContactSearch("")
-      setContactForm(EMPTY_CONTACT_FORM)
-      setEditCustomerData(null)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (view === "edit-contact" && selectedContact) {
-      setContactForm({
-        name: selectedContact.name || "",
-        role: selectedContact.role || "",
-        email: selectedContact.email || "",
-        phone: selectedContact.phone || "",
-      })
       return
     }
 
+    setContactForm(EMPTY_CONTACT_FORM)
+  }, [initialView, open])
+
+  useEffect(() => {
     if (view === "add-contact") {
       setContactForm(EMPTY_CONTACT_FORM)
     }
-  }, [selectedContact, view])
+  }, [view])
 
   const filteredCustomers = useMemo(() => {
     const query = customerSearch.trim().toLowerCase()
@@ -148,25 +136,6 @@ export function QuoteCustomerSheet({
       (contact.role || "").toLowerCase().includes(query)
     )
   }, [contactSearch, selectedCustomer])
-
-  const loadEditableCustomer = async () => {
-    if (!selectedCustomer?.id) return
-
-    try {
-      const response = await fetch(`/api/contractors/${selectedCustomer.id}`)
-      const result = await response.json()
-
-      if (!response.ok || !result?.customer) {
-        throw new Error(result?.error || "Failed to load customer")
-      }
-
-      setEditCustomerData(result.customer)
-      setView("edit-customer")
-    } catch (error) {
-      console.error("Failed to load customer for edit:", error)
-      toast.error("Failed to load customer")
-    }
-  }
 
   const refreshAndReselectCustomer = async (
     customerId: number,
@@ -194,14 +163,8 @@ export function QuoteCustomerSheet({
     setSavingContact(true)
 
     try {
-      const isEdit = view === "edit-contact" && selectedContact?.id
-      const endpoint = isEdit
-        ? `/api/customer-contacts/${selectedContact.id}`
-        : "/api/customer-contacts"
-      const method = isEdit ? "PATCH" : "POST"
-
-      const response = await fetch(endpoint, {
-        method,
+      const response = await fetch("/api/customer-contacts", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
@@ -216,14 +179,14 @@ export function QuoteCustomerSheet({
 
       const result = await response.json().catch(() => null)
 
-      if (!response.ok || (!isEdit && !result?.success)) {
+      if (!response.ok || !result?.success) {
         throw new Error(result?.error || "Failed to save contact")
       }
 
-      const savedContactId = isEdit ? selectedContact?.id || null : result?.data?.id || null
+      const savedContactId = result?.data?.id || null
       await refreshAndReselectCustomer(selectedCustomer.id, savedContactId)
-      setView("root")
-      toast.success(isEdit ? "Contact updated" : "Contact created")
+      setView("select-contact")
+      toast.success("Contact created")
     } catch (error) {
       console.error("Failed to save contact:", error)
       toast.error("Failed to save contact")
@@ -238,29 +201,23 @@ export function QuoteCustomerSheet({
         return "Select Customer"
       case "add-customer":
         return "Add Customer"
-      case "edit-customer":
-        return "Edit Customer"
       case "select-contact":
         return "Select Contact"
       case "add-contact":
         return "Add Contact"
-      case "edit-contact":
-        return "Edit Contact"
-      default:
-        return "Customer & Contact"
     }
   }
 
   const renderHeader = () => (
     <SheetHeader className="border-b px-6 py-4">
       <div className="flex items-center gap-3">
-        {view !== "root" && (
+        {view !== "select-customer" && view !== "select-contact" && (
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setView("root")}
+            onClick={() => setView(view === "add-contact" ? "select-contact" : "select-customer")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -270,154 +227,148 @@ export function QuoteCustomerSheet({
     </SheetHeader>
   )
 
-  const renderRoot = () => (
-    <div className="space-y-6 px-6 py-4">
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</p>
-        <p className="mt-2 text-base font-semibold">{selectedCustomer?.name || "No customer selected"}</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {selectedCustomer
-            ? [selectedCustomer.address, selectedCustomer.city, selectedCustomer.state, selectedCustomer.zip]
-                .filter(Boolean)
-                .join(", ")
-            : "Select or create a customer for this quote."}
-        </p>
-      </div>
+  const renderCustomerList = () => (
+    <>
+      <div className="px-6 py-4 space-y-4 border-b">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setView("add-customer")}
+          >
+            Add New Customer
+          </Button>
+        </div>
 
-      <div className="grid gap-3">
-        <Button type="button" variant="outline" className="justify-between" onClick={() => setView("select-customer")}>
-          Select Customer
-          <Check className={cn("h-4 w-4", selectedCustomer ? "opacity-100" : "opacity-0")} />
-        </Button>
-        <Button type="button" variant="outline" className="justify-between" onClick={() => setView("add-customer")}>
-          Add Customer
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="justify-between"
-          onClick={() => void loadEditableCustomer()}
-          disabled={!selectedCustomer}
-        >
-          Edit Customer
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact</p>
-        <p className="mt-2 text-base font-semibold">{selectedContact?.name || "No contact selected"}</p>
-        <div className="mt-1 space-y-1 text-sm text-muted-foreground">
-          <p>{selectedContact?.role || "Select or create a contact for this quote."}</p>
-          {selectedContact?.email && <p>{selectedContact.email}</p>}
-          {selectedContact?.phone && <p>{selectedContact.phone}</p>}
+        <div className="relative">
+          <Input
+            autoFocus
+            placeholder="Search customers by name..."
+            value={customerSearch}
+            onChange={event => setCustomerSearch(event.target.value)}
+          />
         </div>
       </div>
 
-      <div className="grid gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          className="justify-between"
-          onClick={() => setView("select-contact")}
-          disabled={!selectedCustomer}
-        >
-          Select Contact
-          <Check className={cn("h-4 w-4", selectedContact ? "opacity-100" : "opacity-0")} />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="justify-between"
-          onClick={() => setView("add-contact")}
-          disabled={!selectedCustomer}
-        >
-          Add Contact
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="justify-between"
-          onClick={() => setView("edit-contact")}
-          disabled={!selectedContact}
-        >
-          Edit Contact
-          <Pencil className="h-4 w-4" />
-        </Button>
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+        <table className="w-full">
+          <thead className="bg-muted/50 border-b">
+            <tr>
+              <th className="text-left px-4 py-3 font-medium text-sm">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-sm">Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCustomers.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-6 text-sm text-muted-foreground">
+                  No customers found.
+                </td>
+              </tr>
+            ) : (
+              filteredCustomers.map(customer => (
+                <tr
+                  key={customer.id}
+                  className="cursor-pointer border-b transition-colors hover:bg-muted/40"
+                  onClick={() => {
+                    onSelectCustomer(customer.id.toString())
+                    onOpenChange(false)
+                  }}
+                >
+                  <td className="px-4 py-3 text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Check className={cn("h-4 w-4", selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0")} />
+                      <span>{customer.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(", ") || "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    </div>
-  )
-
-  const renderCustomerList = () => (
-    <div className="px-6 py-4">
-      <Command className="rounded-lg border">
-        <CommandInput
-          value={customerSearch}
-          placeholder="Search customers..."
-          onValueChange={setCustomerSearch}
-        />
-        <CommandList>
-          <CommandEmpty>No customers found.</CommandEmpty>
-          <CommandGroup>
-            {filteredCustomers.map(customer => (
-              <CommandItem
-                key={customer.id}
-                value={`${customer.name} ${customer.display_name || ""}`}
-                onSelect={() => {
-                  onSelectCustomer(customer.id.toString())
-                  setView("root")
-                }}
-              >
-                <Check className={cn("mr-2 h-4 w-4", selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0")} />
-                <div className="flex flex-col">
-                  <span>{customer.name}</span>
-                  {customer.display_name && customer.display_name !== customer.name && (
-                    <span className="text-xs text-muted-foreground">{customer.display_name}</span>
-                  )}
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </Command>
-    </div>
+    </>
   )
 
   const renderContactList = () => (
-    <div className="px-6 py-4">
-      <Command className="rounded-lg border">
-        <CommandInput
-          value={contactSearch}
-          placeholder="Search contacts..."
-          onValueChange={setContactSearch}
-        />
-        <CommandList>
-          <CommandEmpty>No contacts found.</CommandEmpty>
-          <CommandGroup>
-            {filteredContacts.map(contact => (
-              <CommandItem
-                key={contact.id}
-                value={`${contact.name} ${contact.email || ""} ${contact.role || ""}`}
-                onSelect={() => {
-                  onSelectContact(contact.id.toString())
-                  setView("root")
-                }}
-              >
-                <Check className={cn("mr-2 h-4 w-4", selectedContact?.id === contact.id ? "opacity-100" : "opacity-0")} />
-                <div className="flex flex-col">
-                  <span>{contact.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {[contact.role, contact.email].filter(Boolean).join(" • ") || "No details"}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </Command>
-    </div>
+    <>
+      <div className="px-6 py-4 space-y-4 border-b">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setView("select-customer")}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setView("add-contact")}
+          >
+            Add New Contact
+          </Button>
+        </div>
+
+        <div className="relative">
+          <Input
+            autoFocus
+            placeholder="Search contacts by name or email..."
+            value={contactSearch}
+            onChange={event => setContactSearch(event.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+        <table className="w-full">
+          <thead className="bg-muted/50 border-b">
+            <tr>
+              <th className="text-left px-4 py-3 font-medium text-sm">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-sm">Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredContacts.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-6 text-sm text-muted-foreground">
+                  No contacts found.
+                </td>
+              </tr>
+            ) : (
+              filteredContacts.map(contact => (
+                <tr
+                  key={contact.id}
+                  className="cursor-pointer border-b transition-colors hover:bg-muted/40"
+                  onClick={() => {
+                    onSelectContact(contact.id.toString())
+                    onOpenChange(false)
+                  }}
+                >
+                  <td className="px-4 py-3 text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Check className={cn("h-4 w-4", selectedContact?.id === contact.id ? "opacity-100" : "opacity-0")} />
+                      <span>{contact.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {contact.email || "—"}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 
   const renderContactForm = () => (
@@ -475,7 +426,7 @@ export function QuoteCustomerSheet({
 
       <div className="border-t px-6 py-4">
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => setView("root")} disabled={savingContact}>
+          <Button type="button" variant="outline" onClick={() => setView("select-contact")} disabled={savingContact}>
             Cancel
           </Button>
           <Button type="button" onClick={() => void handleContactSave()} disabled={savingContact}>
@@ -492,37 +443,21 @@ export function QuoteCustomerSheet({
         {renderHeader()}
 
         <div className="min-h-0 flex-1 overflow-hidden">
-          {view === "root" && renderRoot()}
           {view === "select-customer" && renderCustomerList()}
           {view === "select-contact" && renderContactList()}
-          {(view === "add-contact" || view === "edit-contact") && renderContactForm()}
+          {view === "add-contact" && renderContactForm()}
           {view === "add-customer" && (
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <CustomerForm
-                onCancel={() => setView("root")}
+                onCancel={() => setView("select-customer")}
                 onSuccess={async (customer) => {
                   if (!customer?.id) {
-                    setView("root")
+                    setView("select-customer")
                     return
                   }
 
                   await refreshAndReselectCustomer(customer.id)
-                  setView("root")
-                }}
-              />
-            </div>
-          )}
-          {view === "edit-customer" && editCustomerData && (
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              <CustomerForm
-                mode="edit"
-                customerId={editCustomerData.id}
-                initialData={editCustomerData}
-                onCancel={() => setView("root")}
-                onSuccess={async (customer) => {
-                  const targetCustomerId = customer?.id || editCustomerData.id
-                  await refreshAndReselectCustomer(targetCustomerId, selectedContact?.id || null)
-                  setView("root")
+                  setView("select-contact")
                 }}
               />
             </div>
