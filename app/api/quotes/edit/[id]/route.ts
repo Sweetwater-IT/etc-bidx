@@ -5,6 +5,35 @@ import { AdminDataEntry } from "@/types/TAdminDataEntry";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { QuoteItem } from "@/types/IQuoteItem";
 
+function normalizeCustomer(customer: any) {
+  const validContacts = Array.isArray(customer?.customer_contacts)
+    ? customer.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+    : [];
+
+  return {
+    id: customer?.id,
+    name: customer?.name || customer?.display_name || "",
+    displayName: customer?.display_name || customer?.name || "",
+    emails: validContacts.map((contact: any) => contact?.email || ""),
+    address: customer?.address || "",
+    phones: validContacts.map((contact: any) => contact?.phone || ""),
+    roles: validContacts.map((contact: any) => contact?.role || ""),
+    names: validContacts.map((contact: any) => contact?.name || ""),
+    contactIds: validContacts.map((contact: any) => contact?.id || 0),
+    url: customer?.web || customer?.url || "",
+    created: customer?.created || "",
+    updated: customer?.updated || "",
+    city: customer?.city || "",
+    state: customer?.state || "",
+    zip: customer?.zip || "",
+    customerNumber: customer?.customer_number || customer?.customerNumber || 0,
+    mainPhone: customer?.main_phone || customer?.mainPhone || "",
+    paymentTerms: customer?.payment_terms || customer?.paymentTerms || "",
+    lastOrdered: customer?.lastOrdered || null,
+    customer_contacts: validContacts,
+  };
+}
+
 
 // --- Helper Functions to map DB data to Frontend types ---
 function mapAdminDataEntryToAdminData(entry: AdminDataEntry | null): AdminData {
@@ -168,7 +197,22 @@ export async function GET(
         id,
         name,
         display_name,
-        email
+        address,
+        city,
+        state,
+        zip,
+        main_phone,
+        payment_terms,
+        web,
+        customer_number,
+        customer_contacts (
+          id,
+          name,
+          role,
+          email,
+          phone,
+          is_deleted
+        )
       )
     `)
     .eq("quote_id", quoteId);
@@ -208,7 +252,14 @@ export async function GET(
       ...note,
       timestamp: new Date(note.created_at).getTime(),
     })),
-    customers: customers?.map((c) => c.contractors) || [],
+    customers: customers
+      ?.map((entry) => {
+        const contractor = Array.isArray(entry.contractors)
+          ? entry.contractors[0]
+          : entry.contractors;
+        return contractor ? normalizeCustomer(contractor) : null;
+      })
+      .filter(Boolean) || [],
     contract_number: adminDataEntry?.contract_number || null,
     job_number: adminDataEntry?.job_id ? String(adminDataEntry.job_id) : null,
     ...quote
