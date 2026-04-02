@@ -41,6 +41,7 @@ import type { ContractPipelineStatus } from "@/types/contract";
 import type { ContractListItem } from "@/types/contract";
 import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 import { cn } from "@/lib/utils";
+import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -333,6 +334,31 @@ const ContractManager = () => {
     setMissingReqsTitle(title);
     setMissingReqsList(items);
     setMissingReqsOpen(true);
+  };
+
+  const handleExportContracts = async (stage: "received" | "sent" | "signed") => {
+    const stageMap: Record<typeof stage, ContractPipelineStatus> = {
+      received: "CONTRACT_RECEIPT",
+      sent: "RETURNED_TO_CUSTOMER",
+      signed: "CONTRACT_SIGNED",
+    };
+
+    const matchingContracts = displayedPipelineJobs.filter(
+      (job) => mapToDisplayStage(job.contractStatus || "CONTRACT_RECEIPT") === stageMap[stage]
+    );
+
+    if (matchingContracts.length === 0) {
+      toast.error(`No ${stage} contracts to export`);
+      return;
+    }
+
+    try {
+      await exportContractListToExcel(matchingContracts, stage);
+      toast.success(`Exported ${matchingContracts.length} ${stage} contract${matchingContracts.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      console.error(`Error exporting ${stage} contracts:`, error);
+      toast.error("Failed to export contracts");
+    }
   };
 
   const moveContract = async (jobId: string, newStatus: ContractPipelineStatus) => {
@@ -865,6 +891,30 @@ const ContractManager = () => {
           </div>
         </div>
       </header>
+
+      <div className="shrink-0 border-y bg-card/60">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-end px-6 py-3">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportContracts("received")}>
+                Export Received Contracts
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportContracts("sent")}>
+                Export Sent Contracts
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportContracts("signed")}>
+                Export Signed Contracts
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
       {/* Pipeline progress bar */}
       <div className="shrink-0 border-b bg-card/50">
