@@ -362,6 +362,40 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         'displayStructure' in localSign ? localSign.displayStructure : null,
     ]);
 
+    const normalizeSearchValue = (value: string) =>
+        (value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+
+    const kitContentMatchesSearch = (
+        kit: PataKit | PtsKit,
+        query: string,
+        normalizedQuery: string
+    ) => {
+        const contents = Array.isArray(kit.contents) ? kit.contents : [];
+
+        return contents.some((content) => {
+            const designation = content.sign_designation || '';
+            if (
+                designation.toLowerCase().includes(query) ||
+                normalizeSearchValue(designation).includes(normalizedQuery)
+            ) {
+                return true;
+            }
+
+            const matchedSign = (apiData?.signs || []).find(
+                (sign) =>
+                    sign.designation === designation ||
+                    normalizeSearchValue(sign.designation) === normalizeSearchValue(designation)
+            );
+
+            return Boolean(
+                matchedSign?.description?.toLowerCase().includes(query) ||
+                normalizeSearchValue(matchedSign?.description || '').includes(normalizedQuery)
+            );
+        });
+    };
+
     // Filter designations based on search term
     const filterDesignations = (searchTerm: string) => {
         if (!apiData) {
@@ -371,7 +405,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             return;
         }
 
-        if (!searchTerm || searchTerm.length < 2) {
+        if (!searchTerm.trim()) {
             setFilteredSigns(apiData.signs || []);
             setFilteredPataKits(apiData.pataKits || []);
             setFilteredPtsKits(apiData.ptsKits || []);
@@ -379,12 +413,14 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }
 
         const query = searchTerm.toLowerCase();
+        const normalizedQuery = normalizeSearchValue(searchTerm);
 
         try {
             // Filter signs
             const filteredSigns = (apiData.signs || []).filter(sign =>
                 sign.designation.toLowerCase().includes(query) ||
-                sign.description.toLowerCase().includes(query)
+                normalizeSearchValue(sign.designation).includes(normalizedQuery) ||
+                (sign.description || '').toLowerCase().includes(query)
             );
 
             // Filter kits that contain signs matching the query
@@ -393,13 +429,15 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             const filteredPataKits = (apiData.pataKits || []).filter(kit =>
                 kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
                 kit.code.toLowerCase().includes(query) ||
-                kit.description.toLowerCase().includes(query)
+                normalizeSearchValue(kit.code).includes(normalizedQuery) ||
+                (kit.description || '').toLowerCase().includes(query)
             );
 
             const filteredPtsKits = (apiData.ptsKits || []).filter(kit =>
                 kit.contents.some(content => signDesignations.has(content.sign_designation)) ||
                 kit.code.toLowerCase().includes(query) ||
-                kit.description.toLowerCase().includes(query)
+                normalizeSearchValue(kit.code).includes(normalizedQuery) ||
+                (kit.description || '').toLowerCase().includes(query)
             );
 
             setFilteredSigns(filteredSigns);
@@ -422,10 +460,12 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             }
 
             const query = searchTerm.toLowerCase();
+            const normalizedQuery = normalizeSearchValue(searchTerm);
             const filteredPata = allPataKits.filter((kit) =>
                 kit.code.toLowerCase().includes(query) ||
+                normalizeSearchValue(kit.code).includes(normalizedQuery) ||
                 (kit.description || '').toLowerCase().includes(query) ||
-                kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
+                kitContentMatchesSearch(kit, query, normalizedQuery)
             );
 
             setFilteredPataKits(filteredPata);
@@ -437,10 +477,12 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
             }
 
             const query = searchTerm.toLowerCase();
+            const normalizedQuery = normalizeSearchValue(searchTerm);
             const filteredPts = allPtsKits.filter((kit) =>
                 kit.code.toLowerCase().includes(query) ||
+                normalizeSearchValue(kit.code).includes(normalizedQuery) ||
                 (kit.description || '').toLowerCase().includes(query) ||
-                kit.contents.some((content) => content.sign_designation.toLowerCase().includes(query))
+                kitContentMatchesSearch(kit, query, normalizedQuery)
             );
 
             setFilteredPtsKits(filteredPts);
