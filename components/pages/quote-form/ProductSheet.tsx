@@ -55,6 +55,20 @@ export function ProductSheet({
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   const [isSaving, setIsSaving] = useState(false)
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen)
+
+    if (!nextOpen) {
+      restorePointerEvents()
+      window.requestAnimationFrame(() => {
+        restorePointerEvents()
+      })
+      window.setTimeout(() => {
+        restorePointerEvents()
+      }, 0)
+    }
+  }
+
   useEffect(() => {
     if (open) {
       return;
@@ -175,7 +189,7 @@ export function ProductSheet({
   ]);
 
   const closeSheet = () => {
-    onOpenChange(false)
+    handleOpenChange(false)
     restorePointerEvents()
   }
 
@@ -288,7 +302,7 @@ export function ProductSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
       <SheetContent side="right" className="flex flex-col h-full">
         <SheetHeader className="p-0 pt-6">
           <SheetTitle className="text-[16px] ml-6">Add New Product</SheetTitle>

@@ -14,6 +14,7 @@ import { ArrowLeft, Check } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { CustomerForm } from "@/components/customer-form"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 type QuoteCustomer = {
   id: number
@@ -89,6 +90,20 @@ export function QuoteCustomerSheet({
   const [contactSearch, setContactSearch] = useState("")
   const [contactForm, setContactForm] = useState(EMPTY_CONTACT_FORM)
   const [savingContact, setSavingContact] = useState(false)
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen)
+
+    if (!nextOpen) {
+      restorePointerEvents()
+      window.requestAnimationFrame(() => {
+        restorePointerEvents()
+      })
+      window.setTimeout(() => {
+        restorePointerEvents()
+      }, 0)
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -347,7 +362,7 @@ export function QuoteCustomerSheet({
                   className="cursor-pointer border-b transition-colors hover:bg-muted/40"
                   onClick={() => {
                     onSelectContact(contact.id.toString())
-                    onOpenChange(false)
+                    handleOpenChange(false)
                   }}
                 >
                   <td className="px-4 py-3 text-sm font-medium">
@@ -435,7 +450,7 @@ export function QuoteCustomerSheet({
   )
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
       <SheetContent side="right" className="flex h-full w-[560px] flex-col p-0 sm:max-w-[560px]">
         {renderHeader()}
 
