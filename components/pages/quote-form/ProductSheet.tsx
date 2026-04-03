@@ -55,35 +55,6 @@ export function ProductSheet({
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   const [isSaving, setIsSaving] = useState(false)
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    onOpenChange(nextOpen)
-
-    if (!nextOpen) {
-      restorePointerEvents()
-      window.requestAnimationFrame(() => {
-        restorePointerEvents()
-      })
-      window.setTimeout(() => {
-        restorePointerEvents()
-      }, 0)
-    }
-  }
-
-  useEffect(() => {
-    if (open) {
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      restorePointerEvents();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      restorePointerEvents();
-    };
-  }, [open]);
-
   useEffect(() => {
     if (open) {
       const defaultTax = quoteMetadata?.tax ?? 0;
@@ -189,8 +160,11 @@ export function ProductSheet({
   ]);
 
   const closeSheet = () => {
-    handleOpenChange(false)
+    onOpenChange(false)
     restorePointerEvents()
+    window.requestAnimationFrame(() => {
+      restorePointerEvents()
+    })
   }
 
   const handleSaveProduct = async () => {
@@ -302,7 +276,7 @@ export function ProductSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex flex-col h-full">
         <SheetHeader className="p-0 pt-6">
           <SheetTitle className="text-[16px] ml-6">Add New Product</SheetTitle>
