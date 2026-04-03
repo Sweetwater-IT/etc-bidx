@@ -36,6 +36,7 @@ const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListPr
         <QuoteItemRow
           key={item.id ?? `quote-item-${ix}`}
           item={item}
+          isEditing={editingItemId === item.id}
           products={products}
           loading={loading}
           {...rest}

@@ -13,15 +13,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Trash2, Pencil, MoreVertical, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
+import { restorePointerEvents } from "@/lib/pointer-events-fix";
 
 export default function QuoteItemRow({
   item,
+  isEditing,
+  editingSubItemId,
   setEditingItemId,
   setEditingSubItemId,
   handleItemUpdate,
@@ -38,12 +42,46 @@ export default function QuoteItemRow({
   const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [activeSection, setActiveSection] = useState<'all' | 'service_items' | 'sale' | 'rental'>('all');
 
+  const [openProductSheet, setOpenProductSheet] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const { quoteMetadata } = useQuoteForm()
+  const [newProduct, setNewProduct] = useState({
+    itemNumber: "",
+    description: "",
+    uom: "",
+    quantity: "",
+    unitPrice: "",
+    discountType: "dollar",
+    discount: "",
+    notes: "",
+    tax: "",
+    is_tax_percentage: false,
+  });
+  const [digits, setDigits] = useState({
+    unitPrice: item.unitPrice
+      ? (item.unitPrice * 100).toString().padStart(3, "0")
+      : "000",
+    discount: item.discount
+      ? (item.discount * 100).toString().padStart(3, "0")
+      : "000",
+  });
 
   useEffect(() => {
     setProductInput(item.itemNumber || "");
   }, [item.itemNumber]);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDigits({
+        unitPrice: item.unitPrice
+          ? (item.unitPrice * 100).toString().padStart(3, "0")
+          : "000",
+        discount: item.discount
+          ? (item.discount * 100).toString().padStart(3, "0")
+          : "000",
+      });
+    }
+  }, [isEditing, item.unitPrice, item.discount]);
 
   function formatDecimal(value: number): string {
     if (isNaN(value)) return "0.00";
@@ -52,6 +90,57 @@ export default function QuoteItemRow({
       maximumFractionDigits: 2,
     });
   }
+
+  function formatPercentage(value: string): string {
+    return (parseInt(value, 10) / 100).toFixed(2);
+  }
+
+  function handleNextDigits(
+    current: string,
+    inputType: string,
+    data: string
+  ): string {
+    let nextDigits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      nextDigits = current + data;
+    } else if (inputType === "deleteContentBackward") {
+      nextDigits = current.slice(0, -1);
+    }
+
+    return nextDigits.padStart(3, "0");
+  }
+
+  useEffect(() => {
+    if (openProductSheet && editingSubItemId) {
+      const subItem = item.associatedItems?.find(
+        (subItemEntry) => subItemEntry.id === editingSubItemId
+      );
+
+      if (subItem) {
+        setNewProduct({
+          itemNumber: subItem.itemNumber || "",
+          description: subItem.description || "",
+          uom: subItem.uom || "",
+          quantity: subItem.quantity || 0,
+          unitPrice: subItem.unitPrice || "",
+          discountType: subItem.discountType || "dollar",
+          discount: subItem.discount || "",
+          notes: subItem.notes || "",
+          tax: "",
+          is_tax_percentage: false,
+        });
+        setDigits({
+          unitPrice: subItem.unitPrice
+            ? (subItem.unitPrice * 100).toString().padStart(3, "0")
+            : "000",
+          discount: subItem.discount
+            ? (subItem.discount * 100).toString().padStart(3, "0")
+            : "000",
+        });
+      }
+    }
+  }, [openProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
 
@@ -65,6 +154,7 @@ export default function QuoteItemRow({
       notes: product.notes
     });
 
+    setOpenProductSheet(true);
     setEditingItemId(item.id);
     setEditingSubItemId(null);
   };
@@ -94,6 +184,7 @@ export default function QuoteItemRow({
             onOpenChange={setShowDropdown}
             onValueChange={(value) => {
               if (value === "add_new") {
+                setOpenProductSheet(true);
                 setEditingItemId(item.id);
                 setEditingSubItemId(null);
                 return;
@@ -123,6 +214,7 @@ export default function QuoteItemRow({
                     key="custom"
                     value="custom"
                     onSelect={() => {
+                      setOpenProductSheet(true);
                       setEditingItemId(item.id);
                       setEditingSubItemId(null);
                       setShowDropdown(false);
@@ -285,6 +377,7 @@ export default function QuoteItemRow({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onSelect={() => {
+                  setOpenProductSheet(true);
                   setEditingItemId(item.id);
                   setEditingSubItemId(null);
                 }}
@@ -300,6 +393,32 @@ export default function QuoteItemRow({
           </DropdownMenu>
         </div>
       </div>
+
+      {openProductSheet && (
+        <ProductSheet
+          open={openProductSheet}
+          onOpenChange={(nextOpen) => {
+            setOpenProductSheet(nextOpen)
+            if (!nextOpen) {
+              restorePointerEvents()
+            }
+          }}
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          digits={digits}
+          setDigits={setDigits}
+          UOM_TYPES={UOM_TYPES}
+          formatDecimal={formatDecimal}
+          formatPercentage={formatPercentage}
+          handleNextDigits={handleNextDigits}
+          editingSubItemId={editingSubItemId}
+          handleItemUpdate={handleItemUpdate}
+          item={item}
+          setProductInput={setProductInput}
+          setEditingItemId={setEditingItemId}
+          setEditingSubItemId={setEditingSubItemId}
+        />
+      )}
     </>
   );
 }
