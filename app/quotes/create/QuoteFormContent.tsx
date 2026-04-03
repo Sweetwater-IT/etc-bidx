@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { PaymentTerms, QuoteAdminInformation } from '@/components/pages/quote-form/QuoteAdminInformation'
+import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
 import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditionalFiles'
 import { QuotePreviewButton } from '@/components/pages/quote-form/PreviewButton'
@@ -25,7 +25,6 @@ import { Check, Edit2, Loader, Loader2, X } from 'lucide-react';
 import { restorePointerEvents } from '@/lib/pointer-events-fix';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
-import { useCustomerSelection } from '@/hooks/use-csutomers-selection';
 import CustomerSelect from './components/CustomerSelector';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -247,8 +246,6 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const [selectedBid, setSelectedBid] = useState<any>(null);
   const [files, setFiles] = useState<any>([])
   const didInitRef = useRef(false);
-  const didRunImmediateRelationshipSaveRef = useRef(false);
-
   const handleFileSelect = (fileId: string) => {
     setQuoteMetadata((prev: any) => ({
       ...prev,
@@ -257,6 +254,40 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         : [...(prev?.selectedfilesids ?? []), fileId],
     }));
   };
+
+  const buildDraftPayload = React.useCallback((overrides?: Partial<QuoteState>) => ({
+    id: numericQuoteId,
+    estimate_id: estimateId || quoteMetadata?.estimate_id,
+    job_id: jobId || quoteMetadata?.job_id,
+    status: 'DRAFT',
+    subject,
+    body: emailBody,
+    from_email: sender?.email || null,
+    recipients: [
+      ...(pointOfContact ? [{
+        email: pointOfContact.email,
+        point_of_contact: true,
+        customer_contacts_id: pointOfContact.id ?? null,
+      }] : []),
+      ...ccEmails.map((email) => ({ email, cc: true })),
+      ...bccEmails.map((email) => ({ email, bcc: true })),
+    ],
+    customers: selectedCustomers.map(c => ({ id: c.id })),
+    ...(quoteMetadata || {}),
+    ...(overrides || {}),
+  }), [
+    numericQuoteId,
+    estimateId,
+    quoteMetadata,
+    jobId,
+    subject,
+    emailBody,
+    sender,
+    pointOfContact,
+    ccEmails,
+    bccEmails,
+    selectedCustomers
+  ]);
 
   useEffect(() => {
     const fetchUserBranch = async () => {
@@ -397,26 +428,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (!numericQuoteId || !canAutosave || loadingMetadata) return false;
 
     try {
-      const payload = {
-        id: numericQuoteId,
-        estimate_id: estimateId || quoteMetadata?.estimate_id,
-        job_id: jobId || quoteMetadata?.job_id,
-        status: 'DRAFT',
-        subject,
-        body: emailBody,
-        from_email: sender?.email || null,
-        recipients: [
-          ...(pointOfContact ? [{
-            email: pointOfContact.email,
-            point_of_contact: true,
-            customer_contacts_id: pointOfContact.id ?? null,
-          }] : []),
-          ...ccEmails.map((email) => ({ email, cc: true })),
-          ...bccEmails.map((email) => ({ email, bcc: true })),
-        ],
-        customers: selectedCustomers.map(c => ({ id: c.id })),
-        ...quoteMetadata,
-      };
+      const payload = buildDraftPayload();
 
       const res = await fetch(`/api/quotes`, {
         method: 'PATCH',
@@ -447,42 +459,25 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       return false;
     }
   }, [
-    numericQuoteId, adminData, notes, quoteMetadata, estimateId, jobId,
-    subject, emailBody, sender, pointOfContact, ccEmails, bccEmails, selectedCustomers,
-    includeTerms, customTerms, paymentTerms, firstSave, quoteItems
-  ]);
-
-  useEffect(() => {
-    if (!numericQuoteId || !canAutosave || loadingMetadata) return;
-
-    const relationshipChanged =
-      !isEqual(pointOfContact, prevStateRef.current.pointOfContact) ||
-      !isEqual(selectedCustomers, prevStateRef.current.selectedCustomers);
-
-    if (!relationshipChanged) {
-      return;
-    }
-
-    if (!didRunImmediateRelationshipSaveRef.current) {
-      didRunImmediateRelationshipSaveRef.current = true;
-      return;
-    }
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-
-    void autosave();
-  }, [
-    autosave,
+    numericQuoteId,
     canAutosave,
     loadingMetadata,
-    numericQuoteId,
+    buildDraftPayload,
+    adminData,
+    notes,
+    quoteMetadata,
+    includeTerms,
+    customTerms,
+    paymentTerms,
+    firstSave,
+    quoteItems,
     pointOfContact,
-    selectedCustomers
+    selectedCustomers,
+    ccEmails,
+    bccEmails,
+    subject,
+    emailBody
   ]);
-
 
   useEffect(() => {
     if (!numericQuoteId || loadingMetadata) return;
@@ -510,7 +505,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = window.setTimeout(() => {
       autosave();
-    }, 2500);
+    }, 5000);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -661,13 +656,12 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
 
     setQuoteMetadata(newQuoteData);
-    handleSaveQuote(newQuoteData);
   };
 
   async function handleSaveQuote(dataToSave?: QuoteState) {
     if (!quoteId) return;
 
-    const payload = { ...dataToSave || quoteMetadata, id: quoteId };
+    const payload = buildDraftPayload(dataToSave);
 
     try {
       const result = await fetch('/api/quotes', {
@@ -675,7 +669,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      await result.json();
+      const response = await result.json().catch(() => null);
+
+      if (!result.ok || response?.success === false) {
+        throw new Error(response?.error || response?.message || 'Failed to update quote');
+      }
 
 
     } catch (error) {
