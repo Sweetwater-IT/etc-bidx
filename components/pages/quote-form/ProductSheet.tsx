@@ -265,7 +265,7 @@ export function ProductSheet({
           }
         }
 
-        setProductInput(newProduct.itemNumber);
+        setProductInput?.(newProduct.itemNumber);
         setEditingItemId(null);
       }
 

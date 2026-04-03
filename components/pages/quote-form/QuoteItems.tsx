@@ -9,6 +9,7 @@ import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-s
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ProductSheet } from "./ProductSheet";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -56,6 +57,29 @@ export function QuoteItems() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
   const [applyToAll, setApplyToAll] = useState<boolean>(false);
+  const [newProduct, setNewProduct] = useState({
+    itemNumber: "",
+    description: "",
+    uom: "",
+    quantity: "",
+    unitPrice: "",
+    discountType: "dollar",
+    discount: "",
+    notes: "",
+    tax: "",
+    is_tax_percentage: false,
+  });
+  const [digits, setDigits] = useState({
+    unitPrice: "000",
+    discount: "000",
+  });
+
+  const editingItem =
+    quoteItems.find((currentItem) => currentItem.id === editingItemId) ??
+    quoteItems.find((currentItem) =>
+      currentItem.associatedItems?.some((subItem) => subItem.id === editingSubItemId)
+    ) ??
+    null;
 
   // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
@@ -92,6 +116,36 @@ export function QuoteItems() {
       }, 0)
       .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  const openProductSheet = Boolean(editingItem);
+
+  function formatDecimal(value: number): string {
+    if (isNaN(value)) return "0.00";
+    return value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function formatPercentage(value: string): string {
+    return (parseInt(value, 10) / 100).toFixed(2);
+  }
+
+  function handleNextDigits(
+    current: string,
+    inputType: string,
+    data: string
+  ): string {
+    let nextDigits = current;
+
+    if (inputType === "insertText" && /\d/.test(data)) {
+      nextDigits = current + data;
+    } else if (inputType === "deleteContentBackward") {
+      nextDigits = current.slice(0, -1);
+    }
+
+    return nextDigits.padStart(3, "0");
+  }
 
   const handleAddNewItem = async () => {
     const newId = generateUniqueId();
@@ -322,6 +376,32 @@ export function QuoteItems() {
           calculateExtendedPrice={calculateExtendedPrice}
         />
       </div>
+
+      {editingItem && (
+        <ProductSheet
+          open={openProductSheet}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setEditingItemId(null);
+              setEditingSubItemId(null);
+            }
+          }}
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          digits={digits}
+          setDigits={setDigits}
+          UOM_TYPES={UOM_TYPES}
+          formatDecimal={formatDecimal}
+          formatPercentage={formatPercentage}
+          handleNextDigits={handleNextDigits}
+          editingSubItemId={editingSubItemId}
+          handleItemUpdate={handleItemUpdate}
+          item={editingItem}
+          setProductInput={() => {}}
+          setEditingItemId={setEditingItemId}
+          setEditingSubItemId={setEditingSubItemId}
+        />
+      )}
 
       <div className="flex items-center justify-between gap-4 border-t px-4 py-4">
         <Button onClick={handleAddNewItem}>
