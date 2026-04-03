@@ -45,6 +45,10 @@ export default function QuoteItemRow({
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const { quoteMetadata } = useQuoteForm()
+  const isEditingSubItemForRow = Boolean(
+    editingSubItemId && item.associatedItems?.some((subItemEntry) => subItemEntry.id === editingSubItemId)
+  );
+  const shouldOpenProductSheet = openProductSheet || isEditing || isEditingSubItemForRow;
   const [newProduct, setNewProduct] = useState({
     itemNumber: "",
     description: "",
@@ -113,7 +117,7 @@ export default function QuoteItemRow({
   }
 
   useEffect(() => {
-    if (openProductSheet && editingSubItemId) {
+    if (shouldOpenProductSheet && editingSubItemId) {
       const subItem = item.associatedItems?.find(
         (subItemEntry) => subItemEntry.id === editingSubItemId
       );
@@ -141,7 +145,7 @@ export default function QuoteItemRow({
         });
       }
     }
-  }, [openProductSheet, editingSubItemId, item.associatedItems]);
+  }, [shouldOpenProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
 
@@ -395,31 +399,31 @@ export default function QuoteItemRow({
         </div>
       </div>
 
-      {openProductSheet && (
-        <ProductSheet
-          open={openProductSheet}
-          onOpenChange={(nextOpen) => {
-            setOpenProductSheet(nextOpen)
-            if (!nextOpen) {
-              restorePointerEvents()
-            }
-          }}
-          newProduct={newProduct}
-          setNewProduct={setNewProduct}
-          digits={digits}
-          setDigits={setDigits}
-          UOM_TYPES={UOM_TYPES}
-          formatDecimal={formatDecimal}
-          formatPercentage={formatPercentage}
-          handleNextDigits={handleNextDigits}
-          editingSubItemId={editingSubItemId}
-          handleItemUpdate={handleItemUpdate}
-          item={item}
-          setProductInput={setProductInput}
-          setEditingItemId={setEditingItemId}
-          setEditingSubItemId={setEditingSubItemId}
-        />
-      )}
+      <ProductSheet
+        open={shouldOpenProductSheet}
+        onOpenChange={(nextOpen) => {
+          setOpenProductSheet(nextOpen)
+          if (!nextOpen) {
+            setEditingItemId(null)
+            setEditingSubItemId(null)
+            restorePointerEvents()
+          }
+        }}
+        newProduct={newProduct}
+        setNewProduct={setNewProduct}
+        digits={digits}
+        setDigits={setDigits}
+        UOM_TYPES={UOM_TYPES}
+        formatDecimal={formatDecimal}
+        formatPercentage={formatPercentage}
+        handleNextDigits={handleNextDigits}
+        editingSubItemId={editingSubItemId}
+        handleItemUpdate={handleItemUpdate}
+        item={item}
+        setProductInput={setProductInput}
+        setEditingItemId={setEditingItemId}
+        setEditingSubItemId={setEditingSubItemId}
+      />
     </>
   );
 }
