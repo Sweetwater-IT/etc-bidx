@@ -57,6 +57,27 @@ export function ProductSheet({
 
   useEffect(() => {
     if (open) {
+      return;
+    }
+
+    restorePointerEvents();
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents();
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      restorePointerEvents();
+    }, 0);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
       const defaultTax = quoteMetadata?.tax ?? 0;
       if (editingSubItemId) {
         const subItem = item.associatedItems?.find(
@@ -165,6 +186,9 @@ export function ProductSheet({
     window.requestAnimationFrame(() => {
       restorePointerEvents()
     })
+    window.setTimeout(() => {
+      restorePointerEvents()
+    }, 0)
   }
 
   const handleSaveProduct = async () => {
