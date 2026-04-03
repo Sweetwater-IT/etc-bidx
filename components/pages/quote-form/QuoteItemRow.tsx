@@ -72,6 +72,7 @@ export default function QuoteItemRow({
 
   useEffect(() => {
     if (isEditing) {
+      setOpenProductSheet(true);
       setDigits({
         unitPrice: item.unitPrice
           ? (item.unitPrice * 100).toString().padStart(3, "0")
