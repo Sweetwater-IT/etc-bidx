@@ -45,6 +45,7 @@ export default function QuoteItemRow({
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const { quoteMetadata } = useQuoteForm()
+  // Keep the editor open if this row or one of its subitems is actively being edited.
   const isEditingSubItemForRow = Boolean(
     editingSubItemId && item.associatedItems?.some((subItemEntry) => subItemEntry.id === editingSubItemId)
   );
