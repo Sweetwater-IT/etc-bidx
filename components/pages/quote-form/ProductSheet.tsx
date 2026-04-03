@@ -226,7 +226,6 @@ export function ProductSheet({
           : [...(item.associatedItems || []), subItemData];
 
         await handleItemUpdate(item.id, "associatedItems", updatedAssociatedItems);
-        setEditingSubItemId(null);
       } else {
         const updatedItem = {
           ...item,
@@ -264,7 +263,6 @@ export function ProductSheet({
         }
 
         setProductInput?.(newProduct.itemNumber);
-        setEditingItemId(null);
       }
 
       setDigits({
