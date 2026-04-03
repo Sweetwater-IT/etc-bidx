@@ -21,6 +21,7 @@ import { useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
+import { restorePointerEvents } from "@/lib/pointer-events-fix";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -52,6 +53,22 @@ export function ProductSheet({
   setEditingSubItemId,
 }) {
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
+
+  useEffect(() => {
+    if (open) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      restorePointerEvents();
+    };
+  }, [open]);
+
   useEffect(() => {
     if (open) {
       const defaultTax = quoteMetadata?.tax ?? 0;
@@ -373,7 +390,10 @@ export function ProductSheet({
               type="button"
               variant="outline"
               className="flex-1 text-sm rounded-md"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                onOpenChange(false)
+                restorePointerEvents()
+              }}
             >
               Cancel
             </Button>
@@ -384,6 +404,7 @@ export function ProductSheet({
               className=" text-white py-2 flex-1 text-sm  transition rounded-md"
               onClick={async () => {
                 onOpenChange(false);
+                restorePointerEvents();
                 let needAddItem = true;
                 if (editingSubItemId) {
                   const subItemData = {

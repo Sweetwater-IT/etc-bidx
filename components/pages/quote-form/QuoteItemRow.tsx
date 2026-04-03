@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
+import { restorePointerEvents } from "@/lib/pointer-events-fix";
 
 export default function QuoteItemRow({
   item,
@@ -393,24 +394,31 @@ export default function QuoteItemRow({
         </div>
       </div>
 
-      <ProductSheet
-        open={openProductSheet}
-        onOpenChange={setOpenProductSheet}
-        newProduct={newProduct}
-        setNewProduct={setNewProduct}
-        digits={digits}
-        setDigits={setDigits}
-        UOM_TYPES={UOM_TYPES}
-        formatDecimal={formatDecimal}
-        formatPercentage={formatPercentage}
-        handleNextDigits={handleNextDigits}
-        editingSubItemId={editingSubItemId}
-        handleItemUpdate={handleItemUpdate}
-        item={item}
-        setProductInput={setProductInput}
-        setEditingItemId={setEditingItemId}
-        setEditingSubItemId={setEditingSubItemId}
-      />
+      {openProductSheet && (
+        <ProductSheet
+          open={openProductSheet}
+          onOpenChange={(nextOpen) => {
+            setOpenProductSheet(nextOpen)
+            if (!nextOpen) {
+              restorePointerEvents()
+            }
+          }}
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          digits={digits}
+          setDigits={setDigits}
+          UOM_TYPES={UOM_TYPES}
+          formatDecimal={formatDecimal}
+          formatPercentage={formatPercentage}
+          handleNextDigits={handleNextDigits}
+          editingSubItemId={editingSubItemId}
+          handleItemUpdate={handleItemUpdate}
+          item={item}
+          setProductInput={setProductInput}
+          setEditingItemId={setEditingItemId}
+          setEditingSubItemId={setEditingSubItemId}
+        />
+      )}
     </>
   );
 }
