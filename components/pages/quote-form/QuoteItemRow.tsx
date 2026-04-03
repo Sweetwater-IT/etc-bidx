@@ -44,6 +44,7 @@ export default function QuoteItemRow({
 
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const { quoteMetadata } = useQuoteForm()
   // Keep the editor open if this row or one of its subitems is actively being edited.
   // This comment intentionally marks the latest branch tip while we verify the quote item editor path.
@@ -372,7 +373,16 @@ export default function QuoteItemRow({
           )}
         </div>
         <div>
-          <DropdownMenu>
+          <DropdownMenu
+            modal={false}
+            open={actionMenuOpen}
+            onOpenChange={(nextOpen) => {
+              setActionMenuOpen(nextOpen);
+              if (!nextOpen) {
+                restorePointerEvents();
+              }
+            }}
+          >
             <DropdownMenuTrigger
               asChild
               className="flex items-center justify-center"
