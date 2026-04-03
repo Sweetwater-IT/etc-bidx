@@ -20,6 +20,8 @@ import {
   Check,
   ChevronsUpDown,
   X,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -67,6 +69,22 @@ interface ContractorOption {
 
 interface ProjectOwnerOption {
   name: string;
+}
+
+function escapeCsvValue(value: string | null | undefined) {
+  const normalized = value ?? "";
+  const escaped = String(normalized).replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
+function downloadCsv(content: string, fileName: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  window.URL.revokeObjectURL(url);
 }
 
 const JobList = () => {
@@ -197,6 +215,33 @@ const JobList = () => {
     return list;
   }, [signedJobs, activeTab, currentPM, ownerFilter, customerFilter, customerPmFilter, jobStatusFilter]);
 
+  const exportableAllJobs = useMemo(() => {
+    let list = signedJobs;
+
+    if (ownerFilter !== "all") {
+      list = list.filter((j) => j.projectOwner === ownerFilter);
+    }
+
+    if (customerFilter !== "all") {
+      list = list.filter((j) => j.customerName === customerFilter);
+    }
+
+    if (customerPmFilter !== "all") {
+      list = list.filter((j) => j.customerPM === customerPmFilter);
+    }
+
+    if (jobStatusFilter !== "all") {
+      list = list.filter((j) => j.projectStatus === jobStatusFilter);
+    }
+
+    return [...list].sort((a, b) => {
+      const aVal = sortField === "actionItems" ? "" : ((a as any)[sortField] || "");
+      const bVal = sortField === "actionItems" ? "" : ((b as any)[sortField] || "");
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [signedJobs, ownerFilter, customerFilter, customerPmFilter, jobStatusFilter, sortField, sortDir]);
+
   // Sort
   const sortedJobs = useMemo(() => {
     const sorted = [...filteredJobs].sort((a, b) => {
@@ -324,6 +369,54 @@ const JobList = () => {
     </span>
   );
 
+  const handleExportJobList = async () => {
+    if (exportableAllJobs.length === 0) {
+      return;
+    }
+
+    const headers = [
+      "ETC Job Number",
+      "Project Name",
+      "Project Owner",
+      "Contract Number",
+      "Customer",
+      "Customer PM",
+      "Project Manager",
+      "Branch",
+      "County",
+      "Project Status",
+      "Billing Status",
+      "Project Start Date",
+      "Project End Date",
+      "Created At",
+    ];
+
+    const rows = exportableAllJobs.map((job) => [
+      job.etcJobNumber,
+      job.projectName,
+      job.projectOwner,
+      job.contractNumber,
+      job.customerName,
+      job.customerPM,
+      job.etcProjectManager,
+      job.etcBranch,
+      job.county,
+      job.projectStatus,
+      job.billingStatus,
+      job.projectStartDate,
+      job.projectEndDate,
+      job.createdAt,
+    ]);
+
+    const csvContent = [
+      headers.map(escapeCsvValue).join(","),
+      ...rows.map((row) => row.map(escapeCsvValue).join(",")),
+    ].join("\n");
+
+    const timestamp = new Date().toISOString().split("T")[0];
+    downloadCsv(csvContent, `job_list_${timestamp}.csv`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -333,11 +426,33 @@ const JobList = () => {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <main className="w-full px-6 py-6">
-            {/* PM Selector */}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
+      <header className="shrink-0 border-b bg-card">
+        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded bg-primary">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {signedJobs.length} signed job{signedJobs.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <Button
+            className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            onClick={handleExportJobList}
+          >
+            <ExternalLink className="h-4 w-4" />
+            Export Job List
+          </Button>
+        </div>
+      </header>
+
+      <div className="@container/main flex flex-1 min-h-0 flex-col overflow-auto">
+        <div className="max-w-[1600px] mx-auto w-full px-6 py-6">
+          <main className="w-full">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
@@ -360,7 +475,6 @@ const JobList = () => {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-1 border rounded-md bg-card p-0.5">
                 {tabs.map((tab) => (

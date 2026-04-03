@@ -1,5 +1,13 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,6 +28,7 @@ import {
   Paperclip,
   Trash2,
   Download,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
@@ -56,6 +65,7 @@ interface ContractSaveDocumentProps {
   onAddDocuments: (files: File[], associatedItemId?: string, associatedItemLabel?: string, category?: DocumentCategory) => void;
   onRemoveDocument: (id: string) => void;
   onUpdateCategory: (id: string, category: DocumentCategory) => void;
+  onRenameDocument?: (id: string, name: string) => Promise<boolean>;
   readOnly?: boolean;
 }
 
@@ -65,9 +75,14 @@ export const ContractSaveDocument = ({
   onAddDocuments,
   onRemoveDocument,
   onUpdateCategory,
+  onRenameDocument,
   readOnly = false,
 }: ContractSaveDocumentProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [documentBeingRenamed, setDocumentBeingRenamed] = useState<ContractDocument | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -91,6 +106,40 @@ export const ContractSaveDocument = ({
       window.open(data.signedUrl, "_blank");
     } catch {
       toast.error("Failed to download document");
+    }
+  };
+
+  const openRenameDialog = (doc: ContractDocument) => {
+    setDocumentBeingRenamed(doc);
+    setRenameValue(doc.name);
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameSave = async () => {
+    if (!documentBeingRenamed) return;
+    if (!onRenameDocument) {
+      toast.error("Rename is not available");
+      return;
+    }
+
+    const nextName = renameValue.trim();
+    if (!nextName) {
+      toast.error("File name is required");
+      return;
+    }
+
+    if (nextName === documentBeingRenamed.name) {
+      setRenameDialogOpen(false);
+      return;
+    }
+
+    setIsRenaming(true);
+    const success = await onRenameDocument(documentBeingRenamed.id, nextName);
+    setIsRenaming(false);
+
+    if (success) {
+      setRenameDialogOpen(false);
+      setDocumentBeingRenamed(null);
     }
   };
 
@@ -179,6 +228,17 @@ export const ContractSaveDocument = ({
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => openRenameDialog(doc)}
+                          title="Rename"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           onClick={() => onRemoveDocument(doc.id)}
                           title="Delete"
@@ -196,6 +256,52 @@ export const ContractSaveDocument = ({
       </div>
 
       {/* Work Orders Ready for Billing section removed on contract new page */}
+
+      <Dialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) {
+            setDocumentBeingRenamed(null);
+            setRenameValue("");
+            setIsRenaming(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="contract-document-name">
+              File name
+            </label>
+            <Input
+              id="contract-document-name"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Enter file name"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRenameDialogOpen(false)}
+              disabled={isRenaming}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenameSave}
+              disabled={isRenaming || !renameValue.trim()}
+              className="bg-[#16335A] text-white hover:bg-[#122947]"
+            >
+              {isRenaming ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

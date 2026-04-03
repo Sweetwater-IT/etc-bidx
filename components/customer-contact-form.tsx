@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useCustomer } from "@/contexts/customer-context"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 interface CustomerContactFormProps {
   customerId: number
@@ -77,6 +78,21 @@ export function CustomerContactForm({
     }
   }, [contactToEdit])
 
+  useEffect(() => {
+    if (isOpen) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents()
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      restorePointerEvents()
+    }
+  }, [isOpen])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
 
@@ -125,6 +141,7 @@ export function CustomerContactForm({
 
           onClose()
           onSuccess()
+          restorePointerEvents()
           toast.success('Contact updated successfully');
         } else {
           console.error('Contact update failed but no error was thrown');
@@ -164,6 +181,7 @@ export function CustomerContactForm({
             email: newContact.email,
             phone: newContact.phone
           })
+          restorePointerEvents()
           toast.success('Contact created successfully');
         } else {
           const errorData = await response.json();
@@ -180,7 +198,16 @@ export function CustomerContactForm({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      modal={false}
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose()
+          restorePointerEvents()
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
@@ -298,7 +325,10 @@ export function CustomerContactForm({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={() => {
+                onClose()
+                restorePointerEvents()
+              }}
               disabled={isSubmitting}
             >
               Cancel

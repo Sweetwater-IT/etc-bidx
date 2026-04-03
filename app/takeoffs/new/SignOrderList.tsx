@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { useEstimate } from '@/contexts/EstimateContext';
+import { useSignRuntime } from '@/hooks/use-sign-runtime';
 import { toast } from 'sonner';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { returnSignTotalsSquareFootage } from '@/lib/mptRentalHelperFunctions';
@@ -22,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import DesignationSearcher from '@/components/pages/active-bid/signs/DesignationSearcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +42,7 @@ import {
 } from '@/components/ui/tooltip';
 import '@/components/pages/active-bid/signs/no-spinner.css';
 import SelectJobOrBid from './SelectJobOrBid';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -70,6 +70,7 @@ interface Props {
   updateShopTracking?: (signId: string, field: 'make' | 'order' | 'inStock', value: number) => void;
   adjustShopValue?: (signId: string, field: 'make' | 'order' | 'inStock', delta: number) => void;
   isSignOrder?: boolean;
+  useSegmentedPicker?: boolean;
   jobNumber?: any;
   needJobNumber?: boolean;
 }
@@ -98,21 +99,30 @@ export function SignOrderList({
   updateShopTracking,
   adjustShopValue,
   isSignOrder,
+  useSegmentedPicker = false,
   jobNumber,
   needJobNumber = false
 }: Props) {
-  const { mptRental, dispatch } = useEstimate();
+  const { mptRental, dispatch } = useSignRuntime();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
   const [open, setOpen] = useState<boolean>(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
+  // Sign orders use a single modal with internal steps: designation -> dimension -> configuration.
+
   const handleClose = useCallback(() => {
     console.log('Closing SignEditingSheet, resetting localSign and mode');
+    logSignOrderDebug('sign_editor_closed', {
+      currentPhase,
+      mode,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+    });
     setLocalSign(undefined);
     setOpen(false);
     setMode('create');
-  }, []);  
+  }, [currentPhase, localSign?.designation, localSign?.id, mode]);  
 
   const getCurrentEquipmentQuantity = useCallback((equipmentType: EquipmentType): number => {
     const currentPhaseData = mptRental.phases[currentPhase];
@@ -180,7 +190,7 @@ export function SignOrderList({
         width: 0,
         height: 0,
         sheeting: 'DG',
-        quantity: 0,
+        quantity: 1,
         associatedStructure: 'none',
         displayStructure: 'LOOSE',
         bLights: 0,
@@ -190,114 +200,22 @@ export function SignOrderList({
         description: '',
         substrate: 'Plastic',
       };
+      logSignOrderDebug('add_new_sign_clicked', {
+        currentPhase,
+        existingSigns: mptRental.phases[currentPhase]?.signs.length ?? 0,
+        jobNumber: jobNumber ?? null,
+      });
       setLocalSign(defaultSign);
       setMode('create');
-    } catch (error) {
-      console.error('Error in handleSignAddition:', error);
-    }
-  }, [currentPhase]);
-
-  const handleDesignationSelected = useCallback((updatedSign: PrimarySign | SecondarySign) => {
-    console.log('Designation selected:', updatedSign.designation, 'for phase:', currentPhase);
-    try {
-      dispatch({
-        type: 'ADD_MPT_SIGN',
-        payload: {
-          phaseNumber: currentPhase,
-          sign: updatedSign,
-        },
-      });
-      setLocalSign(updatedSign);
       setOpen(true);
     } catch (error) {
-      console.error('Error in handleDesignationSelected:', error);
-    }
-  }, [dispatch, currentPhase]);
-
-  const handleKitSelected = useCallback(async (kit: any, kitType: 'pata' | 'pts') => {
-    console.log('Kit selected:', kit.code, 'type:', kitType, 'for phase:', currentPhase);
-    try {
-      // Get the signs data to match designations with dimensions
-      const response = await fetch('/api/signs');
-      const data = await response.json();
-
-      if (!data.success || !data.data) {
-        console.error('Failed to fetch signs data for kit processing');
-        return;
-      }
-
-      const signsMap = new Map();
-      data.data.signs.forEach((sign: any) => {
-        signsMap.set(sign.designation, sign);
+      console.error('Error in handleSignAddition:', error);
+      logSignOrderDebug('add_new_sign_failed', {
+        currentPhase,
+        error: error instanceof Error ? error.message : String(error),
       });
-
-      // Add each sign in the kit
-      kit.contents.forEach((content: any) => {
-        const signData = signsMap.get(content.sign_designation);
-        if (signData && signData.dimensions.length > 0) {
-          // Use the first available dimension for each sign
-          const dimension = signData.dimensions[0];
-
-          const newSign: PrimarySign = {
-            id: generateUniqueId(),
-            designation: content.sign_designation,
-            width: dimension.width,
-            height: dimension.height,
-            quantity: content.quantity,
-            sheeting: signData.sheeting,
-            associatedStructure: 'none',
-            displayStructure: 'LOOSE',
-            bLights: 0,
-            cover: false,
-            isCustom: false,
-            bLightsColor: undefined,
-            description: signData.description,
-            substrate: 'Plastic',
-          };
-
-          dispatch({
-            type: 'ADD_MPT_SIGN',
-            payload: {
-              phaseNumber: currentPhase,
-              sign: newSign,
-            },
-          });
-        }
-      });
-
-      // Reset local sign to allow adding more signs
-      setLocalSign(undefined);
-      setOpen(false);
-    } catch (error) {
-      console.error('Error in handleKitSelected:', error);
     }
-  }, [dispatch, currentPhase]);
-
-  const handleKitSignsConfigured = useCallback((configuredSigns: PrimarySign[], kit: any) => {
-    console.log('Adding configured kit signs:', configuredSigns.length, 'for phase:', currentPhase, 'kit:', kit.code);
-    try {
-      // Add each configured sign directly to the estimate
-      configuredSigns.forEach(sign => {
-        dispatch({
-          type: 'ADD_MPT_SIGN',
-          payload: {
-            phaseNumber: currentPhase,
-            sign: sign,
-          },
-        });
-      });
-
-      // Show success toast
-      toast.success(`${kit.code} kit has been successfully added to your order`);
-
-      // Reset local sign to allow adding more signs
-      setLocalSign(undefined);
-      setOpen(false);
-    } catch (error) {
-      console.error('Error in handleKitSignsConfigured:', error);
-      toast.error('Failed to add kit signs to order');
-    }
-  }, [dispatch, currentPhase]);
+  }, [currentPhase, jobNumber, mptRental.phases]);
 
   const getSecondarySignsForPrimary = useCallback((primarySignId: string): SecondarySign[] => {
     const desiredPhase = mptRental.phases[currentPhase];
@@ -390,14 +308,25 @@ export function SignOrderList({
   }, [mptRental]);
 
   useEffect(() => {
-    const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
-    if (onlyTable && latestSign && latestSign.quantity === 0) {
-      console.log('Opening SignEditingSheet for latest sign in onlyTable mode:', latestSign.id);
-      setLocalSign(latestSign);
-      setMode('edit');
-      setOpen(true);
+      const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
+      if (onlyTable && latestSign && latestSign.quantity === 0) {
+        console.log('Opening SignEditingSheet for latest sign in onlyTable mode:', latestSign.id);
+        setLocalSign(latestSign);
+        setMode('edit');
+        setOpen(true);
     }
   }, [mptRental.phases, currentPhase, onlyTable]);
+
+  useEffect(() => {
+    logSignOrderDebug('sign_order_list_state_changed', {
+      currentPhase,
+      editorOpen: open,
+      designationSearchOpen: false,
+      mode,
+      signId: localSign?.id ?? null,
+      designation: localSign?.designation ?? null,
+    });
+  }, [currentPhase, localSign?.designation, localSign?.id, mode, open]);
 
 
 
@@ -649,7 +578,7 @@ export function SignOrderList({
                                               };
                                               setLocalSign({ ...defaultSecondary });
                                               setMode('create');
-                                              setOpen(false);
+                                              setOpen(true);
                                             }}
                                           >
                                             <Plus className="h-4 w-4 mr-2" />
@@ -678,9 +607,9 @@ export function SignOrderList({
                                                         primarySignId: sign.id,
                                                         quantity: sign.quantity,
                                                       };
-                                                      handleDesignationSelected(duplicated);
+                                                      setLocalSign(duplicated);
                                                       setMode('create');
-                                                      setOpen(false);
+                                                      setOpen(true);
                                                     }}
                                                   >
                                                     <div
@@ -742,15 +671,6 @@ export function SignOrderList({
         </Table>
       </div>
       <div className="space-y-4 mt-4">
-        {localSign && (
-          <DesignationSearcher
-            localSign={localSign}
-            setLocalSign={setLocalSign}
-            onDesignationSelected={handleDesignationSelected}
-            onKitSelected={handleKitSelected}
-            onKitSignsConfigured={handleKitSignsConfigured}
-          />
-        )}
         {localSign && open && (
           <SignEditingSheet
             open={open}
@@ -759,6 +679,7 @@ export function SignOrderList({
             sign={localSign}
             currentPhase={currentPhase}
             isSignOrder={isSignOrder}
+            useSegmentedPicker={useSegmentedPicker}
           />
         )}
       </div>

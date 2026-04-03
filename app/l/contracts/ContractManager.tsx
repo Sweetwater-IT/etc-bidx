@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/formatUTCDate";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,9 @@ import { toast } from "sonner";
 import isEqual from "lodash/isEqual";
 import type { ContractPipelineStatus } from "@/types/contract";
 import type { ContractListItem } from "@/types/contract";
+import { uploadContractDocuments } from "@/lib/upload-contract-documents";
+import { cn } from "@/lib/utils";
+import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -333,6 +336,23 @@ const ContractManager = () => {
     setMissingReqsOpen(true);
   };
 
+  const handleExportContracts = async () => {
+    if (displayedPipelineJobs.length === 0) {
+      toast.error("No contracts to export");
+      return;
+    }
+
+    try {
+      await exportContractListToExcel(displayedPipelineJobs);
+      toast.success(
+                                                                                                                                                                                          `Exported ${displayedPipelineJobs.length} contract${displayedPipelineJobs.length === 1 ? "" : "s"}`
+      );
+    } catch (error) {
+      console.error("Error exporting contracts:", error);
+      toast.error("Failed to export contracts");
+    }
+  };
+
   const moveContract = async (jobId: string, newStatus: ContractPipelineStatus) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
@@ -468,22 +488,17 @@ const ContractManager = () => {
 
     try {
       if (hasNewUpload) {
-        const formData = new FormData();
-        signedFiles.forEach(file => formData.append('files', file));
-        formData.append('contractId', pendingSignedJobId);
-        formData.append('category', 'contract');
-
-        const uploadResponse = await fetch(`/api/l/contracts/${pendingSignedJobId}/documents`, {
-          method: 'POST',
-          body: formData,
+        const uploadResult = await uploadContractDocuments({
+          contractId: pendingSignedJobId,
+          files: signedFiles,
+          category: 'contract',
         });
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || 'Failed to upload files');
+        if (uploadResult.errors.length > 0 && uploadResult.documents.length === 0) {
+          throw new Error(uploadResult.errors[0].error || 'Failed to upload files');
         }
 
-        setExistingSignedContractCount((prev) => prev + signedFiles.length);
+        setExistingSignedContractCount((prev) => prev + uploadResult.documents.length);
       }
 
       setUploadProgress(100);
@@ -869,6 +884,15 @@ const ContractManager = () => {
         </div>
       </header>
 
+      <div className="shrink-0 border-y bg-card/60">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-end px-6 py-3">
+          <Button variant="outline" className="gap-2" onClick={() => void handleExportContracts()}>
+                <ExternalLink className="h-4 w-4" />
+                Export Contracts
+              </Button>
+        </div>
+      </div>
+
       {/* Pipeline progress bar */}
       <div className="shrink-0 border-b bg-card/50">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
@@ -1118,12 +1142,41 @@ const KanbanView = ({
 }) => {
   const [dragOverStage, setDragOverStage] = useState<ContractPipelineStatus | null>(null);
   const [dragSourceStage, setDragSourceStage] = useState<ContractPipelineStatus | null>(null);
+  const [laneSearch, setLaneSearch] = useState<Record<VisiblePipelineStage, string>>({
+    CONTRACT_RECEIPT: "",
+    RETURNED_TO_CUSTOMER: "",
+    CONTRACT_SIGNED: "",
+  });
   const boardRef = useRef<HTMLDivElement | null>(null);
   const laneBodyRefs = useRef<Record<VisiblePipelineStage, HTMLDivElement | null>>({
     CONTRACT_RECEIPT: null,
     RETURNED_TO_CUSTOMER: null,
     CONTRACT_SIGNED: null,
   });
+
+  const getFilteredLaneJobs = useCallback((stageId: ContractPipelineStatus) => {
+    const jobs = jobsByStage[stageId] || [];
+    const query = laneSearch[stageId as VisiblePipelineStage]?.trim().toLowerCase() || "";
+
+    if (!query) return jobs;
+
+    return jobs.filter((job) => {
+      const haystack = [
+        job.projectName,
+        job.customerName,
+        job.contractNumber,
+        job.etcJobNumber,
+        job.county,
+        job.etcProjectManager,
+        job.projectOwner,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [jobsByStage, laneSearch]);
 
   const handleDragOver = (e: React.DragEvent, stageId: ContractPipelineStatus) => {
     if (dragSourceStage && !canMoveTo(dragSourceStage, stageId)) {
@@ -1173,12 +1226,15 @@ const KanbanView = ({
         const laneBody = laneBodyRefs.current[stage.id];
         if (!laneBody) return;
 
+        const visibleCards = getFilteredLaneJobs(stage.id).length;
+
         console.log(stage.id, {
           clientHeight: laneBody.clientHeight,
           scrollHeight: laneBody.scrollHeight,
           canScroll: laneBody.scrollHeight > laneBody.clientHeight,
           overflowY: window.getComputedStyle(laneBody).overflowY,
           cards: (jobsByStage[stage.id] || []).length,
+          visibleCards,
         });
       });
       console.groupEnd();
@@ -1187,7 +1243,7 @@ const KanbanView = ({
     logKanbanMetrics();
     window.addEventListener("resize", logKanbanMetrics);
     return () => window.removeEventListener("resize", logKanbanMetrics);
-  }, [jobsByStage, stages]);
+  }, [getFilteredLaneJobs, jobsByStage, stages]);
 
   return (
     <div
@@ -1199,6 +1255,8 @@ const KanbanView = ({
         const valid = isValidTarget(stage.id);
         const invalid = isInvalidTarget(stage.id);
         const isOver = dragOverStage === stage.id;
+        const filteredLaneJobs = getFilteredLaneJobs(stage.id);
+        const laneQuery = laneSearch[stage.id as VisiblePipelineStage] || "";
 
         return (
           <div
@@ -1240,6 +1298,27 @@ const KanbanView = ({
                   Not a valid next step
                 </div>
               )}
+              <div className="mt-2.5">
+                <Input
+                  value={laneQuery}
+                  onChange={(e) =>
+                    setLaneSearch((prev) => ({
+                      ...prev,
+                      [stage.id]: e.target.value,
+                    }))
+                  }
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder={`Search ${stage.shortLabel.toLowerCase()}...`}
+                  className={cn(
+                    "h-8 border text-xs shadow-none transition-colors",
+                    "placeholder:text-muted-foreground/65",
+                    "focus-visible:ring-1 focus-visible:ring-[#16335A]/20 focus-visible:border-[#16335A]/25",
+                    stage.id === "CONTRACT_RECEIPT" && "border-blue-900/10 bg-blue-950/[0.035] text-blue-950",
+                    stage.id === "RETURNED_TO_CUSTOMER" && "border-amber-700/10 bg-amber-500/[0.045] text-amber-950",
+                    stage.id === "CONTRACT_SIGNED" && "border-emerald-700/10 bg-emerald-500/[0.045] text-emerald-950"
+                  )}
+                />
+              </div>
             </div>
 
             <div
@@ -1250,15 +1329,15 @@ const KanbanView = ({
               className="min-h-0 flex-1 overflow-y-auto"
             >
               <div className="p-2 space-y-2">
-                {(jobsByStage[stage.id] || []).length === 0 ? (
+                {filteredLaneJobs.length === 0 ? (
                   <div className={`py-10 text-center rounded-md border border-dashed transition-colors ${valid && isOver ? "border-primary/40 bg-primary/5" : "border-border/30"}`}>
                     <FileText className="h-5 w-5 text-muted-foreground/30 mx-auto mb-1.5" />
                     <p className="text-[11px] text-muted-foreground/50 font-medium">
-                      {valid && isOver ? "Drop here" : "No contracts"}
+                      {valid && isOver ? "Drop here" : laneQuery ? "No matching contracts" : "No contracts"}
                     </p>
                   </div>
                 ) : (
-                  (jobsByStage[stage.id] || []).map((job) => (
+                  filteredLaneJobs.map((job) => (
                     <KanbanCard
                       key={job.id} job={job} stage={stage} stages={stages}
                       moveContract={moveContract} openDeleteDialog={openDeleteDialog}

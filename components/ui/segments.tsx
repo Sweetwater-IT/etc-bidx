@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type SegmentsProps = {
   segments: {
@@ -9,9 +10,10 @@ type SegmentsProps = {
   onChange?: (value: string) => void
   value?: string
   counts?: Record<string, number>
+  variant?: "default" | "job-list"
 }
 
-export function Segments({ segments, onChange, value, counts }: SegmentsProps) {
+export function Segments({ segments, onChange, value, counts, variant = "default" }: SegmentsProps) {
   const [internalValue, setInternalValue] = useState(segments[0]?.value)
   
   const activeSegment = value !== undefined ? value : internalValue;
@@ -27,13 +29,27 @@ export function Segments({ segments, onChange, value, counts }: SegmentsProps) {
   };
 
   return (
-    <div className="inline-flex rounded-lg border p-1">
+    <div
+      className={cn(
+        "inline-flex rounded-lg border p-1",
+        variant === "job-list" && "items-center gap-1 rounded-md bg-card p-0.5"
+      )}
+    >
       {segments.map((segment) => (
         <Button
           key={segment.value}
           variant={activeSegment === segment.value ? "default" : "ghost"}
           size="sm"
-          className={`rounded-md ${activeSegment === segment.value ? "bg-black text-white" : "bg-white text-black"}`}
+          className={cn(
+            "rounded-md",
+            variant === "job-list"
+              ? activeSegment === segment.value
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              : activeSegment === segment.value
+                ? "bg-black text-white"
+                : "bg-white text-black"
+          )}
           onClick={() => handleSegmentChange(segment.value)}
         >
           {segment.label} ({counts?.[segment.value] || 0})

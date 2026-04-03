@@ -151,6 +151,9 @@ export function OpenBidSheet({
         setUsers(usersData);
         setOwners(ownersData);
         setCounties(countiesData);
+        console.debug("[OpenBidSheet] loaded requestor options", {
+          count: usersData.length,
+        });
 
         const branchNames = countiesData.map((county) => county.branch);
         const uniqueBranchNames = Array.from(new Set(branchNames));
@@ -566,11 +569,16 @@ export function OpenBidSheet({
                     Requestor <span className="text-red-500">*</span>
                   </Label>
                   <RequestorSelector
+                    source='open-bid-requestor'
                     users={users}
                     selectedName={requestor}
                     disabled={isLoading}
                     buttonClassName="text-left"
                     onSelect={(user) => {
+                      console.debug("[OpenBidSheet] requestor-updated", {
+                        requestor: user.name,
+                        email: user.email ?? null,
+                      });
                       setRequestor(user.name);
                     }}
                   />

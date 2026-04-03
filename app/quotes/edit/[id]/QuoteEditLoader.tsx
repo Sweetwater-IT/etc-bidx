@@ -44,6 +44,30 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         if (!res.ok) throw new Error("Failed to fetch quote");
         const data = await res.json();
 
+        const hydratedCustomer =
+          Array.isArray(data.customers) && data.customers.length > 0
+            ? data.customers[0]
+            : null;
+
+        const hydratedPoint = data.recipients?.find((r: any) => r.point_of_contact);
+        const hydratedPointContact =
+          Array.isArray(hydratedPoint?.customer_contacts) &&
+          hydratedPoint.customer_contacts.length > 0
+            ? hydratedPoint.customer_contacts[0]
+            : null;
+
+        const hydratedCustomerAddress =
+          hydratedCustomer
+            ? [
+                hydratedCustomer.address || "",
+                hydratedCustomer.city || "",
+                hydratedCustomer.state || "",
+                hydratedCustomer.zip || "",
+              ]
+                .filter(Boolean)
+                .join(", ")
+            : data.customer_address;
+
         setQuoteMetadata({
           id: data.id,
           from_email: data.from_email,
@@ -81,16 +105,27 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
           end_date: data.end_date,
           duration: data.duration,
           job_number: data.job_number,
-          customer_name: data.customer_name,
-          customer_email: data.customer_email,
-          customer_phone: data.customer_phone,
-          customer_address: data.customer_address,
+          customer_name:
+            hydratedCustomer?.name ||
+            hydratedCustomer?.displayName ||
+            data.customer_name,
+          customer_email:
+            hydratedPointContact?.email ||
+            hydratedPoint?.email ||
+            data.customer_email,
+          customer_phone:
+            hydratedPointContact?.phone ||
+            data.customer_phone,
+          customer_address: hydratedCustomerAddress || "",
           etc_point_of_contact: data.etc_point_of_contact,
           etc_poc_email: data.etc_poc_email,
           etc_poc_phone_number: data.etc_poc_phone_number,
           etc_branch: data.etc_branch,
-          customer: data.customer,
-          customer_contact: data.customer_contact,
+          customer: hydratedCustomer?.id || data.customer,
+          customer_contact_id: hydratedPointContact?.id || "",
+          customer_contact:
+            hydratedPointContact?.name ||
+            data.customer_contact,
           selectedfilesids: data.selectedfilesids,
           aditionalFiles: data.aditionalFiles,
           aditionalTerms: data.aditionalTerms,
@@ -108,7 +143,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         setQuoteNumber(data.quote_number);
         setStatus(data.status || "Not Sent");
         setQuoteDate(data.date_sent || data.created_at);
-        setSelectedCustomers(data.customers || []);
+        setSelectedCustomers(hydratedCustomer ? [hydratedCustomer] : []);
 
         setQuoteItems([
           ...(data.items || []),
@@ -131,7 +166,7 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
         ]);
         setAdminData(data.admin_data ?? defaultAdminObject);
 
-        const point = data.recipients?.find((r: any) => r.point_of_contact);
+        const point = hydratedPoint;
         const cc =
           data.recipients?.filter((r: any) => r.cc).map((r: any) => r.email) ||
           [];
@@ -141,14 +176,9 @@ export default function QuoteEditLoader({ quoteId }: { quoteId: number }) {
 
         if (point) {
           setPointOfContact({
-            name:
-              point.customer_contacts?.name ??
-              point.name ??
-              "",
-            email:
-              point.email ??
-              point.customer_contacts?.email ??
-              "",
+            id: hydratedPointContact?.id,
+            name: hydratedPointContact?.name ?? point.name ?? "",
+            email: point.email ?? hydratedPointContact?.email ?? "",
           });
         } else {
           setPointOfContact(undefined);

@@ -1,16 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { restorePointerEvents } from '@/lib/pointer-events-fix'
 
 type RequestorLike = {
   id?: string | number | null
@@ -23,6 +32,7 @@ interface RequestorSelectorProps<TUser extends RequestorLike> {
   selectedUser?: TUser | null
   selectedName?: string | null
   onSelect: (user: TUser) => void
+  source?: string
   placeholder?: string
   searchPlaceholder?: string
   emptyMessage?: string
@@ -35,20 +45,42 @@ function getRequestorKey(user: RequestorLike) {
   return [user.id ?? '', user.email ?? '', user.name].join('::')
 }
 
-function isSameRequestor(a: RequestorLike | null | undefined, b: RequestorLike) {
-  if (!a) {
-    return false
+function findSelectedUser<TUser extends RequestorLike>(
+  users: TUser[],
+  selectedUser?: TUser | null,
+  selectedName?: string | null
+) {
+  if (selectedUser) {
+    const matchedById = users.find(user => {
+      if (selectedUser.id == null || user.id == null) {
+        return false
+      }
+      return String(user.id) === String(selectedUser.id)
+    })
+
+    if (matchedById) {
+      return matchedById
+    }
+
+    const matchedByEmail = users.find(
+      user => selectedUser.email && user.email && user.email === selectedUser.email
+    )
+
+    if (matchedByEmail) {
+      return matchedByEmail
+    }
+
+    const matchedByName = users.find(user => user.name === selectedUser.name)
+    if (matchedByName) {
+      return matchedByName
+    }
   }
 
-  if (a.id != null && b.id != null) {
-    return String(a.id) === String(b.id)
+  if (selectedName) {
+    return users.find(user => user.name === selectedName) ?? null
   }
 
-  if (a.email && b.email) {
-    return a.email === b.email
-  }
-
-  return a.name === b.name
+  return null
 }
 
 export function RequestorSelector<TUser extends RequestorLike>({
@@ -56,6 +88,7 @@ export function RequestorSelector<TUser extends RequestorLike>({
   selectedUser,
   selectedName,
   onSelect,
+  source = 'requestor-selector',
   placeholder = 'Select requestor...',
   searchPlaceholder = 'Search requestor...',
   emptyMessage = 'No requestor found.',
@@ -63,27 +96,119 @@ export function RequestorSelector<TUser extends RequestorLike>({
   buttonClassName,
   contentClassName
 }: RequestorSelectorProps<TUser>) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
+  const selectedRequestor = findSelectedUser(users, selectedUser, selectedName)
+  const autoDefaultRef = useRef<string | null>(null)
+  const interactionLogRef = useRef({ wheel: false, scroll: false, touch: false })
+
+  const logToVercel = useCallback(
+    (event: string, details: Record<string, unknown> = {}) => {
+      const payload = {
+        source,
+        event,
+        details,
+        authEmail: user?.email ?? null,
+        selectedName: selectedRequestor?.name ?? selectedName ?? null,
+        options: users.length,
+        timestamp: new Date().toISOString()
+      }
+
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+          const blob = new Blob([JSON.stringify(payload)], {
+            type: 'application/json'
+          })
+          navigator.sendBeacon('/api/debug/requestor-selector', blob)
+          return
+        }
+      } catch (error) {
+        console.warn('[RequestorSelector] sendBeacon failed', error)
+      }
+
+      fetch('/api/debug/requestor-selector', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(error => {
+        console.warn('[RequestorSelector] debug fetch failed', error)
+      })
+    },
+    [selectedRequestor?.name, selectedName, source, user?.email, users.length]
+  )
 
   useEffect(() => {
-    if (!open) {
-      setSearch('')
+    console.debug('[RequestorSelector] render-state', {
+      source,
+      options: users.length,
+      selectedName: selectedRequestor?.name ?? selectedName ?? null,
+      authEmail: user?.email ?? null
+    })
+  }, [selectedRequestor?.name, selectedName, source, user?.email, users.length])
+
+  useEffect(() => {
+    if (selectedRequestor || !users.length || !user) {
+      return
     }
-  }, [open])
 
-  const normalizedSearch = search.trim().toLowerCase()
-  const filteredUsers =
-    normalizedSearch.length === 0
-      ? users
-      : users.filter(user =>
-          `${user.name} ${user.email ?? ''}`.toLowerCase().includes(normalizedSearch)
-        )
+    const authEmail = user.email?.toLowerCase() ?? ''
+    const authName =
+      user.user_metadata?.full_name ??
+      user.user_metadata?.name ??
+      user.email ??
+      ''
 
-  const displayValue = selectedUser?.name ?? selectedName ?? placeholder
+    const matchedUser =
+      users.find(candidate => candidate.email?.toLowerCase() === authEmail) ??
+      users.find(candidate => candidate.name === authName)
+
+    if (!matchedUser) {
+      if (autoDefaultRef.current !== '__no-match__') {
+        console.warn('[RequestorSelector] no logged-in employee match found', {
+          source,
+          authEmail,
+          authName,
+          options: users.length
+        })
+        logToVercel('no_logged_in_employee_match', {
+          authEmail,
+          authName
+        })
+        autoDefaultRef.current = '__no-match__'
+      }
+      return
+    }
+
+    const matchedKey = getRequestorKey(matchedUser)
+    if (autoDefaultRef.current === matchedKey) {
+      return
+    }
+
+    autoDefaultRef.current = matchedKey
+    console.debug('[RequestorSelector] defaulting to logged-in user', {
+      source,
+      requestor: matchedUser.name,
+      authEmail
+    })
+    logToVercel('default_to_logged_in_user', {
+      requestor: matchedUser.name,
+      matchedBy: matchedUser.email?.toLowerCase() === authEmail ? 'email' : 'name'
+    })
+    onSelect(matchedUser)
+  }, [logToVercel, onSelect, selectedRequestor, source, user, users])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={nextOpen => {
+        setOpen(nextOpen)
+        restorePointerEvents()
+        interactionLogRef.current = { wheel: false, scroll: false, touch: false }
+        console.debug('[RequestorSelector] popover-state', { open: nextOpen })
+        logToVercel('popover_state', { open: nextOpen })
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant='outline'
@@ -92,64 +217,109 @@ export function RequestorSelector<TUser extends RequestorLike>({
           disabled={disabled}
           className={cn(
             'w-full justify-between',
-            !selectedUser && !selectedName && 'text-muted-foreground',
             buttonClassName
           )}
         >
-          <span className='truncate'>{displayValue}</span>
+          {selectedRequestor?.name ?? selectedName ?? placeholder}
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
       <PopoverContent
         align='start'
-        className={cn('w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
+        className={cn('z-[70] w-[var(--radix-popover-trigger-width)] p-0', contentClassName)}
+        onOpenAutoFocus={event => {
+          event.preventDefault()
+          restorePointerEvents()
+        }}
       >
-        <div className='border-b p-2'>
-          <Input
-            autoFocus
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-            placeholder={searchPlaceholder}
-            className='h-9'
-          />
-        </div>
-        <div className='max-h-64 overflow-y-auto p-1'>
-          {filteredUsers.length === 0 ? (
-            <div className='py-6 text-center text-sm text-muted-foreground'>
-              {emptyMessage}
-            </div>
-          ) : (
-            filteredUsers.map(user => {
-              const selected = selectedUser
-                ? isSameRequestor(selectedUser, user)
-                : selectedName === user.name
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList
+            className='max-h-[240px] overflow-y-auto overflow-x-hidden overscroll-contain'
+            onWheelCapture={event => {
+              event.stopPropagation()
+              restorePointerEvents()
+              if (!interactionLogRef.current.wheel) {
+                const target = event.currentTarget
+                interactionLogRef.current.wheel = true
+                logToVercel('list_wheel', {
+                  scrollTop: target.scrollTop,
+                  scrollHeight: target.scrollHeight,
+                  clientHeight: target.clientHeight,
+                  deltaY: event.deltaY
+                })
+              }
+            }}
+            onScrollCapture={event => {
+              event.stopPropagation()
+              if (!interactionLogRef.current.scroll) {
+                const target = event.currentTarget
+                interactionLogRef.current.scroll = true
+                logToVercel('list_scroll', {
+                  scrollTop: target.scrollTop,
+                  scrollHeight: target.scrollHeight,
+                  clientHeight: target.clientHeight
+                })
+              }
+            }}
+            onTouchMoveCapture={event => {
+              event.stopPropagation()
+              restorePointerEvents()
+              if (!interactionLogRef.current.touch) {
+                interactionLogRef.current.touch = true
+                logToVercel('list_touch_move', {
+                  touches: event.touches.length
+                })
+              }
+            }}
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {users.map(userOption => {
+                const optionKey = getRequestorKey(userOption)
+                const isSelected =
+                  selectedRequestor != null &&
+                  getRequestorKey(selectedRequestor) === optionKey
 
-              return (
-                <button
-                  key={getRequestorKey(user)}
-                  type='button'
-                  onClick={() => {
-                    onSelect(user)
-                    setOpen(false)
-                  }}
-                  className='flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground'
-                >
-                  <Check
-                    className={cn('h-4 w-4 shrink-0', selected ? 'opacity-100' : 'opacity-0')}
-                  />
-                  <div className='min-w-0 flex-1'>
-                    <div className='truncate'>{user.name}</div>
-                    {user.email ? (
-                      <div className='truncate text-xs text-muted-foreground'>
-                        {user.email}
-                      </div>
-                    ) : null}
-                  </div>
-                </button>
-              )
-            })
-          )}
-        </div>
+                return (
+                  <CommandItem
+                    key={optionKey}
+                    value={userOption.name}
+                    onPointerDownCapture={() => {
+                      restorePointerEvents()
+                      logToVercel('item_pointer_down', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                    }}
+                    onSelect={() => {
+                      restorePointerEvents()
+                      console.debug('[RequestorSelector] selected-requestor', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                      logToVercel('selected_requestor', {
+                        requestor: userOption.name,
+                        email: userOption.email ?? null
+                      })
+                      onSelect(userOption)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        isSelected ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    {userOption.name}
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

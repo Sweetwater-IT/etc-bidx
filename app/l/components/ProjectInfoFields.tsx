@@ -37,6 +37,7 @@ import { addDays, format } from "date-fns";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
 import { cn, formatPhoneNumber } from "@/lib/utils";
 import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
+import { CaptionProps, useNavigation } from "react-day-picker";
 
 import type { JobProjectInfo } from "@/types/job";
 import { toast } from "sonner";
@@ -117,6 +118,78 @@ const RateField = ({
         aria-label={label}
         className="h-8"
       />
+    </div>
+  );
+};
+
+const ContractCalendarCaption = ({
+  displayMonth,
+  fromYear,
+  toYear,
+}: CaptionProps & {
+  fromYear: number;
+  toYear: number;
+}) => {
+  const { previousMonth, nextMonth, goToMonth } = useNavigation();
+  const years = useMemo(() => {
+    const values: number[] = [];
+    for (let year = fromYear; year <= toYear; year += 1) {
+      values.push(year);
+    }
+    return values;
+  }, [fromYear, toYear]);
+
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-2 px-2 pt-1">
+      <div className="flex items-center justify-center gap-1 min-w-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-5 w-5 bg-transparent p-0 opacity-70 hover:opacity-100"
+          onClick={() => previousMonth && goToMonth(previousMonth)}
+          disabled={!previousMonth}
+        >
+          <span className="sr-only">Previous month</span>
+          <CalendarIcon className="hidden" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </Button>
+        <div className="min-w-[72px] truncate text-center text-sm font-medium">
+          {format(displayMonth, "MMMM")}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-5 w-5 bg-transparent p-0 opacity-70 hover:opacity-100"
+          onClick={() => nextMonth && goToMonth(nextMonth)}
+          disabled={!nextMonth}
+        >
+          <span className="sr-only">Next month</span>
+          <CalendarIcon className="hidden" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </Button>
+      </div>
+
+      <Select
+        value={String(displayMonth.getFullYear())}
+        onValueChange={(year) => goToMonth(new Date(Number(year), displayMonth.getMonth(), 1))}
+      >
+        <SelectTrigger className="h-7 !w-auto min-w-0 justify-end gap-1 px-2 pr-1 text-xs font-medium justify-self-end">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          {years.map((year) => (
+            <SelectItem key={year} value={String(year)}>
+              {year}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };
@@ -233,6 +306,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
   const [branches, setBranches] = useState<Array<{id: number, name: string, address: string, shop_rate: number}>>([]);
   const [counties, setCounties] = useState<Array<{ name: string; branch: string | null }>>([]);
   const [projectManagers, setProjectManagers] = useState<Array<{ id: string; branch_id: number | null; full_name: string }>>([]);
+  const calendarFromYear = useMemo(() => 2000, []);
+  const calendarToYear = useMemo(() => new Date().getFullYear() + 10, []);
 
   useEffect(() => {
     const fetchBranchesAndCounties = async () => {
@@ -759,6 +834,18 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
+                  fromYear={calendarFromYear}
+                  toYear={calendarToYear}
+                  classNames={{ caption: "pt-1", month: "flex flex-col gap-3" }}
+                  components={{
+                    Caption: (props) => (
+                      <ContractCalendarCaption
+                        {...props}
+                        fromYear={calendarFromYear}
+                        toYear={calendarToYear}
+                      />
+                    ),
+                  }}
                   selected={parseDateValue(projectInfo.projectStartDate)}
                   onSelect={(date) => {
                     if (!date) {
@@ -801,6 +888,18 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
+                  fromYear={calendarFromYear}
+                  toYear={calendarToYear}
+                  classNames={{ caption: "pt-1", month: "flex flex-col gap-3" }}
+                  components={{
+                    Caption: (props) => (
+                      <ContractCalendarCaption
+                        {...props}
+                        fromYear={calendarFromYear}
+                        toYear={calendarToYear}
+                      />
+                    ),
+                  }}
                   selected={parseDateValue(projectInfo.projectEndDate)}
                   defaultMonth={endCalendarDefaultMonth}
                   onSelect={(date) => {

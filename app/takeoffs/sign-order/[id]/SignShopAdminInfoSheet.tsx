@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { SignOrder } from '@/types/TSignOrder';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
+import { restorePointerEvents } from '@/lib/pointer-events-fix';
 
 interface Props {
     open: boolean
-    handleOpenChange: () => void
+    handleOpenChange: (nextOpen?: boolean) => void
     setSignOrder: Dispatch<SetStateAction<SignOrder | undefined>>
     signOrder: SignOrder
 }
@@ -29,6 +30,21 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
     });
     
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+            restorePointerEvents();
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+            restorePointerEvents();
+        };
+    }, [open]);
 
     // Initialize form data when sheet opens or signOrder changes
     useEffect(() => {
@@ -57,7 +73,11 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
             } : undefined);
             
             // Close the sheet
-            handleOpenChange();
+            handleOpenChange(false);
+            restorePointerEvents();
+            window.requestAnimationFrame(() => {
+                restorePointerEvents();
+            });
             
         } catch (error) {
             console.error('Error updating sign order:', error);
@@ -74,7 +94,18 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
     };
 
     return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
+        <Sheet
+            open={open}
+            onOpenChange={(nextOpen) => {
+                handleOpenChange(nextOpen);
+                if (!nextOpen) {
+                    restorePointerEvents();
+                    window.requestAnimationFrame(() => {
+                        restorePointerEvents();
+                    });
+                }
+            }}
+        >
             <SheetContent
                 side="right"
                 className="w-[400px] sm:w-[540px] flex flex-col p-0"
@@ -173,7 +204,13 @@ const SignShopAdminInfoSheet = ({ open, handleOpenChange, signOrder, setSignOrde
                                     type="button"
                                     variant="outline"
                                     className="flex-1"
-                                    onClick={handleOpenChange}
+                                    onClick={() => {
+                                        handleOpenChange(false);
+                                        restorePointerEvents();
+                                        window.requestAnimationFrame(() => {
+                                            restorePointerEvents();
+                                        });
+                                    }}
                                     disabled={isSubmitting}
                                 >
                                     Cancel

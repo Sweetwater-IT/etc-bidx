@@ -974,7 +974,10 @@ export function DataTable<TData extends object>({
                   placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
                   value={globalFilter ?? ""}
                   onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-9 w-full"
+                  className={cn(
+                    "w-full pl-9",
+                    isJobListVariant && "bg-white"
+                  )}
                 />
               </div>
             </div>
@@ -989,6 +992,7 @@ export function DataTable<TData extends object>({
                   value={segmentValue}
                   onChange={onSegmentChange}
                   counts={segmentCounts}
+                  variant={isJobListVariant ? 'job-list' : 'default'}
                 />
               )}
             </div>

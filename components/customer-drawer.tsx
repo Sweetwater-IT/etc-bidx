@@ -12,6 +12,7 @@ import { PlusCircle } from "lucide-react"
 import { CustomerContacts } from "@/components/customer-contacts"
 import { CustomerProvider } from "@/contexts/customer-context"
 import { Separator } from "@/components/ui/separator"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 interface CustomerDrawerProps {
   open: boolean
@@ -56,6 +57,15 @@ export const CustomerDrawer = memo(function CustomerDrawer({
       setLoadingApi(false);
       setIsContactFormOpen(false);
       setCustomerData(null);
+
+      const frameId = window.requestAnimationFrame(() => {
+        restorePointerEvents()
+      })
+
+      return () => {
+        window.cancelAnimationFrame(frameId)
+        restorePointerEvents()
+      }
     }
   }, [open]);
 
@@ -87,6 +97,7 @@ export const CustomerDrawer = memo(function CustomerDrawer({
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
+    restorePointerEvents();
   }, [onOpenChange]);
 
   if (isViewMode && !customerData) {
@@ -127,7 +138,16 @@ export const CustomerDrawer = memo(function CustomerDrawer({
 
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} direction="right">
+    <Drawer
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen)
+        if (!nextOpen) {
+          restorePointerEvents()
+        }
+      }}
+      direction="right"
+    >
       <CustomerProvider initialCustomer={customerData}>
         <DrawerContent className="customer-drawer-content">
           {/* Add custom CSS for the drawer width */}
@@ -275,7 +295,10 @@ export const CustomerDrawer = memo(function CustomerDrawer({
           <CustomerContactForm
             customerId={customerData.id}
             isOpen={isContactFormOpen}
-            onClose={() => setIsContactFormOpen(false)}
+            onClose={() => {
+              setIsContactFormOpen(false)
+              restorePointerEvents()
+            }}
             onSuccess={handleContactSuccess}
             customer={customerData}
           />

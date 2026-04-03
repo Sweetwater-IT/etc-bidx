@@ -37,6 +37,7 @@ export type TermsNames =
   | "custom-terms";
 
 interface PointOfContact {
+  id?: number;
   name: string;
   email: string;
 }
@@ -287,9 +288,25 @@ export default function QuoteFormProvider({
   }, [selectedCustomers]);
 
   useEffect(() => {
-    setPointOfContact(undefined);
-    setCcEmails([]);
-    setBccEmails([]);
+    if (selectedCustomers.length === 0) {
+      setPointOfContact(undefined);
+      setCcEmails([]);
+      setBccEmails([]);
+      return;
+    }
+
+    setPointOfContact((currentPointOfContact) => {
+      if (!currentPointOfContact?.id) {
+        return currentPointOfContact;
+      }
+
+      const activeCustomer = selectedCustomers[0];
+      if (!activeCustomer?.contactIds?.includes(currentPointOfContact.id)) {
+        return undefined;
+      }
+
+      return currentPointOfContact;
+    });
   }, [selectedCustomers]);
 
   const value: QuoteFormState = {

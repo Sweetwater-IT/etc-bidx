@@ -21,12 +21,13 @@ import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes"
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
 import { ChangeOrderGateDialog } from "@/app/l/components/ChangeOrderGateDialog";
 import { saveContract } from "@/lib/api-client";
+import { uploadContractDocuments, type ContractDocumentCategory } from "@/lib/upload-contract-documents";
 import isEqual from "lodash/isEqual";
 import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
 import { useAuth } from "@/contexts/auth-context";
 
 
-type DocumentCategory = "contract" | "addendum" | "permit" | "insurance" | "change_order" | "plan" | "specification" | "correspondence" | "photo" | "other";
+type DocumentCategory = ContractDocumentCategory;
 
 interface ContractDocument {
   id: string;
@@ -741,26 +742,16 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
     }
     const docCategory = category || "other";
 
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    formData.append('associatedItemId', associatedItemId || '');
-    formData.append('category', docCategory);
-
     try {
       await sovTableRef.current?.flushPendingSave();
 
-      const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
-        method: 'POST',
-        body: formData,
+      const result = await uploadContractDocuments({
+        contractId,
+        files,
+        associatedItemId,
+        category: docCategory,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        toast.error(`Upload failed: ${error.error}`);
-        return;
-      }
-
-      const result = await response.json();
       setDocuments((prev) => [...prev, ...result.documents]);
       if (result.errors?.length) {
         const uploadedCount = result.documents?.length || 0;
@@ -822,6 +813,33 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
       );
     } catch (err: any) {
       toast.error(`Failed to update document category: ${err.message}`);
+    }
+  };
+
+  const handleRenameDocument = async (id: string, name: string) => {
+    try {
+      await sovTableRef.current?.flushPendingSave();
+
+      const response = await fetch(`/api/l/contracts/${contractId}/documents`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: id, fileName: name }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error(`Failed to rename document: ${error.error}`);
+        return false;
+      }
+
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === id ? { ...d, name } : d))
+      );
+      toast.success("Document renamed");
+      return true;
+    } catch (err: any) {
+      toast.error(`Failed to rename document: ${err.message}`);
+      return false;
     }
   };
 
@@ -1010,6 +1028,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
           onAddDocuments={handleAddDocuments}
           onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
+          onRenameDocument={handleRenameDocument}
           readOnly={forceReadOnly}
         />
 
