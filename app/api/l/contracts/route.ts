@@ -3,12 +3,22 @@ import { supabase } from '@/lib/supabase';
 
 const LIST_COLUMNS = `
   id, project_name, contract_number, customer_name, project_owner,
-  etc_job_number, etc_branch, county, state_route, etc_project_manager,
+  customer_job_number, etc_job_number, etc_branch, county, state_route, etc_project_manager,
   project_start_date, project_end_date, contract_status,
   project_status, billing_status, archived, created_at,
   approver_pm_user_id, submitted_for_approval_at, submitted_for_approval_by,
   approved_at, approved_by, approval_notes,
-  rejected_at, rejected_by, rejection_reason, rejection_notes
+  rejected_at, rejected_by, rejection_reason, rejection_notes,
+  additional_notes, certified_payroll_type, shop_rate,
+  state_base_rate, state_fringe_rate, state_flagging_base_rate, state_flagging_fringe_rate,
+  federal_base_rate, federal_fringe_rate, federal_flagging_base_rate, federal_flagging_fringe_rate,
+  customer_pm, customer_pm_first_name, customer_pm_last_name, customer_pm_email, customer_pm_phone,
+  certified_payroll_contact, certified_payroll_contact_first_name, certified_payroll_contact_last_name,
+  certified_payroll_email, certified_payroll_phone,
+  customer_billing_contact, customer_billing_contact_first_name, customer_billing_contact_last_name,
+  customer_billing_email, customer_billing_phone,
+  etc_billing_manager, etc_project_manager_email, etc_billing_manager_email,
+  extension_date, internal_id, version
 `;
 
 // Contract pipeline statuses (jobs that are not yet active)
@@ -64,6 +74,7 @@ export async function GET(request: NextRequest) {
       projectName: row.project_name,
       contractNumber: row.contract_number,
       customerName: row.customer_name,
+      customerJobNumber: row.customer_job_number,
       projectOwner: row.project_owner,
       etcJobNumber: row.etc_job_number,
       etcBranch: row.etc_branch,
@@ -86,7 +97,39 @@ export async function GET(request: NextRequest) {
       rejectedAt: row.rejected_at,
       rejectedBy: row.rejected_by,
       rejectionReason: row.rejection_reason,
-      rejectionNotes: row.rejection_notes
+      rejectionNotes: row.rejection_notes,
+      additionalNotes: row.additional_notes,
+      certifiedPayrollType: row.certified_payroll_type,
+      shopRate: row.shop_rate,
+      stateBaseRate: row.state_base_rate,
+      stateFringeRate: row.state_fringe_rate,
+      stateFlaggingBaseRate: row.state_flagging_base_rate,
+      stateFlaggingFringeRate: row.state_flagging_fringe_rate,
+      federalBaseRate: row.federal_base_rate,
+      federalFringeRate: row.federal_fringe_rate,
+      federalFlaggingBaseRate: row.federal_flagging_base_rate,
+      federalFlaggingFringeRate: row.federal_flagging_fringe_rate,
+      customerPm: row.customer_pm,
+      customerPmFirstName: row.customer_pm_first_name,
+      customerPmLastName: row.customer_pm_last_name,
+      customerPmEmail: row.customer_pm_email,
+      customerPmPhone: row.customer_pm_phone,
+      certifiedPayrollContact: row.certified_payroll_contact,
+      certifiedPayrollContactFirstName: row.certified_payroll_contact_first_name,
+      certifiedPayrollContactLastName: row.certified_payroll_contact_last_name,
+      certifiedPayrollEmail: row.certified_payroll_email,
+      certifiedPayrollPhone: row.certified_payroll_phone,
+      customerBillingContact: row.customer_billing_contact,
+      customerBillingContactFirstName: row.customer_billing_contact_first_name,
+      customerBillingContactLastName: row.customer_billing_contact_last_name,
+      customerBillingEmail: row.customer_billing_email,
+      customerBillingPhone: row.customer_billing_phone,
+      etcBillingManager: row.etc_billing_manager,
+      etcProjectManagerEmail: row.etc_project_manager_email,
+      etcBillingManagerEmail: row.etc_billing_manager_email,
+      extensionDate: row.extension_date,
+      internalId: row.internal_id,
+      version: row.version
     }));
 
     return NextResponse.json(contracts);
