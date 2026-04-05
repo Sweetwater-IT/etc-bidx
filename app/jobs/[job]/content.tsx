@@ -21,7 +21,7 @@ import { ActiveJobDetailsSheet } from "../../../components/active-job-details-sh
 import { EditActiveJobSheet } from "../../../components/edit-active-job-sheet"
 import { ActiveBidDetailsSheet } from "../../../components/active-bid-details-sheet"
 import { EditJobNumberDialog } from "../../../components/edit-job-number-dialog";
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, Search } from "lucide-react";
 import { AvailableJob } from "../../../data/available-jobs";
 import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
@@ -33,6 +33,7 @@ import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDate } from "@/lib/formatUTCDate";
+import { Input } from "@/components/ui/input";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -92,6 +93,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
+    const [availableJobsSearch, setAvailableJobsSearch] = useState("");
 
     const [allActiveBidRowsSelected, setAllActiveBidRowsSelected] = useState<boolean>(false);
     const [selectedActiveBids, setSelectedActiveBids] = useState<ActiveBid[]>([]);
@@ -2070,8 +2072,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
             <div className="@container/main flex flex-1 flex-col gap-2">
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                     <div className="flex flex-col gap-2">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between px-4 lg:px-6">
                                 <CardActions
                                     createButtonLabel={createButtonLabel}
                                     onCreateClick={handleCreateClick}
@@ -2102,7 +2104,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         </div>
                     </div>
 
-                    <SectionCards data={cardData} />
+                    <SectionCards
+                        data={cardData}
+                        variant={isAvailableJobs ? "productivity" : "default"}
+                    />
+
+                    {isAvailableJobs && (
+                        <div className="px-4 lg:px-6">
+                            <div className="relative max-w-sm">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search open bids..."
+                                    value={availableJobsSearch}
+                                    onChange={(e) => setAvailableJobsSearch(e.target.value)}
+                                    className="h-9 border-border bg-card pl-9 shadow-sm"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {isAvailableJobs ? (
                         <DataTable<AvailableJob>
@@ -2120,6 +2139,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             enableSearch={true}  
                             searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
                             searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
+                            searchValue={availableJobsSearch}
+                            onSearchChange={setAvailableJobsSearch}
+                            showSearchBar={false}
                             onViewDetails={handleViewDetails}
                             onRowClick={handleViewDetails}
                             onEdit={handleEdit}

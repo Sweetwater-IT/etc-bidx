@@ -179,6 +179,9 @@ export interface DataTableProps<TData extends object> {
   searchPlaceholder?: string
   searchableColumns?: string[]
   isLoading?: boolean
+  searchValue?: string
+  onSearchChange?: (value: string) => void
+  showSearchBar?: boolean
 
 }
 
@@ -454,6 +457,9 @@ export function DataTable<TData extends object>({
   searchPlaceholder,
   searchableColumns,
   isLoading,
+  searchValue,
+  onSearchChange,
+  showSearchBar = true,
 }: DataTableProps<TData>) {
   const isJobListVariant = variant === 'job-list'
 
@@ -908,6 +914,8 @@ export function DataTable<TData extends object>({
 
   // Search state (only used when enableSearch is true)
   const [globalFilter, setGlobalFilter] = useState("")
+  const resolvedGlobalFilter = searchValue ?? globalFilter
+  const handleGlobalFilterChange = onSearchChange ?? setGlobalFilter
 
   const customGlobalFilterFn = (row: any, columnId: string, filterValue: string) => {
     if (!filterValue) return true
@@ -935,13 +943,13 @@ export function DataTable<TData extends object>({
       enableRowSelection: !!(onArchiveSelected || onDeleteSelected),
       globalFilterFn: enableSearch ? customGlobalFilterFn : "auto",
       state: {
-        globalFilter: enableSearch ? globalFilter : "",
+        globalFilter: enableSearch ? resolvedGlobalFilter : "",
         pagination: {
           pageIndex,
           pageSize,
         },
       },
-      onGlobalFilterChange: enableSearch ? setGlobalFilter : undefined,
+      onGlobalFilterChange: enableSearch ? handleGlobalFilterChange : undefined,
     })
   
     React.useImperativeHandle(
@@ -966,14 +974,14 @@ export function DataTable<TData extends object>({
         {/* === TOP CONTROLS SECTION (with search bar) === */}
         <div className="px-6 mb-3">
           {/* Search Bar - Only for Open Bids */}
-          {enableSearch && (
+          {enableSearch && showSearchBar && (
             <div className="mb-6 px-1"> {/* small padding to match segments */}
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder={searchPlaceholder || "Search by contract, requestor, status, owner, letting, or due date..."}
-                  value={globalFilter ?? ""}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  value={resolvedGlobalFilter ?? ""}
+                  onChange={(e) => handleGlobalFilterChange(e.target.value)}
                   className={cn(
                     "w-full pl-9",
                     isJobListVariant && "bg-white"
