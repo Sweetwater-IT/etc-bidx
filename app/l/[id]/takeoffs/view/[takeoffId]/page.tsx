@@ -34,6 +34,9 @@ const COMPONENT_LABELS: Record<ComponentKey, string> = {
   lights: "Lights",
 };
 
+const getReturnInventoryStatusEvent = (takeoffId: string) =>
+  `return-inventory-status:${takeoffId}`;
+
 function parseItemMeta(item: ReturnInventoryItem): Record<string, any> {
   const sources = [item.sign_details, item.notes];
 
@@ -92,6 +95,14 @@ function getReturnInventoryComponents(item: ReturnInventoryItem): ComponentKey[]
   if (hasLights) comps.push("lights");
 
   return comps;
+}
+
+function isReturnInventoryComplete(items: ReturnInventoryItem[]) {
+  return items.length > 0 && items.every((item) => {
+    const components = getReturnInventoryComponents(item);
+    const returnDetails = item.return_details || {};
+    return components.every((componentKey) => Boolean(returnDetails[componentKey]));
+  });
 }
 
 export default function TakeoffViewPage({ params }: any) {
@@ -185,6 +196,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
   const [linkedWorkOrderStatus, setLinkedWorkOrderStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pickupPdfReady, setPickupPdfReady] = useState(false);
 
   useEffect(() => {
     const loadTakeoff = async () => {
@@ -202,6 +214,10 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
           linkedWorkOrderId: data?.work_order_id,
         });
         setTakeoff(data);
+        setPickupPdfReady(
+          Boolean(data?.is_pickup) &&
+          isReturnInventoryComplete(Array.isArray(data?.takeoff_items) ? data.takeoff_items : [])
+        );
         if (data?.work_order_id) {
           try {
             const workOrderResponse = await fetch(`/api/workorders/${data.work_order_id}`);
@@ -228,6 +244,23 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
     }
   }, [takeoffId]);
 
+  useEffect(() => {
+    if (!takeoff?.is_pickup || typeof window === "undefined") {
+      return;
+    }
+
+    const eventName = getReturnInventoryStatusEvent(takeoffId);
+    const handleStatusChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ complete?: boolean }>;
+      setPickupPdfReady(Boolean(customEvent.detail?.complete));
+    };
+
+    window.addEventListener(eventName, handleStatusChange as EventListener);
+    return () => {
+      window.removeEventListener(eventName, handleStatusChange as EventListener);
+    };
+  }, [takeoff?.is_pickup, takeoffId]);
+
   const handleEdit = () => {
     const resolvedJobId = takeoff?.job_id ?? jobId;
     const resolvedTakeoffId = takeoff?.id ?? takeoffId;
@@ -249,10 +282,24 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
     setGeneratingPdf(true);
     try {
       if (takeoff?.is_pickup) {
-        const projectInfo = dbJob?.projectInfo;
-        const pickupItems = Array.isArray(takeoff?.takeoff_items)
-          ? (takeoff.takeoff_items as ReturnInventoryItem[])
+        const takeoffResponse = await fetch(`/api/takeoffs/${takeoffId}`);
+        if (!takeoffResponse.ok) {
+          throw new Error("Failed to load pickup takeoff data");
+        }
+
+        const latestTakeoff = await takeoffResponse.json();
+        const pickupItems = Array.isArray(latestTakeoff?.takeoff_items)
+          ? (latestTakeoff.takeoff_items as ReturnInventoryItem[])
           : [];
+
+        if (!isReturnInventoryComplete(pickupItems)) {
+          toast.error("Complete the return report before downloading the pickup PDF.");
+          setPickupPdfReady(false);
+          return;
+        }
+
+        const projectInfo = dbJob?.projectInfo;
+        setPickupPdfReady(true);
 
         const pdfItems = pickupItems.map((item) => {
           const components = getReturnInventoryComponents(item);
@@ -266,15 +313,15 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
             components: components.map((componentKey) => ({
               key: componentKey,
               label: COMPONENT_LABELS[componentKey],
-              condition: returnDetails[componentKey] || "ok",
+              condition: returnDetails[componentKey],
               photoUrl: damagePhotos[componentKey] || undefined,
             })),
           };
         });
 
         await generateReturnTakeoffPdf({
-          title: takeoff?.title || "Pickup Return",
-          workType: takeoff?.work_type || "",
+          title: latestTakeoff?.title || "Pickup Return",
+          workType: latestTakeoff?.work_type || "",
           projectName: projectInfo?.projectName || undefined,
           etcJobNumber: projectInfo?.etcJobNumber?.toString() || undefined,
           etcBranch: dbJob?.etc_branch || undefined,
@@ -283,11 +330,11 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
           customerJobNumber: projectInfo?.customerJobNumber || undefined,
           projectOwner: projectInfo?.projectOwner || undefined,
           county: projectInfo?.county || undefined,
-          installDate: takeoff?.install_date || undefined,
-          pickupDate: takeoff?.pickup_date || undefined,
+          installDate: latestTakeoff?.install_date || undefined,
+          pickupDate: latestTakeoff?.pickup_date || undefined,
           customerPM: projectInfo?.customerPM || undefined,
-          assignedTo: takeoff?.assigned_to || undefined,
-          contractedOrAdditional: takeoff?.contracted_or_additional || undefined,
+          assignedTo: latestTakeoff?.assigned_to || undefined,
+          contractedOrAdditional: latestTakeoff?.contracted_or_additional || undefined,
           items: pdfItems,
         });
 
@@ -481,9 +528,19 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
               Edit
             </Button>
           )}
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={handleDownloadPdf}
+            disabled={generatingPdf || (takeoff?.is_pickup && !pickupPdfReady)}
+          >
             <Download className="h-3.5 w-3.5" />
-            {generatingPdf ? "Generating…" : takeoff?.is_pickup ? "Download Pickup PDF" : "Download PDF"}
+            {generatingPdf
+              ? "Generating…"
+              : takeoff?.is_pickup
+                ? "Download Pickup PDF"
+                : "Download PDF"}
           </Button>
           {takeoff?.work_order_id ? (
             <>

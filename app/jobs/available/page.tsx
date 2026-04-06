@@ -1,5 +1,5 @@
-import { JobPageContent } from "@/app/jobs/[job]/content"
+import { JobPageContent } from "../[job]/content";
 
 export default function AvailableJobsPage() {
-  return <JobPageContent job="available" />
+  return <JobPageContent job="available" />;
 }

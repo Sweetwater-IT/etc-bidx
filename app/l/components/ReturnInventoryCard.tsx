@@ -72,6 +72,9 @@ interface ReturnInventoryCardProps {
   jobInfo?: ReturnInventoryJobInfo;
 }
 
+const getReturnInventoryStatusEvent = (takeoffId: string) =>
+  `return-inventory-status:${takeoffId}`;
+
 function parseItemMeta(item: ReturnItem): Record<string, any> {
   const sources = [item.sign_details, item.notes];
 
@@ -351,6 +354,15 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     fetchData();
   }, [takeoffId]);
 
+  const emitCompletionState = useCallback((complete: boolean) => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent(getReturnInventoryStatusEvent(takeoffId), {
+        detail: { complete },
+      })
+    );
+  }, [takeoffId]);
+
   const setCondition = useCallback((itemId: string, comp: string, value: string) => {
     setDetails((prev) => {
       const itemDets = { ...(prev[itemId] || {}), [comp]: value };
@@ -453,6 +465,10 @@ export const ReturnInventoryCard = ({ takeoffId, disabled, jobInfo }: ReturnInve
     const d = details[item.id] || {};
     return comps.every((c) => !!d[c]);
   });
+
+  useEffect(() => {
+    emitCompletionState(allComplete);
+  }, [allComplete, emitCompletionState]);
 
   // Check if any damaged items are missing photos
   const hasMissingDamagePhotos = items.some((item) => {

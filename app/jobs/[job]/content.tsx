@@ -7,7 +7,7 @@ import { availableJobsColumns, AvailableJobServices } from "../../../data/availa
 import { FilterOption } from "../../../components/table-controls";
 import { ACTIVE_BIDS_COLUMNS, type ActiveBid } from "../../../data/active-bids";
 import { type ActiveJob } from "../../../data/active-jobs";
-import { notFound, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ConfirmArchiveDialog } from "../../../components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "../../../components/confirm-delete-dialog";
@@ -57,10 +57,6 @@ export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 export function JobPageContent({ job }: JobPageContentProps) {
     const router = useRouter();
     const { customers, getCustomers } = useCustomers();
-
-    if (!["available", "active-bids", "active-jobs"].includes(job)) {
-        notFound();
-    }
 
     const isAvailableJobs = job === "available";
     const isActiveBids = job === "active-bids";

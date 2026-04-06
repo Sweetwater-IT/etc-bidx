@@ -1,13 +1,18 @@
-import { Suspense } from "react"
+import { notFound } from "next/navigation"
 import { JobPageContent } from "./content"
 
-export default async function JobPage({ params }: any) {
-  const resolvedParams = await params
-  const job = resolvedParams.job
+const VALID_JOB_PAGES = new Set(["available", "active-bids", "active-jobs"])
 
-  return (
-    <Suspense fallback={null}>
-      <JobPageContent job={job} />
-    </Suspense>
-  )
+export default function JobPage({
+  params,
+}: {
+  params: { job: string }
+}) {
+  const job = params.job
+
+  if (!VALID_JOB_PAGES.has(job)) {
+    notFound()
+  }
+
+  return <JobPageContent job={job} />
 }
