@@ -328,7 +328,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
           etcProjectManager: dbJob?.etc_project_manager || undefined,
           customerName: projectInfo?.customerName || undefined,
           customerJobNumber: projectInfo?.customerJobNumber || undefined,
-          projectOwner: projectInfo?.projectOwner || undefined,
+          projectOwner: projectInfo?.projectOwner || dbJob?.project_owner || undefined,
           county: projectInfo?.county || undefined,
           installDate: latestTakeoff?.install_date || undefined,
           pickupDate: latestTakeoff?.pickup_date || undefined,

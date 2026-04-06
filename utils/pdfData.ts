@@ -1,5 +1,31 @@
 import { supabase } from '@/lib/supabase';
 
+type PdfJobInfo = {
+  id: string;
+  project_name: string | null;
+  customer_name: string | null;
+  customer_job_number: string | null;
+  customer_pm: string | null;
+  project_owner: string | null;
+  contract_number: string | null;
+  county: string | null;
+  etc_branch: string | null;
+  etc_project_manager: string | null;
+  etc_job_number: string | number | null;
+};
+
+async function fetchPdfJobInfo(jobId?: string | null): Promise<PdfJobInfo | null> {
+  if (!jobId) return null;
+
+  const { data } = await supabase
+    .from('jobs_l')
+    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, contract_number, county, etc_branch, etc_project_manager, etc_job_number')
+    .eq('id', jobId)
+    .maybeSingle();
+
+  return (data as PdfJobInfo | null) || null;
+}
+
 const MPT_SECTION_LABELS: Record<string, string> = {
   trailblazers: 'Trailblazers / H-Stands',
   type_iii: 'Type IIIs',
@@ -104,11 +130,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
   }
 
   // Fetch related job explicitly to avoid relation-name mismatches
-  const { data: job } = await supabase
-    .from('jobs_l')
-    .select('id, project_name, customer_name, customer_job_number, customer_pm, project_owner, contract_number, county, etc_branch, etc_project_manager, etc_job_number')
-    .eq('id', takeoff.job_id)
-    .single();
+  const job = await fetchPdfJobInfo(takeoff.job_id);
 
   const items: any[] = [];
 
@@ -353,7 +375,11 @@ export async function getBillingPacketData(workOrderId: string) {
     throw new Error('Work order not found');
   }
 
-  const job = workOrder.jobs_l;
+  let job = (workOrder.jobs_l as PdfJobInfo | null) || null;
+
+  if (!job?.project_owner || !job?.project_name) {
+    job = (await fetchPdfJobInfo(workOrder.job_id)) || job;
+  }
   let resolvedInstallDate = workOrder.install_date || '';
   let resolvedPickupDate = workOrder.pickup_date || '';
   let resolvedPrimaryTakeoffTitle = workOrder.title || '';
@@ -361,10 +387,13 @@ export async function getBillingPacketData(workOrderId: string) {
   if (workOrder.takeoff_id) {
     const { data: linkedTakeoff } = await supabase
       .from('takeoffs_l')
-      .select('id, title, install_date, pickup_date')
+      .select('id, job_id, title, install_date, pickup_date')
       .eq('id', workOrder.takeoff_id)
       .maybeSingle();
 
+    if ((!job?.project_owner || !job?.project_name) && linkedTakeoff?.job_id) {
+      job = (await fetchPdfJobInfo(linkedTakeoff.job_id)) || job;
+    }
     resolvedPrimaryTakeoffTitle = linkedTakeoff?.title || resolvedPrimaryTakeoffTitle;
     resolvedInstallDate = linkedTakeoff?.install_date || resolvedInstallDate;
     resolvedPickupDate = linkedTakeoff?.pickup_date || resolvedPickupDate;
@@ -380,10 +409,13 @@ export async function getBillingPacketData(workOrderId: string) {
     if (parentWorkOrder?.takeoff_id) {
       const { data: parentTakeoff } = await supabase
         .from('takeoffs_l')
-        .select('install_date')
+        .select('job_id, install_date')
         .eq('id', parentWorkOrder.takeoff_id)
         .maybeSingle();
 
+      if ((!job?.project_owner || !job?.project_name) && parentTakeoff?.job_id) {
+        job = (await fetchPdfJobInfo(parentTakeoff.job_id)) || job;
+      }
       resolvedInstallDate = parentTakeoff?.install_date || resolvedInstallDate;
     }
   }

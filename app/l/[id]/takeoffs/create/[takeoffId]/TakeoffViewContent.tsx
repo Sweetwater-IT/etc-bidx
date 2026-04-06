@@ -240,7 +240,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
     etcProjectManager: dbJob?.etc_project_manager || undefined,
     customerName: info?.customerName || undefined,
     customerJobNumber: info?.customerJobNumber || undefined,
-    projectOwner: info?.projectOwner || undefined,
+    projectOwner: info?.projectOwner || dbJob?.project_owner || undefined,
     county: info?.county || undefined,
     installDate: takeoff.install_date || undefined,
     pickupDate: takeoff.pickup_date || undefined,
