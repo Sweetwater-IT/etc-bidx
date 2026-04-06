@@ -29,14 +29,25 @@ export async function GET(request: NextRequest) {
     const counts = searchParams.get("counts") === "true";
     const nextNumber = searchParams.get("nextNumber") === "true";
     const detailed = searchParams.get("detailed") === "true";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
     // 📊 Counts
     if (counts) {
-      const countQuery = supabase
+      let countQuery = supabase
         .from("quotes")
         .select("id, status, user_created");
+
+      if (startDate) {
+        countQuery = countQuery.gte("created_at", startDate);
+      }
+      if (endDate) {
+        const inclusiveEndDate = new Date(endDate);
+        inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+        countQuery = countQuery.lt("created_at", inclusiveEndDate.toISOString());
+      }
 
       const { data: allQuotes, error: countError } = await countQuery;
 
@@ -61,10 +72,21 @@ export async function GET(request: NextRequest) {
       // Compute counts
       const countData: any = { all: allQuotes.length };
       for (const [segmentName, email] of Object.entries(userEmailMap)) {
-        const { count } = await supabase
+        let segmentCountQuery = supabase
           .from("quotes")
           .select("id", { count: "exact", head: true })
           .eq('user_created', email);
+
+        if (startDate) {
+          segmentCountQuery = segmentCountQuery.gte("created_at", startDate);
+        }
+        if (endDate) {
+          const inclusiveEndDate = new Date(endDate);
+          inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+          segmentCountQuery = segmentCountQuery.lt("created_at", inclusiveEndDate.toISOString());
+        }
+
+        const { count } = await segmentCountQuery;
         countData[segmentName] = count || 0;
       }
 
@@ -132,6 +154,15 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== "all") {
       query = query.eq("status", status);
+    }
+
+    if (startDate) {
+      query = query.gte("created_at", startDate);
+    }
+    if (endDate) {
+      const inclusiveEndDate = new Date(endDate);
+      inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+      query = query.lt("created_at", inclusiveEndDate.toISOString());
     }
 
     if (created_by) {
@@ -234,6 +265,15 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== "all") {
       countQuery = countQuery.eq("status", status);
+    }
+
+    if (startDate) {
+      countQuery = countQuery.gte("created_at", startDate);
+    }
+    if (endDate) {
+      const inclusiveEndDate = new Date(endDate);
+      inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+      countQuery = countQuery.lt("created_at", inclusiveEndDate.toISOString());
     }
 
     if (created_by) {

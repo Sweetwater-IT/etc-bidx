@@ -2146,39 +2146,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Popover open={availableJobsCalendarOpen} onOpenChange={setAvailableJobsCalendarOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-9 min-w-[250px] justify-start gap-2 bg-background font-medium shadow-sm"
-                                    >
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                        <span className="truncate">{availableJobsDateLabel}</span>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                    <Calendar
-                                        key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
-                                        initialFocus
-                                        mode="range"
-                                        defaultMonth={dateRange?.from}
-                                        selected={dateRange}
-                                        onSelect={handleAvailableJobsDateSelect}
-                                        numberOfMonths={2}
-                                    />
-                                </PopoverContent>
-                            </Popover>
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-9 w-9 shrink-0 shadow-sm"
-                                onClick={handleRefreshAvailableJobs}
-                            >
-                                <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
-                            </Button>
-
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -2276,6 +2243,61 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     >
                                         <PencilIcon className="h-4 w-4" />
                                     </Button>
+                                </div>
+                            )}
+                            {isAvailableJobs && (
+                                <div className="px-4 lg:px-6">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Popover open={availableJobsCalendarOpen} onOpenChange={setAvailableJobsCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className="min-w-[240px] justify-start text-left font-normal relative bg-card shadow-sm"
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {dateRange?.from ? (
+                                                        dateRange.to ? (
+                                                            <span className="flex items-center justify-between w-full">
+                                                                <span>{format(dateRange.from, "LLL d, y")} - {format(dateRange.to, "LLL d, y")}</span>
+                                                                <span
+                                                                    onClick={handleClearDateRange}
+                                                                    className="ml-2 rounded p-1 text-muted-foreground transition-colors hover:bg-muted"
+                                                                >
+                                                                    <IconX className="h-3 w-3" />
+                                                                </span>
+                                                            </span>
+                                                        ) : (
+                                                            <span>
+                                                                {format(dateRange.from, "LLL d, y")} - {format(new Date(), "LLL d, y")}
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <span>{availableJobsDateLabel}</span>
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="end">
+                                                <Calendar
+                                                    key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
+                                                    initialFocus
+                                                    mode="range"
+                                                    defaultMonth={dateRange?.from}
+                                                    selected={dateRange}
+                                                    onSelect={handleAvailableJobsDateSelect}
+                                                    numberOfMonths={2}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 font-semibold shadow-sm"
+                                            onClick={handleRefreshAvailableJobs}
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                             {isActiveBids && (

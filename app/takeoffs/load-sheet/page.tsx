@@ -1,8 +1,13 @@
 "use client";
 
 import { DataTable } from "@/components/data-table";
+import { SectionCards } from "@/components/section-cards";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
 import { FilterOption } from "@/components/table-controls";
@@ -12,6 +17,10 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
 import { formatDate } from "@/lib/formatUTCDate";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { ClipboardList, RefreshCw, Search, Calendar as CalendarIcon } from "lucide-react";
+import { IconPlus, IconX } from "@tabler/icons-react";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
@@ -72,6 +81,9 @@ export default function SignOrderPage() {
   const [showArchiveDialog, setShowArchiveDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [loadSheetSearch, setLoadSheetSearch] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Reference for table row selection reset
   const tableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -231,6 +243,13 @@ export default function SignOrderPage() {
         params.append("filters", JSON.stringify(activeFilters));
       }
 
+      if (dateRange?.from) {
+        params.append("startDate", dateRange.from.toISOString().split("T")[0]);
+      }
+      if (dateRange?.to) {
+        params.append("endDate", dateRange.to.toISOString().split("T")[0]);
+      }
+
       const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
 
@@ -273,12 +292,21 @@ export default function SignOrderPage() {
     } finally {
       setIsTableLoading(false);
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to]);
 
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
     try {
-      const segmentResponse = await fetch(`/api/sign-shop-orders?counts=true&includeDrafts=true`);
+      const countParams = new URLSearchParams();
+      countParams.append("counts", "true");
+      countParams.append("includeDrafts", "true");
+      if (dateRange?.from) {
+        countParams.append("startDate", dateRange.from.toISOString().split("T")[0]);
+      }
+      if (dateRange?.to) {
+        countParams.append("endDate", dateRange.to.toISOString().split("T")[0]);
+      }
+      const segmentResponse = await fetch(`/api/sign-shop-orders?${countParams.toString()}`);
       const segmentData = await segmentResponse.json();
 
       if (segmentData.success) {
@@ -295,7 +323,7 @@ export default function SignOrderPage() {
     } catch (error) {
       console.error("Error fetching counts:", error);
     }
-  }, []);
+  }, [dateRange?.from, dateRange?.to]);
 
   // Handle segment change
   const handleSegmentChange = useCallback((value: string) => {
@@ -563,6 +591,46 @@ export default function SignOrderPage() {
     }
   }, [fetchQuotes, fetchCounts, startLoading, stopLoading]);
 
+  const handleDateSelect = (selectedDate: DateRange | undefined) => {
+    setDateRange(selectedDate);
+    if (!selectedDate || (selectedDate.from && selectedDate.to)) {
+      setCalendarOpen(false);
+    }
+  };
+
+  const handleClearDateRange = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDateRange(undefined);
+  };
+
+  const handleRefresh = useCallback(async () => {
+    await fetchCounts();
+    await fetchQuotes();
+  }, [fetchCounts, fetchQuotes]);
+
+  const dateLabel = useMemo(() => {
+    const today = new Date();
+    if (dateRange?.from && dateRange?.to) {
+      return `${format(dateRange.from, "LLL d, y")} - ${format(dateRange.to, "LLL d, y")}`;
+    }
+    if (dateRange?.from) {
+      return `${format(dateRange.from, "LLL d, y")} - ${format(today, "LLL d, y")}`;
+    }
+    return `Jan 1, ${today.getFullYear()} - ${format(today, "LLL d, y")}`;
+  }, [dateRange]);
+
+  const summaryCards = useMemo(
+    () => [
+      { title: "Total Orders", value: String(branchCounts.all || 0) },
+      { title: "Hatfield Orders", value: String(branchCounts.hatfield || 0) },
+      { title: "Turbotville Orders", value: String(branchCounts.turbotville || 0) },
+      { title: "Bedford Orders", value: String(branchCounts.bedford || 0) },
+      { title: "Archived Orders", value: String(branchCounts.archived || 0) },
+    ],
+    [branchCounts]
+  );
+
   return (
     <>
       <ConfirmArchiveDialog
@@ -582,13 +650,92 @@ export default function SignOrderPage() {
       />
 
       <div className="flex flex-1 flex-col">
+        <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+          <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-foreground">Sign Order List</h1>
+                <p className="text-xs text-muted-foreground">
+                  {totalCount} sign order{totalCount === 1 ? "" : "s"} in the current view
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={() => router.push("/takeoffs/sign-order")}>
+                <IconPlus className="h-4 w-4" />
+                Create Sign Order
+              </Button>
+            </div>
+          </div>
+        </header>
+
         <div className="@container/main flex flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6">
+              <div className="flex items-center justify-end gap-2">
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="min-w-[240px] justify-start text-left font-normal relative bg-card shadow-sm">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <span className="flex items-center justify-between w-full">
+                            <span>{format(dateRange.from, "LLL d, y")} - {format(dateRange.to, "LLL d, y")}</span>
+                            <span onClick={handleClearDateRange} className="ml-2 rounded p-1 text-muted-foreground transition-colors hover:bg-muted">
+                              <IconX className="h-3 w-3" />
+                            </span>
+                          </span>
+                        ) : (
+                          <span>{format(dateRange.from, "LLL d, y")} - {format(new Date(), "LLL d, y")}</span>
+                        )
+                      ) : (
+                        <span>{dateLabel}</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}-load-sheet`}
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={handleDateSelect}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Button variant="outline" size="sm" className="gap-2 font-semibold shadow-sm" onClick={handleRefresh}>
+                  <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
+
+            <SectionCards data={summaryCards} variant="productivity" />
+
+            <div className="px-4 lg:px-6">
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search sign orders..."
+                  value={loadSheetSearch}
+                  onChange={(e) => setLoadSheetSearch(e.target.value)}
+                  className="h-9 border-border bg-card pl-9 shadow-sm"
+                />
+              </div>
+            </div>
+
             <DataTable<SignOrderView>
               data={quotes}
               isLoading={isTableLoading}
               columns={SIGN_ORDER_COLUMNS}
               variant="job-list"
+              segmentsVariant="productivity"
               segments={SEGMENTS}
               segmentValue={activeSegment}
               segmentCounts={branchCounts}
@@ -628,6 +775,11 @@ export default function SignOrderPage() {
               showFilters={showFilters}
               setShowFilters={setShowFilters}
               onUnarchive={handleUnarchiveSignOrder}
+              enableSearch
+              searchableColumns={["order_number", "order_type", "requestor", "branch", "order_status", "shop_status", "assigned_to", "customer", "contract_number", "job_number", "order_date", "need_date", "target_date", "created_at"]}
+              searchValue={loadSheetSearch}
+              onSearchChange={setLoadSheetSearch}
+              showSearchBar={false}
             />
           </div>
         </div>

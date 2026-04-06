@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const branch = searchParams.get('branch');
     const filtersJson = searchParams.get('filters');
     const statusParam = searchParams.get('status');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     // Handle archived parameter like in active-bids
     const archived = searchParams.get('archived');
@@ -21,6 +23,12 @@ export async function GET(request: NextRequest) {
 
     // Parse filters if present
     const filters = filtersJson ? JSON.parse(filtersJson) : {};
+
+    const getInclusiveEndDate = (value: string) => {
+      const inclusiveEndDate = new Date(value);
+      inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
+      return inclusiveEndDate.toISOString();
+    };
 
 
     //        if (counts) {
@@ -47,7 +55,7 @@ if (counts) {
     // i bring all active and archived orders
     const { data: allOrders } = await supabase
       .from('sign_orders')
-      .select('requestor, archived, shop_status, order_status')
+      .select('requestor, archived, shop_status, order_status, created_at')
       .in('order_status', statuses);
 
     if (!allOrders) throw new Error('Failed to fetch orders');
@@ -75,6 +83,13 @@ if (counts) {
     };
 
     for (const order of allOrders) {
+      if (startDate && order.created_at && new Date(order.created_at) < new Date(startDate)) {
+        continue;
+      }
+      if (endDate && order.created_at && new Date(order.created_at) >= new Date(getInclusiveEndDate(endDate))) {
+        continue;
+      }
+
       const isArchived = order.archived;
       const branchId = userBranchMap[order.requestor];
 
@@ -435,6 +450,13 @@ if (counts) {
       }
     }
 
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+    if (endDate) {
+      query = query.lt('created_at', getInclusiveEndDate(endDate));
+    }
+
     let paginationCountQuery = supabase
       .from('sign_orders')
       .select('*', { count: 'exact', head: true })
@@ -450,6 +472,13 @@ if (counts) {
         endDate.setDate(endDate.getDate() + 1);
         paginationCountQuery = paginationCountQuery.lt('created_at', endDate.toISOString().split('T')[0]);
       }
+    }
+
+    if (startDate) {
+      paginationCountQuery = paginationCountQuery.gte('created_at', startDate);
+    }
+    if (endDate) {
+      paginationCountQuery = paginationCountQuery.lt('created_at', getInclusiveEndDate(endDate));
     }
 
     // Apply the same filters for pagination count
