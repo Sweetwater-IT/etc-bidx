@@ -525,7 +525,7 @@ export default function SignOrderPage() {
         />
 
         <div className="flex flex-1 flex-col bg-[#F9FAFB]">
-          <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+          <header className="sticky top-11 z-10 shrink-0 border-b bg-card">
             <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
@@ -549,7 +549,7 @@ export default function SignOrderPage() {
           </header>
 
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">
+            <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">
               <div className="flex items-center justify-end gap-2">
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
