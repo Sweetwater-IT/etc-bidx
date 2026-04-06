@@ -377,6 +377,36 @@ export async function POST(request: NextRequest) {
     let takeoff;
 
     if (takeoffId) {
+      const { data: existingTakeoff, error: existingTakeoffError } = await supabase
+        .from('takeoffs_l')
+        .select('id, is_pickup, parent_takeoff_id, install_date')
+        .eq('id', takeoffId)
+        .single();
+
+      if (existingTakeoffError || !existingTakeoff) {
+        console.error('Error loading existing takeoff before update:', existingTakeoffError);
+        return NextResponse.json(
+          { error: 'Takeoff not found' },
+          { status: 404 }
+        );
+      }
+
+      if (existingTakeoff.is_pickup) {
+        let inheritedInstallDate = existingTakeoff.install_date || null;
+
+        if (existingTakeoff.parent_takeoff_id) {
+          const { data: parentTakeoff } = await supabase
+            .from('takeoffs_l')
+            .select('install_date')
+            .eq('id', existingTakeoff.parent_takeoff_id)
+            .maybeSingle();
+
+          inheritedInstallDate = parentTakeoff?.install_date || inheritedInstallDate;
+        }
+
+        takeoffData.install_date = inheritedInstallDate;
+      }
+
       // Update existing takeoff
       const { data: updatedTakeoff, error: updateError } = await supabase
         .from('takeoffs_l')

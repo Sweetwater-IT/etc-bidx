@@ -493,6 +493,7 @@ export const CreateTakeoffForm = ({
   const resolvedPageDescription =
     pageDescription ||
     `Manage takeoff details, work types, materials, and scheduling information for ${jobLabel}.`;
+  const isPickupTakeoff = Boolean(draftTakeoff?.is_pickup);
 
   const installDateValue = parseDateString(installDate);
   const pickupDateValue = parseDateString(pickupDate);
@@ -1516,7 +1517,17 @@ export const CreateTakeoffForm = ({
                 </SelectContent>
               </Select>
             </div>
-            {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
+            {isPickupTakeoff ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+                <div className="h-10 rounded-md border bg-muted/30 px-3 flex items-center text-sm">
+                  {installDateValue ? format(installDateValue, "PPP") : "—"}
+                </div>
+                <span className="text-[9px] text-muted-foreground mt-1 block">
+                  Inherited from the parent takeoff.
+                </span>
+              </div>
+            ) : (workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
               <div>
                 <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Job Start Date</Label>
                 <Popover>
