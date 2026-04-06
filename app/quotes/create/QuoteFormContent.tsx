@@ -382,8 +382,9 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       setCreatingQuote(true);
 
       const data = await createQuoteBase("NOT SENT");
+      const createdQuoteId = data?.data?.id ?? quoteId;
 
-      if (data.success) {
+      if (data.success && createdQuoteId) {
         const uploadedFiles: { name: string; url: string }[] = [];
         for (const file of files) {
           try {
@@ -392,7 +393,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
             const formData = new FormData();
             formData.append("file", new File([blob], file.name, { type: file.type }));
-            formData.append("uniqueIdentifier", data.data.id?.toString() || "temp");
+            formData.append("uniqueIdentifier", createdQuoteId.toString());
             formData.append("folder", "quotes");
 
             const uploadRes = await fetch("/api/files", {
@@ -413,8 +414,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
         }
 
         toast.success("Quote created successfully!");
-        router.push(`/quotes/view/${data.data.id}`);
+        router.push(`/quotes/view/${createdQuoteId}`);
+        return;
       }
+
+      toast.error(data?.message || "Could not create quote");
 
     } catch (err) {
       console.error("Error creating quote", err);
