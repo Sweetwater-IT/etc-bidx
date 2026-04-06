@@ -14,6 +14,85 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { ProjectFooter } from "@/components/ProjectFooter";
 import { formatTakeoffPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
+import { generateReturnTakeoffPdf } from "@/app/l/utils/generateReturnTakeoffPdf";
+
+type ReturnInventoryItem = {
+  product_name: string;
+  category: string;
+  quantity: number;
+  return_details?: Record<string, string> | null;
+  damage_photos?: Record<string, string> | null;
+  sign_details?: Record<string, any> | string | null;
+  notes?: string | null;
+};
+
+type ComponentKey = "sign" | "structure" | "lights";
+
+const COMPONENT_LABELS: Record<ComponentKey, string> = {
+  sign: "Sign",
+  structure: "Structure",
+  lights: "Lights",
+};
+
+function parseItemMeta(item: ReturnInventoryItem): Record<string, any> {
+  const sources = [item.sign_details, item.notes];
+
+  for (const source of sources) {
+    if (!source) continue;
+    if (typeof source === "object") return source;
+
+    try {
+      const parsed = JSON.parse(source);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch {
+      // Ignore plain-text notes.
+    }
+  }
+
+  return {};
+}
+
+function getReturnInventoryComponents(item: ReturnInventoryItem): ComponentKey[] {
+  const name = item.product_name.toUpperCase();
+  const category = item.category.toUpperCase();
+  const comps: ComponentKey[] = [];
+  const meta = parseItemMeta(item);
+
+  const isAdditionalOrEquip =
+    category === "ADDITIONAL ITEMS" ||
+    category === "ADDITIONAL" ||
+    category === "VEHICLES" ||
+    category === "VEHICLE" ||
+    category === "ROLLING STOCK";
+
+  if (
+    isAdditionalOrEquip ||
+    name.includes("VERTICAL PANEL") ||
+    name.includes("HIP VERTICAL") ||
+    name.includes("SAND BAG")
+  ) {
+    comps.push("sign");
+    return comps;
+  }
+
+  if (name.includes("TYPE III") || name.includes("TYPE 3") || name.includes("BARRICADE")) {
+    comps.push("structure");
+    comps.push("lights");
+    return comps;
+  }
+
+  comps.push("sign");
+
+  const hasStruct = meta.structureType && meta.structureType !== "" && meta.structureType !== "Loose";
+  if (hasStruct) comps.push("structure");
+
+  const hasLights = meta.bLights && meta.bLights !== "none" && meta.bLights !== "";
+  if (hasLights) comps.push("lights");
+
+  return comps;
+}
 
 export default function TakeoffViewPage({ params }: any) {
   const jobId = params.id;
@@ -101,6 +180,7 @@ function TakeoffViewPageContent({ jobId, takeoffId, jobName }: { jobId: string; 
 
 function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; takeoffId: string; jobName: string }) {
   const router = useRouter();
+  const { data: dbJob } = useJobFromDB(jobId);
   const [takeoff, setTakeoff] = useState<any>(null);
   const [linkedWorkOrderStatus, setLinkedWorkOrderStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -168,6 +248,53 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
   const handleDownloadPdf = async () => {
     setGeneratingPdf(true);
     try {
+      if (takeoff?.is_pickup) {
+        const projectInfo = dbJob?.projectInfo;
+        const pickupItems = Array.isArray(takeoff?.takeoff_items)
+          ? (takeoff.takeoff_items as ReturnInventoryItem[])
+          : [];
+
+        const pdfItems = pickupItems.map((item) => {
+          const components = getReturnInventoryComponents(item);
+          const returnDetails = item.return_details || {};
+          const damagePhotos = item.damage_photos || {};
+
+          return {
+            product_name: item.product_name,
+            category: item.category,
+            quantity: item.quantity,
+            components: components.map((componentKey) => ({
+              key: componentKey,
+              label: COMPONENT_LABELS[componentKey],
+              condition: returnDetails[componentKey] || "ok",
+              photoUrl: damagePhotos[componentKey] || undefined,
+            })),
+          };
+        });
+
+        await generateReturnTakeoffPdf({
+          title: takeoff?.title || "Pickup Return",
+          workType: takeoff?.work_type || "",
+          projectName: projectInfo?.projectName || undefined,
+          etcJobNumber: projectInfo?.etcJobNumber?.toString() || undefined,
+          etcBranch: dbJob?.etc_branch || undefined,
+          etcProjectManager: dbJob?.etc_project_manager || undefined,
+          customerName: projectInfo?.customerName || undefined,
+          customerJobNumber: projectInfo?.customerJobNumber || undefined,
+          projectOwner: projectInfo?.projectOwner || undefined,
+          county: projectInfo?.county || undefined,
+          installDate: takeoff?.install_date || undefined,
+          pickupDate: takeoff?.pickup_date || undefined,
+          customerPM: projectInfo?.customerPM || undefined,
+          assignedTo: takeoff?.assigned_to || undefined,
+          contractedOrAdditional: takeoff?.contracted_or_additional || undefined,
+          items: pdfItems,
+        });
+
+        toast.success("Pickup PDF downloaded successfully");
+        return;
+      }
+
       const response = await fetch(`/api/takeoffs/${takeoffId}/pdf`);
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
@@ -356,7 +483,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
           )}
           <Button size="sm" variant="outline" className="gap-1.5" onClick={handleDownloadPdf} disabled={generatingPdf}>
             <Download className="h-3.5 w-3.5" />
-            {generatingPdf ? "Generating…" : "Download PDF"}
+            {generatingPdf ? "Generating…" : takeoff?.is_pickup ? "Download Pickup PDF" : "Download PDF"}
           </Button>
           {takeoff?.work_order_id ? (
             <>
