@@ -34,6 +34,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { addDays, format } from "date-fns";
+import { parseMaybeLocalDate } from "@/lib/local-date";
 import { User, Mail, Phone, Building, Calendar as CalendarIcon, FileText, Check, ChevronsUpDown, Plus, DollarSign, StickyNote, Save, X } from "lucide-react";
 import { cn, formatPhoneNumber } from "@/lib/utils";
 import { DollarPercentCurrencyInputField } from "@/components/ui/dollar-percent-currency-input-field";
@@ -566,8 +567,8 @@ export const ProjectInfoFields = ({ projectInfo, onChange, contractSigned = fals
 
   const parseDateValue = (value?: string | null) => {
     if (!value) return undefined;
-    const parsed = new Date(`${value}T00:00:00`);
-    return isNaN(parsed.getTime()) ? undefined : parsed;
+    const parsed = parseMaybeLocalDate(value);
+    return parsed && !isNaN(parsed.getTime()) ? parsed : undefined;
   };
 
   const endCalendarDefaultMonth = useMemo(() => {

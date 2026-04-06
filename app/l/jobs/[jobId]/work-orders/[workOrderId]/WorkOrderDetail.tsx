@@ -79,6 +79,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatLocalDateForDisplay } from "@/lib/local-date";
 
 /* ─── Status config ─── */
 
@@ -162,6 +163,7 @@ const formatQuantityValue = (value: number | string | null | undefined) => {
   return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
+const WORK_ORDER_DESCRIPTION_MIN_LENGTH = 40;
 const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
 
 const buildPermanentSignSqftTotals = (takeoffItems: any[]) => {
@@ -538,6 +540,10 @@ const WorkOrderDetail = ({
 
   const handleSave = async ({ redirectOnSuccess = mode === "edit" }: { redirectOnSuccess?: boolean } = {}) => {
     if (!workOrderId) return;
+    if (editDescription.trim().length < WORK_ORDER_DESCRIPTION_MIN_LENGTH) {
+      toast.error(`Description of Work must be at least ${WORK_ORDER_DESCRIPTION_MIN_LENGTH} characters.`);
+      return;
+    }
     if (editDescription.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
       toast.error(`Description of Work must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer.`);
       return;
@@ -1099,6 +1105,7 @@ const WorkOrderDetail = ({
                   <div className="space-y-1.5">
                     <Textarea
                       rows={2}
+                      minLength={WORK_ORDER_DESCRIPTION_MIN_LENGTH}
                       maxLength={WORK_ORDER_DESCRIPTION_MAX_LENGTH}
                       className="text-sm"
                       value={editDescription}
@@ -1106,7 +1113,7 @@ const WorkOrderDetail = ({
                       placeholder="Describe the work that will be performed by the crew..."
                     />
                     <div className="text-[10px] text-muted-foreground text-right">
-                      {editDescription.length}/{WORK_ORDER_DESCRIPTION_MAX_LENGTH}
+                      {editDescription.trim().length}/{WORK_ORDER_DESCRIPTION_MIN_LENGTH} min • {editDescription.length}/{WORK_ORDER_DESCRIPTION_MAX_LENGTH} max
                     </div>
                   </div>
                 ) : (
@@ -1212,7 +1219,11 @@ const WorkOrderDetail = ({
                         <TableCell className="text-xs font-medium">{t.title}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{t.work_type}</TableCell>
                         <TableCell className="text-xs text-center font-mono">{woItems.length}</TableCell>
-                        <TableCell className="text-xs">{t.install_date || "—"}</TableCell>
+                        <TableCell className="text-xs">
+                          {t.install_date
+                            ? formatLocalDateForDisplay(t.install_date, { month: "short", day: "numeric", year: "numeric" })
+                            : "—"}
+                        </TableCell>
                         <TableCell>
                           <Badge className={`text-[10px] ${ts.color}`}>{ts.label}</Badge>
                         </TableCell>
@@ -2214,7 +2225,11 @@ const WorkOrderDetail = ({
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>Type: {takeoff.work_type}</span>
                           <span>Items: {takeoff.item_count}</span>
-                          {takeoff.install_date && <span>Install: {new Date(takeoff.install_date).toLocaleDateString()}</span>}
+                          {takeoff.install_date && (
+                            <span>
+                              Install: {formatLocalDateForDisplay(takeoff.install_date, { month: "short", day: "numeric", year: "numeric" })}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isAlreadyLinked && (

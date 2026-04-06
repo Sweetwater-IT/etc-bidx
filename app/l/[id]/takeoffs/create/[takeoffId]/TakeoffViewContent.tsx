@@ -13,6 +13,7 @@ import { PermanentSignConfiguration } from "@/components/PermanentSignConfigurat
 import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
 import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
 import type { SignMaterial } from "@/utils/signMaterial";
+import { formatLocalDateForDisplay } from "@/lib/local-date";
 
 interface Props {
   jobId: string;
@@ -460,15 +461,27 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</span>
-            <span className="text-sm font-medium">{takeoff.install_date || "—"}</span>
+            <span className="text-sm font-medium">
+              {takeoff.install_date
+                ? formatLocalDateForDisplay(takeoff.install_date, { month: "short", day: "numeric", year: "numeric" })
+                : "—"}
+            </span>
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</span>
-            <span className="text-sm font-medium">{takeoff.pickup_date || "—"}</span>
+            <span className="text-sm font-medium">
+              {takeoff.pickup_date
+                ? formatLocalDateForDisplay(takeoff.pickup_date, { month: "short", day: "numeric", year: "numeric" })
+                : "—"}
+            </span>
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</span>
-            <span className="text-sm font-medium">{takeoff.needed_by_date || "—"}</span>
+            <span className="text-sm font-medium">
+              {takeoff.needed_by_date
+                ? formatLocalDateForDisplay(takeoff.needed_by_date, { month: "short", day: "numeric", year: "numeric" })
+                : "—"}
+            </span>
           </div>
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</span>

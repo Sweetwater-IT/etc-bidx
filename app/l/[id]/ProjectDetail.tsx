@@ -15,6 +15,7 @@ import { EquipmentSummary } from "@/app/l/components/EquipmentSummary";
 import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { DocumentsFormsStep } from "@/app/l/components/DocumentsFormsStep";
 import type { ContractDocument, DocumentCategory } from "@/types/document";
+import { formatLocalDateForDisplay, parseMaybeLocalDate } from "@/lib/local-date";
 
 import {
   Sheet,
@@ -465,8 +466,8 @@ const ProjectDetail = () => {
   const job = dbJob;
 
   // Status calculations
-  const startDate = info.projectStartDate ? new Date(info.projectStartDate) : null;
-  const endDate = info.projectEndDate ? new Date(info.projectEndDate) : null;
+  const startDate = parseMaybeLocalDate(info.projectStartDate);
+  const endDate = parseMaybeLocalDate(info.projectEndDate);
   const today = new Date();
   const totalDays = startDate && endDate ? Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) : 0;
   const elapsedDays = startDate ? Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / 86400000)) : 0;
@@ -693,20 +694,20 @@ const ProjectDetail = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-muted-foreground">Start Date</span>
                   <span className="text-xs font-semibold tabular-nums text-foreground">
-                    {info.projectStartDate ? new Date(info.projectStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    {info.projectStartDate ? formatLocalDateForDisplay(info.projectStartDate, { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-muted-foreground">End Date</span>
                   <span className="text-xs font-semibold tabular-nums text-foreground">
-                    {info.projectEndDate ? new Date(info.projectEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    {info.projectEndDate ? formatLocalDateForDisplay(info.projectEndDate, { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </span>
                 </div>
                 {info.extensionDate && (
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-muted-foreground">Extension Date</span>
                     <span className="text-xs font-semibold tabular-nums text-primary">
-                      {new Date(info.extensionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {formatLocalDateForDisplay(info.extensionDate, { month: "short", day: "numeric", year: "numeric" })}
                     </span>
                   </div>
                 )}
@@ -1043,7 +1044,7 @@ const ManufacturingStatusPanel = ({
                   <td className="px-4 py-2.5 text-center font-mono">{o.item_count}</td>
                   <td className="px-4 py-2.5">
                     {o.submitted_date
-                      ? new Date(o.submitted_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                      ? formatLocalDateForDisplay(o.submitted_date, { month: "short", day: "numeric", year: "numeric" })
                       : "—"}
                   </td>
                   <td className="px-4 py-2.5">
@@ -1213,7 +1214,7 @@ const TakeoffsList = ({ jobId, userEmail }: { jobId: string; userEmail?: string 
                   </td>
                   <td className="px-3 py-1.5">
                     {takeoff.needed_by_date
-                      ? new Date(takeoff.needed_by_date).toLocaleDateString("en-US", {
+                      ? formatLocalDateForDisplay(takeoff.needed_by_date, {
                           month: "short",
                           day: "numeric",
                           year: "numeric",

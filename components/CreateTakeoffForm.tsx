@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { Check, Package, Plus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon, ExternalLink, Loader2 } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
+import { dateToLocalDateString, parseMaybeLocalDate } from "@/lib/local-date";
 import {
   Dialog,
   DialogContent,
@@ -210,13 +211,13 @@ const MPT_ADDITIONAL_ITEM_OPTIONS = [
 
 const parseDateString = (value?: string | null) => {
   if (!value) return undefined;
-  const parsed = new Date(`${value}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  const parsed = parseMaybeLocalDate(value);
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined;
 };
 
 const toDateString = (value?: Date) => {
   if (!value) return "";
-  return format(value, "yyyy-MM-dd");
+  return dateToLocalDateString(value);
 };
 
 const clampNeededByDate = (date?: Date, referenceDateStr?: string) => {

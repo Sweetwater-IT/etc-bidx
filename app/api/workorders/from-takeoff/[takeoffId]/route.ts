@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { fetchSovMastersForEntries, getPrimaryUom, resolveEntryMaster, type SovMasterItemRecord } from '@/lib/server/sov/masterItems';
 
+const WORK_ORDER_DESCRIPTION_MIN_LENGTH = 40;
 const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
 
 type SOVLookupItem = {
@@ -116,6 +117,13 @@ export async function POST(request: NextRequest) {
       pmNotes,
     } = requestBody;
 
+    if (typeof description === 'string' && description.trim().length < WORK_ORDER_DESCRIPTION_MIN_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be at least ${WORK_ORDER_DESCRIPTION_MIN_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
     if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
       return NextResponse.json(
         { error: `Description must be ${WORK_ORDER_DESCRIPTION_MAX_LENGTH} characters or fewer` },
@@ -204,7 +212,7 @@ export async function POST(request: NextRequest) {
         title: title || `PU-${takeoff.title}`,
         status: 'draft',
         notes: notes || takeoff.notes || null,
-        install_date: null,
+        install_date: install_date || takeoff.install_date || null,
         pickup_date: pickup_date || takeoff.pickup_date || null,
         contracted_or_additional: contracted_or_additional || takeoff.contracted_or_additional || 'contracted',
         needed_by_date: takeoff.needed_by_date || null,

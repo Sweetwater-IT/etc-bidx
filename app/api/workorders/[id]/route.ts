@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { normalizeWorkOrderStatusForDb, normalizeWorkOrderStatusForUi } from '@/lib/workOrderStatus';
 
+const WORK_ORDER_DESCRIPTION_MIN_LENGTH = 40;
 const WORK_ORDER_DESCRIPTION_MAX_LENGTH = 256;
 
 export async function GET(
@@ -47,6 +48,13 @@ export async function PATCH(
         : patch.description === null
           ? null
           : undefined;
+
+    if (typeof description === 'string' && description.trim().length < WORK_ORDER_DESCRIPTION_MIN_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be at least ${WORK_ORDER_DESCRIPTION_MIN_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
 
     if (typeof description === 'string' && description.length > WORK_ORDER_DESCRIPTION_MAX_LENGTH) {
       return NextResponse.json(
