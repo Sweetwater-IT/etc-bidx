@@ -11,7 +11,8 @@ export default function JobsLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const hideTitleBlock = pathname === "/jobs/available"
+  const hideTitleBlock =
+    pathname === "/jobs/available" || pathname === "/jobs/active-bids"
 
   return (
     <SidebarProvider

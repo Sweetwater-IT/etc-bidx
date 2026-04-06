@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { ImportSheet } from "@/components/import-sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { IconDownload, IconPlus, IconUpload } from "@tabler/icons-react";
+import { IconDownload, IconPlus, IconUpload, IconX } from "@tabler/icons-react";
 import { format } from "date-fns";
 
 // Map between UI status and database status
@@ -99,8 +99,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
     const [availableJobsSearch, setAvailableJobsSearch] = useState("");
+    const [activeBidsSearch, setActiveBidsSearch] = useState("");
     const [availableJobsImportOpen, setAvailableJobsImportOpen] = useState(false);
     const [availableJobsCalendarOpen, setAvailableJobsCalendarOpen] = useState(false);
+    const [activeBidsCalendarOpen, setActiveBidsCalendarOpen] = useState(false);
 
     const [allActiveBidRowsSelected, setAllActiveBidRowsSelected] = useState<boolean>(false);
     const [selectedActiveBids, setSelectedActiveBids] = useState<ActiveBid[]>([]);
@@ -1019,6 +1021,24 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
         await fetchAvailableJobCounts();
     }, [dateRange, fetchAvailableJobCounts, loadAvailableJobs]);
+
+    const handleRefreshActiveBids = useCallback(async () => {
+        await loadActiveBids();
+        await fetchActiveBidCounts();
+    }, [fetchActiveBidCounts, loadActiveBids]);
+
+    const handleActiveBidsDateSelect = (selectedDate: DateRange | undefined) => {
+        setDateRange(selectedDate);
+        if (!selectedDate || (selectedDate.from && selectedDate.to)) {
+            setActiveBidsCalendarOpen(false);
+        }
+    };
+
+    const handleClearDateRange = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDateRange(undefined);
+    };
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
@@ -2109,7 +2129,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const content = (
-        <div className={`flex flex-1 flex-col ${isAvailableJobs ? "bg-[#F9FAFB]" : ""}`}>
+        <div className={`flex flex-1 flex-col ${isAvailableJobs || isActiveBids ? "bg-[#F9FAFB]" : ""}`}>
             {isAvailableJobs && (
                 <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
                     <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
@@ -2187,12 +2207,46 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     </div>
                 </header>
             )}
+            {isActiveBids && (
+                <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+                    <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+                                <BriefcaseBusiness className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold tracking-tight text-foreground">Bid List</h1>
+                                <p className="text-xs text-muted-foreground">
+                                    {activeBidsTotalCount} active bid{activeBidsTotalCount === 1 ? "" : "s"} in the current view
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 gap-2 bg-background font-semibold shadow-sm"
+                                onClick={handleExportActiveBids}
+                            >
+                                <IconDownload className="h-4 w-4" />
+                                Export
+                            </Button>
+
+                            <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={handleCreateClick}>
+                                <IconPlus className="h-4 w-4" />
+                                Create Active Bid
+                            </Button>
+                        </div>
+                    </div>
+                </header>
+            )}
 
             <div className="@container/main flex flex-1 flex-col gap-2">
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-3">
-                            {!isAvailableJobs && (
+                            {!isAvailableJobs && !isActiveBids && (
                                 <div className="flex items-center justify-between px-4 lg:px-6">
                                     <CardActions
                                         createButtonLabel={createButtonLabel}
@@ -2224,6 +2278,61 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     </Button>
                                 </div>
                             )}
+                            {isActiveBids && (
+                                <div className="px-4 lg:px-6">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Popover open={activeBidsCalendarOpen} onOpenChange={setActiveBidsCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className="min-w-[240px] justify-start text-left font-normal relative bg-card shadow-sm"
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {dateRange?.from ? (
+                                                        dateRange.to ? (
+                                                            <span className="flex items-center justify-between w-full">
+                                                                <span>{format(dateRange.from, "LLL d, y")} - {format(dateRange.to, "LLL d, y")}</span>
+                                                                <span
+                                                                    onClick={handleClearDateRange}
+                                                                    className="ml-2 rounded p-1 text-muted-foreground transition-colors hover:bg-muted"
+                                                                >
+                                                                    <IconX className="h-3 w-3" />
+                                                                </span>
+                                                            </span>
+                                                        ) : (
+                                                            <span>
+                                                                {format(dateRange.from, "LLL d, y")} - {format(new Date(), "LLL d, y")}
+                                                            </span>
+                                                        )
+                                                    ) : (
+                                                        <span>{availableJobsDateLabel}</span>
+                                                    )}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="end">
+                                                <Calendar
+                                                    key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}-active-bids`}
+                                                    initialFocus
+                                                    mode="range"
+                                                    defaultMonth={dateRange?.from}
+                                                    selected={dateRange}
+                                                    onSelect={handleActiveBidsDateSelect}
+                                                    numberOfMonths={2}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 font-semibold shadow-sm"
+                                            onClick={handleRefreshActiveBids}
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -2240,6 +2349,20 @@ export function JobPageContent({ job }: JobPageContentProps) {
                                     placeholder="Search open bids..."
                                     value={availableJobsSearch}
                                     onChange={(e) => setAvailableJobsSearch(e.target.value)}
+                                    className="h-9 border-border bg-card pl-9 shadow-sm"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {isActiveBids && (
+                        <div className="px-4 lg:px-6">
+                            <div className="relative max-w-sm">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search active bids..."
+                                    value={activeBidsSearch}
+                                    onChange={(e) => setActiveBidsSearch(e.target.value)}
                                     className="h-9 border-border bg-card pl-9 shadow-sm"
                                 />
                             </div>
@@ -2328,9 +2451,13 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             isLoading={isTableLoading}
                             columns={columns}
                             variant="job-list"
+                            segmentsVariant="productivity"
                             enableSearch={true}
                             searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
                             searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
+                            searchValue={activeBidsSearch}
+                            onSearchChange={setActiveBidsSearch}
+                            showSearchBar={false}
                             segments={segments}
                             segmentValue={activeSegment}
                             segmentCounts={activeBidCounts}
