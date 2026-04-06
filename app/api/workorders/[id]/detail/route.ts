@@ -199,6 +199,21 @@ export async function GET(
       }));
     }
 
+    if (isPickup && parentWORes.data?.takeoff_id && takeoffs.length > 0) {
+      const { data: parentTakeoff } = await supabase
+        .from("takeoffs_l")
+        .select("install_date")
+        .eq("id", parentWORes.data.takeoff_id)
+        .maybeSingle();
+
+      if (parentTakeoff?.install_date) {
+        takeoffs = takeoffs.map((takeoff) => ({
+          ...takeoff,
+          install_date: parentTakeoff.install_date,
+        }));
+      }
+    }
+
     // Process work order items
     const woItems: WOItem[] = ((woItemsRes.data || []) as WOItem[]).filter((item: any) => Boolean(item.sov_item_id));
 

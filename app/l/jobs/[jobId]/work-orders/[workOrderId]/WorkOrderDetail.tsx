@@ -1113,7 +1113,7 @@ const WorkOrderDetail = ({
                       placeholder="Describe the work that will be performed by the crew..."
                     />
                     <div className="text-[10px] text-muted-foreground text-right">
-                      {editDescription.trim().length}/{WORK_ORDER_DESCRIPTION_MIN_LENGTH} min • {editDescription.length}/{WORK_ORDER_DESCRIPTION_MAX_LENGTH} max
+                      40 character minimum
                     </div>
                   </div>
                 ) : (
