@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 const DAMAGE_PHOTO_KEY = '__damage_photos';
+const PICKUP_CONDITION_MAP: Record<string, "good" | "serviceable" | "damaged" | "missing" | null> = {
+  ok: "good",
+  damaged: "damaged",
+  missing: "missing",
+  on_job: null,
+};
 
 const flattenDamagePhotos = (damagePhotos: unknown): string[] => {
   if (!damagePhotos || typeof damagePhotos !== 'object') return [];
@@ -15,6 +21,13 @@ const flattenDamagePhotos = (damagePhotos: unknown): string[] => {
       return [];
     })
     .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+};
+
+const mapPickupConditionForDb = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  return Object.prototype.hasOwnProperty.call(PICKUP_CONDITION_MAP, value)
+    ? PICKUP_CONDITION_MAP[value]
+    : undefined;
 };
 
 export async function PUT(
@@ -77,9 +90,13 @@ export async function PUT(
 
       // Handle individual condition updates
       if (return_details && typeof return_details === 'object') {
-        if (return_details.sign !== undefined) updateData.sign_condition = return_details.sign;
-        if (return_details.structure !== undefined) updateData.structure_condition = return_details.structure;
-        if (return_details.lights !== undefined) updateData.light_condition = return_details.lights;
+        const signCondition = mapPickupConditionForDb(return_details.sign);
+        const structureCondition = mapPickupConditionForDb(return_details.structure);
+        const lightCondition = mapPickupConditionForDb(return_details.lights);
+
+        if (signCondition !== undefined) updateData.sign_condition = signCondition;
+        if (structureCondition !== undefined) updateData.structure_condition = structureCondition;
+        if (lightCondition !== undefined) updateData.light_condition = lightCondition;
       }
 
       console.log('🔍 [ITEM UPDATE] Prepared update data for pickup item:', {
