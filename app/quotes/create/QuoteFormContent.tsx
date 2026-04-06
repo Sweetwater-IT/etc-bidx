@@ -412,8 +412,8 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           }
         }
 
-        router.push('/quotes')
         toast.success("Quote created successfully!");
+        router.push(`/quotes/view/${data.data.id}`);
       }
 
     } catch (err) {
