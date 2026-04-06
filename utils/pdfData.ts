@@ -353,6 +353,37 @@ export async function getBillingPacketData(workOrderId: string) {
   }
 
   const job = workOrder.jobs_l;
+  let resolvedInstallDate = workOrder.install_date || '';
+  let resolvedPickupDate = workOrder.pickup_date || '';
+
+  if (workOrder.takeoff_id) {
+    const { data: linkedTakeoff } = await supabase
+      .from('takeoffs_l')
+      .select('id, install_date, pickup_date')
+      .eq('id', workOrder.takeoff_id)
+      .maybeSingle();
+
+    resolvedInstallDate = linkedTakeoff?.install_date || resolvedInstallDate;
+    resolvedPickupDate = linkedTakeoff?.pickup_date || resolvedPickupDate;
+  }
+
+  if (workOrder.is_pickup && workOrder.parent_work_order_id) {
+    const { data: parentWorkOrder } = await supabase
+      .from('work_orders_l')
+      .select('takeoff_id')
+      .eq('id', workOrder.parent_work_order_id)
+      .maybeSingle();
+
+    if (parentWorkOrder?.takeoff_id) {
+      const { data: parentTakeoff } = await supabase
+        .from('takeoffs_l')
+        .select('install_date')
+        .eq('id', parentWorkOrder.takeoff_id)
+        .maybeSingle();
+
+      resolvedInstallDate = parentTakeoff?.install_date || resolvedInstallDate;
+    }
+  }
 
   // Get work order items
   const { data: woItems, error: itemsError } = await supabase
@@ -392,8 +423,8 @@ export async function getBillingPacketData(workOrderId: string) {
     etcBranch: job?.etc_branch || '',
     etcProjectManager: job?.etc_project_manager || '',
     primaryTakeoffId: workOrder.takeoff_id || '',
-    installDate: workOrder.install_date || '',
-    pickupDate: workOrder.pickup_date || '',
+    installDate: resolvedInstallDate,
+    pickupDate: resolvedPickupDate,
     items,
     crewNotes: workOrder.crew_notes || '',
     customerNotOnSite: workOrder.customer_not_on_site || false,
