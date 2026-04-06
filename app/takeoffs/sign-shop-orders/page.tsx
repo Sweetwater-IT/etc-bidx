@@ -591,14 +591,16 @@ export default function SignOrderPage() {
 
               <SectionCards data={summaryCards} variant="productivity" />
 
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search sign shop orders..."
-                  value={signShopSearch}
-                  onChange={(e) => setSignShopSearch(e.target.value)}
-                  className="h-9 border-border bg-card pl-9 shadow-sm"
-                />
+              <div className="px-4 lg:px-6">
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search sign shop orders..."
+                    value={signShopSearch}
+                    onChange={(e) => setSignShopSearch(e.target.value)}
+                    className="h-9 border-border bg-card pl-9 shadow-sm"
+                  />
+                </div>
               </div>
 
               <DataTable<SignOrderView>

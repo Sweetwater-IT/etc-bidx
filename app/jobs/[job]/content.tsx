@@ -2360,7 +2360,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
 
                     <SectionCards
                         data={cardData}
-                        variant={isAvailableJobs ? "productivity" : "default"}
+                        variant={isAvailableJobs || isActiveBids ? "productivity" : "default"}
                     />
 
                     {isAvailableJobs && (
