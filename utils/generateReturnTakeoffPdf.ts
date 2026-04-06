@@ -97,15 +97,6 @@ function drawProjectFooter(
     return line || `${label}: —`;
   };
 
-  doc.setDrawColor(210);
-  doc.setLineWidth(0.2);
-  doc.rect(footerX, footerY, footerW, footerH, "S");
-
-  for (let i = 1; i < footerItems.length; i++) {
-    const x = footerX + colW * i;
-    doc.line(x, footerY, x, footerY + footerH);
-  }
-
   footerItems.forEach((item, index) => {
     const x = footerX + colW * index + 1;
     doc.setFont("helvetica", "normal");
