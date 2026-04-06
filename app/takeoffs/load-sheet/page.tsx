@@ -1,7 +1,6 @@
 "use client";
 
 import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
@@ -620,17 +619,6 @@ export default function SignOrderPage() {
     return `Jan 1, ${today.getFullYear()} - ${format(today, "LLL d, y")}`;
   }, [dateRange]);
 
-  const summaryCards = useMemo(
-    () => [
-      { title: "Total Orders", value: String(branchCounts.all || 0) },
-      { title: "Hatfield Orders", value: String(branchCounts.hatfield || 0) },
-      { title: "Turbotville Orders", value: String(branchCounts.turbotville || 0) },
-      { title: "Bedford Orders", value: String(branchCounts.bedford || 0) },
-      { title: "Archived Orders", value: String(branchCounts.archived || 0) },
-    ],
-    [branchCounts]
-  );
-
   return (
     <>
       <ConfirmArchiveDialog
@@ -715,9 +703,6 @@ export default function SignOrderPage() {
                 </Button>
               </div>
             </div>
-
-            <SectionCards data={summaryCards} variant="productivity" />
-
             <div className="px-4 lg:px-6">
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

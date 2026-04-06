@@ -2,21 +2,27 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
 import { FilterOption } from "@/components/table-controls";
 import { toast } from "sonner";
-import { IconPlus } from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
+import { IconPlus, IconX } from "@tabler/icons-react";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
-import { SectionCards } from "@/components/section-cards";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { Factory, RefreshCw, Search, Calendar as CalendarIcon } from "lucide-react";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
@@ -30,7 +36,7 @@ const SIGN_ORDER_COLUMNS = [
   { key: "contract_number", title: "Contract Number" },
   { key: "job_number", title: "Job Number" },
   { key: "shop_status", title: "Build Status" },
-  { key: 'created_at', title: 'Created At'}
+  { key: "created_at", title: "Created At" }
 ];
 
 const SEGMENTS = [
@@ -53,34 +59,24 @@ export default function SignOrderPage() {
     "in-process": 0,
     "on-order": 0,
     complete: 0,
+    archived: 0,
   });
-
-  // Pagination state
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Sorting state
   const [sortBy, setSortBy] = useState<string | undefined>("created_at");
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Filtering state
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
-
-  // Selected rows state
   const [selectedRows, setSelectedRows] = useState<SignOrderView[]>([]);
   const [allRowsSelected, setAllRowsSelected] = useState<boolean>(false);
-
-  // Archive/Delete dialog states
   const [showArchiveDialog, setShowArchiveDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
-
-  // Reference for table row selection reset
+  const [signShopSearch, setSignShopSearch] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const tableRef = useRef<{ resetRowSelection: () => void }>(null);
-
-  // Reference data for dropdowns and filters
   const [referenceData, setReferenceData] = useState<{
     customers: { id: number; display_name: string }[];
     requestors: string[];
@@ -90,133 +86,119 @@ export default function SignOrderPage() {
     requestors: [],
     assignees: []
   });
-
-  // Define filter options
   const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
-
   const { startLoading, stopLoading } = useLoading();
-
   const { customers, getCustomers } = useCustomers();
 
   useEffect(() => {
     getCustomers();
-  }, [getCustomers])
+  }, [getCustomers]);
 
-  // Fetch reference data for filters
   useEffect(() => {
     const fetchFilterData = async () => {
       try {
-
-        // Get unique requestors and assignees from sign orders
-        const ordersResponse = await fetch('/api/sign-shop-orders?page=1&limit=1000');
+        const ordersResponse = await fetch("/api/sign-shop-orders?page=1&limit=1000");
         const ordersData = await ordersResponse.json();
-        const users = await fetchReferenceData('users');
-        
+        const users = await fetchReferenceData("users");
+
         let uniqueAssignees: string[] = [];
-        
         if (ordersData.success && ordersData.orders) {
           uniqueAssignees = [...new Set(ordersData.orders.map((order: any) => order.assigned_to).filter(Boolean))] as string[];
         }
 
         setReferenceData({
-          customers: customers.filter(c => !!c.id && !!c.displayName).map(c => ({id: c.id, display_name: c.displayName })),
+          customers: customers.filter(c => !!c.id && !!c.displayName).map(c => ({ id: c.id, display_name: c.displayName })),
           requestors: users.map(u => u.name),
           assignees: uniqueAssignees
         });
       } catch (error) {
-        console.error('Error fetching reference data:', error);
+        console.error("Error fetching reference data:", error);
       }
     };
 
     fetchFilterData();
   }, [customers]);
 
-  // Initialize filter options when reference data is loaded
   useEffect(() => {
     const options: FilterOption[] = [
       {
-        label: 'Customer',
-        field: 'customer',
+        label: "Customer",
+        field: "customer",
         options: referenceData.customers.map(customer => ({
           label: customer.display_name,
           value: customer.display_name
         }))
       },
       {
-        label: 'Requestor',
-        field: 'requestor',
+        label: "Requestor",
+        field: "requestor",
         options: referenceData.requestors.map(requestor => ({
           label: requestor,
           value: requestor
         }))
       },
       {
-        label: 'Branch',
-        field: 'branch',
+        label: "Branch",
+        field: "branch",
         options: [
-          { label: 'Hatfield', value: 'hatfield' },
-          { label: 'Turbotville', value: 'turbotville' },
-          { label: 'Bedford', value: 'bedford' }
+          { label: "Hatfield", value: "hatfield" },
+          { label: "Turbotville", value: "turbotville" },
+          { label: "Bedford", value: "bedford" }
         ]
       },
       {
-        label: 'Shop Status',
-        field: 'shop_status',
+        label: "Shop Status",
+        field: "shop_status",
         options: [
-          { label: 'Not Started', value: 'not-started' },
-          { label: 'In Progress', value: 'in-progress' },
-          { label: 'Complete', value: 'complete' },
-          { label: 'On Hold', value: 'on-hold' }
+          { label: "Not Started", value: "not-started" },
+          { label: "In Process", value: "in-process" },
+          { label: "On Order", value: "on-order" },
+          { label: "Complete", value: "complete" },
+          { label: "On Hold", value: "on-hold" }
         ]
       },
       {
-        label: 'Status',
-        field: 'status',
-        options: [
-          { label: 'Draft', value: 'DRAFT' },
-          { label: 'Submitted', value: 'SUBMITTED' },
-        ]
-      },
-      {
-        label: 'Assigned To',
-        field: 'assigned_to',
+        label: "Assigned To",
+        field: "assigned_to",
         options: referenceData.assignees.map(assignee => ({
           label: assignee,
           value: assignee
         }))
       },
       {
-        label: 'Order Type',
-        field: 'order_type',
+        label: "Order Type",
+        field: "order_type",
         options: [
-          { label: 'Rental', value: 'R' },
-          { label: 'Sale', value: 'S' },
-          { label: 'Permanent Signs', value: 'P' },
-          { label: 'Multiple', value: 'M' }
+          { label: "Rental", value: "R" },
+          { label: "Sale", value: "S" },
+          { label: "Permanent Signs", value: "P" },
+          { label: "Multiple", value: "M" }
         ]
       }
     ];
     setFilterOptions(options);
   }, [referenceData]);
 
-  // Fetch quotes with enhanced parameters
+  const buildDateParams = () => {
+    const params: { startDate?: string; endDate?: string } = {};
+    if (dateRange?.from) params.startDate = dateRange.from.toISOString().split("T")[0];
+    if (dateRange?.to) params.endDate = dateRange.to.toISOString().split("T")[0];
+    return params;
+  };
+
   const fetchQuotes = useCallback(async () => {
     setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
-
-      // Add pagination
       params.append("page", (pageIndex + 1).toString());
       params.append("limit", pageSize.toString());
 
-      // Add sorting
       if (sortBy) {
         params.append("orderBy", sortBy);
-        params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
+        params.append("ascending", sortOrder === "asc" ? "true" : "false");
       }
 
-      // Add shop_status segment filter
       if (activeSegment === "archived") {
         params.append("archived", "true");
         if (Object.keys(activeFilters).length > 0) {
@@ -228,6 +210,10 @@ export default function SignOrderPage() {
         params.append("filters", JSON.stringify(activeFilters));
       }
 
+      const dateParams = buildDateParams();
+      if (dateParams.startDate) params.append("startDate", dateParams.startDate);
+      if (dateParams.endDate) params.append("endDate", dateParams.endDate);
+
       const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
       const data = await response.json();
 
@@ -235,13 +221,13 @@ export default function SignOrderPage() {
         if (data.orders && Array.isArray(data.orders)) {
           const processedOrders = data.orders.map((order: any) => ({
             ...order,
-            customer: order.customer || '-',
-            branch: order.branch || '-',
-            assigned_to: order.assigned_to || 'Unassigned',
-            type: order.type || '-',
-            shop_status: order.shop_status || '',
-            order_type: order.order_type || '-',
-            order_number: order.order_number == null ? '' : order.order_number,
+            customer: order.customer || "-",
+            branch: order.branch || "-",
+            assigned_to: order.assigned_to || "Unassigned",
+            type: order.type || "-",
+            shop_status: order.shop_status || "",
+            order_type: order.order_type || "-",
+            order_number: order.order_number == null ? "" : order.order_number,
           }));
 
           setQuotes(processedOrders);
@@ -252,58 +238,94 @@ export default function SignOrderPage() {
         setTotalCount(data.pagination?.total || 0);
         setPageCount(data.pagination?.pages || 0);
       } else {
-        toast.error("Failed to load sign orders");
+        toast.error("Failed to load sign shop orders");
       }
     } catch (error) {
-      toast.error("Failed to load sign orders");
+      toast.error("Failed to load sign shop orders");
     } finally {
       setIsTableLoading(false);
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to]);
 
-  // Fetch counts for each segment (shop_status)
   const fetchCounts = useCallback(async () => {
     try {
-      // Get all counts for each shop_status
-      const statuses = ["not-started", "in-process", "on-order", "complete"];
-      const counts: Record<string, number> = { all: 0, "not-started": 0, "in-process": 0, "on-order": 0, complete: 0, archived: 0 };
+      const countParams = new URLSearchParams();
+      countParams.append("counts", "true");
+      const dateParams = buildDateParams();
+      if (dateParams.startDate) countParams.append("startDate", dateParams.startDate);
+      if (dateParams.endDate) countParams.append("endDate", dateParams.endDate);
 
-      // Fetch count for all (non-archived)
-      const allRes = await fetch(`/api/sign-shop-orders?counts=true`);
-      const allData = await allRes.json();
-      counts.all = allData.counts?.all || 0;
-
-      // Fetch count for each shop_status (non-archived)
-      for (const status of statuses) {
-        const res = await fetch(`/api/sign-shop-orders?counts=true&filters=${encodeURIComponent(JSON.stringify({ shop_status: [status] }))}`);
-        const d = await res.json();
-        counts[status] = d.counts?.[status] || 0;
+      const response = await fetch(`/api/sign-shop-orders?${countParams.toString()}`);
+      const data = await response.json();
+      if (data.success) {
+        setSegmentCounts({
+          all: data.counts?.all || 0,
+          "not-started": data.counts?.["not-started"] || 0,
+          "in-process": data.counts?.["in-process"] || 0,
+          "on-order": data.counts?.["on-order"] || 0,
+          complete: data.counts?.complete || 0,
+          archived: data.counts?.archived || 0,
+        });
       }
-
-      // Fetch count for archived
-      const archivedRes = await fetch(`/api/sign-shop-orders?counts=true&archived=true`);
-      const archivedData = await archivedRes.json();
-      counts.archived = archivedData.counts?.archived || archivedData.counts?.all || 0;
-
-      setSegmentCounts(counts as { all: number; "not-started": number; "in-process": number; "on-order": number; complete: number; archived: number });
     } catch (error) {
       console.error("Error fetching segment counts:", error);
     }
-  }, []);
+  }, [dateRange?.from, dateRange?.to]);
 
-  // Handle segment change
   const handleSegmentChange = useCallback((value: string) => {
     setActiveSegment(value);
     setPageIndex(0);
   }, []);
 
-  // Handle filter change
   const handleFilterChange = useCallback((filters: Record<string, string[]>) => {
     setActiveFilters(filters);
     setPageIndex(0);
   }, []);
 
-  // Archive selected sign orders
+  const fetchAllFilteredOrders = async (): Promise<SignOrderView[]> => {
+    const params = new URLSearchParams();
+    params.append("page", "1");
+    params.append("limit", totalCount.toString() || "10000");
+
+    let filters = { ...activeFilters };
+    if (activeSegment === "archived") {
+      params.append("archived", "true");
+    } else if (activeSegment !== "all") {
+      filters = { ...filters, shop_status: [activeSegment] };
+    }
+
+    if (Object.keys(filters).length > 0) {
+      params.append("filters", JSON.stringify(filters));
+    }
+
+    if (sortBy) {
+      params.append("orderBy", sortBy);
+      params.append("ascending", sortOrder === "asc" ? "true" : "false");
+    }
+
+    const dateParams = buildDateParams();
+    if (dateParams.startDate) params.append("startDate", dateParams.startDate);
+    if (dateParams.endDate) params.append("endDate", dateParams.endDate);
+
+    const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
+    const data = await response.json();
+
+    if (data.success && data.orders) {
+      return data.orders.map((order: any) => ({
+        ...order,
+        customer: order.customer || "-",
+        branch: order.branch || "-",
+        assigned_to: order.assigned_to || "Unassigned",
+        type: order.type || "-",
+        shop_status: order.shop_status || "",
+        order_type: order.order_type || "-",
+        order_number: order.order_number == null ? "" : order.order_number,
+      }));
+    }
+
+    return [];
+  };
+
   const handleArchiveSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
@@ -315,13 +337,13 @@ export default function SignOrderPage() {
         ordersToArchive = rows.filter(order => !order.archived);
       }
       if (ordersToArchive.length === 0) {
-        toast.error('No orders to archive. All selected orders are already archived.');
+        toast.error("No orders to archive. All selected orders are already archived.");
         return false;
       }
       const ids = ordersToArchive.map(order => order.id);
-      const response = await fetch('/api/sign-orders/archive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/sign-orders/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
       });
       const result = await response.json();
@@ -329,22 +351,18 @@ export default function SignOrderPage() {
         toast.success(`Successfully archived ${ordersToArchive.length} sign order(s)`);
         await fetchQuotes();
         await fetchCounts();
-        if (tableRef.current) {
-          tableRef.current.resetRowSelection();
-        }
+        tableRef.current?.resetRowSelection();
         return true;
-      } else {
-        throw new Error(result.message || 'Failed to archive sign orders');
       }
+      throw new Error(result.message || "Failed to archive sign orders");
     } catch (error) {
-      toast.error('Failed to archive sign orders. Please try again.');
+      toast.error("Failed to archive sign orders. Please try again.");
       return false;
     } finally {
       stopLoading();
     }
-  }, [allRowsSelected, fetchQuotes, fetchCounts, startLoading, stopLoading]);
+  }, [allRowsSelected, fetchCounts, fetchQuotes, startLoading, stopLoading, totalCount, activeFilters, activeSegment, sortBy, sortOrder, dateRange?.from, dateRange?.to]);
 
-  // Delete selected sign orders
   const handleDeleteSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
@@ -356,13 +374,13 @@ export default function SignOrderPage() {
         ordersToDelete = rows.filter(order => order.archived);
       }
       if (ordersToDelete.length === 0) {
-        toast.error('No archived sign orders found to delete.');
+        toast.error("No archived sign orders found to delete.");
         return false;
       }
       const ids = ordersToDelete.map(order => order.id);
-      const response = await fetch('/api/sign-orders/archive', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/sign-orders/archive", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
       });
       const result = await response.json();
@@ -370,129 +388,112 @@ export default function SignOrderPage() {
         toast.success(`Successfully deleted ${ordersToDelete.length} sign order(s)`);
         await fetchQuotes();
         await fetchCounts();
-        if (tableRef.current) {
-          tableRef.current.resetRowSelection();
-        }
+        tableRef.current?.resetRowSelection();
         return true;
-      } else {
-        throw new Error(result.message || 'Failed to delete sign orders');
       }
+      throw new Error(result.message || "Failed to delete sign orders");
     } catch (error) {
-      toast.error('Failed to delete sign orders. Please try again.');
+      toast.error("Failed to delete sign orders. Please try again.");
       return false;
     } finally {
       stopLoading();
     }
-  }, [allRowsSelected, fetchQuotes, fetchCounts, startLoading, stopLoading]);
+  }, [allRowsSelected, fetchCounts, fetchQuotes, startLoading, stopLoading, totalCount, activeFilters, activeSegment, sortBy, sortOrder, dateRange?.from, dateRange?.to]);
 
-  // Fetch all filtered orders (for bulk operations)
-  const fetchAllFilteredOrders = async (): Promise<SignOrderView[]> => {
-    const params = new URLSearchParams();
-    params.append("page", "1");
-    params.append("limit", totalCount.toString() || "10000");
-    // Apply current filters and segment
-    let filters = { ...activeFilters };
-    if (activeSegment !== "all") {
-      filters = { ...filters, shop_status: [activeSegment] };
-    }
-    if (Object.keys(filters).length > 0) {
-      params.append("filters", JSON.stringify(filters));
-    }
-    // Apply current sorting
-    if (sortBy) {
-      params.append("orderBy", sortBy);
-      params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
-    }
-    const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
-    const data = await response.json();
-    if (data.success && data.orders) {
-      return data.orders.map((order: any) => ({
-        ...order,
-        customer: order.customer || '-',
-        branch: order.branch || '-',
-        assigned_to: order.assigned_to || 'Unassigned',
-        type: order.type || '-',
-        shop_status: order.shop_status === 'not-started' ? 'Not Started' :
-                    order.shop_status === 'in-process' ? 'In Process' :
-                    order.shop_status === 'on-order' ? 'On Order' :
-                    order.shop_status === 'complete' ? 'Complete' :
-                    order.shop_status || '',
-        order_type: order.order_type || '-',
-        order_number: order.order_number == null ? '' : order.order_number,
-      }));
-    }
-    return [];
-  };
-
-  // Initiate archive dialog
   const initiateArchiveOrders = useCallback((selectedOrders: SignOrderView[]) => {
     setSelectedRows(selectedOrders);
     setShowArchiveDialog(true);
   }, []);
 
-  // Initiate delete dialog
   const initiateDeleteOrders = useCallback((selectedOrders: SignOrderView[]) => {
     setSelectedRows(selectedOrders);
     setShowDeleteDialog(true);
   }, []);
 
-  // Handle archive confirmation
   const handleArchive = useCallback(async () => {
     const success = await handleArchiveSelected(selectedRows);
-    if (success) {
-      setShowArchiveDialog(false);
-    }
+    if (success) setShowArchiveDialog(false);
   }, [selectedRows, handleArchiveSelected]);
 
-  // Handle delete confirmation
   const handleDelete = useCallback(async () => {
     const success = await handleDeleteSelected(selectedRows);
-    if (success) {
-      setShowDeleteDialog(false);
-    }
+    if (success) setShowDeleteDialog(false);
   }, [selectedRows, handleDeleteSelected]);
 
-  // Load data when dependencies change
   useEffect(() => {
     fetchQuotes();
   }, [fetchQuotes]);
 
-  // Load counts when segment changes
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts, activeSegment]);
 
   const handleRowClick = useCallback((row: SignOrderView) => {
-    // Navigate to the sign order detail page when clicking a row
-    router.push(`/takeoffs/sign-order/${row.id}`)
+    router.push(`/takeoffs/sign-order/${row.id}`);
   }, [router]);
 
-  // Handle view details action
   const handleViewDetails = useCallback((row: SignOrderView) => {
     router.push(`/takeoffs/sign-order/${row.id}`);
   }, [router]);
 
-  // Segments are static, counts handled by DataTable
-
   const handleUnarchiveSignOrder = useCallback(async (item: SignOrderView) => {
     try {
       startLoading();
-      const response = await fetch('/api/sign-orders/unarchive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/sign-orders/unarchive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [item.id] }),
       });
-      if (!response.ok) throw new Error('Failed to unarchive sign order');
-      toast.success('Sign order unarchived successfully');
+      if (!response.ok) throw new Error("Failed to unarchive sign order");
+      toast.success("Sign order unarchived successfully");
       await fetchQuotes();
       await fetchCounts();
     } catch (error) {
-      console.error('Error unarchiving sign order:', error);
-      toast.error('Failed to unarchive sign order');
+      toast.error("Failed to unarchive sign order");
     } finally {
       stopLoading();
     }
-  }, [fetchQuotes, fetchCounts, startLoading, stopLoading]);
+  }, [fetchCounts, fetchQuotes, startLoading, stopLoading]);
+
+  const handleDateSelect = (selectedDate: DateRange | undefined) => {
+    setDateRange(selectedDate);
+    if (!selectedDate || (selectedDate.from && selectedDate.to)) {
+      setCalendarOpen(false);
+    }
+  };
+
+  const handleClearDateRange = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDateRange(undefined);
+  };
+
+  const handleRefresh = useCallback(async () => {
+    await fetchCounts();
+    await fetchQuotes();
+  }, [fetchCounts, fetchQuotes]);
+
+  const dateLabel = useMemo(() => {
+    const today = new Date();
+    if (dateRange?.from && dateRange?.to) {
+      return `${format(dateRange.from, "LLL d, y")} - ${format(dateRange.to, "LLL d, y")}`;
+    }
+    if (dateRange?.from) {
+      return `${format(dateRange.from, "LLL d, y")} - ${format(today, "LLL d, y")}`;
+    }
+    return `Jan 1, ${today.getFullYear()} - ${format(today, "LLL d, y")}`;
+  }, [dateRange]);
+
+  const summaryCards = useMemo(
+    () => [
+      { title: "Total Orders", value: String(segmentCounts.all || 0) },
+      { title: "Not Started", value: String(segmentCounts["not-started"] || 0) },
+      { title: "In Process", value: String(segmentCounts["in-process"] || 0) },
+      { title: "On Order", value: String(segmentCounts["on-order"] || 0) },
+      { title: "Complete", value: String(segmentCounts.complete || 0) },
+    ],
+    [segmentCounts]
+  );
 
   return (
     <SidebarProvider
@@ -505,23 +506,8 @@ export default function SignOrderPage() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader>
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold mt-2 ml-0">Sign Shop Orders</h1>
-            <div className="flex gap-3">
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => router.push('/takeoffs/sign-order')}
-                  size="sm"
-                >
-                  <IconPlus className="h-4 w-4 -mr-[3px] mt-[2px]" />
-                  Create sign order
-                </Button>
-              </div>
-            </div>
-          </div>
-        </SiteHeader>
-        
+        <SiteHeader showTitleBlock={false} />
+
         <ConfirmArchiveDialog
           isOpen={showArchiveDialog}
           onClose={() => setShowArchiveDialog(false)}
@@ -529,7 +515,7 @@ export default function SignOrderPage() {
           itemCount={allRowsSelected ? totalCount : selectedRows.length}
           itemType="sign order"
         />
-        
+
         <ConfirmDeleteDialog
           isOpen={showDeleteDialog}
           onClose={() => setShowDeleteDialog(false)}
@@ -537,21 +523,90 @@ export default function SignOrderPage() {
           itemCount={allRowsSelected ? totalCount : selectedRows.length}
           itemType="sign order"
         />
-        
-        <div className="flex flex-1 flex-col">
+
+        <div className="flex flex-1 flex-col bg-[#F9FAFB]">
+          <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+            <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+                  <Factory className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-foreground">Sign Shop Orders</h1>
+                  <p className="text-xs text-muted-foreground">
+                    {totalCount} sign shop order{totalCount === 1 ? "" : "s"} in the current view
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={() => router.push("/takeoffs/sign-order")}>
+                  <IconPlus className="h-4 w-4" />
+                  Create Sign Order
+                </Button>
+              </div>
+            </div>
+          </header>
+
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-6 md:gap-6 md:py-12 px-4 md:px-6">
-              {/* Static summary cards for sign shop orders */}
-              <SectionCards data={[
-                { title: "Orders not started", value: "12" },
-                { title: "Orders due in next 7 days", value: "7" },
-                { title: "Sq. ft due in next 7 days", value: "1,250" },
-              ]} />
+            <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">
+              <div className="flex items-center justify-end gap-2">
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="min-w-[240px] justify-start text-left font-normal relative bg-card shadow-sm">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <span className="flex items-center justify-between w-full">
+                            <span>{format(dateRange.from, "LLL d, y")} - {format(dateRange.to, "LLL d, y")}</span>
+                            <span onClick={handleClearDateRange} className="ml-2 rounded p-1 text-muted-foreground transition-colors hover:bg-muted">
+                              <IconX className="h-3 w-3" />
+                            </span>
+                          </span>
+                        ) : (
+                          <span>{format(dateRange.from, "LLL d, y")} - {format(new Date(), "LLL d, y")}</span>
+                        )
+                      ) : (
+                        <span>{dateLabel}</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}-sign-shop-orders`}
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={handleDateSelect}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Button variant="outline" size="sm" className="gap-2 font-semibold shadow-sm" onClick={handleRefresh}>
+                  <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+
+              <SectionCards data={summaryCards} variant="productivity" />
+
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search sign shop orders..."
+                  value={signShopSearch}
+                  onChange={(e) => setSignShopSearch(e.target.value)}
+                  className="h-9 border-border bg-card pl-9 shadow-sm"
+                />
+              </div>
+
               <DataTable<SignOrderView>
                 data={quotes}
                 isLoading={isTableLoading}
                 columns={SIGN_ORDER_COLUMNS}
                 variant="job-list"
+                segmentsVariant="productivity"
                 segments={SEGMENTS}
                 segmentValue={activeSegment}
                 segmentCounts={segmentCounts}
@@ -559,36 +614,36 @@ export default function SignOrderPage() {
                 onRowClick={handleRowClick}
                 stickyLastColumn
                 onViewDetails={handleViewDetails}
-                // Selection props
                 onArchiveSelected={initiateArchiveOrders}
                 onDeleteSelected={initiateDeleteOrders}
                 tableRef={tableRef}
                 setSelectedRows={setSelectedRows}
                 allRowsSelected={allRowsSelected}
                 onAllRowsSelectedChange={setAllRowsSelected}
-                // Pagination props
                 pageCount={pageCount}
                 pageIndex={pageIndex}
                 pageSize={pageSize}
                 onPageChange={setPageIndex}
                 onPageSizeChange={setPageSize}
-                // Sorting props
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSortChange={(column, order) => {
                   setSortBy(column);
                   setSortOrder(order);
                 }}
-                // Filter props
                 filterOptions={filterOptions}
                 onFilterChange={handleFilterChange}
                 activeFilters={activeFilters}
                 totalCount={totalCount}
-                // Additional filter props for sign orders
                 hideDropdown={true}
                 showFilters={showFilters}
                 setShowFilters={setShowFilters}
                 onUnarchive={handleUnarchiveSignOrder}
+                enableSearch
+                searchableColumns={["order_number", "requestor", "branch", "customer", "order_date", "need_date", "order_type", "assigned_to", "contract_number", "job_number", "shop_status", "created_at"]}
+                searchValue={signShopSearch}
+                onSearchChange={setSignShopSearch}
+                showSearchBar={false}
               />
             </div>
           </div>

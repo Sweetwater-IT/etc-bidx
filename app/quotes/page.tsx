@@ -2,7 +2,6 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
-import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -184,17 +183,6 @@ export default function QuotesPage() {
     router.push(`/quotes/view/${quote.id}`);
   };
 
-  const summaryCards = useMemo(
-    () => [
-      { title: "Total Quotes", value: String(quoteCounts.all || 0) },
-      { title: "Napoleon Quotes", value: String(quoteCounts.Napoleon || 0) },
-      { title: "Eric Quotes", value: String(quoteCounts.Eric || 0) },
-      { title: "Rad Quotes", value: String(quoteCounts.Rad || 0) },
-      { title: "Ken Quotes", value: String(quoteCounts.Ken || 0) },
-    ],
-    [quoteCounts]
-  );
-
   const dateLabel = useMemo(() => {
     const today = new Date();
     if (dateRange?.from && dateRange?.to) {
@@ -284,9 +272,6 @@ export default function QuotesPage() {
                   </Button>
                 </div>
               </div>
-
-              <SectionCards data={summaryCards} variant="productivity" />
-
               <div className="px-4 lg:px-6">
                 <div className="relative max-w-sm">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
