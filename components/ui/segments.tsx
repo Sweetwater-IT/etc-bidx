@@ -10,7 +10,7 @@ type SegmentsProps = {
   onChange?: (value: string) => void
   value?: string
   counts?: Record<string, number>
-  variant?: "default" | "job-list"
+  variant?: "default" | "job-list" | "productivity"
 }
 
 export function Segments({ segments, onChange, value, counts, variant = "default" }: SegmentsProps) {
@@ -32,7 +32,8 @@ export function Segments({ segments, onChange, value, counts, variant = "default
     <div
       className={cn(
         "inline-flex rounded-lg border p-1",
-        variant === "job-list" && "items-center gap-1 rounded-md bg-card p-0.5"
+        variant === "job-list" && "items-center gap-1 rounded-md bg-card p-0.5",
+        variant === "productivity" && "items-center gap-1 rounded-lg border bg-card p-0.5"
       )}
     >
       {segments.map((segment) => (
@@ -42,7 +43,11 @@ export function Segments({ segments, onChange, value, counts, variant = "default
           size="sm"
           className={cn(
             "rounded-md",
-            variant === "job-list"
+            variant === "productivity"
+              ? activeSegment === segment.value
+                ? "border border-border bg-card px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-foreground shadow-sm"
+                : "border border-transparent px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+              : variant === "job-list"
               ? activeSegment === segment.value
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -52,7 +57,9 @@ export function Segments({ segments, onChange, value, counts, variant = "default
           )}
           onClick={() => handleSegmentChange(segment.value)}
         >
-          {segment.label} ({counts?.[segment.value] || 0})
+          {variant === "productivity"
+            ? `${segment.label} (${counts?.[segment.value] || 0})`
+            : `${segment.label} (${counts?.[segment.value] || 0})`}
         </Button>
       ))}
     </div>

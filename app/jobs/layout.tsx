@@ -1,3 +1,6 @@
+"use client"
+
+import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -7,6 +10,9 @@ export default function JobsLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+  const hideTitleBlock = pathname === "/jobs/available"
+
   return (
     <SidebarProvider
       style={
@@ -18,7 +24,7 @@ export default function JobsLayout({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
+        <SiteHeader showTitleBlock={!hideTitleBlock} />
         {children}
       </SidebarInset>
     </SidebarProvider>

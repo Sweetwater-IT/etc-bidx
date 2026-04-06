@@ -21,7 +21,7 @@ import { ActiveJobDetailsSheet } from "../../../components/active-job-details-sh
 import { EditActiveJobSheet } from "../../../components/edit-active-job-sheet"
 import { ActiveBidDetailsSheet } from "../../../components/active-bid-details-sheet"
 import { EditJobNumberDialog } from "../../../components/edit-job-number-dialog";
-import { PencilIcon, Search } from "lucide-react";
+import { BriefcaseBusiness, Calendar as CalendarIcon, PencilIcon, RefreshCw, Search } from "lucide-react";
 import { AvailableJob } from "../../../data/available-jobs";
 import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
@@ -34,6 +34,11 @@ import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDate } from "@/lib/formatUTCDate";
 import { Input } from "@/components/ui/input";
+import { ImportSheet } from "@/components/import-sheet";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { IconDownload, IconPlus, IconUpload } from "@tabler/icons-react";
+import { format } from "date-fns";
 
 // Map between UI status and database status
 const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | undefined => {
@@ -94,6 +99,8 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
     const [availableJobsSearch, setAvailableJobsSearch] = useState("");
+    const [availableJobsImportOpen, setAvailableJobsImportOpen] = useState(false);
+    const [availableJobsCalendarOpen, setAvailableJobsCalendarOpen] = useState(false);
 
     const [allActiveBidRowsSelected, setAllActiveBidRowsSelected] = useState<boolean>(false);
     const [selectedActiveBids, setSelectedActiveBids] = useState<ActiveBid[]>([]);
@@ -978,6 +985,40 @@ export function JobPageContent({ job }: JobPageContentProps) {
         }
 
     }, [dateRange?.from, dateRange?.to, fetchAvailableJobCounts, isAvailableJobs]);
+
+    const handleAvailableJobsDateSelect = (selectedDate: DateRange | undefined) => {
+        setDateRange(selectedDate);
+        if (!selectedDate || (selectedDate.from && selectedDate.to)) {
+            setAvailableJobsCalendarOpen(false);
+        }
+    };
+
+    const availableJobsDateLabel = useMemo(() => {
+        const today = new Date();
+
+        if (dateRange?.from && dateRange?.to) {
+            return `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`;
+        }
+
+        if (dateRange?.from) {
+            return `${format(dateRange.from, "MMM d, yyyy")} - ${format(today, "MMM d, yyyy")}`;
+        }
+
+        return `Jan 1, ${today.getFullYear()} - ${format(today, "MMM d, yyyy")}`;
+    }, [dateRange]);
+
+    const handleRefreshAvailableJobs = useCallback(async () => {
+        await loadAvailableJobs();
+
+        if (dateRange?.from && dateRange?.to) {
+            const startDate = dateRange.from.toISOString().split('T')[0];
+            const endDate = dateRange.to.toISOString().split('T')[0];
+            await fetchAvailableJobCounts(startDate, endDate);
+            return;
+        }
+
+        await fetchAvailableJobCounts();
+    }, [dateRange, fetchAvailableJobCounts, loadAvailableJobs]);
 
     const createButtonLabel = isAvailableJobs ? "Create Open Bid" : isActiveBids ? "Create Active Bid" : "Create Active Job";
 
@@ -2068,26 +2109,108 @@ export function JobPageContent({ job }: JobPageContentProps) {
     };
 
     const content = (
-        <div className="flex flex-1 flex-col">
+        <div className={`flex flex-1 flex-col ${isAvailableJobs ? "bg-[#F9FAFB]" : ""}`}>
+            {isAvailableJobs && (
+                <header className="sticky top-11 z-10 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+                    <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+                                <BriefcaseBusiness className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold tracking-tight text-foreground">Bid Board</h1>
+                                <p className="text-xs text-muted-foreground">
+                                    {availableJobsTotalCount} open bid{availableJobsTotalCount === 1 ? "" : "s"} in the current view
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Popover open={availableJobsCalendarOpen} onOpenChange={setAvailableJobsCalendarOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 min-w-[250px] justify-start gap-2 bg-background font-medium shadow-sm"
+                                    >
+                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                        <span className="truncate">{availableJobsDateLabel}</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar
+                                        key={`${dateRange?.from?.getTime()}-${dateRange?.to?.getTime()}`}
+                                        initialFocus
+                                        mode="range"
+                                        defaultMonth={dateRange?.from}
+                                        selected={dateRange}
+                                        onSelect={handleAvailableJobsDateSelect}
+                                        numberOfMonths={2}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-9 w-9 shrink-0 shadow-sm"
+                                onClick={handleRefreshAvailableJobs}
+                            >
+                                <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 gap-2 bg-background font-semibold shadow-sm"
+                                onClick={() => setAvailableJobsImportOpen(true)}
+                            >
+                                <IconUpload className="h-4 w-4" />
+                                Import
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 gap-2 bg-background font-semibold shadow-sm"
+                                onClick={handleExportAvailableJobs}
+                            >
+                                <IconDownload className="h-4 w-4" />
+                                Export
+                            </Button>
+
+                            <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={handleCreateClick}>
+                                <IconPlus className="h-4 w-4" />
+                                Create Open Bid
+                            </Button>
+                        </div>
+                    </div>
+                </header>
+            )}
+
             <div className="@container/main flex flex-1 flex-col gap-2">
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-3">
-                            <div className="flex items-center justify-between px-4 lg:px-6">
-                                <CardActions
-                                    createButtonLabel={createButtonLabel}
-                                    onCreateClick={handleCreateClick}
-                                    onImportSuccess={isAvailableJobs ? loadAvailableJobs : isActiveBids ? loadActiveBids : undefined}
-                                    date={dateRange}
-                                    setDate={setDateRange}
-                                    importType={isAvailableJobs ? 'available-jobs' : 'active-bids'}
-                                    onExport={isAvailableJobs ? handleExportAvailableJobs : handleExportActiveBids}
-                                    showFilterButton={false}
-                                    showFilters={showFilters}
-                                    setShowFilters={setShowFilters}
-                                    hideImport={isActiveBids}
-                                />
-                            </div>
+                            {!isAvailableJobs && (
+                                <div className="flex items-center justify-between px-4 lg:px-6">
+                                    <CardActions
+                                        createButtonLabel={createButtonLabel}
+                                        onCreateClick={handleCreateClick}
+                                        onImportSuccess={isActiveBids ? loadActiveBids : undefined}
+                                        date={dateRange}
+                                        setDate={setDateRange}
+                                        importType={isActiveBids ? 'active-bids' : 'available-jobs'}
+                                        onExport={isActiveBids ? handleExportActiveBids : undefined}
+                                        showFilterButton={false}
+                                        showFilters={showFilters}
+                                        setShowFilters={setShowFilters}
+                                        hideImport={isActiveBids}
+                                        hideCalendar={isActiveJobs}
+                                        hideImportExport={isActiveJobs}
+                                    />
+                                </div>
+                            )}
                             {isActiveJobs && nextJobNumber && (
                                 <div className="text-sm text-muted-foreground px-6 flex items-center justify-end gap-2">
                                     <span className="font-medium">Next job number:</span> {nextJobNumber.split('-')[2]}
@@ -2129,6 +2252,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             isLoading={isTableLoading}
                             columns={columns}
                             variant="job-list"
+                            segmentsVariant="productivity"
                             segments={segments}
                             segmentValue={activeSegment}
                             segmentCounts={jobCounts}
@@ -2460,6 +2584,12 @@ export function JobPageContent({ job }: JobPageContentProps) {
                     />
                 </div>
             </div>
+            <ImportSheet
+                open={availableJobsImportOpen}
+                onOpenChange={setAvailableJobsImportOpen}
+                onImportSuccess={handleRefreshAvailableJobs}
+                importType="available-jobs"
+            />
         </div>
     );
     return content;

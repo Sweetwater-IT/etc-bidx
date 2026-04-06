@@ -120,6 +120,7 @@ export interface DataTableProps<TData extends object> {
   columns: LegacyColumn[] | readonly LegacyColumn[]
   data: TData[]
   variant?: 'default' | 'job-list'
+  segmentsVariant?: 'default' | 'job-list' | 'productivity'
   segments?: {
     label: string
     value: string
@@ -402,6 +403,7 @@ export function DataTable<TData extends object>({
   columns: legacyColumns,
   data,
   variant = 'default',
+  segmentsVariant,
   segments,
   segmentValue,
   segmentCounts,
@@ -1000,7 +1002,7 @@ export function DataTable<TData extends object>({
                   value={segmentValue}
                   onChange={onSegmentChange}
                   counts={segmentCounts}
-                  variant={isJobListVariant ? 'job-list' : 'default'}
+                  variant={segmentsVariant || (isJobListVariant ? 'job-list' : 'default')}
                 />
               )}
             </div>
