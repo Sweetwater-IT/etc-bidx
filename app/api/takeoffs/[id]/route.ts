@@ -10,6 +10,9 @@ type RelatedTakeoffSummary = {
   work_order_number: string | null;
   is_pickup: boolean;
   parent_takeoff_id: string | null;
+  install_date?: string | null;
+  pickup_date?: string | null;
+  needed_by_date?: string | null;
 };
 
 export async function GET(
@@ -121,7 +124,7 @@ export async function GET(
     if (data.parent_takeoff_id) {
       const { data: parent } = await supabase
         .from('takeoffs_l')
-        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id')
+        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id, install_date, pickup_date, needed_by_date')
         .eq('id', data.parent_takeoff_id)
         .maybeSingle();
       parentTakeoff = parent || null;
@@ -130,11 +133,17 @@ export async function GET(
     if (!data.is_pickup) {
       const { data: child } = await supabase
         .from('takeoffs_l')
-        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id')
+        .select('id, title, work_type, work_order_id, work_order_number, is_pickup, parent_takeoff_id, install_date, pickup_date, needed_by_date')
         .eq('parent_takeoff_id', id)
         .eq('is_pickup', true)
         .maybeSingle();
       pickupTakeoff = child || null;
+    }
+
+    if (data.is_pickup && parentTakeoff) {
+      data.install_date = data.install_date || parentTakeoff.install_date || null;
+      data.pickup_date = data.pickup_date || parentTakeoff.pickup_date || null;
+      data.needed_by_date = data.needed_by_date || parentTakeoff.needed_by_date || null;
     }
 
     const takeoffItems = await loadTakeoffItems(data);
