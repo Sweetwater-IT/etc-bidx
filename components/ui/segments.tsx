@@ -45,8 +45,8 @@ export function Segments({ segments, onChange, value, counts, variant = "default
             "rounded-md",
             variant === "productivity"
               ? activeSegment === segment.value
-                ? "border border-border bg-card px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-foreground shadow-sm"
-                : "border border-transparent px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                ? "border border-primary/20 bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-sm hover:bg-primary/90"
+                : "border border-transparent px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:bg-primary/10 hover:text-primary"
               : variant === "job-list"
               ? activeSegment === segment.value
                 ? "bg-primary text-primary-foreground"
