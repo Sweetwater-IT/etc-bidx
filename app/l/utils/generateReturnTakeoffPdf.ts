@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 
 interface ReturnPdfItem {
   product_name: string;
@@ -498,5 +499,5 @@ export async function generateReturnTakeoffPdf(data: ReturnTakeoffPdfData) {
     doc.setTextColor(0);
   }
 
-  doc.save(`Return_Inventory_${data.etcJobNumber || "report"}.pdf`);
+  doc.save(getTakeoffPdfFilename(data.title, true));
 }

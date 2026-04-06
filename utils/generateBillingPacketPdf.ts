@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { getWorkOrderPdfFilename } from "@/utils/pdfFilename";
 
 interface BillingPacketData {
   // WO info
@@ -9,6 +10,8 @@ interface BillingPacketData {
   etcAssignedTo: string;
   contractedOrAdditional: string;
   customerPocPhone: string;
+  isPickup?: boolean;
+  primaryTakeoffTitle?: string;
   // Job info
   projectName: string;
   etcJobNumber: string;
@@ -486,7 +489,10 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
     }
   }
 
-  const filename = `BillingPacket_${data.woNumber || "WO"}_${new Date().toISOString().split("T")[0]}.pdf`;
+  const filename = getWorkOrderPdfFilename(
+    data.primaryTakeoffTitle || data.woTitle || data.woNumber,
+    Boolean(data.isPickup)
+  );
 
   if (data.returnBytes) {
     return doc.output("arraybuffer") as ArrayBuffer;

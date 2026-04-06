@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateTakeoffPdf } from '@/utils/generateTakeoffPdf';
 import { getTakeoffPdfData } from '@/utils/pdfData';
+import { getTakeoffPdfFilename } from '@/utils/pdfFilename';
 import { supabase } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 
@@ -29,7 +30,7 @@ export async function GET(
     }
 
     // Upload to Supabase Storage
-    const fileName = `takeoff.pdf`;
+    const fileName = getTakeoffPdfFilename(takeoffData.title, Boolean(takeoffData.isPickup));
     const filePath = `documents_l/takeoffs/${id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -56,7 +57,7 @@ export async function GET(
         .from('documents_l')
         .insert({
           job_id: takeoffRecord.job_id,
-          file_name: `Takeoff - ${takeoffData.title || 'Untitled'}.pdf`,
+          file_name: fileName,
           file_path: filePath,
           file_type: 'application/pdf',
           file_size: pdfBytes.byteLength,
@@ -72,7 +73,7 @@ export async function GET(
     return new Response(pdfBytes, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=takeoff-${takeoffData.title || 'untitled'}.pdf`,
+        'Content-Disposition': `attachment; filename=${fileName}`,
       },
     });
   } catch (error) {

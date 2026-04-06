@@ -303,6 +303,7 @@ export async function getTakeoffPdfData(takeoffId: string) {
     title: takeoff.title || '',
     workType: takeoff.work_type || '',
     status: takeoff.status || '',
+    isPickup: Boolean(takeoff.is_pickup),
     installDate: takeoff.install_date || null,
     pickupDate: takeoff.pickup_date || null,
     neededByDate: takeoff.needed_by_date || null,
@@ -355,14 +356,16 @@ export async function getBillingPacketData(workOrderId: string) {
   const job = workOrder.jobs_l;
   let resolvedInstallDate = workOrder.install_date || '';
   let resolvedPickupDate = workOrder.pickup_date || '';
+  let resolvedPrimaryTakeoffTitle = workOrder.title || '';
 
   if (workOrder.takeoff_id) {
     const { data: linkedTakeoff } = await supabase
       .from('takeoffs_l')
-      .select('id, install_date, pickup_date')
+      .select('id, title, install_date, pickup_date')
       .eq('id', workOrder.takeoff_id)
       .maybeSingle();
 
+    resolvedPrimaryTakeoffTitle = linkedTakeoff?.title || resolvedPrimaryTakeoffTitle;
     resolvedInstallDate = linkedTakeoff?.install_date || resolvedInstallDate;
     resolvedPickupDate = linkedTakeoff?.pickup_date || resolvedPickupDate;
   }
@@ -412,6 +415,8 @@ export async function getBillingPacketData(workOrderId: string) {
     etcAssignedTo: workOrder.assigned_to || workOrder.etc_assigned_to || '',
     contractedOrAdditional: workOrder.contracted_or_additional || 'contracted',
     customerPocPhone: workOrder.customer_poc_phone || '',
+    isPickup: Boolean(workOrder.is_pickup),
+    primaryTakeoffTitle: resolvedPrimaryTakeoffTitle,
     projectName: job?.project_name || '',
     etcJobNumber: job?.etc_job_number?.toString() || '',
     customerName: job?.customer_name || '',

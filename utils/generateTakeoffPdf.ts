@@ -1,10 +1,12 @@
 import jsPDF from "jspdf";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 import { abbreviateMaterial } from "@/utils/signMaterial";
 
 interface TakeoffPdfData {
   title: string;
   workType: string;
   status: string;
+  isPickup?: boolean;
   installDate?: string | null;
   pickupDate?: string | null;
   neededByDate?: string | null;
@@ -1060,7 +1062,7 @@ export async function generateTakeoffPdf(data: TakeoffPdfData): Promise<ArrayBuf
   }
 
   // Download
-  const filename = `Takeoff_${data.title.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+  const filename = getTakeoffPdfFilename(data.title, Boolean(data.isPickup));
   doc.save(filename);
   return null;
 }

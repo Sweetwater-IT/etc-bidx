@@ -3,6 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { generateBillingPacketPdf } from '@/utils/generateBillingPacketPdf';
 import { generateTakeoffPdf } from '@/utils/generateTakeoffPdf';
 import { getBillingPacketData, getTakeoffPdfData } from '@/utils/pdfData';
+import { getWorkOrderPdfFilename } from '@/utils/pdfFilename';
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +46,10 @@ export async function GET(
     return new Response(pdfBytes, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=${includeTakeoff ? 'billing-packet' : 'work-order'}-${woData.woNumber || id}.pdf`,
+        'Content-Disposition': `attachment; filename=${getWorkOrderPdfFilename(
+          woData.primaryTakeoffTitle || woData.woTitle || woData.woNumber || id,
+          Boolean(woData.isPickup)
+        )}`,
       },
     });
   } catch (error) {
