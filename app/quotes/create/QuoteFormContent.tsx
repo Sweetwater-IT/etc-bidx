@@ -381,13 +381,54 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     try {
       setCreatingQuote(true);
 
-      const data = await createQuoteBase("NOT SENT");
+      const data = quoteId
+        ? await (async () => {
+            const payload = buildDraftPayload({
+              status: "Not Sent",
+            });
+
+            const response = await fetch("/api/quotes", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            const result = await response.json().catch(() => null);
+
+            if (!response.ok || result?.success === false) {
+              throw new Error(result?.error || result?.message || "Failed to finalize quote");
+            }
+
+            return {
+              success: true,
+              data: {
+                id: quoteId,
+                quote_number: quoteNumber,
+              },
+            };
+          })()
+        : await createQuoteBase("NOT SENT");
+
+      if (!data?.success || !data?.data?.id) {
+        throw new Error("Quote was saved but could not be opened");
+      }
 
       if (data.success) {
+        setQuoteId(data.data.id);
+        setQuoteMetadata((prev) => ({
+          ...prev,
+          id: data.data.id,
+          quote_number: data.data.quote_number ?? prev?.quote_number,
+          status: "Not Sent",
+        }));
+
         const uploadedFiles: { name: string; url: string }[] = [];
         for (const file of files) {
           try {
-            const response = await fetch(file.preview);
+            const fileSource = file.preview || file.file_url;
+            if (!fileSource) continue;
+
+            const response = await fetch(fileSource);
             const blob = await response.blob();
 
             const formData = new FormData();
@@ -412,6 +453,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
           }
         }
 
+        restorePointerEvents();
         toast.success("Quote created successfully!");
         router.push(`/quotes/view/${data.data.id}`);
       }
