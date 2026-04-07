@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HashIcon, CalendarIcon, UserIcon, MapPinIcon, BuildingIcon, ClockIcon, DollarSignIcon } from "lucide-react";
 import { type ActiveBid } from "@/data/active-bids";
-import { type JobPageData } from "@/app/jobs/[job]/content";
+import { type JobPageData } from "@/app/jobs/_components/JobPageContent";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
