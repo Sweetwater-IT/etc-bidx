@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState, useRef } from 'react'
-import { useEstimate } from '@/contexts/EstimateContext'
+import { useEffect, useState, useRef, type SetStateAction } from 'react'
+import { useSignOrderBuilder } from '@/contexts/SignOrderBuilderContext'
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel'
 import { SignOrderList } from '../new/SignOrderList'
 import { SignOrderAdminInfo } from '../new/SignOrderAdminInfo'
@@ -33,12 +33,12 @@ import { FileMetadata } from '@/types/FileTypes'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthAdminApi } from '@supabase/supabase-js'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
-import { SignItem } from '@/components/sheets/SignOrderWorksheetPDF'
+import { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
-import { PDFDownloadLink } from '@react-pdf/renderer'
 import { useMemo } from 'react';
-import { usePDF } from '@react-pdf/renderer';
 import { pdf } from '@react-pdf/renderer';
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
+import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -62,31 +62,47 @@ interface Props {
   signOrderId?: number
 }
 
+interface SignOrderDraft {
+  adminInfo: SignOrderAdminInformation
+  signs: (PrimarySign | SecondarySign)[]
+  notes: Note[]
+  files: FileMetadata[]
+}
+
+const defaultAdminInfo: SignOrderAdminInformation = {
+  requestor: null,
+  customer: null,
+  orderDate: new Date(),
+  needDate: null,
+  orderType: [],
+  selectedBranch: 'All',
+  jobNumber: '',
+  isSubmitting: false,
+  contractNumber: '',
+  orderNumber: undefined,
+  contact: null
+}
+
 export default function SignOrderContentSimple({
   signOrderId: initialSignOrderId
 }: Props) {
-  const { dispatch, mptRental } = useEstimate()
+  const { dispatch, mptRental } = useSignOrderBuilder()
   const router = useRouter()
 
-  // Set up admin info state in the parent component
-  const [adminInfo, setAdminInfo] = useState<SignOrderAdminInformation>({
-    requestor: null,
-    customer: null,
-    orderDate: new Date(),
-    needDate: null,
-    orderType: [],
-    selectedBranch: 'All',
-    jobNumber: '',
-    isSubmitting: false,
-    contractNumber: '',
-    orderNumber: undefined,
-    contact: null
+  const [draft, setDraft] = useState<SignOrderDraft>({
+    adminInfo: defaultAdminInfo,
+    signs: [],
+    notes: [],
+    files: []
   })
-  const [signList, setSignList] = useState<SignItem[]>([])
+  const adminInfo = draft.adminInfo
+  const signList = useMemo(
+    () => draft.signs.map(normalizeSign),
+    [draft.signs]
+  )
 
   const { startLoading, stopLoading } = useLoading()
   const { user } = useAuth()
-  const [localFiles, setLocalFiles] = useState<FileMetadata[]>([])
   const [alreadySubmitted, setAlreadySubmitted] = useState<boolean>(false)
   const [signOrderId, setSignOrderId] = useState<number | null>(
     initialSignOrderId ?? null
@@ -98,13 +114,34 @@ export default function SignOrderContentSimple({
   const saveTimeoutRef = useRef<number | null>(null)
   const [firstSave, setFirstSave] = useState<boolean>(false)
 
-  const prevStateRef = useRef({
-    adminInfo,
-    mptRental
-  })
+  const prevDraftRef = useRef<SignOrderDraft>(draft)
 
-  const [notes, setNotes] = useState<Note[]>([])
   const [loadingNotes, setLoadingNotes] = useState(false)
+  const signCount = draft.signs.length
+
+  const setAdminInfo = (
+    updater:
+      | SignOrderAdminInformation
+      | ((prev: SignOrderAdminInformation) => SignOrderAdminInformation)
+  ) => {
+    setDraft(prev => ({
+      ...prev,
+      adminInfo:
+        typeof updater === 'function'
+          ? (updater as (prev: SignOrderAdminInformation) => SignOrderAdminInformation)(prev.adminInfo)
+          : updater
+    }))
+  }
+
+  const setDraftFiles = (updater: SetStateAction<FileMetadata[]>) => {
+    setDraft(prev => ({
+      ...prev,
+      files:
+        typeof updater === 'function'
+          ? (updater as (prev: FileMetadata[]) => FileMetadata[])(prev.files)
+          : updater
+    }))
+  }
 
   const isOrderInvalid = (): boolean => {
     return (
@@ -118,12 +155,17 @@ export default function SignOrderContentSimple({
     )
   }
 
-  const fetchSignOrder = async () => {
+  const fetchSignOrder = async (requestedId?: number | null) => {
+    const resolvedId = requestedId ?? signOrderId ?? initialSignOrderId ?? null
+    if (!resolvedId) {
+      return
+    }
+
     try {
       startLoading()
       setLoadingNotes(true)
-      console.log(`Fetching sign order with ID: ${initialSignOrderId}`)
-      const response = await fetch(`/api/sign-orders/${initialSignOrderId}`)
+      console.log(`Fetching sign order with ID: ${resolvedId}`)
+      const response = await fetch(`/api/sign-orders/${resolvedId}`)
       const data = await response.json()
 
       if (!response.ok) {
@@ -140,11 +182,50 @@ export default function SignOrderContentSimple({
       }
 
       const users = await fetchReferenceData('users')
+      const matchedRequestor =
+        users.find((u: User) => u.name === data.data.requestor) || null
+
+      let hydratedCustomer: Customer | null = null
+      if (data.data.contractor_id) {
+        try {
+          const customerResponse = await fetch(
+            `/api/contractors/${data.data.contractor_id}`
+          )
+          const customerResult = await customerResponse.json()
+
+          if (customerResponse.ok && customerResult?.customer) {
+            const customer = customerResult.customer
+            hydratedCustomer = {
+              id: customer.id,
+              name: customer.name,
+              displayName: customer.display_name || customer.displayName || customer.name,
+              emails: customer.emails || [],
+              address: customer.address || '',
+              phones: customer.phones || [],
+              paymentTerms: customer.payment_terms || customer.paymentTerms || '',
+              mainPhone: customer.main_phone || customer.mainPhone || '',
+              zip: customer.zip || '',
+              roles: customer.roles || [],
+              names: customer.names || [],
+              contactIds: customer.contactIds || [],
+              url: customer.web || customer.url || '',
+              created: customer.created || '',
+              updated: customer.updated || '',
+              city: customer.city || '',
+              state: customer.state || '',
+              customerNumber:
+                customer.customer_number || customer.customerNumber || 1,
+              lastOrdered: customer.lastOrdered || null
+            }
+          }
+        } catch (customerError) {
+          console.error('Error hydrating sign order customer:', customerError)
+        }
+      }
 
       const orderWithBranch = {
         ...data.data,
-        branch:
-          users.find(u => u.name === data.data.requestor)?.branches?.name || ''
+        branch: matchedRequestor?.branches?.name || ''
       }
 
       const ordersData: OrderTypes[] = []
@@ -160,7 +241,7 @@ export default function SignOrderContentSimple({
 
       setAdminInfo({
         contractNumber: data.data.contract_number,
-        requestor: {
+        requestor: matchedRequestor || {
           name: data.data.requestor,
           email: '',
           role: ''
@@ -183,38 +264,45 @@ export default function SignOrderContentSimple({
             ? new Date(formatDate(data.data.end_date))
             : undefined,
         selectedBranch: orderWithBranch.branch,
-        customer: {
-          id: data.data.contractor_id,
-          name: data.data.contractors?.name,
-          displayName: data.data.contractors?.name,
-          emails: [],
-          address: '',
-          phones: [],
-          paymentTerms: '',
-          mainPhone: '',
-          zip: '',
-          roles: [],
-          names: [],
-          contactIds: [],
-          url: '',
-          created: '',
-          updated: '',
-          city: '',
-          state: '',
-          customerNumber: 1
-        },
+        customer:
+          hydratedCustomer ||
+          (data.data.contractor_id
+            ? {
+                id: data.data.contractor_id,
+                name: data.data.contractors?.name || '',
+                displayName: data.data.contractors?.name || '',
+                emails: [],
+                address: '',
+                phones: [],
+                paymentTerms: '',
+                mainPhone: '',
+                zip: '',
+                roles: [],
+                names: [],
+                contactIds: [],
+                url: '',
+                created: '',
+                updated: '',
+                city: '',
+                state: '',
+                customerNumber: 1,
+                lastOrdered: null
+              }
+            : null),
         isSubmitting: false,
         orderType: ordersData,
-        orderNumber: data.data.order_number || undefined
+        orderNumber: data.data.order_number || undefined,
+        contact: data.data.contact || null
       })
 
       if (data.data.order_status === 'SUBMITTED') {
         setAlreadySubmitted(true)
       }
 
-      if (data.data.notes) {
-        setNotes(data.data.notes)
-      }
+      setDraft(prev => ({
+        ...prev,
+        notes: Array.isArray(data.data.notes) ? data.data.notes : []
+      }))
 
       if (data.data.signs) {
         try {
@@ -226,6 +314,11 @@ export default function SignOrderContentSimple({
               id: s.id ? s.id : generateUniqueId(),
               bLights: s.bLights || 0
             }))
+
+          setDraft(prev => ({
+            ...prev,
+            signs: signItemsArray as (PrimarySign | SecondarySign)[]
+          }))
 
           dispatch({
             type: 'COPY_MPT_RENTAL',
@@ -240,6 +333,10 @@ export default function SignOrderContentSimple({
         }
       } else {
         console.log('No signs data found in the sign order')
+        setDraft(prev => ({
+          ...prev,
+          signs: []
+        }))
       }
     } catch (error) {
       toast.error('Error fetching sign order:' + error)
@@ -250,16 +347,84 @@ export default function SignOrderContentSimple({
     }
   }
 
+  const handleAdminInfoSaved = async (
+    nextAdminInfo: SignOrderAdminInformation
+  ) => {
+    if (!initialSignOrderId && !signOrderId) {
+      return
+    }
+
+    const currentId = signOrderId || initialSignOrderId
+    if (!currentId) {
+      return
+    }
+
+    const signOrderData = {
+      id: currentId,
+      requestor: nextAdminInfo.requestor ? nextAdminInfo.requestor : undefined,
+      contractor_id: nextAdminInfo.customer ? nextAdminInfo.customer.id : undefined,
+      contract_number: nextAdminInfo.contractNumber,
+      order_date: new Date(nextAdminInfo.orderDate).toISOString(),
+      need_date: nextAdminInfo.needDate
+        ? new Date(nextAdminInfo.needDate).toISOString()
+        : undefined,
+      start_date: nextAdminInfo.startDate
+        ? new Date(nextAdminInfo.startDate).toISOString()
+        : '',
+      end_date: nextAdminInfo.endDate
+        ? new Date(nextAdminInfo.endDate).toISOString()
+        : '',
+      order_type: nextAdminInfo.orderType,
+      job_number: nextAdminInfo.jobNumber,
+      signs: draft.signs || [],
+      status: alreadySubmitted ? ('SUBMITTED' as const) : ('DRAFT' as const),
+      order_number: nextAdminInfo.orderNumber,
+      contact: nextAdminInfo.contact
+    }
+
+    const result = await saveSignOrder(signOrderData)
+    const nextId = result.id || currentId
+    if (result.id && !signOrderId) {
+      setSignOrderId(result.id)
+    }
+
+    await fetchSignOrder(nextId)
+  }
+
   // Initialize MPT rental data
   useEffect(() => {
     dispatch({ type: 'ADD_MPT_RENTAL' })
+    logSignOrderDebug('page_loaded', {
+      mode: initialSignOrderId ? 'edit' : 'create',
+      signOrderId: initialSignOrderId ?? null
+    })
     if (!initialSignOrderId) {
       dispatch({ type: 'ADD_MPT_PHASE' })
       return
     } else {
-      fetchSignOrder()
+      fetchSignOrder(initialSignOrderId)
     }
   }, [dispatch])
+
+  useEffect(() => {
+    const nextSigns = (mptRental.phases[0]?.signs || []) as (PrimarySign | SecondarySign)[]
+    setDraft(prev =>
+      isEqual(prev.signs, nextSigns)
+        ? prev
+        : {
+            ...prev,
+            signs: nextSigns
+          }
+    )
+  }, [mptRental])
+
+  useEffect(() => {
+    logSignOrderDebug('sign_count_changed', {
+      signCount,
+      jobNumber: adminInfo.jobNumber || null,
+      contractNumber: adminInfo.contractNumber || null
+    })
+  }, [adminInfo.contractNumber, adminInfo.jobNumber, signCount])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -271,31 +436,18 @@ export default function SignOrderContentSimple({
 
   // Autosave effect - exactly like active bid header
   useEffect(() => {
-    // Check if there were any changes
-    const hasAdminInfoChanged = !isEqual(
-      adminInfo,
-      prevStateRef.current.adminInfo
-    )
-    const hasMptRentalChanged = !isEqual(
-      mptRental,
-      prevStateRef.current.mptRental
-    )
-
-    const hasAnyStateChanged = hasAdminInfoChanged || hasMptRentalChanged
-
     // Don't autosave if no changes, no contract number, or if it's never been saved
-    if (isOrderInvalid() || !hasAnyStateChanged) return
+    if (isOrderInvalid() || isEqual(draft, prevDraftRef.current)) return
     else {
       // Clear timeout if there is one
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      setSignList(mptRental.phases[0].signs.map(normalizeSign));
       saveTimeoutRef.current = window.setTimeout(() => {
         autosave()
       }, 5000)
     }
-  }, [adminInfo, mptRental])
+  }, [draft])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -314,10 +466,7 @@ export default function SignOrderContentSimple({
     }
 
     // Update the previous state reference
-    prevStateRef.current = {
-      adminInfo,
-      mptRental
-    }
+    prevDraftRef.current = draft
 
     try {
       const signOrderData = {
@@ -337,7 +486,7 @@ export default function SignOrderContentSimple({
           : '',
         order_type: adminInfo.orderType,
         job_number: adminInfo.jobNumber,
-        signs: mptRental.phases[0].signs || [],
+        signs: draft.signs || [],
         status: 'DRAFT' as const,
         order_number: adminInfo.orderNumber,
         contact: adminInfo.contact
@@ -413,7 +562,7 @@ export default function SignOrderContentSimple({
 
   const fetchFiles = () => {
     if (!signOrderId) return
-    fetchAssociatedFiles(signOrderId, 'sign-orders', setLocalFiles)
+    fetchAssociatedFiles(signOrderId, 'sign-orders', setDraftFiles)
   }
 
   useEffect(() => {
@@ -424,10 +573,10 @@ export default function SignOrderContentSimple({
     if (isSuccess && files.length > 0) {
       fetchFiles();
     }
-  }, [isSuccess, files, successes, setLocalFiles])
+  }, [isSuccess, files, successes])
 
   const handleSaveNote = async (note: Note) => {
-    const updatedNotes = [...notes, note];
+    const updatedNotes = [...draft.notes, note];
     if (signOrderId) {
       const resp = await fetch(`/api/sign-orders/addNotes`, {
         method: 'POST',
@@ -442,16 +591,20 @@ export default function SignOrderContentSimple({
       const data = await resp.json();
 
       if (data.ok && data.data) {
-        setNotes((prev) => ([...prev,
-        { ...data.data, timestamp: new Date(data.data.created_at).getTime() }
-        ]))
+        setDraft(prev => ({
+          ...prev,
+          notes: [
+            ...prev.notes,
+            { ...data.data, timestamp: new Date(data.data.created_at).getTime() }
+          ]
+        }))
       }
 
     }
   }
 
   const handleEditNote = async (index: number, updatedNote: Note) => {
-    const noteToEdit = notes[index];
+    const noteToEdit = draft.notes[index];
     if (!noteToEdit) return;
 
     const resp = await fetch(`/api/sign-orders/addNotes`, {
@@ -462,14 +615,21 @@ export default function SignOrderContentSimple({
     const data = await resp.json();
 
     if (data.ok && data.data) {
-      setNotes(notes.map(n => (n.id === noteToEdit.id ? { ...data.data, timestamp: new Date(data.data.created_at).getTime() } : n)));
+      setDraft(prev => ({
+        ...prev,
+        notes: prev.notes.map(n =>
+          n.id === noteToEdit.id
+            ? { ...data.data, timestamp: new Date(data.data.created_at).getTime() }
+            : n
+        )
+      }))
     } else {
       console.error('Error updating note:', data.error || data.message);
     }
   }
 
   const handleDeleteNote = async (index: number) => {
-    const noteToDelete = notes[index];
+    const noteToDelete = draft.notes[index];
     if (!noteToDelete) return;
 
     const resp = await fetch(`/api/sign-orders/addNotes`, {
@@ -480,7 +640,10 @@ export default function SignOrderContentSimple({
     const data = await resp.json();
 
     if (data.ok) {
-      setNotes(notes.filter(n => n.id !== noteToDelete.id));
+      setDraft(prev => ({
+        ...prev,
+        notes: prev.notes.filter(n => n.id !== noteToDelete.id)
+      }))
     } else {
       console.error('Error deleting note:', data.error || data.message);
     }
@@ -493,6 +656,13 @@ export default function SignOrderContentSimple({
     if (isOrderInvalid()) return
 
     try {
+      logSignOrderDebug('sign_order_save_requested', {
+        status,
+        signCount,
+        signOrderId,
+        requestor: adminInfo.requestor?.name ?? null,
+        contractNumber: adminInfo.contractNumber || null
+      })
       setAdminInfo(prev => ({ ...prev, isSubmitting: true }))
 
       const signOrderData = {
@@ -514,7 +684,7 @@ export default function SignOrderContentSimple({
           : '',
         order_type: adminInfo.orderType,
         job_number: adminInfo.jobNumber,
-        signs: mptRental.phases[0].signs || [],
+        signs: draft.signs || [],
         status,
         order_number: adminInfo.orderNumber,
         contact: adminInfo.contact
@@ -526,11 +696,21 @@ export default function SignOrderContentSimple({
         setSignOrderId(result.id)
       }
       setFirstSave(true)
+      logSignOrderDebug('sign_order_save_succeeded', {
+        status,
+        signCount,
+        signOrderId: result.id ?? signOrderId ?? null
+      })
 
       toast.success('Sign order saved successfully')
       router.push('/takeoffs/sign-order/view/' + (signOrderId || result.id))
     } catch (error) {
       console.error('Error saving sign order:', error)
+      logSignOrderDebug('sign_order_save_failed', {
+        status,
+        signCount,
+        error: error instanceof Error ? error.message : String(error)
+      })
       toast.error((error as string) || 'Failed to save sign order')
     } finally {
       setAdminInfo(prev => ({ ...prev, isSubmitting: false }))
@@ -542,23 +722,13 @@ export default function SignOrderContentSimple({
       const pdfElement = (
         <SignOrderWorksheetPDF
           adminInfo={adminInfo || {
-            requestor: null,
-            customer: null,
-            orderDate: new Date(),
-            needDate: null,
-            orderType: [],
-            selectedBranch: 'All',
-            jobNumber: '',
-            isSubmitting: false,
-            contractNumber: '',
-            orderNumber: undefined,
+            ...defaultAdminInfo,
             startDate: undefined,
-            endDate: undefined,
-            contact: null
+            endDate: undefined
           }}
           signList={signList || []}
           mptRental={mptRental}
-          notes={notes || []}
+          notes={draft.notes || []}
         />
       );
 
@@ -580,7 +750,7 @@ export default function SignOrderContentSimple({
   };
 
   return mptRental.phases.length > 0 ? (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
       <PageHeaderWithSaving
         heading="Create Sign Order"
         handleSubmit={() => {
@@ -600,7 +770,7 @@ export default function SignOrderContentSimple({
                 }
                 disabled={
                   adminInfo.isSubmitting ||
-                  mptRental.phases[0].signs.length === 0 ||
+                  draft.signs.length === 0 ||
                   isOrderInvalid()
                 }
               >
@@ -614,18 +784,20 @@ export default function SignOrderContentSimple({
           </div>
         }
       />
-      <div className="flex gap-6 p-6 max-w-full">
+      <div className="grid min-w-0 max-w-full grid-cols-1 gap-6 p-6 xl:grid-cols-[minmax(0,3fr)_minmax(320px,1fr)]">
         {/* Main Form Column (3/4) */}
-        <div className="w-3/4 space-y-6">
+        <div className="min-w-0 space-y-6">
           <SignOrderAdminInfo
             adminInfo={adminInfo}
             setAdminInfo={setAdminInfo}
             showInitialAdminState={!!initialSignOrderId}
+            onImport={(signs) => dispatch({ type: 'COPY_MPT_RENTAL', payload: { ...mptRental, phases: [{ ...mptRental.phases[0], signs }] } })}
+            onDetailsSaved={handleAdminInfoSaved}
           />
-          <SignOrderList needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
+          <SignOrderList isSignOrder={true} needJobNumber={true} jobNumber={adminInfo?.jobNumber} />
         </div>
         {/* Right Column (1/4) */}
-        <div className="w-1/4 space-y-6">
+        <div className="min-w-0 space-y-6">
           <EquipmentTotalsAccordion />
           <div className="border rounded-lg p-4">
             <h2 className="mb-2 text-lg font-semibold">Files</h2>
@@ -633,13 +805,21 @@ export default function SignOrderContentSimple({
               {...fileUploadProps}
               className="p-8 cursor-pointer space-y-4 mb-4"
             >
-              <DropzoneContent />
+            <DropzoneContent />
               <DropzoneEmptyState />
             </Dropzone>
-            <FileViewingContainer files={localFiles} onFilesChange={setLocalFiles} />
+            <FileViewingContainer
+              files={draft.files}
+              onFilesChange={files =>
+                setDraft(prev => ({
+                  ...prev,
+                  files
+                }))
+              }
+            />
           </div>
           <QuoteNotes
-            notes={notes}
+            notes={draft.notes}
             onSave={handleSaveNote}
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
@@ -655,7 +835,7 @@ export default function SignOrderContentSimple({
                 adminInfo={adminInfo}
                 signList={signList}
                 mptRental={mptRental}
-                notes={notes}
+                notes={draft.notes}
               />
             </div>
           </div>
@@ -667,7 +847,7 @@ export default function SignOrderContentSimple({
   );
 }
 
-const normalizeSign = (sign: any): SignItem => ({
+const normalizeSign = (sign: any): WorksheetSignItem => ({
   designation: sign.designation || '',
   description: sign.description || '',
   quantity: sign.quantity || 0,

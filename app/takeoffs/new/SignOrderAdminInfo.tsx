@@ -1,7 +1,7 @@
 // SignOrderAdminInfo.jsx - Updated to use custom SignOrderJobSelector
 "use client";
 
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { fetchReferenceData } from "@/lib/api-client";
@@ -29,9 +29,11 @@ interface Estimate {
 export function SignOrderAdminInfo({
     adminInfo,
     setAdminInfo,
-    showInitialAdminState
-}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>, showInitialAdminState: boolean }) {
-    const { customers, getCustomers, isLoading } = useCustomers();
+    showInitialAdminState,
+    onImport,
+    onDetailsSaved
+}: { adminInfo: SignOrderAdminInformation, setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>, showInitialAdminState: boolean, onImport?: (signs: any[]) => void, onDetailsSaved?: (nextAdminInfo: SignOrderAdminInformation) => Promise<void> | void }) {
+    const { customers, getCustomers } = useCustomers();
 
     // State for local UI management
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -45,7 +47,6 @@ export function SignOrderAdminInfo({
     }, [setOpen])
 
     // Job selector state
-    const [selectedContractJob, setSelectedContractJob] = useState<Estimate | Job | null>(null);
     const [searchValue, setSearchValue] = useState("");
     const [sheetOpen, setSheetOpen] = useState(false);
     const [sheetMode, setSheetMode] = useState<'edit' | 'create'>('edit');
@@ -71,9 +72,6 @@ export function SignOrderAdminInfo({
     const handleJobCreated = (newJob: Job) => {        
         // Add the new job to the jobs list (optional - for immediate availability in dropdown)
         setAllJobs(prev => [...prev, newJob]);
-
-        // Set this new job as selected
-        setSelectedContractJob(newJob);
 
         // Clear search
         setSearchValue("");
@@ -102,8 +100,6 @@ export function SignOrderAdminInfo({
 
     // Handle contract/job selection
     const handleContractJobSelect = (contractJob: Estimate | Job | null) => {
-        setSelectedContractJob(contractJob);
-
         if (contractJob) {
             // Check if it's a job or estimate
             if ('job_number' in contractJob) {
@@ -134,8 +130,16 @@ export function SignOrderAdminInfo({
                 ...prev,
                 jobNumber: '',
                 contractNumber: '',
-                customer: null
+                customer: null,
+                contact: null,
+                requestor: null,
+                needDate: null,
+                startDate: undefined,
+                endDate: undefined,
+                orderType: [],
+                selectedBranch: 'All'
             }));
+            setSearchValue("");
         }
     };
 
@@ -166,12 +170,29 @@ export function SignOrderAdminInfo({
         return date.toLocaleDateString();
     };
 
+    const hasSelection = useMemo(() => {
+        return Boolean(
+            adminInfo.jobNumber ||
+            adminInfo.contractNumber ||
+            adminInfo.customer ||
+            adminInfo.requestor ||
+            adminInfo.needDate ||
+            adminInfo.orderType.length > 0
+        );
+    }, [adminInfo]);
+
+    const selectedDisplayValue = useMemo(() => {
+        return adminInfo.jobNumber || adminInfo.contractNumber || '';
+    }, [adminInfo.contractNumber, adminInfo.jobNumber]);
+
     return (
         <div className="space-y-6">
             {/* Job Selector */}
             <SignOrderJobSelector
                 allJobs={allJobs}
-                selectedContractJob={selectedContractJob}
+                hasSelection={hasSelection}
+                selectedDisplayValue={selectedDisplayValue}
+                selectedJobId={adminInfo.jobNumber || undefined}
                 onSelect={handleContractJobSelect}
                 onAddNew={handleAddNew}
                 onEdit={handleEdit}
@@ -188,7 +209,7 @@ export function SignOrderAdminInfo({
                 contractNumber={adminInfo.contractNumber}
                 showInitialAdminState={showInitialAdminState}
                 contact={adminInfo.contact}
-                // jobNumber={adminInfo.jobNumber}        // Add this
+                onImport={onImport}
             />
             <SignOrderDetailsSheet
                 open={sheetOpen}
@@ -199,6 +220,7 @@ export function SignOrderAdminInfo({
                 customers={customers}
                 mode={sheetMode}
                 onJobCreated={handleJobCreated}
+                onSaved={onDetailsSaved}
             />
         </div>
     );

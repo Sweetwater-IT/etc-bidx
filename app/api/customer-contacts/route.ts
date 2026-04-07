@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { contractor_id, name, role, email, phone, quoteId } = body;
 
-    if (!contractor_id || !email) {
+    if (!contractor_id) {
       return NextResponse.json(
-        { error: "contractor_id and email are required" },
+        { error: "contractor_id is required" },
         { status: 400 }
       );
     }

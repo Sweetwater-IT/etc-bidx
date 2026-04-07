@@ -1,9 +1,10 @@
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { EstimateProvider } from "@/contexts/EstimateContext";
+"use client";
+
+import { SignOrderBuilderProvider } from "@/contexts/SignOrderBuilderContext";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import SignOrderContentSimple from "./SignOrderContentSimple";
 
-export default async function CreateSignOrderPage() {    
+export default function CreateSignOrderPage() {
     return (
         <SidebarProvider
             style={
@@ -13,12 +14,13 @@ export default async function CreateSignOrderPage() {
                 } as React.CSSProperties
             }
         >
-            <AppSidebar variant="inset" />
-            <SidebarInset>
-                <EstimateProvider>
-                    <SignOrderContentSimple />
-                </EstimateProvider>
-            </SidebarInset>
+            <div className="flex h-screen w-screen flex-col">
+                <div className="flex-1 overflow-auto">
+                    <SignOrderBuilderProvider>
+                        <SignOrderContentSimple />
+                    </SignOrderBuilderProvider>
+                </div>
+            </div>
         </SidebarProvider>
     );
 }

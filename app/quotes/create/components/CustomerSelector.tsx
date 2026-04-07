@@ -1,288 +1,257 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import {
-    Command,
-    CommandInput,
-    CommandList,
-    CommandEmpty,
-    CommandGroup,
-    CommandItem,
-} from '@/components/ui/command'
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import CreateModal from './CreateModal'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
-import { Loader, Check, ChevronsUpDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider'
+import { Pencil, Users } from 'lucide-react'
+import type { Customer as QuoteCustomer } from '@/types/Customer'
+import { QuoteCustomerSheet } from './QuoteCustomerSheet'
 
-const CustomerSelect = ({ data, setData, direction = 'row', columnCustomerTitle, columnContactTitle }: { data: any, setData: React.Dispatch<any>, direction?: 'row' | 'column', columnCustomerTitle?: string, columnContactTitle?: string }) => {
-    const { customers, selectedCustomer, selectedContact, selectCustomer, selectContact, addContact, addCustomer, loading } = useCustomerSelection();
-    const [customerSearch, setCustomerSearch] = useState('')
-    const [contactSearch, setContactSearch] = useState('')
-    const [modalOpen, setModalOpen] = useState(false)
-    const [modalType, setModalType] = useState<'customer' | 'contact' | null>(null)
-    const [openCustomer, setOpenCustomer] = useState(false)
-    const [openContact, setOpenContact] = useState(false)
+const CustomerSelect = ({
+  data,
+  setData,
+  direction = 'row',
+  columnCustomerTitle,
+  columnContactTitle,
+}: {
+  data: any
+  setData: React.Dispatch<any>
+  direction?: 'row' | 'column'
+  columnCustomerTitle?: string
+  columnContactTitle?: string
+}) => {
+  const { setSelectedCustomers, setPointOfContact } = useQuoteForm()
+  const {
+    customers,
+    selectedCustomer,
+    selectedContact,
+    selectCustomer,
+    selectContact,
+    refreshCustomers,
+    loading,
+    upsertCustomer,
+  } = useCustomerSelection()
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetView, setSheetView] = useState<'select-customer' | 'select-contact'>('select-customer')
 
-    useEffect(() => {
-        if (!data.customer || customers.length === 0) return;
+  const buildCustomerAddress = (customer: any) =>
+    [customer?.address || '', customer?.city || '', customer?.state || '', customer?.zip || '']
+      .filter(Boolean)
+      .join(', ')
 
-        const cust = customers.find(c => c.id.toString() === data.customer.toString());
-        if (!cust) return;
+  const toQuoteCustomer = (customer: any): QuoteCustomer => ({
+    id: customer.id,
+    name: customer.name || customer.display_name || '',
+    displayName: customer.display_name || customer.displayName || customer.name || '',
+    emails: Array.isArray(customer.customer_contacts)
+      ? customer.customer_contacts.map((contact: any) => contact.email || '')
+      : [],
+    address: customer.address || '',
+    phones: Array.isArray(customer.customer_contacts)
+      ? customer.customer_contacts.map((contact: any) => contact.phone || '')
+      : [],
+    roles: Array.isArray(customer.customer_contacts)
+      ? customer.customer_contacts.map((contact: any) => contact.role || '')
+      : [],
+    names: Array.isArray(customer.customer_contacts)
+      ? customer.customer_contacts.map((contact: any) => contact.name || '')
+      : [],
+    contactIds: Array.isArray(customer.customer_contacts)
+      ? customer.customer_contacts.map((contact: any) => contact.id || 0)
+      : [],
+    url: customer.web || customer.url || '',
+    created: customer.created || '',
+    updated: customer.updated || '',
+    city: customer.city || '',
+    state: customer.state || '',
+    zip: customer.zip || '',
+    customerNumber: customer.customer_number || customer.customerNumber || 0,
+    mainPhone: customer.main_phone || customer.mainPhone || '',
+    paymentTerms: customer.payment_terms || customer.paymentTerms || '',
+    lastOrdered: customer.lastOrdered || null,
+  })
 
-        selectCustomer(cust.id.toString());
+  useEffect(() => {
+    if (!data.customer || customers.length === 0) return
 
-        if (data.customer_contact && cust.customer_contacts?.length) {
-            const contact = cust.customer_contacts.find(c => c.name === data.customer_contact);
-            if (contact) selectContact(contact.id.toString());
+    const customer = customers.find(c => c.id.toString() === data.customer.toString())
+    if (!customer) return
+
+    const contact =
+      customer.customer_contacts?.length
+        ? customer.customer_contacts.find(c =>
+            c.id?.toString() === data.customer_contact_id?.toString()
+          ) ||
+          customer.customer_contacts.find(c => c.name === data.customer_contact) ||
+          null
+        : null
+
+    selectCustomer(customer.id.toString(), contact?.id?.toString())
+  }, [customers, data.customer, data.customer_contact, data.customer_contact_id, selectCustomer])
+
+  useEffect(() => {
+    setData((prev: any) => {
+      if (!selectedCustomer) {
+        if (
+          prev.customer ||
+          prev.customer_name ||
+          prev.customer_contact ||
+          prev.customer_email ||
+          prev.customer_phone ||
+          prev.customer_address
+        ) {
+          return prev
         }
-    }, [data.customer, data.customer_contact, customers]);
 
-    useEffect(() => {
-        if (!selectedCustomer) return;
+        return prev
+      }
 
-        const newData = {
-            ...data,
-            customer: selectedCustomer.id || "",
-            customer_name: selectedCustomer.name || "",
-            customer_email: selectedContact?.email || "",
-            customer_phone: selectedContact?.phone || "",
-            customer_address: `${selectedCustomer.address || ""} ${selectedCustomer.city || ""}, ${selectedCustomer.state || ""} ${selectedCustomer.zip || ""}`,
-            customer_contact: selectedContact?.name || "",
-        };
+      const customerChanged = prev.customer?.toString() !== selectedCustomer.id.toString()
+      const nextData = {
+        ...prev,
+        customer: selectedCustomer.id || '',
+        customer_name: selectedCustomer.name || '',
+        customer_address: buildCustomerAddress(selectedCustomer),
+        customer_contact_id: selectedContact?.id || (customerChanged ? '' : prev.customer_contact_id || ''),
+        customer_contact: selectedContact?.name || (customerChanged ? '' : prev.customer_contact || ''),
+        customer_email: selectedContact?.email || (customerChanged ? '' : prev.customer_email || ''),
+        customer_phone: selectedContact?.phone || (customerChanged ? '' : prev.customer_phone || ''),
+      }
 
-        const hasChanged = Object.keys(newData).some(
-            key => newData[key] !== data[key]
-        );
+      const hasChanged = Object.keys(nextData).some(key => nextData[key] !== prev[key])
+      return hasChanged ? nextData : prev
+    })
+  }, [selectedCustomer, selectedContact, setData])
 
-        if (hasChanged) setData(newData);
-    }, [selectedCustomer, selectedContact]);
+  useEffect(() => {
+    if (!selectedCustomer) {
+      if (data.customer) {
+        return
+      }
 
-    const openModal = (type: 'customer' | 'contact') => {
-        setModalType(type)
-        setModalOpen(true)
+      setSelectedCustomers([])
+      setPointOfContact(undefined)
+      return
     }
 
-    const handleConfirm = async (data: Record<string, string>) => {
-        if (modalType === 'customer') {
-            const resp = await fetch('/api/contractors/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: data.name,
-                    address: data.address || null,
-                    url: data.url || null,
-                    city: data.city || null,
-                    state: data.state || null,
-                    zip: data.zip || null,
-                    phone: data.phone || null,
-                    customerNumber: data.customerNumber || null
-                })
-            })
-            const result = await resp.json()
-            if (result.success) addCustomer(result.data)
-        }
+    setSelectedCustomers([toQuoteCustomer(selectedCustomer)])
 
-        if (modalType === 'contact') {
-            const resp = await fetch('/api/customer-contacts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contractor_id: selectedCustomer?.id,
-                    name: data.name,
-                    role: data.role || null,
-                    email: data.email,
-                    phone: data.phone || null,
-                }),
-            })
-            const result = await resp.json()
-            if (result.success) addContact(result.data)
-        }
-
-        setModalOpen(false)
+    if (selectedContact) {
+      setPointOfContact({
+        id: selectedContact.id,
+        name: selectedContact.name || '',
+        email: selectedContact.email || '',
+      })
+      return
     }
 
-    const handleContactClick = (contactId: string) => {
-        const contact = selectedCustomer?.customer_contacts?.find(c => c.id.toString() === contactId);
-        if (!contact) return;
+    setPointOfContact(undefined)
+  }, [data.customer, data.customer_contact, selectedContact, selectedCustomer, setPointOfContact, setSelectedCustomers])
 
-        selectContact(contact.id.toString());
-        setData((prev: any) => ({
-            ...prev,
-            customer_contact: contact.name || "",
-            customer_email: contact.email || "",
-            customer_phone: contact.phone || "",
-            customer_address: contact.address || ""
-        }));
-    };
+  const handleContactClick = (contactId: string) => {
+    const contact = selectedCustomer?.customer_contacts?.find(c => c.id?.toString() === contactId)
+    if (!contact) return
 
-    const filteredCustomers = useMemo(() => {
-        if (!customerSearch) return customers
-        return customers.filter(c =>
-            c.name.toLowerCase().includes(customerSearch)
-        )
-    }, [customers, customerSearch])
+    selectContact(contact.id.toString())
+    setPointOfContact({
+      id: contact.id,
+      name: contact.name || '',
+      email: contact.email || '',
+    })
+    setData((prev: any) => ({
+      ...prev,
+      customer_contact_id: contact.id || '',
+      customer_contact: contact.name || '',
+      customer_email: contact.email || '',
+      customer_phone: contact.phone || '',
+    }))
+  }
 
-    const filteredContacts = useMemo(() => {
-        if (!selectedCustomer?.customer_contacts) return []
-        if (!contactSearch) return selectedCustomer.customer_contacts
-        return selectedCustomer.customer_contacts.filter(
-            cc =>
-                cc.name.toLowerCase().includes(contactSearch) ||
-                cc.email.toLowerCase().includes(contactSearch)
-        )
-    }, [selectedCustomer, contactSearch])
+  const handleCustomerClick = (customerId: string) => {
+    const nextCustomer = customers.find(customer => customer.id.toString() === customerId) || null
+    const isSameCustomer = selectedCustomer?.id?.toString() === customerId
+    const preservedContactId = isSameCustomer ? selectedContact?.id?.toString() : undefined
 
-    return (
-        <div className="w-full">
-            <div className={`flex ${direction === "row" ? "flex-row" : "flex-col"} justify-between gap-4 mb-4 flex-1`}>
-                {/* Customer */}
-                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"} flex flex-col`}>
-                    <label className="font-semibold block mb-1">{columnCustomerTitle || "Customer Selection"}</label>
-                    <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="justify-between">
-                                {loading
-                                    ? "Loading..."
-                                    : selectedCustomer?.name || "Select Customer"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                            <Command>
-                                <CommandInput
-                                    value={customerSearch.toLocaleLowerCase()}
-                                    placeholder="Search..."
-                                    onValueChange={(val: string) => setCustomerSearch(val.toLocaleLowerCase())}
-                                />
-                                <CommandList>
-                                    <CommandEmpty>No customers found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {filteredCustomers.map(c => (
-                                            <CommandItem
-                                                key={c.id}
-                                                value={c.name.toString().toLocaleLowerCase()}
-                                                onSelect={() => {
-                                                    if (c.id.toString() === "__new__") return openModal("customer");
-                                                    selectCustomer(c.id.toString());
-                                                    setOpenCustomer(false);
-                                                }}
-                                            >
-                                                <Check className={cn("mr-2 h-4 w-4", selectedCustomer?.id === c.id ? "opacity-100" : "opacity-0")} />
-                                                {c.name}
-                                            </CommandItem>
-                                        ))}
-                                        <CommandItem
-                                            value="__new__"
-                                            onSelect={() => {
-                                                openModal("customer");
-                                                setOpenCustomer(false);
-                                            }}
-                                        >
-                                            ➕ Add new customer
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
+    selectCustomer(customerId, preservedContactId)
 
-                {/* Contact */}
-                <div className={`${direction === "row" ? "w-1/2" : "w-full mb-2"} flex flex-col`}>
-                    <label className="font-semibold block mb-1">{columnContactTitle || "Contact Selection"}</label>
-                    <Popover open={openContact} onOpenChange={setOpenContact}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="justify-between" disabled={!selectedCustomer || loading}>
-                                {loading
-                                    ? "Loading..."
-                                    : selectedContact?.name || "Select Contact"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                            <Command>
-                                <CommandInput
-                                    value={contactSearch}
-                                    placeholder="Search..."
-                                    onValueChange={(val: string) => setContactSearch(val.toLocaleLowerCase())}
-                                />
-                                <CommandList>
-                                    <CommandEmpty>No contacts found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {filteredContacts.length ? (
-                                            filteredContacts.map(cc => (
-                                                <CommandItem
-                                                    key={cc.id}
-                                                    value={cc.id.toString()}
-                                                    onSelect={() => {
-                                                        handleContactClick(cc.id.toString());
-                                                        setOpenContact(false);
-                                                    }}
-                                                >
-                                                    <Check className={cn("mr-2 h-4 w-4", selectedContact?.id === cc.id ? "opacity-100" : "opacity-0")} />
-                                                    {cc.name} ({cc.email})
-                                                </CommandItem>
-                                            ))
-                                        ) : (
-                                            <p className="p-2 text-sm text-gray-500">There are no contacts</p>
-                                        )}
-                                        <CommandItem
-                                            value="__new__"
-                                            onSelect={() => {
-                                                openModal("contact");
-                                                setOpenContact(false);
-                                            }}
-                                        >
-                                            ➕ Add new contact
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-            </div>
+    if (!nextCustomer) {
+      return
+    }
 
-            <CreateModal
-                open={modalOpen}
-                title={modalType === 'customer' ? 'Create Customer' : 'Create Contact'}
-                fields={
-                    modalType === 'customer'
-                        ? [
-                            { name: 'name', label: 'Name', placeholder: 'Enter customer name' },
-                            { name: 'address', label: 'Address', placeholder: 'Enter address' },
-                            { name: 'url', label: 'Website', placeholder: 'Enter website URL' },
-                            { name: 'city', label: 'City', placeholder: 'Enter city' },
-                            { name: 'state', label: 'State', placeholder: 'Enter state' },
-                            { name: 'zip', label: 'Zip', placeholder: 'Enter ZIP code' },
-                            { name: 'phone', label: 'Phone', placeholder: 'Enter phone number' },
-                            { name: 'customerNumber', label: 'Customer Number', type: 'number', placeholder: 'Enter customer number' }
-                        ]
-                        : [
-                            { name: 'name', label: 'Name', placeholder: 'Enter contact name' },
-                            { name: 'email', label: 'Email', type: 'email', placeholder: 'Enter contact email' },
-                            {
-                                name: 'role',
-                                label: 'Role',
-                                type: 'select',
-                                options: [
-                                    'ESTIMATOR',
-                                    'PROJECT MANAGER',
-                                    'ADMIN',
-                                    'FIELD / SUPERVISOR',
-                                    'OTHER'
-                                ],
-                                placeholder: 'Select role'
-                            },
-                            { name: 'phone', label: 'Phone', placeholder: 'Enter phone number' },
-                        ]
-                }
-                onClose={() => setModalOpen(false)}
-                onConfirm={handleConfirm}
-            />
+    if (isSameCustomer) {
+      setSelectedCustomers([toQuoteCustomer(nextCustomer)])
+      return
+    }
+
+    setPointOfContact(undefined)
+    setSelectedCustomers([toQuoteCustomer(nextCustomer)])
+    setData((prev: any) => ({
+      ...prev,
+      customer: nextCustomer.id || '',
+      customer_name: nextCustomer.name || '',
+      customer_address: buildCustomerAddress(nextCustomer),
+      customer_contact_id: '',
+      customer_contact: '',
+      customer_email: '',
+      customer_phone: '',
+    }))
+  }
+
+  return (
+    <div className="w-full">
+      <div className={`flex ${direction === 'row' ? 'flex-row' : 'flex-col'} justify-between gap-4 mb-4 flex-1`}>
+        <div className={`${direction === 'row' ? 'w-1/2' : 'w-full mb-2'} flex flex-col`}>
+          <label className="font-semibold block mb-1">{columnCustomerTitle || 'Customer'}</label>
+          <Button
+            variant="outline"
+            className="justify-between"
+            onClick={() => {
+              setSheetView('select-customer')
+              setSheetOpen(true)
+            }}
+          >
+            <span className="truncate text-left">
+              {loading ? 'Loading...' : selectedCustomer?.name || data.customer_name || 'Select Customer'}
+            </span>
+            <Users className="ml-2 h-4 w-4 opacity-60" />
+          </Button>
         </div>
-    )
+
+        <div className={`${direction === 'row' ? 'w-1/2' : 'w-full mb-2'} flex flex-col`}>
+          <label className="font-semibold block mb-1">{columnContactTitle || 'Contact'}</label>
+          <Button
+            variant="outline"
+            className="justify-between"
+            disabled={!selectedCustomer || loading}
+            onClick={() => {
+              setSheetView('select-contact')
+              setSheetOpen(true)
+            }}
+          >
+            <span className="truncate text-left">
+              {loading
+                ? 'Loading...'
+                : selectedContact?.name || data.customer_contact || (selectedCustomer || data.customer ? 'Please select contact' : 'Select Contact')}
+            </span>
+            <Pencil className="ml-2 h-4 w-4 opacity-60" />
+          </Button>
+        </div>
+      </div>
+
+      <QuoteCustomerSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        initialView={sheetView}
+        customers={customers}
+        selectedCustomer={selectedCustomer}
+        selectedContact={selectedContact}
+        loading={loading}
+        onSelectCustomer={handleCustomerClick}
+        onSelectContact={handleContactClick}
+        onCustomerUpsert={(customer) => upsertCustomer(customer as any)}
+        refreshCustomers={refreshCustomers}
+      />
+    </div>
+  )
 }
 
 export default CustomerSelect

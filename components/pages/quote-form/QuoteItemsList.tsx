@@ -34,7 +34,7 @@ const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListPr
     <>
       {quoteItems.map((item, ix) => (
         <QuoteItemRow
-          key={ix}
+          key={item.id ?? `quote-item-${ix}`}
           item={item}
           isEditing={editingItemId === item.id}
           products={products}

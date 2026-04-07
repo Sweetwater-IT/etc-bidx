@@ -171,6 +171,7 @@ export default function QuotesPage() {
               <DataTable<QuoteGridView>
                 data={quotes}
                 columns={QUOTES_COLUMNS}
+                variant="job-list"
                 segments={SEGMENTS}
                 segmentValue={activeFilter}
                 segmentCounts={quoteCounts}
@@ -183,7 +184,7 @@ export default function QuotesPage() {
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
                 totalCount={totalCount}
-
+                isLoading={isTableLoading}
                 onDelete={(quote) => handleDeleteQuote(quote)}
               />
             </div>

@@ -45,5 +45,5 @@ export const defaultAdminObject: AdminData = {
     emergencyACLites: 0,
     emergencySharps: 0,
   },
-
+  etcRep: "",
 };

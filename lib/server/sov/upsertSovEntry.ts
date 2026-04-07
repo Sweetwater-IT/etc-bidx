@@ -1,0 +1,334 @@
+import { supabase } from '@/lib/supabase';
+import {
+  buildRepeatableCloneItemNumber,
+  fetchSovMastersForEntries,
+  getPrimaryUom,
+  getVisibleSovItemNumber,
+  isRepeatableCloneItemNumber,
+  isRepeatableSovItemNumber,
+  resolveEntryMaster,
+  SOV_MASTER_SELECT_FIELDS,
+} from '@/lib/server/sov/masterItems';
+
+export class SovUpsertError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status = 500, details?: unknown) {
+    super(message);
+    this.name = 'SovUpsertError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
+export type UpsertSovEntryInput = {
+  jobId: string;
+  sov_item_id?: string | null;
+  custom_sov_item_id?: string | null;
+  item_number?: string | null;
+  description?: string | null;
+  display_name_override?: string | null;
+  work_type?: string | null;
+  uom?: string | null;
+  uom_override?: string | null;
+  quantity?: number | null;
+  unit_price?: number | null;
+  retainage_type?: string | null;
+  retainage_value?: number | null;
+  notes?: string | null;
+  sort_order?: number | null;
+};
+
+export async function upsertSovEntry(input: UpsertSovEntryInput) {
+  const {
+    jobId,
+    sov_item_id,
+    custom_sov_item_id,
+    item_number,
+    description,
+    display_name_override,
+    work_type,
+    uom,
+    uom_override,
+    quantity,
+    unit_price,
+    retainage_type,
+    retainage_value,
+    notes,
+    sort_order,
+  } = input;
+
+  let finalSovItemId = sov_item_id ?? null;
+  let finalCustomSovItemId = custom_sov_item_id ?? null;
+  const createCustomClone = async (master: {
+    item_number: string;
+    display_item_number: string;
+    description: string;
+    display_name: string;
+    work_type: string;
+    uom_1: string | null;
+    uom_2: string | null;
+    uom_3: string | null;
+    uom_4: string | null;
+    uom_5: string | null;
+    uom_6: string | null;
+    uom_7: string | null;
+  }) => {
+    const visibleItemNumber = getVisibleSovItemNumber(master);
+    const { data: clone, error: cloneError } = await supabase
+      .from('custom_sov_items')
+      .insert({
+        job_id: jobId,
+        item_number: buildRepeatableCloneItemNumber(visibleItemNumber),
+        display_item_number: visibleItemNumber,
+        description: description ?? master.description ?? '',
+        display_name:
+          display_name_override ||
+          description ||
+          master.display_name ||
+          visibleItemNumber,
+        work_type: work_type ?? master.work_type ?? 'OTHER',
+        uom_1: uom ?? getPrimaryUom(master),
+      })
+      .select('id')
+      .single();
+
+    if (cloneError) {
+      throw new SovUpsertError('Failed to create duplicate SOV item clone', 500, cloneError);
+    }
+
+    finalSovItemId = null;
+    finalCustomSovItemId = clone.id;
+  };
+
+  if (!finalSovItemId && !finalCustomSovItemId && item_number) {
+    const normalizedItemNumber = String(item_number).trim();
+    let standardLookup = supabase
+      .from('sov_items')
+      .select(SOV_MASTER_SELECT_FIELDS)
+      .eq('item_number', normalizedItemNumber);
+
+    if (work_type) {
+      standardLookup = standardLookup.eq('work_type', work_type);
+    }
+
+    const { data: standardMatches, error: findError } = await standardLookup.limit(2);
+
+    if (findError && findError.code !== 'PGRST116') {
+      throw new SovUpsertError('Failed to lookup master SOV item', 500, findError);
+    }
+
+    const existingItem = standardMatches?.[0] ?? null;
+
+    if ((standardMatches?.length || 0) > 1) {
+      throw new SovUpsertError(
+        'Found multiple standard SOV items for this item number. Please include work type when selecting the row.',
+        400,
+        { item_number: normalizedItemNumber, work_type }
+      );
+    }
+
+    if (existingItem) {
+      if (isRepeatableSovItemNumber(existingItem.display_item_number || existingItem.item_number)) {
+        await createCustomClone(existingItem);
+      } else {
+        finalSovItemId = existingItem.id;
+      }
+    } else {
+      const { data: newItem, error: createError } = await supabase
+        .from('custom_sov_items')
+        .insert({
+          job_id: jobId,
+          item_number: normalizedItemNumber,
+          display_item_number: normalizedItemNumber,
+          description: description ?? '',
+          display_name: description || normalizedItemNumber,
+          work_type: work_type ?? 'OTHER',
+          uom_1: uom ?? 'UNKNOWN',
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        throw new SovUpsertError('Failed to create custom SOV item', 500, createError);
+      }
+
+      finalCustomSovItemId = newItem.id;
+    }
+  }
+
+  if (!finalSovItemId && !finalCustomSovItemId) {
+    throw new SovUpsertError('Missing sov_item_id, custom_sov_item_id, or item_number', 400);
+  }
+
+  const normalizedQuantity = Number(quantity ?? 0);
+  const normalizedUnitPrice = Number(unit_price ?? 0);
+  const normalizedRetainageValue = Number(retainage_value ?? 0);
+  const normalizedRetainageType = retainage_type ?? 'percent';
+
+  const extended_price = normalizedQuantity * normalizedUnitPrice;
+  const retainage_amount = normalizedRetainageType === 'percent'
+    ? extended_price * (normalizedRetainageValue / 100)
+    : normalizedRetainageValue;
+
+  let finalSortOrder = sort_order ?? null;
+
+  if (finalSortOrder == null) {
+    const { data: maxSort, error: sortError } = await supabase
+      .from('sov_entries')
+      .select('sort_order')
+      .eq('job_id', jobId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+
+    if (sortError) {
+      throw new SovUpsertError('Failed to determine SOV sort order', 500, sortError);
+    }
+
+    finalSortOrder = maxSort && maxSort.length > 0 ? maxSort[0].sort_order + 1 : 1;
+  }
+
+  let writePayload = {
+    job_id: jobId,
+    sov_item_id: finalSovItemId,
+    custom_sov_item_id: finalCustomSovItemId,
+    display_name_override: display_name_override ?? null,
+    uom_override: uom_override ?? null,
+    quantity: normalizedQuantity,
+    unit_price: normalizedUnitPrice,
+    extended_price,
+    retainage_type: normalizedRetainageType,
+    retainage_value: normalizedRetainageValue,
+    retainage_amount,
+    notes: notes ?? null,
+    sort_order: finalSortOrder,
+  };
+
+  const selectEntryFields = `
+    id,
+    job_id,
+    sov_item_id,
+    custom_sov_item_id,
+    display_name_override,
+    uom_override,
+    quantity,
+    unit_price,
+    extended_price,
+    retainage_type,
+    retainage_value,
+    retainage_amount,
+    notes,
+    sort_order,
+    created_at,
+    updated_at
+  `;
+
+  const hydrateResponse = async (entry: any) => {
+    const masterMaps = await fetchSovMastersForEntries([entry]);
+    const masterItem = resolveEntryMaster(entry, masterMaps);
+
+    if (!masterItem) {
+      throw new SovUpsertError('Failed to fetch SOV master item after save', 500);
+    }
+
+    return {
+      id: entry.id,
+      job_id: entry.job_id,
+      sov_item_id: entry.sov_item_id,
+      custom_sov_item_id: entry.custom_sov_item_id,
+      display_name_override: entry.display_name_override,
+      uom_override: entry.uom_override,
+      item_number: masterItem.item_number,
+      display_item_number: masterItem.display_item_number,
+      description: masterItem.description,
+      display_name: entry.display_name_override || masterItem.display_name,
+      work_type: masterItem.work_type,
+      uom: entry.uom_override || getPrimaryUom(masterItem),
+      is_custom: masterItem.source === 'custom' && !isRepeatableCloneItemNumber(masterItem.item_number),
+      quantity: entry.quantity,
+      unit_price: entry.unit_price,
+      extended_price: entry.extended_price,
+      retainage_type: entry.retainage_type,
+      retainage_value: entry.retainage_value,
+      retainage_amount: entry.retainage_amount,
+      notes: entry.notes,
+      sort_order: entry.sort_order,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+    };
+  };
+
+  let { data, error } = await supabase
+    .from('sov_entries')
+    .insert(writePayload)
+    .select(selectEntryFields)
+    .single();
+
+  const duplicateStandard = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_sov_item_id_key');
+  const duplicateCustom = error && error.code === '23505' && error.message?.includes('sov_entries_job_id_custom_sov_item_id_key');
+
+  if (duplicateStandard && finalSovItemId && !finalCustomSovItemId) {
+    const { data: existingMaster, error: masterError } = await supabase
+      .from('sov_items')
+      .select(SOV_MASTER_SELECT_FIELDS)
+      .eq('id', finalSovItemId)
+      .single();
+
+    if (masterError || !existingMaster) {
+      throw new SovUpsertError('Failed to load standard SOV item for duplicate entry clone', 500, masterError);
+    }
+
+    await createCustomClone(existingMaster);
+
+    writePayload = {
+      ...writePayload,
+      sov_item_id: null,
+      custom_sov_item_id: finalCustomSovItemId,
+    };
+
+    const retryResult = await supabase
+      .from('sov_entries')
+      .insert(writePayload)
+      .select(selectEntryFields)
+      .single();
+
+    data = retryResult.data;
+    error = retryResult.error;
+  }
+
+  if (error && (duplicateStandard || duplicateCustom)) {
+    const { sort_order: _ignoredSort, ...updatePayload } = writePayload;
+    let updateQuery = supabase
+      .from('sov_entries')
+      .update(updatePayload)
+      .eq('job_id', jobId);
+
+    if (finalCustomSovItemId) {
+      updateQuery = updateQuery.eq('custom_sov_item_id', finalCustomSovItemId);
+    } else {
+      updateQuery = updateQuery.eq('sov_item_id', finalSovItemId);
+    }
+
+    const { data: updatedData, error: updateError } = await updateQuery
+      .select(selectEntryFields)
+      .single();
+
+    if (updateError) {
+      throw new SovUpsertError('Failed to update existing SOV entry', 500, updateError);
+    }
+
+    data = updatedData;
+    error = null;
+  }
+
+  if (error) {
+    throw new SovUpsertError('Failed to create SOV entry', 500, error);
+  }
+
+  if (!data) {
+    throw new SovUpsertError('No data returned from database operation', 500);
+  }
+
+  return await hydrateResponse(data);
+}

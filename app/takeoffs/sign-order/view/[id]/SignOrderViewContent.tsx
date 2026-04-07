@@ -8,7 +8,7 @@ import { SiteHeader } from '@/components/site-header'
 import { toast } from 'sonner'
 import { DataTable } from '@/components/data-table'
 import EquipmentTotalsAccordion from './EquipmentTotalsAccordion'
-import { useEstimate } from '@/contexts/EstimateContext'
+import { useSignOrderBuilder } from '@/contexts/SignOrderBuilderContext'
 import { fetchAssociatedFiles, fetchReferenceData, saveSignOrder } from '@/lib/api-client'
 import { formatDate } from '@/lib/formatUTCDate'
 import { User } from '@/types/User'
@@ -94,7 +94,7 @@ const determineBranch = (id: number): string => {
 export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
-  const { dispatch, mptRental } = useEstimate()
+  const { dispatch, mptRental } = useSignOrderBuilder()
   const [signOrder, setSignOrder] = useState<SignOrder | null>(null)
   const [signItems, setSignItems] = useState<SignItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -526,13 +526,13 @@ export default function SignOrderViewContent() {
           </div>
         </div>
       </SiteHeader>
-      <div className='flex flex-1 flex-col'>
-        <div className='@container/main flex flex-1 flex-col gap-2'>
-          <div className='flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6'>
+      <div className='flex min-w-0 flex-1 flex-col overflow-x-hidden'>
+        <div className='@container/main flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden'>
+          <div className='flex min-w-0 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6'>
             {/* Customer Info and Upload Files in same row */}
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+            <div className='grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-3'>
               {/* Customer Information - Takes 2/3 of the row */}
-              <div className='lg:col-span-2 bg-white p-8 rounded-md shadow-sm border border-gray-100'>
+              <div className='min-w-0 rounded-md border border-gray-100 bg-white p-8 shadow-sm lg:col-span-2'>
                 <h2 className='text-xl font-semibold mb-4'>
                   Customer Information
                 </h2>
@@ -653,36 +653,38 @@ export default function SignOrderViewContent() {
               </div>
 
               {/* Equipment Totals - Takes 1/3 of the row */}
-              <div className='flex flex-col gap-y-2'>
+              <div className='min-w-0 flex flex-col gap-y-2'>
                 <EquipmentTotalsAccordion key={signItems.length} />
                 <FileViewingContainer files={files} onFilesChange={setFiles} />
               </div>
             </div>
 
             {/* Sign Details Table - Full width below */}
-            <div className='grid grid-cols-1 gap-8'>
-              <div className='bg-white p-8 rounded-md shadow-sm border border-gray-100'>
+            <div className='grid min-w-0 grid-cols-1 gap-8'>
+              <div className='min-w-0 rounded-md border border-gray-100 bg-white p-8 shadow-sm'>
                 <h2 className='text-xl font-semibold mb-4'>Sign Details</h2>
-                <DataTable
-                  data={
-                    signItems.length === 0
-                      ? [
-                        {
-                          designation: '-',
-                          description: '-',
-                          dimensions: '-',
-                          quantity: '-',
-                          sheeting: '-',
-                          structure: '-',
-                          bLights: '-',
-                          covers: '-'
-                        } as any
-                      ]
-                      : signItems
-                  }
-                  columns={SIGN_COLUMNS}
-                  hideDropdown
-                />
+                <div className='min-w-0 max-w-full overflow-x-auto'>
+                  <DataTable
+                    data={
+                      signItems.length === 0
+                        ? [
+                          {
+                            designation: '-',
+                            description: '-',
+                            dimensions: '-',
+                            quantity: '-',
+                            sheeting: '-',
+                            structure: '-',
+                            bLights: '-',
+                            covers: '-'
+                          } as any
+                        ]
+                        : signItems
+                    }
+                    columns={SIGN_COLUMNS}
+                    hideDropdown
+                  />
+                </div>
               </div>
             </div>
           </div>

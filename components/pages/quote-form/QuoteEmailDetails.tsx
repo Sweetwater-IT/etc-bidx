@@ -54,6 +54,7 @@ export function QuoteEmailDetails() {
       label: string;
       customer: string;
       name: string;
+      id?: number;
     }[] = [];
 
     (selectedCustomers || []).forEach((customer) => {
@@ -65,6 +66,7 @@ export function QuoteEmailDetails() {
               }`,
             customer: customer.name || "Unknown Customer",
             name: customer.names?.[index] || "Unknown",
+            id: customer.contactIds?.[index],
           });
         }
       });
@@ -93,6 +95,7 @@ export function QuoteEmailDetails() {
 
     if (selectedContact) {
       setPointOfContact({
+        id: (selectedContact as any).id,
         email: selectedContact.value,
         name: selectedContact.name,
       });
@@ -128,7 +131,7 @@ export function QuoteEmailDetails() {
       updatedCustomer.names = [...(updatedCustomer.names || []), newContact.name];
 
       setSelectedCustomers([updatedCustomer]);
-      setPointOfContact({ name: newContact.name, email: newContact.email });
+      setPointOfContact({ id: newContact.id, name: newContact.name, email: newContact.email });
 
       toast.success(`Contact ${newContact.name} added!`);
     } catch (err) {

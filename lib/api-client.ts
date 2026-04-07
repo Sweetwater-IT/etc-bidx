@@ -1136,6 +1136,32 @@ export const saveSignOrder = async (signOrderData: {
   return { id: data.id };
 }
 
+export const saveContract = async (contractData: {
+  contractId?: string,
+  data: any
+}) => {
+  const response = await fetch('/api/l/contracts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(contractData),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.contract) {
+    throw new Error('Failed to save contract');
+  }
+
+  // Return the contract data
+  return data.contract;
+}
+
 export const fetchAssociatedFiles = async (
   uniqueIdentifier: number,
   folder: string,

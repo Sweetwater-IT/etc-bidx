@@ -21,4 +21,5 @@ export type AdminDataEntry = {
   emergency_job: boolean;
   rated: 'RATED' | 'NON-RATED' | null;
   emergency_fields: any;
+  etc_rep: string | null;
 };

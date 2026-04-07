@@ -1,49 +1,251 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createCustomer } from "@/hooks/use-customers-swr"
 
 interface CustomerFormProps {
-  onSuccess: () => void
+  onSuccess: (customer?: { id: number; name?: string; display_name?: string }) => void
   onCancel?: () => void
+  mode?: "create" | "edit"
+  customerId?: number
+  initialData?: any
 }
 
 type FormData = {
+  // Company Info
   name: string
   display_name: string
   customer_number: string
   url: string
   main_phone: string
+
+  // Main Address
   address: string
   city: string
   state: string
   zip: string
+
+  // Bill To Address
+  bill_to_street_address: string
+  bill_to_city: string
+  bill_to_state: string
+  bill_to_zip_code: string
+  billToSameAsMain: boolean
+
+  // Person Ordering
+  personOrderingName: string
+  personOrderingTitle: string
+
+  // Primary Contact
+  primaryContactName: string
+  primaryContactPhone: string
+  primaryContactEmail: string
+  primaryContactSameAsPersonOrdering: boolean
+
+  // Project Manager
+  projectManagerName: string
+  projectManagerPhone: string
+  projectManagerEmail: string
+
+  // Other
   payment_terms: string
+  would_like_to_apply_for_credit: boolean
 }
 
-export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
+const EMPTY_FORM_VALUES: FormData = {
+  name: '',
+  display_name: '',
+  customer_number: '',
+  url: '',
+  main_phone: '',
+  address: '',
+  city: '',
+  state: '',
+  zip: '',
+  bill_to_street_address: '',
+  bill_to_city: '',
+  bill_to_state: '',
+  bill_to_zip_code: '',
+  billToSameAsMain: false,
+  personOrderingName: '',
+  personOrderingTitle: '',
+  primaryContactName: '',
+  primaryContactPhone: '',
+  primaryContactEmail: '',
+  primaryContactSameAsPersonOrdering: false,
+  projectManagerName: '',
+  projectManagerPhone: '',
+  projectManagerEmail: '',
+  payment_terms: '',
+  would_like_to_apply_for_credit: false,
+}
+
+function buildInitialValues(initialData?: any): FormData {
+  if (!initialData) {
+    return EMPTY_FORM_VALUES
+  }
+
+  const contacts = Array.isArray(initialData.customer_contacts)
+    ? initialData.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+    : []
+
+  const findRole = (role: string) =>
+    contacts.find((contact: any) => (contact.role || "").toUpperCase() === role)
+
+  const personOrdering = findRole("PERSON ORDERING")
+  const primaryContact = findRole("PRIMARY CONTACT")
+  const projectManager = findRole("PROJECT MANAGER")
+
+  const billToStreet = initialData.bill_to_street || ''
+  const billToCity = initialData.bill_to_city || ''
+  const billToState = initialData.bill_to_state || ''
+  const billToZip = initialData.bill_to_zip || ''
+  const mainAddress = initialData.address || ''
+  const mainCity = initialData.city || ''
+  const mainState = initialData.state || ''
+  const mainZip = initialData.zip || ''
+  const billToSameAsMain =
+    billToStreet === mainAddress &&
+    billToCity === mainCity &&
+    billToState === mainState &&
+    billToZip === mainZip
+
+  const resolvedPersonOrderingName = personOrdering?.name || ''
+  const resolvedPrimaryContactName = primaryContact?.name || ''
+
+  return {
+    name: initialData.name || '',
+    display_name: initialData.display_name || initialData.displayName || '',
+    customer_number: String(initialData.customer_number || initialData.customerNumber || ''),
+    url: initialData.web || initialData.url || '',
+    main_phone: initialData.main_phone || initialData.mainPhone || '',
+    address: mainAddress,
+    city: mainCity,
+    state: mainState,
+    zip: mainZip,
+    bill_to_street_address: billToStreet,
+    bill_to_city: billToCity,
+    bill_to_state: billToState,
+    bill_to_zip_code: billToZip,
+    billToSameAsMain,
+    personOrderingName: resolvedPersonOrderingName,
+    personOrderingTitle: personOrdering?.role && personOrdering.role !== 'PERSON ORDERING'
+      ? personOrdering.role
+      : '',
+    primaryContactName: resolvedPrimaryContactName,
+    primaryContactPhone: primaryContact?.phone || '',
+    primaryContactEmail: primaryContact?.email || '',
+    primaryContactSameAsPersonOrdering:
+      !!resolvedPersonOrderingName && resolvedPrimaryContactName === resolvedPersonOrderingName,
+    projectManagerName: projectManager?.name || '',
+    projectManagerPhone: projectManager?.phone || '',
+    projectManagerEmail: projectManager?.email || '',
+    payment_terms: initialData.payment_terms || initialData.paymentTerms || '',
+    would_like_to_apply_for_credit:
+      !!(initialData.would_like_to_apply_for_credit ?? initialData.wouldLikeToApplyForCredit),
+  }
+}
+
+async function saveLegacyContact({
+  contractorId,
+  contactId,
+  name,
+  role,
+  email,
+  phone,
+}: {
+  contractorId: number
+  contactId: number | null
+  name: string
+  role: string
+  email?: string
+  phone?: string
+}) {
+  const trimmedName = name.trim()
+  const trimmedRole = role.trim()
+  const trimmedEmail = email?.trim() || null
+  const trimmedPhone = phone?.trim() || null
+  const hasValues = !!trimmedName || !!trimmedEmail || !!trimmedPhone
+
+  if (!hasValues) {
+    if (contactId) {
+      const deleteResponse = await fetch(`/api/customer-contacts/${contactId}`, {
+        method: 'DELETE',
+      })
+
+      if (!deleteResponse.ok) {
+        const errorResult = await deleteResponse.json().catch(() => null)
+        throw new Error(errorResult?.error || 'Failed to remove customer contact')
+      }
+    }
+
+    return
+  }
+
+  const payload = {
+    contractor_id: contractorId,
+    name: trimmedName || null,
+    role: trimmedRole || null,
+    email: trimmedEmail,
+    phone: trimmedPhone,
+  }
+
+  if (contactId) {
+    const updateResponse = await fetch(`/api/customer-contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!updateResponse.ok) {
+      const errorResult = await updateResponse.json().catch(() => null)
+      throw new Error(errorResult?.error || 'Failed to update customer contact')
+    }
+
+    return
+  }
+
+  const createResponse = await fetch('/api/customer-contacts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const createResult = await createResponse.json().catch(() => null)
+
+  if (!createResponse.ok || !createResult?.success) {
+    throw new Error(createResult?.error || 'Failed to create customer contact')
+  }
+}
+
+export function CustomerForm({
+  onSuccess,
+  onCancel,
+  mode = "create",
+  customerId,
+  initialData,
+}: CustomerFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isEditMode = mode === "edit"
   
   const { register, handleSubmit, setValue, formState: { errors }, reset, watch } = useForm<FormData>({
-    defaultValues: {
-      name: '',
-      display_name: '',
-      customer_number: '',
-      url: '',
-      main_phone: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      payment_terms: ''
-    }
+    defaultValues: buildInitialValues(initialData)
   })
+
+  useEffect(() => {
+    reset(buildInitialValues(initialData))
+  }, [initialData, reset])
 
   const states = [
     { value: 'AL', label: 'Alabama' },
@@ -86,7 +288,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
     { value: 'OR', label: 'Oregon' },
     { value: 'PA', label: 'Pennsylvania' },
     { value: 'RI', label: 'Rhode Island' },
-    { value: 'SC', 'label': 'South Carolina' },
+    { value: 'SC', label: 'South Carolina' },
     { value: 'SD', label: 'South Dakota' },
     { value: 'TN', label: 'Tennessee' },
     { value: 'TX', label: 'Texas' },
@@ -114,179 +316,514 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
   const customerName = watch("name");
 
   const onSubmit = async (data: FormData) => {
+    // Custom validation
+    const errors: string[] = [];
+
+    // Main address validation - at least one field required
+    const hasMainAddress = data.address.trim() || data.city.trim() || data.state.trim() || data.zip.trim();
+    if (!hasMainAddress) {
+      errors.push("Main address is required (at least one field must be filled)");
+    }
+
+    // Bill-to address validation - either checkbox checked OR bill-to fields filled
+    const hasBillToAddress = data.billToSameAsMain ||
+      (data.bill_to_street_address.trim() || data.bill_to_city.trim() || data.bill_to_state.trim() || data.bill_to_zip_code.trim());
+    if (!hasBillToAddress) {
+      errors.push("Bill-to address is required (check 'same as main address' or fill in bill-to fields)");
+    }
+
+    // Contact validation - person ordering OR primary contact OR same as checkbox required
+    const hasPersonOrdering = data.personOrderingName.trim();
+    const hasPrimaryContact = data.primaryContactName.trim() || data.primaryContactPhone.trim() || data.primaryContactEmail.trim();
+    const hasSameAsCheckbox = data.primaryContactSameAsPersonOrdering;
+
+    if (!hasPersonOrdering && !hasPrimaryContact && !hasSameAsCheckbox) {
+      errors.push("Contact information is required (person ordering, primary contact, or 'same as person ordering' checkbox)");
+    }
+
+    if (errors.length > 0) {
+      toast.error(errors.join(". "));
+      return;
+    }
+
     setIsSubmitting(true)
-    
+
+    console.log('Submitting customer data:', data)
+
     try {
-      await createCustomer(data)
+      if (isEditMode) {
+        if (!customerId) {
+          throw new Error("Customer ID is required for editing")
+        }
+
+        const resolvedBillToStreet = data.billToSameAsMain ? data.address : data.bill_to_street_address
+        const resolvedBillToCity = data.billToSameAsMain ? data.city : data.bill_to_city
+        const resolvedBillToState = data.billToSameAsMain ? data.state : data.bill_to_state
+        const resolvedBillToZip = data.billToSameAsMain ? data.zip : data.bill_to_zip_code
+        const resolvedPrimaryContactName = data.primaryContactSameAsPersonOrdering
+          ? data.personOrderingName
+          : data.primaryContactName
+
+        if (data.primaryContactSameAsPersonOrdering && !data.personOrderingName.trim()) {
+          throw new Error("Add a person ordering name before using same as person ordering")
+        }
+
+        const updateResponse = await fetch(`/api/contractors/${customerId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: data.name,
+            display_name: data.display_name,
+            customer_number: data.customer_number,
+            main_phone: data.main_phone,
+            web: data.url,
+            address: data.address,
+            city: data.city,
+            state: data.state,
+            zip: data.zip,
+            bill_to_street: resolvedBillToStreet,
+            bill_to_city: resolvedBillToCity,
+            bill_to_state: resolvedBillToState,
+            bill_to_zip: resolvedBillToZip,
+            payment_terms: data.payment_terms,
+            would_like_to_apply_for_credit: data.would_like_to_apply_for_credit,
+          }),
+        })
+
+        const updateResult = await updateResponse.json()
+
+        if (!updateResponse.ok || !updateResult.ok) {
+          throw new Error(updateResult.error || 'Failed to update customer')
+        }
+
+        const contacts = Array.isArray(initialData?.customer_contacts)
+          ? initialData.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+          : []
+        const findRole = (role: string) =>
+          contacts.find((contact: any) => (contact.role || "").toUpperCase() === role)
+
+        const personOrdering = findRole("PERSON ORDERING")
+        const primaryContact = findRole("PRIMARY CONTACT")
+        const projectManager = findRole("PROJECT MANAGER")
+
+        await Promise.all([
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: personOrdering?.id ?? null,
+            name: data.personOrderingName,
+            role: data.personOrderingTitle || 'PERSON ORDERING',
+          }),
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: primaryContact?.id ?? null,
+            name: resolvedPrimaryContactName,
+            role: 'PRIMARY CONTACT',
+            phone: data.primaryContactPhone,
+            email: data.primaryContactEmail,
+          }),
+          saveLegacyContact({
+            contractorId: customerId,
+            contactId: projectManager?.id ?? null,
+            name: data.projectManagerName,
+            role: 'PROJECT MANAGER',
+            phone: data.projectManagerPhone,
+            email: data.projectManagerEmail,
+          }),
+        ])
+
+        toast.success('Customer updated successfully!')
+        onSuccess({ id: customerId, name: data.name, display_name: data.display_name })
+        return
+      }
+
+      const result = await createCustomer(data)
+      console.log('Customer creation result:', result)
       toast.success('Customer created successfully!')
-      reset()
-      onSuccess()
+      reset(EMPTY_FORM_VALUES)
+      onSuccess(result.customer)
     } catch (error: any) {
-      toast.error(`Error creating customer: ${error.message}`)
+      console.error('Customer creation error:', error)
+      toast.error(`Error ${isEditMode ? 'updating' : 'creating'} customer: ${error.message}`)
     } finally {
       setIsSubmitting(false)
     }
   }
   
+  // Watch form values for conditional logic
+  const billToSameAsMain = watch("billToSameAsMain");
+  const primaryContactSameAsPersonOrdering = watch("primaryContactSameAsPersonOrdering");
+  const personOrderingName = watch("personOrderingName");
+  const personOrderingTitle = watch("personOrderingTitle");
+
   return (
     <form className="flex flex-col h-full" onSubmit={handleSubmit(onSubmit)}>
       <div className="flex-1 overflow-y-auto p-1 -m-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input 
-            id="name" 
-            placeholder="Full customer name"
-            {...register("name", { required: "Customer name is required" })}
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500">{errors.name.message}</p>
-          )}
-        </div>
-        
-        {/* Display Name */}
-        <div className="space-y-2">
-          <Label htmlFor="display_name">Display Name</Label>
-          <Input 
-            id="display_name" 
-            placeholder="Display name"
-            {...register("display_name")}
-          />
-        </div>
-        
-        {/* Customer Number */}
-        <div className="space-y-2">
-          <Label htmlFor="customer_number">Customer Number</Label>
-          <Input 
-            id="customer_number" 
-            placeholder="Foundation Customer #"
-            {...register("customer_number")}
-          />
-        </div>
-        
-        {/* Website URL */}
-        <div className="space-y-2">
-          <Label htmlFor="url">Website URL</Label>
-          <Input 
-            id="url" 
-            placeholder="www.example.com" 
-            type="text"
-            {...register("url", {
-              pattern: {
-                value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
-                message: "Please enter a valid URL (e.g., www.example.com)"
-              }
-            })}
-          />
-          {errors.url && (
-            <p className="text-sm text-red-500">{errors.url.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Accepts URLs starting with http://, https://, or www.
-          </p>
-        </div>
-        
-        {/* Main Phone */}
-        <div className="space-y-2">
-          <Label htmlFor="main_phone">Main Phone</Label>
-          <Input 
-            id="main_phone" 
-            placeholder="Phone Number" 
-            type="tel"
-            {...register("main_phone")}
-          />
-        </div>
-        
-        {/* Address */}
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input 
-            id="address" 
-            placeholder="Address"
-            {...register("address")}
-          />
-        </div>
-        
-        {/* City */}
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input 
-            id="city" 
-            placeholder="City"
-            {...register("city")}
-          />
-        </div>
-        
-        {/* State */}
-        <div className="space-y-2">
-          <Label htmlFor="state">State</Label>
-          <Select onValueChange={(value) => setValue('state', value)}>
-            <SelectTrigger id="state">
-              <SelectValue placeholder="Select a state" />
-            </SelectTrigger>
-            <SelectContent>
-              {states.map((state) => (
-                <SelectItem key={state.value} value={state.value}>
-                  {state.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {/* ZIP Code */}
-        <div className="space-y-2">
-          <Label htmlFor="zip">ZIP Code</Label>
-          <Input 
-            id="zip" 
-            placeholder="ZIP"
-            {...register("zip")}
-          />
-        </div>
-        
-        {/* Payment Terms */}
-        <div className="space-y-2">
-          <Label htmlFor="payment_terms">Payment Terms</Label>
-          <Select 
-            onValueChange={handleSelectChange}
-            defaultValue=""
-          >
-            <SelectTrigger id="payment_terms" className="w-full">
-              <SelectValue placeholder="Payment Terms" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1%10 NET 30">1%10 NET 30</SelectItem>
-              <SelectItem value="COD">COD</SelectItem>
-              <SelectItem value="CC">CC</SelectItem>
-              <SelectItem value="NET15">NET15</SelectItem>
-              <SelectItem value="NET30">NET30</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="space-y-8">
+          {/* Company Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Company Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Company Legal Name <span className="text-red-500">*</span></Label>
+                <Input
+                  id="name"
+                  placeholder="Enter company legal name"
+                  {...register("name", { required: "Company legal name is required" })}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="display_name">Display Name</Label>
+                <Input
+                  id="display_name"
+                  placeholder="Display name"
+                  {...register("display_name")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customer_number">Customer Number <span className="text-red-500">*</span></Label>
+                <Input
+                  id="customer_number"
+                  placeholder="Foundation Customer #"
+                  {...register("customer_number")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="url">Website URL</Label>
+                <Input
+                  id="url"
+                  placeholder="www.example.com"
+                  type="text"
+                  {...register("url", {
+                    pattern: {
+                      value: /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+                      message: "Please enter a valid URL (e.g., www.example.com)"
+                    }
+                  })}
+                />
+                {errors.url && (
+                  <p className="text-sm text-red-500">{errors.url.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="main_phone">Main Phone</Label>
+                <Input
+                  id="main_phone"
+                  placeholder="Phone Number"
+                  type="tel"
+                  {...register("main_phone")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_terms">Payment Terms <span className="text-red-500">*</span></Label>
+                <Select
+                  onValueChange={handleSelectChange}
+                  defaultValue=""
+                >
+                  <SelectTrigger id="payment_terms" className="w-full">
+                    <SelectValue placeholder="Payment Terms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1%10 NET 30">1%10 NET 30</SelectItem>
+                    <SelectItem value="COD">COD</SelectItem>
+                    <SelectItem value="CC">CC</SelectItem>
+                    <SelectItem value="NET15">NET15</SelectItem>
+                    <SelectItem value="NET30">NET30</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Address */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Main Address <span className="text-red-500">*</span></h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="Street address"
+                  {...register("address")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="City"
+                  {...register("city")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Select onValueChange={(value) => setValue('state', value)}>
+                  <SelectTrigger id="state">
+                    <SelectValue placeholder="Select a state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((state) => (
+                      <SelectItem key={state.value} value={state.value}>
+                        {state.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zip">ZIP Code</Label>
+                <Input
+                  id="zip"
+                  placeholder="ZIP"
+                  {...register("zip")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bill To Address */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Bill To Address <span className="text-red-500">*</span></h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="billToSameAsMain"
+                  checked={billToSameAsMain}
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked as boolean;
+                    setValue('billToSameAsMain', isChecked);
+                    if (isChecked) {
+                      // Copy main address to bill-to address
+                      const mainAddress = watch('address');
+                      const mainCity = watch('city');
+                      const mainState = watch('state');
+                      const mainZip = watch('zip');
+                      setValue('bill_to_street_address', mainAddress);
+                      setValue('bill_to_city', mainCity);
+                      setValue('bill_to_state', mainState);
+                      setValue('bill_to_zip_code', mainZip);
+                    }
+                  }}
+                />
+                <Label htmlFor="billToSameAsMain" className="text-sm font-normal">
+                  Same as main address
+                </Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="bill_to_street_address">Street Address</Label>
+                  <Input
+                    id="bill_to_street_address"
+                    placeholder="Bill to street address"
+                    {...register("bill_to_street_address")}
+                    disabled={billToSameAsMain}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_city">City</Label>
+                  <Input
+                    id="bill_to_city"
+                    placeholder="Bill to city"
+                    {...register("bill_to_city")}
+                    disabled={billToSameAsMain}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_state">State</Label>
+                  <Select
+                    value={watch('bill_to_state')}
+                    onValueChange={(value) => setValue('bill_to_state', value)}
+                    disabled={billToSameAsMain}
+                  >
+                    <SelectTrigger id="bill_to_state">
+                      <SelectValue placeholder="Select a state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {states.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bill_to_zip_code">ZIP Code</Label>
+                  <Input
+                    id="bill_to_zip_code"
+                    placeholder="Bill to ZIP"
+                    {...register("bill_to_zip_code")}
+                    disabled={billToSameAsMain}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Person Ordering */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Person Ordering</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="personOrderingName">Name</Label>
+                <Input
+                  id="personOrderingName"
+                  placeholder="Person ordering name"
+                  {...register("personOrderingName")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="personOrderingTitle">Title</Label>
+                <Input
+                  id="personOrderingTitle"
+                  placeholder="Job title"
+                  {...register("personOrderingTitle")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Contact */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Primary Contact</h3>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="primaryContactSameAsPersonOrdering"
+                  checked={primaryContactSameAsPersonOrdering}
+                  onCheckedChange={(checked) => {
+                    setValue('primaryContactSameAsPersonOrdering', checked as boolean);
+                    if (checked) {
+                      setValue('primaryContactName', personOrderingName || '');
+                    }
+                  }}
+                />
+                <Label htmlFor="primaryContactSameAsPersonOrdering" className="text-sm font-normal">
+                  Same as person ordering
+                </Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactName">Name</Label>
+                  <Input
+                    id="primaryContactName"
+                    placeholder="Contact name"
+                    {...register("primaryContactName")}
+                    disabled={primaryContactSameAsPersonOrdering}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactPhone">Phone</Label>
+                  <Input
+                    id="primaryContactPhone"
+                    placeholder="Phone number"
+                    type="tel"
+                    {...register("primaryContactPhone")}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primaryContactEmail">Email</Label>
+                  <Input
+                    id="primaryContactEmail"
+                    placeholder="Email address"
+                    type="email"
+                    {...register("primaryContactEmail")}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Project Manager */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Project Manager</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerName">Name</Label>
+                <Input
+                  id="projectManagerName"
+                  placeholder="Project manager name"
+                  {...register("projectManagerName")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerPhone">Phone</Label>
+                <Input
+                  id="projectManagerPhone"
+                  placeholder="Phone number"
+                  type="tel"
+                  {...register("projectManagerPhone")}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectManagerEmail">Email</Label>
+                <Input
+                  id="projectManagerEmail"
+                  placeholder="Email address"
+                  type="email"
+                  {...register("projectManagerEmail")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Credit Application */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="would_like_to_apply_for_credit"
+                {...register("would_like_to_apply_for_credit")}
+              />
+              <Label htmlFor="would_like_to_apply_for_credit" className="text-sm font-normal">
+                Would you like to apply for credit?
+              </Label>
+            </div>
+          </div>
         </div>
       </div>
-      
+
       {/* Action Buttons */}
       <div className="mt-auto pt-6 border-t">
         <div className="flex justify-between gap-4">
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             variant="outline"
             className="flex-1"
             onClick={onCancel}
-            disabled={isSubmitting} 
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className={`flex-1 transition-colors ${
               customerName ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
             }`}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Creating...' : 'Create'}
+            {isSubmitting ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save' : 'Create')}
           </Button>
         </div>
       </div>

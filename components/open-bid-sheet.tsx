@@ -51,6 +51,7 @@ import { useState, useEffect } from "react";
 import { createBid, updateBid, fetchReferenceData } from "@/lib/api-client";
 import { toast } from "sonner";
 import { County } from "@/types/TCounty";
+import { User } from "@/types/User";
 import {
   AVAILABLE_JOB_SERVICES,
   AvailableJob,
@@ -59,6 +60,7 @@ import {
 import { formatDate } from "@/lib/formatUTCDate";
 import { Separator } from "./ui/separator";
 import { useAuth } from "@/contexts/auth-context";
+import { RequestorSelector } from "./requestor-selector";
 
 interface OpenBidSheetProps {
   open: boolean;
@@ -100,7 +102,7 @@ export function OpenBidSheet({
   const [statusMessage, setStatusMessage] = useState("");
   const [isValid, setIsValid] = useState(true);
 
-  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [owners, setOwners] = useState<{ id: string; name: string }[]>([]);
   const [counties, setCounties] = useState<County[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
@@ -113,7 +115,6 @@ export function OpenBidSheet({
 
   // State for popover open states
   const [openStates, setOpenStates] = useState({
-    requestor: false,
     owner: false,
     county: false,
     lettingDate: false,
@@ -150,6 +151,9 @@ export function OpenBidSheet({
         setUsers(usersData);
         setOwners(ownersData);
         setCounties(countiesData);
+        console.debug("[OpenBidSheet] loaded requestor options", {
+          count: usersData.length,
+        });
 
         const branchNames = countiesData.map((county) => county.branch);
         const uniqueBranchNames = Array.from(new Set(branchNames));
@@ -429,11 +433,6 @@ export function OpenBidSheet({
     }
   };
 
-  const handleRequestorChange = (requestorName: string) => {
-    setRequestor(requestorName);
-    setOpenStates((prev) => ({ ...prev, requestor: false }));
-  };
-
   const handleOwnerChange = (ownerName: string) => {
     setOwner(ownerName);
     setOpenStates((prev) => ({ ...prev, owner: false }));
@@ -569,53 +568,20 @@ export function OpenBidSheet({
                   <Label className="text-sm font-medium text-muted-foreground">
                     Requestor <span className="text-red-500">*</span>
                   </Label>
-                  <Popover
-                    open={openStates.requestor}
-                    onOpenChange={(open) =>
-                      setOpenStates((prev) => ({ ...prev, requestor: open }))
-                    }
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStates.requestor}
-                        className="w-full justify-between text-muted-foreground"
-                        disabled={isLoading}
-                      >
-                        {requestor || "Select requestor..."}
-                        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-full p-0"
-                      avoidCollisions={false}
-                    >
-                      <Command>
-                        <CommandInput placeholder="Search requestor..." />
-                        <CommandEmpty>No requestor found.</CommandEmpty>
-                        <CommandGroup>
-                          {users.map((user) => (
-                            <CommandItem
-                              key={user.id}
-                              value={user.name}
-                              onSelect={() => handleRequestorChange(user.name)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  requestor === user.name
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {user.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <RequestorSelector
+                    source='open-bid-requestor'
+                    users={users}
+                    selectedName={requestor}
+                    disabled={isLoading}
+                    buttonClassName="text-left"
+                    onSelect={(user) => {
+                      console.debug("[OpenBidSheet] requestor-updated", {
+                        requestor: user.name,
+                        email: user.email ?? null,
+                      });
+                      setRequestor(user.name);
+                    }}
+                  />
                 </div>
 
                 <div className="space-y-2 w-full">

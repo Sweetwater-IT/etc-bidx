@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
+import { restorePointerEvents } from "@/lib/pointer-events-fix";
 
 export default function QuoteItemRow({
   item,
@@ -41,9 +42,6 @@ export default function QuoteItemRow({
   const [productInput, setProductInput] = useState(item.itemNumber || "");
   const [activeSection, setActiveSection] = useState<'all' | 'service_items' | 'sale' | 'rental'>('all');
 
-  const hasAssociatedItems =
-    item.associatedItems && item.associatedItems.length > 0;
-  const hasSubItems = hasAssociatedItems;
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const { quoteMetadata } = useQuoteForm()
@@ -176,8 +174,7 @@ export default function QuoteItemRow({
   return (
     <>
       <div
-        className={`grid items-center mb-1 gap-2 ${!hasSubItems ? "border-b border-border py-2" : ""
-          }`}
+        className={`grid min-w-[980px] items-center gap-2 border-b border-border px-4 py-3 text-sm transition-colors hover:bg-muted/20`}
         style={{
           gridTemplateColumns: "1.5fr 2.5fr 0.8fr 0.5fr 1fr 1fr 0.4fr 1fr 40px",
         }}
@@ -196,7 +193,7 @@ export default function QuoteItemRow({
               if (selected) handleProductSelect(selected);
             }}
           >
-            <SelectTrigger className="w-full h-9 text-base text-foreground bg-transparent">
+            <SelectTrigger className="h-9 w-full bg-transparent text-sm text-foreground">
               <SelectValue placeholder="Search or add a product...">
                 {item.itemNumber
                   ? `${item.itemNumber} - ${item.description}`
@@ -270,14 +267,14 @@ export default function QuoteItemRow({
         </div>
 
         {/* Descrição */}
-        <div className="text-foreground w-full text-center text-base">
+        <div className="w-full text-center text-sm text-foreground">
           {item.description ? (
             item.description
           ) : (
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="text-foreground text-base text-center">
+        <div className="text-center text-sm text-foreground">
           {item.uom ? item.uom : <span className="opacity-50">—</span>}
         </div>
         {/* Qty: stepper com input */}
@@ -325,14 +322,14 @@ export default function QuoteItemRow({
             </Button> */}
           </ButtonGroup>
         </div>
-        <div className="text-foreground text-sm">
+        <div className="text-sm text-foreground">
           {item.unitPrice ? (
             "$" + formatDecimal(Number(item.unitPrice))
           ) : (
             <span className="opacity-50">—</span>
           )}
         </div>
-        <div className="text-foreground text-base">
+        <div className="text-sm text-foreground">
           {item.discount !== undefined && item.discount !== null && item.discount !== 0 ? (
             item.discountType === "dollar" ? (
               "$" + formatDecimal(Number(item.discount)) 
@@ -360,7 +357,7 @@ export default function QuoteItemRow({
             }}
           />
         </div>
-        <div className="text-foreground w-full text-base text-start">
+        <div className="w-full text-start text-sm text-foreground">
           {item.unitPrice && item.quantity ? (
             `$${calculateExtendedPrice(item)}`
           ) : (
@@ -397,24 +394,31 @@ export default function QuoteItemRow({
         </div>
       </div>
 
-      <ProductSheet
-        open={openProductSheet}
-        onOpenChange={setOpenProductSheet}
-        newProduct={newProduct}
-        setNewProduct={setNewProduct}
-        digits={digits}
-        setDigits={setDigits}
-        UOM_TYPES={UOM_TYPES}
-        formatDecimal={formatDecimal}
-        formatPercentage={formatPercentage}
-        handleNextDigits={handleNextDigits}
-        editingSubItemId={editingSubItemId}
-        handleItemUpdate={handleItemUpdate}
-        item={item}
-        setProductInput={setProductInput}
-        setEditingItemId={setEditingItemId}
-        setEditingSubItemId={setEditingSubItemId}
-      />
+      {openProductSheet && (
+        <ProductSheet
+          open={openProductSheet}
+          onOpenChange={(nextOpen) => {
+            setOpenProductSheet(nextOpen)
+            if (!nextOpen) {
+              restorePointerEvents()
+            }
+          }}
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          digits={digits}
+          setDigits={setDigits}
+          UOM_TYPES={UOM_TYPES}
+          formatDecimal={formatDecimal}
+          formatPercentage={formatPercentage}
+          handleNextDigits={handleNextDigits}
+          editingSubItemId={editingSubItemId}
+          handleItemUpdate={handleItemUpdate}
+          item={item}
+          setProductInput={setProductInput}
+          setEditingItemId={setEditingItemId}
+          setEditingSubItemId={setEditingSubItemId}
+        />
+      )}
     </>
   );
 }

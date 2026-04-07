@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         to_be_printed,
         created,
         updated,
-        customer_contacts:customer_contacts(id, name, role, phone, email)
+        customer_contacts:customer_contacts(id, name, role, phone, email, is_deleted)
       `, { count: 'exact' })
       .order(orderBy, { ascending })
       .range(offset, offset + limit - 1);
@@ -64,9 +64,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const normalizedData = (data || []).map((contractor: any) => ({
+      ...contractor,
+      customer_contacts: Array.isArray(contractor.customer_contacts)
+        ? contractor.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+        : [],
+    }));
+
     return NextResponse.json({ 
       success: true,
-      data,
+      data: normalizedData,
       count,
       page,
       limit,

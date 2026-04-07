@@ -10,6 +10,7 @@ export type ActiveBid = {
   branch: string;
   service_work: any;
   estimator: string;
+  etcRep: string;
   status: string;
   division: string;
   startDate: string;
@@ -33,6 +34,7 @@ export const ACTIVE_BIDS_COLUMNS = [
   { key: "subcontractor", title: "Subcontractor" },
   { key: "owner", title: "Owner" },
   { key: "estimator", title: 'Estimator', className: 'min-w-35'},
+  { key: "etcRep", title: 'ETC Rep', className: 'min-w-30'},
   { key: "county", title: "County", className: 'max-w-40' },
   { key: "status", title: "Status" },
   { key: "createdAt", title: "Created At", className: 'whitespace-nowrap' },

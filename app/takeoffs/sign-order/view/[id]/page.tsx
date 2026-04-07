@@ -4,7 +4,7 @@ import React from 'react'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { EstimateProvider } from '@/contexts/EstimateContext'
+import { SignOrderBuilderProvider } from '@/contexts/SignOrderBuilderContext'
 import SignOrderViewContent from './SignOrderViewContent'
 
 export default function SignOrderTrackerPage() {
@@ -20,9 +20,9 @@ export default function SignOrderTrackerPage() {
       <Toaster />
       <AppSidebar variant='inset' />
       <SidebarInset>
-        <EstimateProvider>
+        <SignOrderBuilderProvider>
           <SignOrderViewContent />
-        </EstimateProvider>
+        </SignOrderBuilderProvider>
       </SidebarInset>
     </SidebarProvider>
   )

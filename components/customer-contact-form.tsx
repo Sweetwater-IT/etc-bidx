@@ -16,12 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useCustomer } from "@/contexts/customer-context"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 interface CustomerContactFormProps {
   customerId: number
   isOpen: boolean
   onClose: () => void
-  onSuccess: (updatedCustomer?: any) => void
+  onSuccess: (newContactId?: number, newContactData?: any) => void
   contactToEdit?: {
     id: number
     name: string
@@ -77,6 +78,21 @@ export function CustomerContactForm({
     }
   }, [contactToEdit])
 
+  useEffect(() => {
+    if (isOpen) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restorePointerEvents()
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      restorePointerEvents()
+    }
+  }, [isOpen])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
 
@@ -94,7 +110,7 @@ export function CustomerContactForm({
     }
   }
 
-  const { createContact, updateContact } = useCustomer()
+  const { updateContact } = useCustomer()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,37 +123,71 @@ export function CustomerContactForm({
     try {
       setIsSubmitting(true)
 
-      let success = false;
       if (isEditMode && contactToEdit) {
-        success = await updateContact(contactToEdit.id, {
+        const success = await updateContact(contactToEdit.id, {
           name: formData.name,
           role: formData.role,
           email: formData.email,
           phone: formData.phone
         })
-      } else {
-        success = await createContact({
-          name: formData.name,
-          role: formData.role,
-          email: formData.email,
-          phone: formData.phone
-        })
-      }
 
-      if (success) {
-        setFormData({
-          name: "",
-          role: "",
-          email: "",
-          phone: ""
-        })
+        if (success) {
+          setFormData({
+            name: "",
+            role: "",
+            email: "",
+            phone: ""
+          })
 
-        onClose()
-        onSuccess()
-        toast.success(isEditMode ? 'Contact updated successfully' : 'Contact created successfully');
+          onClose()
+          onSuccess()
+          restorePointerEvents()
+          toast.success('Contact updated successfully');
+        } else {
+          console.error('Contact update failed but no error was thrown');
+          toast.error('Failed to update contact');
+        }
       } else {
-        console.error('Contact operation failed but no error was thrown');
-        toast.error(isEditMode ? 'Failed to update contact' : 'Failed to create contact');
+        // For creating contacts, call the API directly to get the contact data
+        const response = await fetch('/api/customer-contacts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contractor_id: customerId,
+            name: formData.name,
+            role: formData.role,
+            email: formData.email,
+            phone: formData.phone
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const newContact = result.data;
+
+          setFormData({
+            name: "",
+            role: "",
+            email: "",
+            phone: ""
+          })
+
+          onClose()
+          onSuccess(newContact.id, {
+            name: newContact.name,
+            role: newContact.role,
+            email: newContact.email,
+            phone: newContact.phone
+          })
+          restorePointerEvents()
+          toast.success('Contact created successfully');
+        } else {
+          const errorData = await response.json();
+          console.error('Contact creation failed:', errorData);
+          toast.error('Failed to create contact');
+        }
       }
     } catch (error) {
       console.error(isEditMode ? "Error updating contact:" : "Error creating contact:", error)
@@ -148,7 +198,16 @@ export function CustomerContactForm({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      modal={false}
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onClose()
+          restorePointerEvents()
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
@@ -266,7 +325,10 @@ export function CustomerContactForm({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={() => {
+                onClose()
+                restorePointerEvents()
+              }}
               disabled={isSubmitting}
             >
               Cancel

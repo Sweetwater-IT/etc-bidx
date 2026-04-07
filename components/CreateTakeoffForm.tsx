@@ -1,0 +1,2664 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useJobFromDB } from "@/hooks/useJobFromDB";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { toast } from "sonner";
+import { Check, Package, Plus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon, ExternalLink, Loader2 } from "lucide-react";
+import { format, addDays, subDays } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { MPTSignTable, type MPTSignRow } from "@/components/MPTSignTable";
+import { MPTSignConfiguration } from "@/components/MPTSignConfiguration";
+import { PermanentSignConfiguration, type PermSignRow, type PermEntryRow } from "@/components/PermanentSignConfiguration";
+import { SignMaterial, DEFAULT_SIGN_MATERIAL } from "@/utils/signMaterial";
+import { QuantityInput } from "@/components/ui/quantity-input";
+import { NewRecordStickyPageHeader } from "@/app/l/components/NewRecordStickyPageHeader";
+import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
+import { formatTakeoffPageTitle } from "@/app/l/utils/pageTitles";
+import { cn } from "@/lib/utils";
+
+interface Props {
+  jobId: string;
+  onBack: () => void;
+  draftTakeoff?: any;
+  backLabel?: string;
+  mode?: "create" | "edit";
+  pageTitle?: string;
+  pageDescription?: string;
+}
+
+type AdditionalItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  description: string;
+  customName?: string;
+  unit?: string;
+  generated?: boolean;
+  source?: string;
+};
+
+const WORK_TYPES = [
+  { value: "MPT", label: "MPT (Maintenance & Protection of Traffic)" },
+  { value: "PERMANENT_SIGNS", label: "Permanent Signs" },
+  { value: "FLAGGING", label: "Flagging" },
+  { value: "LANE_CLOSURE", label: "Lane Closure" },
+  { value: "SERVICE", label: "Service" },
+  { value: "DELIVERY", label: "Delivery" },
+  { value: "CUSTOM", label: "Custom" },
+  { value: "RENTAL", label: "Rental" },
+];
+
+const normalizeSovWorkTypeToTakeoffValue = (workType?: string | null): string | null => {
+  if (!workType) return null;
+
+  const normalized = workType.trim().toUpperCase();
+
+  const mapping: Record<string, string> = {
+    MPT: "MPT",
+    "PERMANENT SIGN": "PERMANENT_SIGNS",
+    "PERMANENT SIGNS": "PERMANENT_SIGNS",
+    FLAGGING: "FLAGGING",
+    "LANE CLOSURE": "LANE_CLOSURE",
+    SERVICE: "SERVICE",
+    DELIVERY: "DELIVERY",
+    CUSTOM: "CUSTOM",
+    OTHER: "CUSTOM",
+  };
+
+  return mapping[normalized] || normalized;
+};
+
+const MPT_SECTIONS = [
+  {
+    key: "trailblazers",
+    label: "Trailblazers / H-Stands",
+    structures: [
+      "Loose",
+      "8FT POST (COMPLETE)",
+      "10FT POST (COMPLETE)",
+      "12FT POST (COMPLETE)",
+      "14FT POST (COMPLETE)",
+      "8FT H-STAND",
+      "10FT H-STAND",
+      "12FT H-STAND",
+      "14FT H-STAND",
+    ],
+  },
+  {
+    key: "type_iii",
+    label: "Type IIIs",
+    structures: [
+      "6FT RIGHT",
+      "6FT LEFT",
+      "4FT RIGHT",
+      "4FT LEFT",
+      "6FT LEFT/RIGHT",
+      "4FT LEFT/RIGHT",
+      "6FT WING BARRICADE",
+    ],
+  },
+  {
+    key: "sign_stands",
+    label: "Sign Stands",
+    structures: ["Sign Stand", "Loose"],
+  },
+];
+
+const SIGN_MATERIALS = [
+  { value: "PLASTIC", label: "Plastic", abbrev: "PL" },
+  { value: "ALUMINUM", label: "Aluminum", abbrev: "AL" },
+];
+
+const getSandbagsForRow = (sectionKey: string, structureType: string, quantity: number) => {
+  if (!structureType) return 0;
+  if (sectionKey === "trailblazers") {
+    return structureType.toUpperCase().includes("H-STAND") ? 6 * quantity : 0;
+  }
+  if (sectionKey === "type_iii") {
+    return structureType === "Loose" ? 0 : 12 * quantity;
+  }
+  return 0;
+};
+
+const buildGeneratedAdditionalItems = (
+  activeSections: string[],
+  signRows: Record<string, MPTSignRow[]>
+): AdditionalItem[] => {
+  const trailblazerSandbags = activeSections.reduce((total, sectionKey) => {
+    const rows = signRows[sectionKey] || [];
+    return total + rows.reduce((rowTotal, row) => rowTotal + getSandbagsForRow(sectionKey, row.structureType, row.quantity), 0);
+  }, 0);
+
+  if (trailblazerSandbags <= 0) return [];
+
+  return [
+    {
+      id: "generated-trailblazer-sandbags",
+      name: "SAND BAGS",
+      quantity: trailblazerSandbags,
+      description: "Auto-calculated from trailblazer structure types",
+      unit: "EA",
+      generated: true,
+      source: "trailblazer_sandbags",
+    },
+  ];
+};
+
+const buildEffectiveAdditionalItems = (
+  manualItems: AdditionalItem[],
+  activeSections: string[],
+  signRows: Record<string, MPTSignRow[]>
+): AdditionalItem[] => {
+  const sanitizedManualItems = manualItems.filter((item) => !item.generated && item.source !== "trailblazer_sandbags");
+  return [...sanitizedManualItems, ...buildGeneratedAdditionalItems(activeSections, signRows)];
+};
+
+const FLAGGING_VEHICLE_OPTIONS = [
+  { id: "pickup_truck", name: "Pick Up Truck" },
+  { id: "tma", name: "TMA" },
+  { id: "message_board", name: "Message Board" },
+  { id: "arrow_panel", name: "Arrow Panel" },
+  { id: "speed_trailer", name: "Speed Trailer" },
+];
+
+const MPT_ADDITIONAL_ITEM_OPTIONS = [
+  "SAND BAGS",
+  "HIP VERTICAL PANEL (TOP AND BASE)",
+  "TYPE 11 VERTICAL PANEL (TOP AND BASE)",
+  "A LIGHT",
+  "C LIGHT",
+  "SHARP BARRICADE",
+  "TYPE III BARRICADE — 6FT RIGHT",
+  "TYPE III BARRICADE — 6FT LEFT",
+  "TYPE III BARRICADE — 6FT LEFT/RIGHT",
+  "TYPE III BARRICADE — 4FT RIGHT",
+  "TYPE III BARRICADE — 4FT LEFT",
+  "TYPE III BARRICADE — 4FT LEFT/RIGHT",
+  "TYPE III BARRICADE — 6FT WING BARRICADE",
+  "8FT H-STAND",
+  "10FT H-STAND",
+  "12FT H-STAND",
+  "14FT H-STAND",
+  "SIGN STAND",
+];
+
+const parseDateString = (value?: string | null) => {
+  if (!value) return undefined;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const toDateString = (value?: Date) => {
+  if (!value) return "";
+  return format(value, "yyyy-MM-dd");
+};
+
+const clampNeededByDate = (date?: Date, referenceDateStr?: string) => {
+  if (!date) return "";
+  let nextDate = date;
+  const referenceDate = parseDateString(referenceDateStr);
+
+  if (referenceDate && nextDate >= referenceDate) {
+    nextDate = subDays(referenceDate, 1);
+  }
+
+  return toDateString(nextDate);
+};
+
+const TAKEOFF_PANEL_MAX_WIDTH_CLASS = "w-full max-w-[calc(100vw-272px-64px)] min-[1921px]:max-w-[calc(100vw-272px-24px)]";
+
+type ImportStructureSectionKey = "type_iii" | "trailblazers" | "sign_stands";
+
+type SignOrderListItem = {
+  id: number;
+  order_number: string | null;
+  status: string | null;
+  requestor: string | null;
+  contract_number: string | null;
+  order_date: string | null;
+  need_date: string | null;
+  created_at: string | null;
+  customer: string | null;
+  branch: string | null;
+  assigned_to: string | null;
+  order_type: string | null;
+  shop_status: string | null;
+  job_number: string | null;
+};
+
+type SignOrderImportSign = {
+  id: string;
+  designation: string;
+  description: string;
+  quantity: number;
+  width: number;
+  height: number;
+  sheeting: string;
+  substrate: string;
+  cover: boolean;
+  bLights: MPTSignRow["bLights"];
+  structureType: string;
+  existingStructure: string;
+};
+
+const IMPORT_STRUCTURE_OPTIONS = Array.from(
+  new Set(MPT_SECTIONS.flatMap((section) => section.structures))
+);
+
+const TYPE_III_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "type_iii")?.structures || []);
+const TRAILBLAZER_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "trailblazers")?.structures || []);
+const SIGN_STAND_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "sign_stands")?.structures || []);
+
+const formatDateTimeLabel = (value?: string | null) => {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString();
+};
+
+const normalizeImportStructureSection = (value?: string | null): ImportStructureSectionKey | "" => {
+  if (!value) return "";
+
+  const normalized = value.trim().toUpperCase();
+
+  if (
+    normalized === "TYPE 3" ||
+    normalized === "TYPE III" ||
+    normalized.includes("TYPE III") ||
+    normalized.includes("TYPE 3") ||
+    TYPE_III_STRUCTURES.has(normalized)
+  ) {
+    return "type_iii";
+  }
+
+  if (
+    normalized === "TRAILBLAZER" ||
+    normalized === "TRAILBLAZERS" ||
+    normalized.includes("TRAILBLAZER") ||
+    normalized.includes("H-STAND") ||
+    TRAILBLAZER_STRUCTURES.has(normalized)
+  ) {
+    return "trailblazers";
+  }
+
+  if (
+    normalized === "SIGN STAND" ||
+    normalized === "SIGN STANDS" ||
+    normalized.includes("SIGN STAND") ||
+    SIGN_STAND_STRUCTURES.has(normalized)
+  ) {
+    return "sign_stands";
+  }
+
+  return "";
+};
+
+const normalizeImportedBLight = (value: unknown): MPTSignRow["bLights"] => {
+  if (typeof value !== "string") return "none";
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "1y" || normalized === "1 yellow") return "1Y";
+  if (normalized === "1r" || normalized === "1 red") return "1R";
+  if (normalized === "1w" || normalized === "1 white") return "1W";
+  if (normalized === "2y" || normalized === "2 yellow") return "2Y";
+  if (normalized === "2r" || normalized === "2 red") return "2R";
+  if (normalized === "2w" || normalized === "2 white") return "2W";
+  return "none";
+};
+
+const getImportedTotalSqft = (
+  sectionKey: ImportStructureSectionKey,
+  structureType: string,
+  signSqft: number,
+  quantity: number
+) => {
+  if (sectionKey !== "type_iii" || structureType === "Loose") {
+    return Math.round(signSqft * quantity * 100) / 100;
+  }
+
+  const structureSqft = structureType.includes("6FT") ? 12 : 8.01;
+  return Math.round((signSqft + structureSqft) * quantity * 100) / 100;
+};
+
+const getImportStructureSectionFromType = (structureType?: string | null): ImportStructureSectionKey | "" => {
+  if (!structureType) return "";
+
+  const normalized = structureType.trim().toUpperCase();
+
+  if (TYPE_III_STRUCTURES.has(normalized)) return "type_iii";
+  if (TRAILBLAZER_STRUCTURES.has(normalized)) return "trailblazers";
+  if (SIGN_STAND_STRUCTURES.has(normalized)) return "sign_stands";
+
+  return normalizeImportStructureSection(normalized);
+};
+
+export const CreateTakeoffForm = ({
+  jobId,
+  onBack,
+  draftTakeoff,
+  backLabel = "Back",
+  mode = "create",
+  pageTitle,
+  pageDescription,
+}: Props) => {
+  const router = useRouter();
+  const { data: dbJob, isLoading } = useJobFromDB(jobId);
+  const { user } = useAuth();
+  const info = dbJob?.projectInfo;
+  const jobLabel = info?.etcJobNumber?.toString() || info?.projectName || "Project";
+
+  // Fetch allowed work types from job's SOV entries
+  const [allowedWorkTypes, setAllowedWorkTypes] = useState<string[]>([]);
+  const [loadingWorkTypes, setLoadingWorkTypes] = useState(true);
+
+  // Fetch allowed work types when jobId is available
+  useEffect(() => {
+    const fetchAllowedWorkTypes = async () => {
+      if (!jobId) return;
+
+      try {
+        const response = await fetch(`/api/l/jobs/${jobId}/sov-items`);
+        if (response.ok) {
+          const data = await response.json();
+          const workTypes = [
+            ...new Set(
+              (data.data || [])
+                .map((item: any) => normalizeSovWorkTypeToTakeoffValue(item.work_type))
+                .filter((wt): wt is string => Boolean(wt))
+            ),
+          ] as string[];
+          setAllowedWorkTypes(workTypes);
+        } else {
+          // If no SOV items exist, allow all work types (backward compatibility)
+          setAllowedWorkTypes(WORK_TYPES.map(wt => wt.value));
+        }
+      } catch (error) {
+        console.error('Error fetching SOV items for work types:', error);
+        // Allow all work types on error
+        setAllowedWorkTypes(WORK_TYPES.map(wt => wt.value));
+      } finally {
+        setLoadingWorkTypes(false);
+      }
+    };
+
+    fetchAllowedWorkTypes();
+  }, [jobId]);
+
+  const [title, setTitle] = useState("");
+  const [workType, setWorkType] = useState("");
+  const [workOrderNumber, setWorkOrderNumber] = useState("");
+  const [workOrderId, setWorkOrderId] = useState("");
+  const [contractedOrAdditional, setContractedOrAdditional] = useState("contracted");
+  const [installDate, setInstallDate] = useState("");
+  const [pickupDate, setPickupDate] = useState("");
+  const [neededByDate, setNeededByDate] = useState("");
+  const [priority, setPriority] = useState("standard");
+  const [mobilizationNumber, setMobilizationNumber] = useState(1);
+  const [isMultiDayJob, setIsMultiDayJob] = useState(false);
+  const [endDate, setEndDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [crewNotes, setCrewNotes] = useState("");
+  const [buildShopNotes, setBuildShopNotes] = useState("");
+  const [pmNotes, setPmNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [takeoffSaved, setTakeoffSaved] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [savedTakeoffId, setSavedTakeoffId] = useState<string | null>(null);
+  const [workOrderExists, setWorkOrderExists] = useState(false);
+  const [showWorkTypeChangeDialog, setShowWorkTypeChangeDialog] = useState(false);
+  const [pendingWorkType, setPendingWorkType] = useState<string | null>(null);
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<null | { type: "vehicle" | "rollingStock" | "additionalItem"; id: string }>(null);
+  const [workTypeSelectedAt, setWorkTypeSelectedAt] = useState<Date | null>(null);
+  const hasCreatedTakeoff = Boolean(savedTakeoffId);
+  const isEditMode = mode === "edit";
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importStep, setImportStep] = useState<1 | 2>(1);
+  const [signOrders, setSignOrders] = useState<SignOrderListItem[]>([]);
+  const [selectedSignOrderId, setSelectedSignOrderId] = useState<number | null>(null);
+  const [selectedSignOrder, setSelectedSignOrder] = useState<SignOrderListItem | null>(null);
+  const [importableSigns, setImportableSigns] = useState<SignOrderImportSign[]>([]);
+  const [loadingSignOrders, setLoadingSignOrders] = useState(false);
+  const [loadingSelectedSignOrder, setLoadingSelectedSignOrder] = useState(false);
+  const [importingSigns, setImportingSigns] = useState(false);
+  const [signOrderSearch, setSignOrderSearch] = useState("");
+
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [titleEnteredAt, setTitleEnteredAt] = useState<Date | null>(null);
+  const titleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [firstSave, setFirstSave] = useState<boolean>(false);
+
+  // MPT Configuration State
+  const [activeSections, setActiveSections] = useState<string[]>([]);
+  const [signRows, setSignRows] = useState<Record<string, MPTSignRow[]>>({});
+  const [defaultSignMaterial, setDefaultSignMaterial] = useState<SignMaterial>(DEFAULT_SIGN_MATERIAL);
+
+  // Permanent Signs Configuration State
+  const [activePermanentItems, setActivePermanentItems] = useState<string[]>([]);
+  const [permanentSignRows, setPermanentSignRows] = useState<Record<string, PermSignRow[]>>({});
+  const [permanentEntryRows, setPermanentEntryRows] = useState<Record<string, PermEntryRow[]>>({});
+  const [defaultPermanentSignMaterial, setDefaultPermanentSignMaterial] = useState<SignMaterial>("ALUMINUM");
+
+  // Flagging/Lane Closure State
+  const [vehicleItems, setVehicleItems] = useState<{ id: string; vehicleType: string; quantity: number; description: string }[]>([]);
+  const [rollingStockItems, setRollingStockItems] = useState<{ id: string; equipmentId: string; equipmentLabel: string }[]>([]);
+  const [availableEquipment, setAvailableEquipment] = useState<{
+    id: string; equipment_number: string; category: string; equipment_type: string;
+    make: string; model: string; status: string; rental_rate: number | null;
+    availability: "available" | "soon" | "unavailable";
+    availability_note: string;
+  }[]>([]);
+
+  // Additional Items State
+  const [additionalItems, setAdditionalItems] = useState<AdditionalItem[]>([]);
+
+  const isPermanentSigns = workType === "PERMANENT_SIGNS";
+  const showsSignConfiguration = workType === "FLAGGING" || workType === "LANE_CLOSURE";
+  const showsVehicles = workType === "FLAGGING" || workType === "LANE_CLOSURE";
+  const resolvedPageTitle = pageTitle || formatTakeoffPageTitle({
+    workType,
+    isPickup: Boolean(draftTakeoff?.is_pickup),
+    jobLabel,
+  });
+  const resolvedPageDescription =
+    pageDescription ||
+    `Manage takeoff details, work types, materials, and scheduling information for ${jobLabel}.`;
+
+  const installDateValue = parseDateString(installDate);
+  const pickupDateValue = parseDateString(pickupDate);
+  const neededByDateValue = parseDateString(neededByDate);
+  const showsPickupDate = workType === "MPT";
+  const scheduleReferenceLabel = workType === "FLAGGING" || workType === "LANE_CLOSURE"
+    ? "job start date"
+    : "install date";
+  const endDateValue = parseDateString(endDate);
+  const effectiveAdditionalItems = buildEffectiveAdditionalItems(additionalItems, activeSections, signRows);
+  const generatedAdditionalItems = effectiveAdditionalItems.filter(
+    (item) => item.generated || item.source === "trailblazer_sandbags"
+  );
+  const manualAdditionalItems = effectiveAdditionalItems.filter(
+    (item) => !item.generated && item.source !== "trailblazer_sandbags"
+  );
+  const signOrderCustomerFilter = info?.customerName || dbJob?.customer_name || "";
+  const normalizedSignOrderSearch = signOrderSearch.trim().toLowerCase();
+  const filteredSignOrders = signOrders.filter((order) => {
+    if (!normalizedSignOrderSearch) return true;
+
+    return [
+      order.order_number,
+      order.customer,
+      order.contract_number,
+      order.job_number,
+    ].some((value) => String(value || "").toLowerCase().includes(normalizedSignOrderSearch));
+  });
+
+  const resetImportDialog = useCallback(() => {
+    setImportStep(1);
+    setSelectedSignOrderId(null);
+    setSelectedSignOrder(null);
+    setImportableSigns([]);
+    setLoadingSelectedSignOrder(false);
+    setImportingSigns(false);
+    setSignOrderSearch("");
+  }, []);
+
+  // Debugging refs
+  const mptContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    if (!title.trim() || !workType || !dbJob || saving) return;
+
+    setSaveStatus('saving');
+    try {
+      const response = await fetch('/api/l/takeoffs/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+          title,
+          workType,
+          workOrderNumber,
+          workOrderId,
+          contractedOrAdditional,
+          installDate,
+          pickupDate,
+          neededByDate,
+          isMultiDayJob,
+          endDate,
+          priority,
+          notes,
+          crewNotes,
+          buildShopNotes,
+          pmNotes,
+          // Include MPT sign data
+          activeSections,
+          signRows,
+          defaultSignMaterial,
+          // Include permanent signs data
+          activePermanentItems,
+          permanentSignRows,
+          permanentEntryRows,
+          defaultPermanentSignMaterial,
+          // Include flagging/lane closure data
+          vehicleItems,
+          rollingStockItems,
+          additionalItems: effectiveAdditionalItems,
+          // Include takeoffId for updates
+          takeoffId: savedTakeoffId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to auto-save takeoff');
+      }
+
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+      const newTakeoffId = data.takeoff.id as string;
+      setSavedTakeoffId(newTakeoffId);
+      setHasUnsavedChanges(false);
+      setFirstSave(true);
+      // Reset counter to 1 like sign order page
+      // Note: We can't directly reset the counter here since it's in the header component
+      // The header component will handle showing the message based on firstSave
+      if (!savedTakeoffId && newTakeoffId) {
+        // Update URL without full page reload for better UX
+        window.history.replaceState(null, '', `/l/${jobId}/takeoffs/edit/${newTakeoffId}`);
+      }
+    } catch (error) {
+      console.error("Error auto-saving takeoff:", error);
+      setSaveStatus('error');
+    }
+  }, [
+    title, workType, dbJob, saving, jobId, workOrderNumber, workOrderId, contractedOrAdditional,
+    installDate, pickupDate, neededByDate, isMultiDayJob, endDate, priority, notes, crewNotes, buildShopNotes, pmNotes,
+    activeSections, signRows, defaultSignMaterial, activePermanentItems, permanentSignRows,
+    permanentEntryRows, defaultPermanentSignMaterial, vehicleItems, rollingStockItems,
+    effectiveAdditionalItems, savedTakeoffId
+  ]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (hasUnsavedChanges && title.trim() && workType) {
+      const now = Date.now();
+      const latestTrigger = Math.max(
+        titleEnteredAt?.getTime() ?? 0,
+        workTypeSelectedAt?.getTime() ?? 0
+      );
+      const shouldDelay = !savedTakeoffId && latestTrigger > 0 && now - latestTrigger < 2000;
+      const delay = shouldDelay ? 5000 - (now - latestTrigger) : 5000;
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        autoSave();
+      }, Math.max(0, delay));
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, title, workType, autoSave, savedTakeoffId, titleEnteredAt, workTypeSelectedAt]);
+
+  // Mark as having unsaved changes when form data changes
+  useEffect(() => {
+    if (
+      title ||
+      workType ||
+      workOrderNumber ||
+      workOrderId ||
+      installDate ||
+      pickupDate ||
+      neededByDate ||
+      endDate ||
+      notes ||
+      crewNotes ||
+      buildShopNotes ||
+      pmNotes ||
+      activeSections.length > 0 ||
+      Object.keys(signRows).length > 0 ||
+      activePermanentItems.length > 0 ||
+      Object.keys(permanentSignRows).length > 0 ||
+      Object.keys(permanentEntryRows).length > 0 ||
+      vehicleItems.length > 0 ||
+      rollingStockItems.length > 0 ||
+      additionalItems.length > 0
+    ) {
+      setHasUnsavedChanges(true);
+    }
+  }, [
+    title,
+    workType,
+    workOrderNumber,
+    workOrderId,
+    installDate,
+    pickupDate,
+    neededByDate,
+    endDate,
+    notes,
+    crewNotes,
+    buildShopNotes,
+    pmNotes,
+    activeSections,
+    signRows,
+    activePermanentItems,
+    permanentSignRows,
+    permanentEntryRows,
+    vehicleItems,
+    rollingStockItems,
+    additionalItems,
+  ]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Load draft takeoff data when provided
+  useEffect(() => {
+    if (draftTakeoff) {
+      setTitle(draftTakeoff.title || "");
+      setWorkType(draftTakeoff.work_type || "");
+      setWorkOrderNumber(draftTakeoff.work_order_number || "");
+      setWorkOrderId(draftTakeoff.work_order_id || "");
+      setContractedOrAdditional(draftTakeoff.contracted_or_additional || "contracted");
+      setInstallDate(draftTakeoff.install_date || "");
+      setPickupDate(draftTakeoff.pickup_date || "");
+      setNeededByDate(draftTakeoff.needed_by_date || "");
+      setPriority(draftTakeoff.priority || "standard");
+      setNotes(draftTakeoff.notes || "");
+      setCrewNotes(draftTakeoff.crew_notes || "");
+      setBuildShopNotes(draftTakeoff.build_shop_notes || "");
+      setPmNotes(draftTakeoff.pm_notes || "");
+      setIsMultiDayJob(Boolean(draftTakeoff.is_multi_day_job));
+      setEndDate(draftTakeoff.end_date || "");
+      setActiveSections(draftTakeoff.active_sections || []);
+      setSignRows(draftTakeoff.sign_rows || {});
+      setDefaultSignMaterial(draftTakeoff.default_sign_material || DEFAULT_SIGN_MATERIAL);
+      // Load permanent signs data
+      setActivePermanentItems(draftTakeoff.active_permanent_items || []);
+      setPermanentSignRows(draftTakeoff.permanent_sign_rows || {});
+      setPermanentEntryRows(draftTakeoff.permanent_entry_rows || {});
+      setDefaultPermanentSignMaterial(draftTakeoff.default_permanent_sign_material || "ALUMINUM");
+      setVehicleItems(
+        (draftTakeoff.vehicle_items || []).map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          vehicleType: item.vehicleType || "",
+          quantity: Number(item.quantity || 1),
+          description: item.description || "",
+        }))
+      );
+      setRollingStockItems(draftTakeoff.rolling_stock_items || []);
+      setAdditionalItems(
+        (draftTakeoff.additional_items || [])
+          .filter((item: any) => item?.source !== "trailblazer_sandbags" && !item?.generated)
+          .map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          name: item.name || "",
+          quantity: Number(item.quantity || 1),
+          description: item.description || "",
+          customName: item.customName || (item.name === "__custom" ? item.description || "" : ""),
+          }))
+      );
+      setSavedTakeoffId(draftTakeoff.id);
+      setTakeoffSaved(true);
+      setSaveStatus('saved');
+      setLastSaved(draftTakeoff.updated_at ? new Date(draftTakeoff.updated_at) : new Date());
+      setFirstSave(true);
+      setHasUnsavedChanges(false);
+    }
+  }, [draftTakeoff]);
+
+  // Debugging: Log container dimensions
+  useEffect(() => {
+    const logDimensions = () => {
+      if (mptContainerRef.current) {
+        const rect = mptContainerRef.current.getBoundingClientRect();
+        console.log('MPT Container Dimensions:', {
+          clientWidth: mptContainerRef.current.clientWidth,
+          clientHeight: mptContainerRef.current.clientHeight,
+          scrollWidth: mptContainerRef.current.scrollWidth,
+          scrollHeight: mptContainerRef.current.scrollHeight,
+          scrollLeft: mptContainerRef.current.scrollLeft,
+          scrollTop: mptContainerRef.current.scrollTop,
+          boundingRect: rect,
+          overflow: window.getComputedStyle(mptContainerRef.current).overflow,
+          overflowX: window.getComputedStyle(mptContainerRef.current).overflowX,
+          overflowY: window.getComputedStyle(mptContainerRef.current).overflowY,
+        });
+      }
+    };
+
+    // Log on mount and resize
+    logDimensions();
+    window.addEventListener('resize', logDimensions);
+
+    return () => window.removeEventListener('resize', logDimensions);
+  }, [workType]);
+
+  // Log when sign rows change (add sign clicked)
+  useEffect(() => {
+    console.log('Sign rows changed:', signRows);
+  }, [signRows]);
+
+  useEffect(() => {
+    console.log('[CreateTakeoffForm] Additional item selector context', {
+      workType,
+      optionsCount: MPT_ADDITIONAL_ITEM_OPTIONS.length,
+      optionsPreview: MPT_ADDITIONAL_ITEM_OPTIONS.slice(0, 5),
+      additionalItems: effectiveAdditionalItems,
+    });
+  }, [workType, effectiveAdditionalItems]);
+
+  // Fetch rental equipment - simplified to show all equipment as available
+  useEffect(() => {
+    if (workType === "FLAGGING" || workType === "LANE_CLOSURE" || (workType === "DELIVERY" || workType === "RENTAL") && installDate) {
+      const fetchEquipment = async () => {
+        try {
+          console.log('🔍 DEBUG - Starting equipment fetch');
+          console.log('🔍 DEBUG - workType:', workType);
+
+          const eqRes = await fetch('/api/l/rental-equipment');
+          console.log('📡 API eqRes.status:', eqRes.status, 'ok:', eqRes.ok);
+
+          if (!eqRes.ok) {
+            console.error('❌ API Error - rental-equipment:', await eqRes.text());
+            return;
+          }
+
+          const eqData = await eqRes.json();
+          console.log('📦 Raw eqData:', eqData);
+
+          const allEq = eqData.data || [];
+          console.log('🔢 allEq.length:', allEq.length);
+
+          if (allEq.length === 0) {
+            console.warn('⚠️ No equipment data returned from API');
+          }
+
+          console.log('📋 Sample equipment items:', allEq.slice(0, 3));
+
+          // Mark all equipment as available (simplified logic)
+          const enriched = allEq.map((eq: any) => {
+            console.log(`🔍 Processing equipment ${eq.equipment_number} (${eq.id}):`, {
+              status: eq.status,
+              category: eq.category,
+              equipment_type: eq.equipment_type
+            });
+
+            if (eq.status === "damaged") {
+              console.log(`💥 Equipment ${eq.equipment_number} is damaged`);
+              return { ...eq, availability: "unavailable" as const, availability_note: "Damaged" };
+            }
+
+            console.log(`✅ Equipment ${eq.equipment_number} marked as available`);
+            return { ...eq, availability: "available" as const, availability_note: "Available" };
+          });
+
+          // Sort by category
+          enriched.sort((a: any, b: any) => a.category.localeCompare(b.category));
+
+          console.log('🔢 enriched.length:', enriched.length);
+          console.log('📋 enriched sample:', enriched.slice(0, 3));
+
+          setAvailableEquipment(enriched);
+        } catch (error) {
+          console.error("Error fetching equipment:", error);
+        }
+      };
+      fetchEquipment();
+    }
+  }, [workType, installDate]);
+
+  const handleScheduleReferenceDateChange = (date?: Date) => {
+    const nextReferenceDate = toDateString(date);
+    setInstallDate(nextReferenceDate);
+
+    if (!date) {
+      return;
+    }
+
+    const currentNeededBy = parseDateString(neededByDate);
+    if (!currentNeededBy || currentNeededBy >= date) {
+      setNeededByDate(toDateString(subDays(date, 1)));
+    }
+
+    if (showsPickupDate) {
+      const currentPickup = parseDateString(pickupDate);
+      if (!currentPickup || currentPickup <= date) {
+        setPickupDate(toDateString(addDays(date, 1)));
+      }
+    }
+  };
+
+  const handlePermanentPickupDateChange = (date?: Date) => {
+    if (!date) {
+      setPickupDate("");
+      return;
+    }
+
+    const baseInstall = parseDateString(installDate);
+    const normalized = baseInstall && date <= baseInstall ? addDays(baseInstall, 1) : date;
+    setPickupDate(toDateString(normalized));
+  };
+
+  const handlePermanentNeededByDateChange = (date?: Date) => {
+    if (!date) {
+      setNeededByDate("");
+      return;
+    }
+
+    setNeededByDate(clampNeededByDate(date, installDate));
+  };
+
+  useEffect(() => {
+    if (!showsPickupDate && pickupDate) {
+      setPickupDate("");
+    }
+  }, [showsPickupDate, pickupDate]);
+
+  useEffect(() => {
+    if (!importDialogOpen) {
+      resetImportDialog();
+      return;
+    }
+
+    const fetchSignOrders = async () => {
+      setLoadingSignOrders(true);
+      try {
+        const filters = signOrderCustomerFilter
+          ? { customer: [signOrderCustomerFilter] }
+          : {};
+        const params = new URLSearchParams({
+          page: "1",
+          limit: "250",
+          includeDrafts: "true",
+          orderBy: "created_at",
+          ascending: "false",
+        });
+
+        if (Object.keys(filters).length > 0) {
+          params.set("filters", JSON.stringify(filters));
+        }
+
+        console.log('[CreateTakeoffForm] Fetching sign orders for import', {
+          jobId,
+          customerFilter: signOrderCustomerFilter,
+          params: params.toString(),
+        });
+
+        const response = await fetch(`/api/sign-shop-orders?${params.toString()}`);
+        const data = await response.json();
+
+        console.log('[CreateTakeoffForm] Sign order import response received', {
+          jobId,
+          customerFilter: signOrderCustomerFilter,
+          status: response.status,
+          ok: response.ok,
+          orderCount: Array.isArray(data?.orders) ? data.orders.length : undefined,
+          data,
+        });
+
+        if (!response.ok || !data?.success) {
+          throw new Error(data.error || "Failed to load sign orders");
+        }
+
+        setSignOrders(Array.isArray(data.orders) ? data.orders : []);
+      } catch (error) {
+        console.error("Error fetching sign orders:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to load sign orders");
+        setSignOrders([]);
+      } finally {
+        setLoadingSignOrders(false);
+      }
+    };
+
+    fetchSignOrders();
+  }, [importDialogOpen, jobId, resetImportDialog, signOrderCustomerFilter]);
+
+  useEffect(() => {
+    if (!importDialogOpen || !selectedSignOrderId) return;
+
+    const currentOrder = signOrders.find((order) => order.id === selectedSignOrderId) || null;
+    setSelectedSignOrder(currentOrder);
+
+    const fetchSignOrderDetails = async () => {
+      setLoadingSelectedSignOrder(true);
+      try {
+        console.log('[CreateTakeoffForm] Fetching selected sign order details', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+        });
+        const response = await fetch(`/api/sign-orders/${selectedSignOrderId}`);
+        const data = await response.json();
+
+        console.log('[CreateTakeoffForm] Sign order details response received', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+          status: response.status,
+          ok: response.ok,
+          success: data?.success,
+        });
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Failed to load sign order");
+        }
+
+        const signsSource = Array.isArray(data.data?.signs)
+          ? data.data.signs
+          : Object.values(data.data?.signs || {});
+
+        const mappedSigns = signsSource
+          .filter((sign): sign is Record<string, unknown> => Boolean(sign) && typeof sign === "object")
+          .map((sign, index) => {
+            const designation = String(sign.designation || sign.description || `Sign ${index + 1}`);
+            const description = String(sign.description || sign.designation || "");
+            const existingStructure = String(
+              sign.associated_structure ||
+              sign.associatedStructure ||
+              sign.displayStructure ||
+              ""
+            );
+
+            return {
+              id: String(sign.id || `${selectedSignOrderId}-${index}`),
+              designation,
+              description,
+              quantity: Math.max(1, Number(sign.quantity || 1)),
+              width: Number(sign.width || 0),
+              height: Number(sign.height || 0),
+              sheeting: String(sign.sheeting || "HI"),
+              substrate: String(sign.substrate || ""),
+              cover: Boolean(sign.cover),
+              bLights: normalizeImportedBLight(sign.bLights),
+              existingStructure,
+              structureType: IMPORT_STRUCTURE_OPTIONS.includes(existingStructure) ? existingStructure : "",
+            } satisfies SignOrderImportSign;
+          });
+
+        setImportableSigns(mappedSigns);
+        console.log('[CreateTakeoffForm] Prepared importable signs', {
+          jobId,
+          signOrderId: selectedSignOrderId,
+          signCount: mappedSigns.length,
+        });
+      } catch (error) {
+        console.error("Error fetching sign order details:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to load sign order");
+        setImportableSigns([]);
+      } finally {
+        setLoadingSelectedSignOrder(false);
+      }
+    };
+
+    fetchSignOrderDetails();
+  }, [importDialogOpen, selectedSignOrderId, signOrders, jobId]);
+
+  const handleToggleSection = (key: string) => {
+    if (activeSections.includes(key)) {
+      setActiveSections((prev) => prev.filter((s) => s !== key));
+    } else {
+      setActiveSections((prev) => [...prev, key]);
+      if (!signRows[key] || signRows[key].length === 0) {
+        // Auto-add empty sign row
+        const emptyRow = {
+          id: crypto.randomUUID(),
+          isCustom: false,
+          signDesignation: '',
+          signDescription: '',
+          width: 0,
+          height: 0,
+          dimensionLabel: '',
+          signLegend: '',
+          sheeting: 'HI',
+          structureType: '', // Will be set by user
+          bLights: 'none' as const,
+          sqft: 0,
+          totalSqft: 0,
+          quantity: 1,
+          needsOrder: false,
+          cover: false,
+          loadOrder: 1,
+          material: defaultSignMaterial,
+          secondarySigns: [],
+        };
+        setSignRows((prev) => ({ ...prev, [key]: [emptyRow] }));
+      }
+    }
+  };
+
+  const handleSignRowsChange = (sectionKey: string, rows: MPTSignRow[]) => {
+    setSignRows((prev) => ({ ...prev, [sectionKey]: rows }));
+  };
+
+  const handleApplyMaterialToAll = () => {
+    const newSignRows = { ...signRows };
+    for (const key of Object.keys(newSignRows)) {
+      newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultSignMaterial }));
+    }
+    setSignRows(newSignRows);
+    toast.success(`All signs set to ${defaultSignMaterial}`);
+  };
+
+  const buildImportedSignRows = useCallback((signsToImport: SignOrderImportSign[]) => {
+    const nextRows: Record<string, MPTSignRow[]> = {};
+    const nextActiveSections = new Set(activeSections);
+
+    signsToImport.forEach((sign) => {
+      const structureSection = getImportStructureSectionFromType(sign.structureType);
+      if (!structureSection) return;
+
+      nextActiveSections.add(structureSection);
+      const quantity = Math.max(1, Number(sign.quantity || 1));
+      const material: SignMaterial = sign.substrate.toUpperCase().includes("PLASTIC") ? "PLASTIC" : "ALUMINUM";
+      const sqft = Math.round(((Number(sign.width || 0) * Number(sign.height || 0)) / 144) * 100) / 100;
+      const structureType = sign.structureType;
+      const baseRow: MPTSignRow = {
+        id: crypto.randomUUID(),
+        isCustom: false,
+        signDesignation: sign.designation,
+        signDescription: sign.description,
+        width: Number(sign.width || 0),
+        height: Number(sign.height || 0),
+        dimensionLabel: sign.width && sign.height ? `${sign.width} x ${sign.height}` : "",
+        signLegend: sign.description,
+        sheeting: sign.sheeting || "HI",
+        structureType,
+        bLights: sign.bLights,
+        sqft,
+        totalSqft: getImportedTotalSqft(structureSection, structureType, sqft, structureSection === "type_iii" ? 1 : quantity),
+        quantity: structureSection === "type_iii" ? 1 : quantity,
+        needsOrder: false,
+        cover: Boolean(sign.cover),
+        loadOrder: 1,
+        material,
+        secondarySigns: [],
+      };
+
+      const rowsForSection = nextRows[structureSection] || [];
+
+      if (structureSection === "type_iii" && quantity > 1) {
+        for (let index = 0; index < quantity; index += 1) {
+          rowsForSection.push({
+            ...baseRow,
+            id: crypto.randomUUID(),
+            loadOrder: rowsForSection.length + 1,
+          });
+        }
+      } else {
+        rowsForSection.push({
+          ...baseRow,
+          loadOrder: rowsForSection.length + 1,
+        });
+      }
+
+      nextRows[structureSection] = rowsForSection;
+    });
+
+    return {
+      nextRows,
+      nextActiveSections: Array.from(nextActiveSections),
+    };
+  }, [activeSections]);
+
+  const handleImportSignOrder = useCallback(() => {
+    const missingAssignment = importableSigns.some((sign) => !sign.structureType);
+    if (missingAssignment) {
+      toast.error("Assign a structure to each sign before importing");
+      return;
+    }
+
+    const { nextRows, nextActiveSections } = buildImportedSignRows(importableSigns);
+    const importedCount = importableSigns.reduce((total, sign) => total + Math.max(1, Number(sign.quantity || 1)), 0);
+
+    setImportingSigns(true);
+    setSignRows((prev) => {
+      const mergedRows = { ...prev };
+
+      Object.entries(nextRows).forEach(([sectionKey, rows]) => {
+        const existingRows = mergedRows[sectionKey] || [];
+        mergedRows[sectionKey] = [
+          ...existingRows,
+          ...rows.map((row, index) => ({
+            ...row,
+            loadOrder: sectionKey === "type_iii" ? existingRows.length + index + 1 : row.loadOrder,
+          })),
+        ];
+      });
+
+      return mergedRows;
+    });
+    setActiveSections(nextActiveSections);
+    setImportDialogOpen(false);
+    resetImportDialog();
+    setImportingSigns(false);
+    toast.success(`Imported ${importedCount} sign row${importedCount === 1 ? "" : "s"} from sign order`);
+  }, [buildImportedSignRows, importableSigns, resetImportDialog]);
+
+  const handleCreateWorkOrder = async () => {
+    if (!savedTakeoffId) {
+      toast.error("Please save the takeoff first before generating a work order");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      console.log('[CreateTakeoffForm] Generate work order clicked', {
+        savedTakeoffId,
+        jobId,
+        title,
+        workType,
+        additionalItemsCount: additionalItems.length,
+        vehicleItemsCount: vehicleItems.length,
+        rollingStockItemsCount: rollingStockItems.length,
+        activeSections,
+        activePermanentItems,
+      });
+      // Create work order from the saved takeoff
+      const woResponse = await fetch(`/api/workorders/from-takeoff/${savedTakeoffId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: user?.email || 'unknown@example.com'
+        })
+      });
+
+      console.log('[CreateTakeoffForm] Generate work order response', {
+        status: woResponse.status,
+        ok: woResponse.ok,
+      });
+
+      if (woResponse.ok) {
+        const result = await woResponse.json();
+        console.log('[CreateTakeoffForm] Generate work order success', result);
+        // Update the work order number field
+        setWorkOrderNumber(result.workOrder.workOrderNumber);
+        setWorkOrderId(result.workOrder.id);
+        setWorkOrderExists(true);
+        toast.success('Work order generated successfully!');
+        router.push(`/l/jobs/${jobId}/work-orders/view/${result.workOrder.id}`);
+      } else {
+        const err = await woResponse.json();
+        console.error('[CreateTakeoffForm] Generate work order failed', err);
+        toast.error(err.error || 'Failed to generate work order');
+      }
+    } catch (error) {
+      console.error("[CreateTakeoffForm] Error generating work order", error);
+      toast.error("Failed to generate work order");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!savedTakeoffId) {
+      toast.error("Please save the takeoff first before downloading PDF");
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const response = await fetch(`/api/l/takeoffs/${savedTakeoffId}/pdf`);
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `takeoff-${title || 'untitled'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF downloaded successfully");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    if (!workType) {
+      toast.error("Work Type is required");
+      return;
+    }
+    if (!dbJob) {
+      toast.error("This contract has not been saved to the database yet. Please create it via the Contract Wizard first.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/l/takeoffs/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId,
+          title,
+          workType,
+          workOrderNumber,
+          workOrderId,
+          contractedOrAdditional,
+          installDate,
+          pickupDate,
+          neededByDate,
+          isMultiDayJob,
+          endDate,
+          priority,
+          notes,
+          crewNotes,
+          buildShopNotes,
+          pmNotes,
+          // Include MPT sign data
+          activeSections,
+          signRows,
+          defaultSignMaterial,
+          // Include permanent signs data
+          activePermanentItems,
+          permanentSignRows,
+          permanentEntryRows,
+          defaultPermanentSignMaterial,
+          // Include flagging/lane closure data
+          vehicleItems,
+          rollingStockItems,
+          additionalItems: effectiveAdditionalItems,
+          // Include takeoffId for updates
+          takeoffId: savedTakeoffId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create takeoff');
+      }
+
+      toast.success(`Takeoff "${title}" saved successfully`);
+      setTakeoffSaved(true);
+      setSavedTakeoffId(data.takeoff.id);
+      // Navigate to the view page (we'll create this route structure)
+      router.push(`/l/${jobId}/takeoffs/view/${data.takeoff.id}`);
+    } catch (error) {
+      console.error("Error saving takeoff:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save takeoff");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedSignOrderLink = selectedSignOrderId ? `/takeoffs/sign-order/view/${selectedSignOrderId}` : "";
+  const canOpenImportDialog = workType === "MPT" || showsSignConfiguration;
+  const importButton = canOpenImportDialog ? (
+    <>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Import Signs From Sign Order</span>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 text-[10px] gap-1.5"
+        onClick={() => setImportDialogOpen(true)}
+      >
+        <Package className="h-3 w-3" />
+        Import Signs
+      </Button>
+    </>
+  ) : null;
+
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  return (
+    <div>
+      <NewRecordStickyPageHeader
+        backLabel={backLabel}
+        onBack={onBack}
+        onDone={handleSave}
+        isSaving={saving}
+        lastSavedAt={lastSaved}
+        hasUnsavedChanges={hasUnsavedChanges}
+        firstSave={firstSave}
+        additionalButtons={undefined}
+      />
+
+      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
+      <PageTitleBlock title={resolvedPageTitle} description={resolvedPageDescription} />
+
+      {/* Project Info */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Project Information</h2>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Branch</span>
+              <span className="text-sm font-medium">{dbJob?.etc_branch || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Project Manager</span>
+              <span className="text-sm font-medium">{dbJob?.etc_project_manager || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">ETC Job #</span>
+              <span className="text-sm font-medium font-mono">{info?.etcJobNumber || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">County</span>
+              <span className="text-sm font-medium">{info?.county || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer</span>
+              <span className="text-sm font-medium">{info?.customerName || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer PM / POC</span>
+              <span className="text-sm font-medium">{info?.customerPM || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Customer Job #</span>
+              <span className="text-sm font-medium">{info?.customerJobNumber || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner</span>
+              <span className="text-sm font-medium">{info?.projectOwner || "—"}</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Owner Contract #</span>
+              <span className="text-sm font-medium">{info?.contractNumber || "—"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Takeoff Details */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Takeoff Details</h2>
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-5 text-xs">
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Takeoff Title *</Label>
+              <Input
+                className="text-sm"
+                value={title}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  setTitle(newTitle);
+                  // Track when title is first entered for creation delay
+                  if (newTitle.trim() && !titleEnteredAt && !savedTakeoffId) {
+                    setTitleEnteredAt(new Date());
+                  } else if (!newTitle.trim() && titleEnteredAt) {
+                    // Reset if title is cleared
+                    setTitleEnteredAt(null);
+                  }
+                }}
+                placeholder="e.g. Phase 1 MPT Setup"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Type *</Label>
+              <Select value={workType} onValueChange={(newWorkType) => {
+                // Check if there's progress made
+                const hasProgress = activeSections.length > 0 ||
+                  Object.values(signRows).some(rows => rows.length > 0) ||
+                  activePermanentItems.length > 0 ||
+                  Object.values(permanentSignRows).some(rows => rows.length > 0) ||
+                  Object.values(permanentEntryRows).some(rows => rows.length > 0) ||
+                  vehicleItems.length > 0 ||
+                  rollingStockItems.length > 0 ||
+                  additionalItems.length > 0;
+
+                if (hasProgress && newWorkType !== workType) {
+                  setPendingWorkType(newWorkType);
+                  setShowWorkTypeChangeDialog(true);
+                } else {
+                  setWorkType(newWorkType);
+                  if (newWorkType) {
+                    setWorkTypeSelectedAt(new Date());
+                  } else {
+                    setWorkTypeSelectedAt(null);
+                  }
+                }
+              }}>
+                <SelectTrigger className="text-sm mt-0">
+                  <SelectValue placeholder="Choose Work Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORK_TYPES.filter(wt => loadingWorkTypes || allowedWorkTypes.includes(wt.value)).map((wt) => (
+                    <SelectItem key={wt.value} value={wt.value}>{wt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Work Order #</Label>
+              {workOrderNumber ? (
+                <div
+                  className="text-sm text-primary hover:text-primary/80 cursor-pointer underline"
+                  onClick={() => workOrderId && router.push(`/l/jobs/${jobId}/work-orders/view/${workOrderId}`)}
+                >
+                  {workOrderNumber}
+                </div>
+              ) : (
+                <Input
+                  className="text-sm"
+                  value="Save takeoff first"
+                  disabled
+                  placeholder="Save takeoff first"
+                />
+              )}
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Contracted / Additional</Label>
+              <Select value={contractedOrAdditional} onValueChange={setContractedOrAdditional}>
+                <SelectTrigger className="text-sm mt-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contracted">Contracted Work</SelectItem>
+                  <SelectItem value="additional">Additional Work</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Job Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select job start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : isPermanentSigns ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select install date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Install Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !installDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {installDateValue ? format(installDateValue, "PPP") : "Select install date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={installDateValue} onSelect={handleScheduleReferenceDateChange} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+            {(workType === "FLAGGING" || workType === "LANE_CLOSURE") ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Multi-Day Job</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="checkbox"
+                    id="multiDayJob"
+                    checked={isMultiDayJob}
+                    onChange={(e) => setIsMultiDayJob(e.target.checked)}
+                    className="h-4 w-4 rounded border border-input"
+                  />
+                  <label htmlFor="multiDayJob" className="text-xs text-muted-foreground">
+                    This job spans multiple days
+                  </label>
+                </div>
+                {isMultiDayJob && (
+                  <div className="mt-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">End Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal text-sm",
+                            !endDateValue && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDateValue ? format(endDateValue, "PPP") : "Select end date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={endDateValue} onSelect={(date) => setEndDate(toDateString(date))} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+            ) : showsPickupDate ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Pick Up Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal text-sm",
+                        !pickupDateValue && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {pickupDateValue ? format(pickupDateValue, "PPP") : "Select pickup date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={pickupDateValue}
+                      onSelect={handlePermanentPickupDateChange}
+                      disabled={(date) => Boolean(installDateValue && date <= installDateValue)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            ) : null}
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Needed By Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal text-sm",
+                      !neededByDateValue && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {neededByDateValue ? format(neededByDateValue, "PPP") : "Select needed by date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={neededByDateValue}
+                    onSelect={handlePermanentNeededByDateChange}
+                    disabled={(date) => Boolean(installDateValue && date >= installDateValue)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-[9px] text-muted-foreground mt-1 block">
+                Must be before the {scheduleReferenceLabel}.
+              </span>
+            </div>
+            {workType === "PERMANENT_SIGNS" ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Mobilization #</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  className="text-sm"
+                  value={mobilizationNumber}
+                  onChange={(e) => setMobilizationNumber(Math.max(1, parseInt(e.target.value) || 1))}
+                />
+              </div>
+            ) : workType ? (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger className="text-sm mt-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* Work Type Specific Content */}
+      {workType === "MPT" && (
+        <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
+          <MPTSignConfiguration
+            activeSections={activeSections}
+            signRows={signRows}
+            defaultSignMaterial={defaultSignMaterial}
+            onToggleSection={handleToggleSection}
+            onSignRowsChange={handleSignRowsChange}
+            onDefaultMaterialChange={setDefaultSignMaterial}
+            onApplyMaterialToAll={handleApplyMaterialToAll}
+            importAction={importButton}
+          />
+        </div>
+      )}
+
+      {workType === "PERMANENT_SIGNS" && (
+        <PermanentSignConfiguration
+          activeItems={activePermanentItems}
+          signRows={permanentSignRows}
+          entryRows={permanentEntryRows}
+          defaultSignMaterial={defaultPermanentSignMaterial}
+          onToggleItem={(itemNumber) => {
+            if (activePermanentItems.includes(itemNumber)) {
+              setActivePermanentItems(prev => prev.filter(i => i !== itemNumber));
+            } else {
+              setActivePermanentItems(prev => [...prev, itemNumber]);
+            }
+          }}
+          onSignRowsChange={(itemNumber, rows) => {
+            setPermanentSignRows(prev => ({ ...prev, [itemNumber]: rows }));
+          }}
+          onEntryRowsChange={(itemNumber, rows) => {
+            setPermanentEntryRows(prev => ({ ...prev, [itemNumber]: rows }));
+          }}
+          onDefaultMaterialChange={setDefaultPermanentSignMaterial}
+          onApplyMaterialToAll={() => {
+            const newSignRows = { ...permanentSignRows };
+            for (const key of Object.keys(newSignRows)) {
+              newSignRows[key] = newSignRows[key].map(r => ({ ...r, material: defaultPermanentSignMaterial }));
+            }
+            setPermanentSignRows(newSignRows);
+            toast.success(`All permanent signs set to ${defaultPermanentSignMaterial}`);
+          }}
+          jobId={jobId}
+        />
+      )}
+
+      {showsSignConfiguration && (
+        <>
+          {/* Sign Configuration Section */}
+          <div className={`rounded-lg border bg-card shadow-sm overflow-x-auto ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Sign Configuration
+              </h2>
+              <div className="flex items-center gap-3">
+                {importButton}
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Default Material:
+                </span>
+                <div className="flex items-center rounded-md border bg-muted/30 p-0.5">
+                  {SIGN_MATERIALS.map((m) => (
+                    <button
+                      key={m.value}
+                      onClick={() => setDefaultSignMaterial(m.value as SignMaterial)}
+                      className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-all ${defaultSignMaterial === m.value ? "bg-card text-foreground shadow-sm border border-border" : "text-muted-foreground border border-transparent"}`}
+                    >
+                      {m.abbrev}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px]"
+                  onClick={handleApplyMaterialToAll}
+                >
+                  Apply to All
+                </Button>
+              </div>
+            </div>
+            <div className="flex">
+              <div className="w-[200px] shrink-0 border-r p-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  Structure Types
+                </h4>
+                <div className="space-y-2">
+                  {MPT_SECTIONS.map((section) => {
+                    const active = activeSections.includes(section.key);
+                    return (
+                      <label
+                        key={section.key}
+                        className="flex items-center gap-2 select-none cursor-pointer"
+                        onClick={() => handleToggleSection(section.key)}
+                      >
+                        <div className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${active ? "bg-primary border-primary" : "border-muted-foreground/40 bg-background"}`}>
+                          {active && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </div>
+                        <span className="text-xs font-medium text-foreground">{section.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 p-4 overflow-x-auto">
+                {activeSections.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-12 text-center">
+                    <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground font-medium">Select a structure type</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click a structure type on the left to start building your sign configuration.
+                    </p>
+                  </div>
+                ) : (
+                  activeSections.map((sectionKey) => {
+                    const section = MPT_SECTIONS.find((s) => s.key === sectionKey)!;
+                    const sectionSandbags = (signRows[sectionKey] || []).reduce((total, row) => {
+                      return total + getSandbagsForRow(sectionKey, row.structureType, row.quantity);
+                    }, 0);
+                    return (
+                      <div key={sectionKey}>
+                        <MPTSignTable
+                          sectionTitle={section.label}
+                          structureOptions={section.structures}
+                          rows={signRows[sectionKey] || []}
+                          onRowsChange={(rows) => setSignRows((prev) => ({ ...prev, [sectionKey]: rows }))}
+                          orderable={sectionKey === "type_iii"}
+                          disabled={false}
+                          defaultMaterial={defaultSignMaterial}
+                        />
+                        {sectionSandbags > 0 && (
+                          <div className="mt-1.5 mb-4 px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 inline-flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Sand Bags
+                            </span>
+                            <span className="text-sm font-bold tabular-nums text-amber-700">{sectionSandbags}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Vehicles Section */}
+          {showsVehicles && (
+          <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+            <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Vehicles</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 h-7 text-xs"
+                onClick={() =>
+                  setVehicleItems((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), vehicleType: "", quantity: 1, description: "" },
+                  ])
+                }
+              >
+                <Plus className="h-3 w-3" /> Add Vehicle
+              </Button>
+            </div>
+            <div className="p-5">
+              {vehicleItems.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground font-medium">No vehicles assigned</p>
+                  <p className="text-xs text-muted-foreground mt-1">Click Add Vehicle to assign trucks, TMAs, etc.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {vehicleItems.map((item) => (
+                    <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background">
+                      <Select
+                        value={item.vehicleType}
+                        onValueChange={(v) =>
+                          setVehicleItems((prev) =>
+                            prev.map((vi) => (vi.id === item.id ? { ...vi, vehicleType: v } : vi))
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs w-[220px] shrink-0">
+                          <SelectValue placeholder="Select vehicle type…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FLAGGING_VEHICLE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.id} value={opt.id}>
+                              {opt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex flex-col items-start gap-0.5 shrink-0">
+                        <span className="text-[10px] text-muted-foreground font-medium">Qty</span>
+                        <QuantityInput
+                          value={item.quantity || 1}
+                          min={1}
+                          onChange={(value) =>
+                            setVehicleItems((prev) =>
+                              prev.map((vi) =>
+                                vi.id === item.id
+                                  ? { ...vi, quantity: Math.max(1, value) }
+                                  : vi
+                              )
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col items-start gap-0.5 w-[260px] shrink-0">
+                        <span className="text-[10px] text-muted-foreground font-medium">Notes</span>
+                        <Input
+                          className="h-8 text-xs w-full"
+                          value={item.description}
+                          onChange={(e) =>
+                            setVehicleItems((prev) =>
+                              prev.map((vi) =>
+                                vi.id === item.id
+                                  ? { ...vi, description: e.target.value }
+                                  : vi
+                              )
+                            )
+                          }
+                          placeholder="Notes (optional)"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => setPendingDeleteAction({ type: "vehicle", id: item.id })}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          )}
+
+        </>
+      )}
+
+      {/* Rolling Stock Section */}
+      {workType === "DELIVERY" && (
+      <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-7 text-xs"
+            disabled
+            onClick={() =>
+              setRollingStockItems((prev) => [
+                ...prev,
+                { id: crypto.randomUUID(), equipmentId: "", equipmentLabel: "" },
+              ])
+            }
+          >
+            <Plus className="h-3 w-3" /> Add Equipment
+          </Button>
+        </div>
+        <div className="p-5">
+          <div className="mb-3 rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Rolling stock is temporarily disabled and read-only.
+          </div>
+          {rollingStockItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <Package className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground font-medium">No rolling stock selected</p>
+              <p className="text-xs text-muted-foreground mt-1">Rolling stock selection is disabled for now.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {rollingStockItems.map((item) => {
+                console.log(`🎯 Rendering rolling stock item ${item.id}:`, {
+                  equipmentId: item.equipmentId,
+                  equipmentLabel: item.equipmentLabel
+                });
+
+                // Filter out already-selected equipment (except the current row's selection)
+                const selectedIds = rollingStockItems
+                  .filter((rs) => rs.id !== item.id && rs.equipmentId)
+                  .map((rs) => rs.equipmentId);
+
+                console.log(`🚫 Selected IDs to exclude:`, selectedIds);
+
+                const filteredEquipment = availableEquipment
+                  .filter((eq) => !selectedIds.includes(eq.id))
+                  .filter((eq) => eq.availability !== "unavailable");
+
+                console.log(`📋 Available equipment after filtering:`, filteredEquipment.length, 'items');
+                    console.log(`📋 Filtered equipment sample:`, filteredEquipment.slice(0, 3));
+
+                    // Group by category
+                    const groupedEquipment = filteredEquipment.reduce<Record<string, typeof filteredEquipment>>((acc, eq) => {
+                      if (!acc[eq.category]) acc[eq.category] = [];
+                      acc[eq.category].push(eq);
+                      return acc;
+                    }, {});
+
+                    console.log(`📂 Grouped equipment by category:`, Object.keys(groupedEquipment));
+                    console.log(`📂 Grouped equipment details:`, Object.entries(groupedEquipment).map(([cat, items]) => `${cat}: ${items.length} items`));
+
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-background">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled
+                              className="h-8 text-xs flex-1 min-w-[300px] justify-between font-normal"
+                            >
+                              {item.equipmentId ? (
+                                <span className="truncate">{item.equipmentLabel}</span>
+                              ) : (
+                                <span className="text-muted-foreground">Search equipment…</span>
+                              )}
+                              <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[520px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search by number, type, make…" className="h-9 text-xs" />
+                              <CommandList>
+                                <CommandEmpty>
+                                  {(() => { console.log('🚨 CommandEmpty rendered - no equipment found'); return null; })()}
+                                  No equipment found matching your dates.
+                                </CommandEmpty>
+                                {Object.entries(groupedEquipment).map(([category, items]) => {
+                                  (() => console.log(`🏷️ Rendering category "${category}" with ${items.length} items:`, items.map(eq => eq.equipment_number)))();
+                                  return (
+                                    <CommandGroup key={category} heading={category}>
+                                      {items.map((eq) => {
+                                        (() => console.log(`🔧 Rendering equipment ${eq.equipment_number} in category ${category}`))();
+                                        const colorClass = eq.availability === "available"
+                                          ? "bg-emerald-500/10 hover:bg-emerald-500/20"
+                                          : "bg-amber-500/10 hover:bg-amber-500/20";
+                                        const dotColor = eq.availability === "available"
+                                          ? "bg-emerald-500"
+                                          : "bg-amber-500";
+                                        return (
+                                          <CommandItem
+                                            key={eq.id}
+                                            value={`${eq.equipment_number} ${eq.equipment_type} ${eq.make} ${eq.model} ${eq.category}`}
+                                            onSelect={() => {
+                                              const label = `${eq.equipment_number} — ${eq.category} ${eq.equipment_type} (${eq.make} ${eq.model})${eq.rental_rate ? ` · $${eq.rental_rate.toLocaleString()}/mo` : ""}`;
+                                              setRollingStockItems((prev) =>
+                                                prev.map((rs) =>
+                                                  rs.id === item.id ? { ...rs, equipmentId: eq.id, equipmentLabel: label } : rs
+                                                )
+                                              );
+                                            }}
+                                            className={`text-xs ${colorClass}`}
+                                          >
+                                            <Check
+                                              className={`mr-2 h-3 w-3 ${item.equipmentId === eq.id ? "opacity-100" : "opacity-0"}`}
+                                            />
+                                            <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${dotColor}`} />
+                                            <span className="font-mono">{eq.equipment_number}</span>
+                                            <span className="text-muted-foreground ml-2">
+                                              {eq.equipment_type} · {eq.make} {eq.model}
+                                            </span>
+                                            {eq.rental_rate ? (
+                                              <span className="ml-auto text-[10px] font-semibold text-foreground">${eq.rental_rate.toLocaleString()}/mo</span>
+                                            ) : null}
+                                            <span className={`ml-2 text-[9px] font-medium ${eq.availability === "available" ? "text-emerald-600" : "text-amber-600"}`}>
+                                              {eq.availability_note}
+                                            </span>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  );
+                                })}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled
+                          className="h-8 w-8"
+                          onClick={() => setPendingDeleteAction({ type: "rollingStock", id: item.id })}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+          )}
+
+      {workType === "RENTAL" && (
+        <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+          <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rolling Stock</h2>
+            <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" disabled>
+              <Plus className="h-3 w-3" /> Add Equipment
+            </Button>
+          </div>
+          <div className="p-5">
+            <div className="rounded-md border border-amber-300/50 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Rolling stock is temporarily disabled and read-only.
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Additional Items */}
+      <div className={`rounded-lg border bg-card shadow-sm ${TAKEOFF_PANEL_MAX_WIDTH_CLASS}`}>
+        <div className="px-5 py-3 border-b bg-muted/30 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Items</h2>
+          <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setAdditionalItems((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), name: "", quantity: 1, description: "", customName: "" },
+          ])}>
+            <Plus className="h-3 w-3" /> Add Item
+          </Button>
+        </div>
+        <div className="p-5">
+          {generatedAdditionalItems.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {generatedAdditionalItems.map((item) => (
+                <div key={item.id} className="space-y-1">
+                  <div className="px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 inline-flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {item.name}
+                    </span>
+                    <span className="text-sm font-bold tabular-nums text-amber-700">{item.quantity}</span>
+                  </div>
+                  {item.description ? (
+                    <p className="text-[10px] text-muted-foreground">{item.description}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+          {manualAdditionalItems.length === 0 ? (
+            <div className="text-center text-xs text-muted-foreground py-4">
+              {generatedAdditionalItems.length > 0 ? "No manual additional items." : "No additional items."}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {manualAdditionalItems.map((item) => (
+                <div key={item.id} className="flex items-start gap-3 p-2.5 rounded-md border bg-background">
+                  <div className="w-[320px] shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Item</div>
+                    <div className="flex items-center gap-2">
+                      <Select value={item.name} onValueChange={(v) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, name: v } : i)))}>
+                        <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="Select item…" /></SelectTrigger>
+                        <SelectContent>
+                          {MPT_ADDITIONAL_ITEM_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                          <SelectItem value="__custom">Custom…</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {item.name === "__custom" && (
+                        <Input
+                          className="h-8 text-xs w-[140px] shrink-0"
+                          value={item.customName || ""}
+                          onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, customName: e.target.value } : i)))}
+                          placeholder="Custom name"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Qty</div>
+                    <QuantityInput
+                      value={item.quantity || 1}
+                      min={1}
+                      onChange={(value) =>
+                        setAdditionalItems((prev) =>
+                          prev.map((i) => (i.id === item.id ? { ...i, quantity: Math.max(1, value) } : i))
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="w-[280px] shrink-0">
+                    <div className="text-[10px] text-muted-foreground font-medium mb-0.5">Notes</div>
+                    <Input
+                      className="h-8 text-xs w-full"
+                      value={item.description}
+                      onChange={(e) => setAdditionalItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, description: e.target.value } : i)))}
+                      placeholder="Notes (optional)"
+                    />
+                  </div>
+                  <div className="pt-[18px] shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPendingDeleteAction({ type: "additionalItem", id: item.id })}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="px-5 py-3 border-b bg-muted/30">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</h2>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Crew Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={crewNotes}
+              onChange={(e) => setCrewNotes(e.target.value)}
+              placeholder="Notes for the road crew…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Visible to road crew on dispatches</span>
+          </div>
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">Build Shop Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={buildShopNotes}
+              onChange={(e) => setBuildShopNotes(e.target.value)}
+              placeholder="Internal notes for the build shop…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Sent with the build request submission</span>
+          </div>
+          <div>
+            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">PM Notes</Label>
+            <Textarea
+              className="text-sm"
+              value={pmNotes}
+              onChange={(e) => setPmNotes(e.target.value)}
+              placeholder="Personal notes (PM only)…"
+              rows={2}
+            />
+            <span className="text-[10px] text-muted-foreground mt-1 block">Private notes for your reference only</span>
+          </div>
+        </div>
+      </div>
+
+      <Dialog
+        open={importDialogOpen}
+        onOpenChange={(open) => {
+          setImportDialogOpen(open);
+          if (!open) {
+            resetImportDialog();
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Import Signs From Sign Order</DialogTitle>
+            <DialogDescription>
+              Step {importStep} of 2. Select a sign order for this job&apos;s customer, then assign each sign to Type 3, Trailblazer, or Sign Stands before importing.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importStep === 1 ? (
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
+              <div className="rounded-lg border">
+                <div className="border-b px-4 py-3 space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Sign Orders</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Showing sign orders for {signOrderCustomerFilter || "the current job customer"}.
+                    </p>
+                  </div>
+                  <Input
+                    value={signOrderSearch}
+                    onChange={(event) => setSignOrderSearch(event.target.value)}
+                    placeholder="Search by SO number, customer, contract, or job number"
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="max-h-[420px] overflow-y-auto">
+                  {loadingSignOrders ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading sign orders...
+                    </div>
+                  ) : signOrders.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      No sign orders were found for this customer.
+                    </div>
+                  ) : filteredSignOrders.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      No sign orders match that search.
+                    </div>
+                  ) : (
+                    <div className="min-w-[760px]">
+                      <div className="grid grid-cols-[120px_160px_150px_120px_130px_130px] gap-3 border-b bg-muted/30 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div>SO Number</div>
+                        <div>Customer</div>
+                        <div>Contract / Job</div>
+                        <div>Requestor</div>
+                        <div>Date Made</div>
+                        <div>Build Status</div>
+                      </div>
+                      {filteredSignOrders.map((order) => {
+                        const isSelected = selectedSignOrderId === order.id;
+                        return (
+                          <button
+                            key={order.id}
+                            type="button"
+                            className={cn(
+                              "grid w-full grid-cols-[120px_160px_150px_120px_130px_130px] gap-3 border-b px-4 py-3 text-left text-xs transition-colors hover:bg-muted/40",
+                              isSelected && "bg-muted"
+                            )}
+                            onClick={() => setSelectedSignOrderId(order.id)}
+                          >
+                            <div>
+                                <div className="font-medium">{order.order_number || `SO-${order.id}`}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.order_type || "—"}</div>
+                              </div>
+                              <div>
+                                <div>{order.customer || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.assigned_to || "Unassigned"}</div>
+                              </div>
+                              <div>
+                                <div className="truncate">{order.contract_number || "—"}</div>
+                                <div className="truncate text-[11px] text-muted-foreground">{order.job_number || "—"}</div>
+                              </div>
+                              <div>
+                                <div>{order.requestor || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.branch || "—"}</div>
+                              </div>
+                              <div>
+                                <div>{formatDateTimeLabel(order.order_date || order.created_at)}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  Need: {formatDateTimeLabel(order.need_date)}
+                                </div>
+                              </div>
+                              <div>
+                                <div>{order.shop_status || "—"}</div>
+                                <div className="text-[11px] text-muted-foreground">{order.status || "—"}</div>
+                              </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border">
+                <div className="border-b px-4 py-3">
+                  <h3 className="text-sm font-semibold">Selected Sign Order</h3>
+                  <p className="text-xs text-muted-foreground">Review the order details before moving to sign assignment.</p>
+                </div>
+                <div className="space-y-4 px-4 py-4">
+                  {selectedSignOrder ? (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contract Number</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.contract_number || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SO Number</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.order_number || `SO-${selectedSignOrder.id}`}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Order By</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.requestor || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Customer</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.customer || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date Made</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {formatDateTimeLabel(selectedSignOrder.order_date || selectedSignOrder.created_at)}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
+                          <div className="mt-1 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                            {selectedSignOrder.status || "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Link</Label>
+                        <div className="mt-1">
+                          <a
+                            href={selectedSignOrderLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+                          >
+                            Open sign order view page
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Signs In Order</Label>
+                        <div className="mt-1 rounded-md border">
+                          {loadingSelectedSignOrder ? (
+                            <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading signs...
+                            </div>
+                          ) : importableSigns.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                              No signs found on this order.
+                            </div>
+                          ) : (
+                            <div className="max-h-[220px] overflow-y-auto divide-y">
+                              {importableSigns.map((sign) => (
+                                <div key={`selected-order-${sign.id}`} className="px-3 py-2.5 text-xs">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="font-medium">{sign.designation || "—"}</div>
+                                      <div className="truncate text-muted-foreground">
+                                        {sign.description || "—"}
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0 text-right text-muted-foreground">
+                                      <div>Qty {sign.quantity}</div>
+                                      <div>
+                                        {sign.width > 0 && sign.height > 0 ? `${sign.width} x ${sign.height}` : "—"}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+                      Select a sign order on the left to review it here.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border">
+              <div className="border-b px-4 py-3">
+                <h3 className="text-sm font-semibold">Assign Structure Types</h3>
+                <p className="text-xs text-muted-foreground">
+                  Each imported sign needs a structure assignment before it can be added to this takeoff.
+                </p>
+              </div>
+              <div className="max-h-[460px] overflow-auto">
+                {loadingSelectedSignOrder ? (
+                  <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading sign order items...
+                  </div>
+                ) : importableSigns.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    This sign order does not have any importable signs.
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-background">
+                      <tr className="border-b text-left">
+                        <th className="px-4 py-2 font-medium">Designation</th>
+                        <th className="px-4 py-2 font-medium">Description</th>
+                        <th className="px-4 py-2 font-medium">Qty</th>
+                        <th className="px-4 py-2 font-medium">Size</th>
+                        <th className="px-4 py-2 font-medium">Sheeting</th>
+                        <th className="px-4 py-2 font-medium">Structure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importableSigns.map((sign) => (
+                        <tr key={sign.id} className="border-b align-top">
+                          <td className="px-4 py-3 font-medium">{sign.designation || "—"}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{sign.description || "—"}</td>
+                          <td className="px-4 py-3">{sign.quantity}</td>
+                          <td className="px-4 py-3">
+                            {sign.width > 0 && sign.height > 0 ? `${sign.width} x ${sign.height}` : "—"}
+                          </td>
+                          <td className="px-4 py-3">{sign.sheeting || "—"}</td>
+                          <td className="px-4 py-3 min-w-[220px]">
+                            <Select
+                              value={sign.structureType}
+                              onValueChange={(value: string) =>
+                                setImportableSigns((prev) =>
+                                  prev.map((current) =>
+                                    current.id === sign.id
+                                      ? { ...current, structureType: value }
+                                      : current
+                                  )
+                                )
+                              }
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Assign structure" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {IMPORT_STRUCTURE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {sign.existingStructure ? (
+                              <div className="mt-1 text-[11px] text-muted-foreground">
+                                Existing value: {sign.existingStructure}
+                              </div>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (importStep === 2) {
+                  setImportStep(1);
+                  return;
+                }
+
+                setImportDialogOpen(false);
+                resetImportDialog();
+              }}
+            >
+              {importStep === 2 ? "Back" : "Cancel"}
+            </Button>
+            {importStep === 1 ? (
+              <Button
+                onClick={() => setImportStep(2)}
+                disabled={!selectedSignOrderId || loadingSelectedSignOrder}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={handleImportSignOrder}
+                disabled={loadingSelectedSignOrder || importableSigns.length === 0 || importingSigns}
+              >
+                {importingSigns ? "Importing..." : "Import Signs"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingDeleteAction} onOpenChange={(open) => !open && setPendingDeleteAction(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              This will remove the selected row. Choose confirm to continue or cancel to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteAction(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingDeleteAction) return;
+                if (pendingDeleteAction.type === "vehicle") {
+                  setVehicleItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                } else if (pendingDeleteAction.type === "rollingStock") {
+                  setRollingStockItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                } else if (pendingDeleteAction.type === "additionalItem") {
+                  setAdditionalItems((prev) => prev.filter((item) => item.id !== pendingDeleteAction.id));
+                }
+                setPendingDeleteAction(null);
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Work Type Change Confirmation Dialog */}
+      <Dialog open={showWorkTypeChangeDialog} onOpenChange={setShowWorkTypeChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Change Work Type?
+            </DialogTitle>
+            <DialogDescription>
+              You have items entered for the current work type. Switching will clear all sign rows and additional items. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowWorkTypeChangeDialog(false);
+              setPendingWorkType(null);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (pendingWorkType) {
+                  setWorkType(pendingWorkType);
+                  // Clear all progress
+                  setActiveSections([]);
+                  setSignRows({});
+                  setActivePermanentItems([]);
+                  setPermanentSignRows({});
+                  setPermanentEntryRows({});
+                  setVehicleItems([]);
+                  setRollingStockItems([]);
+                  setAdditionalItems([]);
+                }
+                setShowWorkTypeChangeDialog(false);
+                setPendingWorkType(null);
+              }}
+            >
+              Change Work Type
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      </div>
+    </div>
+  );
+};

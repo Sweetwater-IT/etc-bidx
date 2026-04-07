@@ -17,46 +17,19 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover'
-import { AlertCircle, Check, ChevronsUpDown } from 'lucide-react'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command'
-import { cn } from '@/lib/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { IconBulb } from '@tabler/icons-react'
-import { useState, useEffect, useRef } from 'react'
+import { AlertCircle, ArrowLeft, Check, Edit, Search } from 'lucide-react'
+import { cn, formatPhoneNumber } from '@/lib/utils'
+import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react'
+import { flushSync } from 'react-dom'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
 import { SignOrderAdminInformation, OrderTypes } from './SignOrderContentSimple'
 import { toast } from 'sonner'
 import { Separator } from '@/components/ui/separator'
-import { CustomerDrawer } from '@/components/customer-drawer'
 import { useCustomers } from '@/hooks/use-customers'
-import { CustomerProvider } from '@/contexts/customer-context'
-import { CustomerContactForm } from '@/components/customer-contact-form'
-import { Drawer, DrawerContent } from '@/components/ui/drawer'
-import { CustomerSelectionModal } from '@/components/CustomerSelectionModal'
-
-const BRANCHES = [
-  { value: 'All', label: 'All' },
-  { value: 'Turbotville', label: 'Turbotville' },
-  { value: 'Hatfield', label: 'Hatfield' },
-  { value: 'Bedford', label: 'Bedford' }
-]
+import { RequestorSelector } from '@/components/requestor-selector'
+import { restorePointerEvents } from '@/lib/pointer-events-fix'
+import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
 
 interface IContact {
   id: number
@@ -78,13 +51,75 @@ interface SignOrderDetailsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   adminInfo: SignOrderAdminInformation
-  setAdminInfo: (
-    updater: (prev: SignOrderAdminInformation) => SignOrderAdminInformation
-  ) => void
+  setAdminInfo: Dispatch<SetStateAction<SignOrderAdminInformation>>
   allUsers: User[]
   customers: Customer[]
   mode: 'edit' | 'create'
   onJobCreated?: (job: Job) => void // Add this callback
+  onSaved?: (
+    nextAdminInfo: SignOrderAdminInformation
+  ) => Promise<void> | void
+}
+
+type DrawerView =
+  | 'details'
+  | 'customer-selection'
+  | 'customer-create'
+  | 'contact-selection'
+  | 'contact-create'
+  | 'contact-edit'
+
+const CONTACT_ROLE_OPTIONS = [
+  'ESTIMATOR',
+  'PROJECT MANAGER',
+  'ADMIN',
+  'FIELD / SUPERVISOR',
+  'OTHER'
+] as const
+
+function normalizeCustomer(customer: any): Customer {
+  const displayName =
+    customer.displayName ||
+    customer.display_name ||
+    customer.name ||
+    `Customer #${customer.id}`
+
+  const validContacts = Array.isArray(customer.customer_contacts)
+    ? customer.customer_contacts.filter((contact: any) => !contact?.is_deleted)
+    : []
+
+  return {
+    id: customer.id,
+    name: customer.name || displayName,
+    displayName,
+    emails:
+      customer.emails ||
+      validContacts.map((contact: any) => contact.email || ''),
+    address: customer.address || '',
+    phones:
+      customer.phones ||
+      validContacts.map((contact: any) => contact.phone || ''),
+    roles:
+      customer.roles ||
+      validContacts.map((contact: any) => contact.role || ''),
+    names:
+      customer.names ||
+      validContacts.map((contact: any) => contact.name || ''),
+    contactIds:
+      customer.contactIds ||
+      validContacts.map((contact: any) => contact.id || 0),
+    url: customer.url || customer.web || '',
+    created: customer.created || '',
+    updated: customer.updated || '',
+    city: customer.city || '',
+    state: customer.state || '',
+    zip: customer.zip || '',
+    customerNumber:
+      customer.customerNumber || customer.customer_number || 0,
+    mainPhone: customer.mainPhone || customer.main_phone || '',
+    paymentTerms: customer.paymentTerms || customer.payment_terms || '',
+    lastOrdered: customer.lastOrdered || null
+  }
 }
 
 export function SignOrderDetailsSheet({
@@ -95,7 +130,8 @@ export function SignOrderDetailsSheet({
   allUsers,
   customers,
   mode,
-  onJobCreated
+  onJobCreated,
+  onSaved
 }: SignOrderDetailsSheetProps) {
   // Local state for form fields
   const [localRequestor, setLocalRequestor] = useState<User | null>(
@@ -118,31 +154,113 @@ export function SignOrderDetailsSheet({
   )
   const [localStartDate, setLocalStartDate] = useState(adminInfo.startDate)
   const [localEndDate, setLocalEndDate] = useState(adminInfo.endDate)
-
-  // Popover states
-  const [openRequestor, setOpenRequestor] = useState(false)
-  const [openCustomer, setOpenCustomer] = useState(false)
-
-  // Customer modal state
-  const [customerModalOpen, setCustomerModalOpen] = useState(false)
-
-  // Add state for CustomerDrawer
-  const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false)
-  const [newCustomerId, setNewCustomerId] = useState<number | null>(null)
-  const { getCustomers } = useCustomers()
-
-  // Add a ref to store the last created customer id
-  const lastCreatedCustomerId = useRef<number | null>(null)
-
-  // Add state for selected contact
+  const [drawerView, setDrawerView] = useState<DrawerView>('details')
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('')
+  const [contactSearchQuery, setContactSearchQuery] = useState('')
+  const [customerOptions, setCustomerOptions] = useState<Customer[]>(customers)
+  const [newCustomerName, setNewCustomerName] = useState('')
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false)
   const [localContact, setLocalContact] = useState<any | null>(null)
+  const [editingContact, setEditingContact] = useState<IContact | null>(null)
+  const [contactEditorReturnView, setContactEditorReturnView] = useState<
+    'details' | 'contact-selection'
+  >('contact-selection')
+  const [contactFormData, setContactFormData] = useState({
+    name: '',
+    role: '',
+    email: '',
+    phone: ''
+  })
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false)
+  const [isSavingDetails, setIsSavingDetails] = useState(false)
+  const { getCustomers } = useCustomers()
+  const restoreOverlayInteraction = useCallback(
+    (event: string, details: Record<string, unknown> = {}) => {
+      restorePointerEvents()
+      window.requestAnimationFrame(() => {
+        restorePointerEvents()
+      })
+      window.setTimeout(() => {
+        restorePointerEvents()
+      }, 0)
+      logSignOrderDebug(event, {
+        mode,
+        ...details
+      })
+    },
+    [mode]
+  )
 
-  // Add state for contact popover open/close
-  const [openCustomerContact, setOpenCustomerContact] = useState(false)
+  const applyCustomerSelection = useCallback((customer: Customer | null) => {
+    setLocalCustomer(customer)
+    setLocalContact(null)
+    setContactSearchQuery('')
+  }, [])
 
-  // Add state for contact creation drawer
-  const [contactDrawerOpen, setContactDrawerOpen] = useState(false)
-  const lastCreatedContactId = useRef<number | null>(null)
+  const customerContacts = useMemo(() => {
+    if (!localCustomer || !Array.isArray(localCustomer.contactIds)) {
+      return [] as IContact[]
+    }
+
+    return localCustomer.contactIds
+      .map((id: number, index: number) => ({
+        id,
+        name: localCustomer.names?.[index] || '',
+        email: localCustomer.emails?.[index] || '',
+        phone: localCustomer.phones?.[index] || '',
+        role: localCustomer.roles?.[index] || ''
+      }))
+      .filter(
+        contact =>
+          Boolean(contact.id) ||
+          Boolean(contact.name) ||
+          Boolean(contact.email) ||
+          Boolean(contact.phone)
+      )
+  }, [localCustomer])
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearchQuery.trim()) {
+      return customerOptions
+    }
+
+    const query = customerSearchQuery.toLowerCase()
+    return customerOptions.filter(customer =>
+      [customer.name, customer.displayName, customer.mainPhone]
+        .filter(Boolean)
+        .some(value => value!.toLowerCase().includes(query)) ||
+      customer.emails?.some(email => email?.toLowerCase().includes(query))
+    )
+  }, [customerOptions, customerSearchQuery])
+
+  const filteredContacts = useMemo(() => {
+    if (!contactSearchQuery.trim()) {
+      return customerContacts
+    }
+
+    const query = contactSearchQuery.toLowerCase()
+    return customerContacts.filter(contact =>
+      [contact.name, contact.email, contact.phone, contact.role]
+        .filter(Boolean)
+        .some(value => value.toLowerCase().includes(query))
+    )
+  }, [contactSearchQuery, customerContacts])
+
+  const formatLastOrdered = useCallback((dateString: string | null | undefined) => {
+    if (!dateString) {
+      return '-'
+    }
+
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return '-'
+    }
+  }, [])
 
   // Add this smarter effect instead:
   useEffect(() => {
@@ -156,15 +274,43 @@ export function SignOrderDetailsSheet({
       setLocalContact(null)
     }
     // Otherwise, do nothing (preserve selection)
-  }, [localCustomer])
+  }, [localContact, localCustomer])
+
+  useEffect(() => {
+    setCustomerOptions(prevCustomers => {
+      const mergedCustomers = new Map(
+        prevCustomers.map(customer => [customer.id, customer])
+      )
+
+      customers.forEach(customer => {
+        mergedCustomers.set(customer.id, customer)
+      })
+
+      return Array.from(mergedCustomers.values())
+    })
+  }, [customers])
 
   // Update local state when adminInfo changes or when sheet opens
   useEffect(() => {
     if (open) {
+      setDrawerView('details')
+      setCustomerSearchQuery('')
+      setContactSearchQuery('')
+      setNewCustomerName('')
+      setEditingContact(null)
+      setContactEditorReturnView('contact-selection')
+      setContactFormData({
+        name: '',
+        role: '',
+        email: '',
+        phone: ''
+      })
+
       if (mode === 'create') {
         // Reset form for new job creation
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(null)
+        setLocalContact(null)
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -177,6 +323,7 @@ export function SignOrderDetailsSheet({
         // Edit mode - populate with existing data
         setLocalRequestor(adminInfo.requestor)
         setLocalCustomer(adminInfo.customer)
+        setLocalContact(adminInfo.contact ?? null)
         setLocalOrderDate(adminInfo.orderDate)
         setLocalNeedDate(adminInfo.needDate)
         setLocalOrderType(adminInfo.orderType)
@@ -196,35 +343,74 @@ export function SignOrderDetailsSheet({
     }
   }, [localRequestor])
 
-  // Effect: when newCustomerId is set, auto-select that customer
   useEffect(() => {
-    if (newCustomerId && customers.length > 0) {
-      const created = customers.find(c => c.id === newCustomerId)
-      if (created) {
-        setLocalCustomer(created)
-        setNewCustomerId(null)
-      }
+    if (localCustomer || drawerView === 'details' || drawerView === 'customer-selection' || drawerView === 'customer-create') {
+      return
     }
-  }, [newCustomerId, customers])
+
+    setDrawerView('details')
+  }, [drawerView, localCustomer])
 
   // Remove the generateJobNumber function since we don't need it
 
+  const handleSheetOpenChange = useCallback((nextOpen: boolean) => {
+    logSignOrderDebug('details_sheet_open_changed', {
+      open: nextOpen,
+      mode,
+      requestor: localRequestor?.name ?? null,
+      customerId: localCustomer?.id ?? null
+    })
+    onOpenChange(nextOpen)
+    if (!nextOpen) {
+      restoreOverlayInteraction('details_sheet_closed', {
+        customerId: localCustomer?.id ?? null
+      })
+    }
+  }, [localCustomer?.id, localRequestor?.name, mode, onOpenChange, restoreOverlayInteraction])
+
+  const closeSheet = useCallback(
+    (reason: string, details: Record<string, unknown> = {}) => {
+      restoreOverlayInteraction(reason, details)
+      handleSheetOpenChange(false)
+    },
+    [handleSheetOpenChange, restoreOverlayInteraction]
+  )
+
   const handleSave = async () => {
+    if (isSavingDetails) {
+      return
+    }
+
     if (mode === 'create') {
       // For new sign orders, validate required fields
       if (!localCustomer) {
+        logSignOrderDebug('details_sheet_save_blocked', {
+          reason: 'missing_customer',
+          mode
+        })
         toast.error('Customer is required')
         return
       }
       if (!localSelectedBranch) {
+        logSignOrderDebug('details_sheet_save_blocked', {
+          reason: 'missing_branch',
+          mode
+        })
         toast.error('Branch is required')
         return
       }
     }
 
-    // Update admin info regardless of mode
-    setAdminInfo(prev => ({
-      ...prev,
+    logSignOrderDebug('details_sheet_saved', {
+      mode,
+      requestor: localRequestor?.name ?? null,
+      customerId: localCustomer?.id ?? null,
+      contractNumber: localContractNumber || null,
+      jobNumber: localJobNumber || null
+    })
+
+    const nextAdminInfo: SignOrderAdminInformation = {
+      ...adminInfo,
       requestor: localRequestor,
       customer: localCustomer,
       orderDate: localOrderDate,
@@ -236,7 +422,24 @@ export function SignOrderDetailsSheet({
       startDate: localStartDate,
       endDate: localEndDate,
       contact: localContact
-    }))
+    }
+
+    setIsSavingDetails(true)
+
+    try {
+      // Commit the new admin info into the page before closing.
+      flushSync(() => {
+        setAdminInfo(() => nextAdminInfo)
+      })
+
+      await onSaved?.(nextAdminInfo)
+    } catch (error) {
+      console.error('Error saving sign order details:', error)
+      toast.error('Failed to save sign order details')
+      return
+    } finally {
+      setIsSavingDetails(false)
+    }
 
     if (mode === 'create' && onJobCreated) {
       const newJob: Job = {
@@ -249,7 +452,10 @@ export function SignOrderDetailsSheet({
       onJobCreated(newJob)
     }
 
-    onOpenChange(false)
+    closeSheet('details_sheet_save_closed', {
+      customerId: localCustomer?.id ?? null,
+      contactId: localContact?.id ?? null
+    })
   }
 
   const handleOrderTypeChange = (orderType: OrderTypes, checked: boolean) => {
@@ -266,470 +472,1114 @@ export function SignOrderDetailsSheet({
       localContractNumber !== '' &&
       !!localRequestor &&
       !!localCustomer &&
+      !!localContact &&
       !!localNeedDate &&
       localOrderType.length > 0
     )
   }
 
   const isCreateMode = mode === 'create'
+  const sheetTitle =
+    drawerView === 'customer-selection'
+      ? 'Select Customer'
+      : drawerView === 'customer-create'
+        ? 'Add New Customer'
+        : drawerView === 'contact-selection'
+          ? 'Select Contact'
+          : drawerView === 'contact-create'
+            ? 'Add New Contact'
+            : drawerView === 'contact-edit'
+              ? 'Edit Contact'
+            : isCreateMode
+              ? 'Create New Sign Order'
+              : 'Edit Sign Order Details'
 
   // Add this helper function inside the component
-  async function fetchCustomerById(id: number) {
-    const res = await fetch(`/api/customers/${id}`)
+  const fetchCustomerById = useCallback(async (id: number) => {
+    const res = await fetch(`/api/contractors/${id}`)
     if (res.ok) {
-      return await res.json()
+      const data = await res.json()
+      if (data?.customer) {
+        return normalizeCustomer(data.customer)
+      }
     }
     return null
-  }
+  }, [])
+
+  const returnToDetailsView = useCallback(
+    (event: string, details: Record<string, unknown> = {}) => {
+      setDrawerView('details')
+      setCustomerSearchQuery('')
+      setContactSearchQuery('')
+      setNewCustomerName('')
+      setEditingContact(null)
+      setContactEditorReturnView('contact-selection')
+      setContactFormData({
+        name: '',
+        role: '',
+        email: '',
+        phone: ''
+      })
+      restoreOverlayInteraction(event, details)
+    },
+    [restoreOverlayInteraction]
+  )
+
+  const openCustomerSelection = useCallback(() => {
+    setDrawerView('customer-selection')
+    setCustomerSearchQuery('')
+    restoreOverlayInteraction('customer_selection_view_opened', {
+      customerId: localCustomer?.id ?? null
+    })
+  }, [localCustomer?.id, restoreOverlayInteraction])
+
+  const openCustomerCreate = useCallback(() => {
+    setDrawerView('customer-create')
+    restoreOverlayInteraction('customer_create_view_opened', {
+      customerId: localCustomer?.id ?? null
+    })
+  }, [localCustomer?.id, restoreOverlayInteraction])
+
+  const openContactSelection = useCallback(() => {
+    if (!localCustomer) {
+      toast.error('Please select a customer first')
+      return
+    }
+
+    setDrawerView('contact-selection')
+    setContactSearchQuery('')
+    restoreOverlayInteraction('contact_selection_view_opened', {
+      customerId: localCustomer.id,
+      contactId: localContact?.id ?? null
+    })
+  }, [localContact?.id, localCustomer, restoreOverlayInteraction])
+
+  const openContactCreate = useCallback(() => {
+    if (!localCustomer) {
+      toast.error('Please select a customer before adding a contact.')
+      return
+    }
+
+    setDrawerView('contact-create')
+    setEditingContact(null)
+    setContactEditorReturnView('contact-selection')
+    setContactFormData({
+      name: '',
+      role: '',
+      email: '',
+      phone: ''
+    })
+    restoreOverlayInteraction('contact_create_view_opened', {
+      customerId: localCustomer.id
+    })
+  }, [localCustomer, restoreOverlayInteraction])
+
+  const openContactEdit = useCallback(
+    (contact: IContact, returnView: 'details' | 'contact-selection' = 'contact-selection') => {
+      const normalizedRole = CONTACT_ROLE_OPTIONS.includes(
+        (contact.role || 'OTHER') as (typeof CONTACT_ROLE_OPTIONS)[number]
+      )
+        ? ((contact.role || 'OTHER') as (typeof CONTACT_ROLE_OPTIONS)[number])
+        : 'OTHER'
+
+      setEditingContact(contact)
+      setContactEditorReturnView(returnView)
+      setDrawerView('contact-edit')
+      setContactFormData({
+        name: contact.name || '',
+        role: normalizedRole,
+        email: contact.email || '',
+        phone: contact.phone || ''
+      })
+      restoreOverlayInteraction('contact_edit_view_opened', {
+        customerId: localCustomer?.id ?? null,
+        contactId: contact.id
+      })
+    },
+    [localCustomer?.id, restoreOverlayInteraction]
+  )
+
+  const handleSelectCustomer = useCallback(
+    async (customer: Customer) => {
+      const hydratedCustomer = await fetchCustomerById(customer.id)
+      const nextCustomer = hydratedCustomer || normalizeCustomer(customer)
+
+      applyCustomerSelection(nextCustomer)
+      returnToDetailsView('customer_selected', {
+        customerId: nextCustomer.id
+      })
+    },
+    [applyCustomerSelection, fetchCustomerById, returnToDetailsView]
+  )
+
+  const handleClearCustomerSelection = useCallback(() => {
+    applyCustomerSelection(null)
+    returnToDetailsView('customer_cleared')
+  }, [applyCustomerSelection, returnToDetailsView])
+
+  const handleSelectContact = useCallback(
+    (contact: IContact) => {
+      setLocalContact(contact)
+      returnToDetailsView('contact_selected', {
+        customerId: localCustomer?.id ?? null,
+        contactId: contact.id
+      })
+    },
+    [localCustomer?.id, returnToDetailsView]
+  )
+
+  const handleClearContactSelection = useCallback(() => {
+    setLocalContact(null)
+    returnToDetailsView('contact_cleared', {
+      customerId: localCustomer?.id ?? null
+    })
+  }, [localCustomer?.id, returnToDetailsView])
+
+  const handleCreateCustomer = useCallback(async () => {
+    const trimmedName = newCustomerName.trim()
+
+    if (!trimmedName) {
+      return
+    }
+
+    setIsCreatingCustomer(true)
+
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          display_name: trimmedName
+        })
+      })
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok || !result?.ok || !result?.customer) {
+        throw new Error(
+          result?.error || result?.message || 'Failed to create customer'
+        )
+      }
+
+      await getCustomers()
+      const hydratedCustomer = await fetchCustomerById(result.customer.id)
+      const nextCustomer =
+        hydratedCustomer || normalizeCustomer(result.customer)
+
+      setCustomerOptions(prevCustomers => {
+        const nextCustomers = prevCustomers.filter(
+          customer => customer.id !== nextCustomer.id
+        )
+        return [nextCustomer, ...nextCustomers]
+      })
+
+      applyCustomerSelection(nextCustomer)
+      toast.success('Customer created')
+      returnToDetailsView('customer_created_in_drawer', {
+        customerId: nextCustomer.id
+      })
+    } catch (error) {
+      console.error('Failed to create customer:', error)
+      toast.error('Failed to create customer')
+    } finally {
+      setIsCreatingCustomer(false)
+    }
+  }, [
+    applyCustomerSelection,
+    fetchCustomerById,
+    getCustomers,
+    newCustomerName,
+    returnToDetailsView
+  ])
+
+  const handleContactFieldChange = useCallback(
+    (field: 'name' | 'role' | 'email' | 'phone', value: string) => {
+      setContactFormData(prevFormData => ({
+        ...prevFormData,
+        [field]: field === 'phone' ? formatPhoneNumber(value) : value
+      }))
+    },
+    []
+  )
+
+  const handleSubmitContact = useCallback(async () => {
+    if (!localCustomer) {
+      toast.error('Please select a customer before adding a contact.')
+      return
+    }
+
+    if (!contactFormData.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+
+    setIsSubmittingContact(true)
+
+    try {
+      const response = await fetch(
+        editingContact
+          ? `/api/customer-contacts/${editingContact.id}`
+          : '/api/customer-contacts',
+        {
+          method: editingContact ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contractor_id: localCustomer.id,
+            name: contactFormData.name,
+            role: contactFormData.role,
+            email: contactFormData.email,
+            phone: contactFormData.phone
+          })
+        }
+      )
+
+      const result = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to save contact')
+      }
+
+      const savedContact: IContact = {
+        id: editingContact ? editingContact.id : result.data.id,
+        name: contactFormData.name.trim(),
+        role: contactFormData.role || '',
+        email: contactFormData.email || '',
+        phone: contactFormData.phone || ''
+      }
+
+      const existingIndex = (localCustomer.contactIds || []).findIndex(
+        contactId => contactId === savedContact.id
+      )
+
+      const updatedCustomer: Customer =
+        existingIndex === -1
+          ? {
+              ...localCustomer,
+              contactIds: [...(localCustomer.contactIds || []), savedContact.id],
+              names: [...(localCustomer.names || []), savedContact.name],
+              emails: [...(localCustomer.emails || []), savedContact.email],
+              phones: [...(localCustomer.phones || []), savedContact.phone],
+              roles: [...(localCustomer.roles || []), savedContact.role]
+            }
+          : {
+              ...localCustomer,
+              names: (localCustomer.names || []).map((value, index) =>
+                index === existingIndex ? savedContact.name : value
+              ),
+              emails: (localCustomer.emails || []).map((value, index) =>
+                index === existingIndex ? savedContact.email : value
+              ),
+              phones: (localCustomer.phones || []).map((value, index) =>
+                index === existingIndex ? savedContact.phone : value
+              ),
+              roles: (localCustomer.roles || []).map((value, index) =>
+                index === existingIndex ? savedContact.role : value
+              )
+            }
+
+      setLocalCustomer(updatedCustomer)
+      setCustomerOptions(prevCustomers =>
+        prevCustomers.map(customer =>
+          customer.id === updatedCustomer.id ? updatedCustomer : customer
+        )
+      )
+      setLocalContact(savedContact)
+      toast.success(
+        editingContact
+          ? 'Contact updated successfully'
+          : 'Contact created successfully'
+      )
+      returnToDetailsView(
+        editingContact ? 'contact_updated_in_drawer' : 'contact_created_in_drawer',
+        {
+          customerId: updatedCustomer.id,
+          contactId: savedContact.id
+        }
+      )
+    } catch (error) {
+      console.error(
+        editingContact ? 'Error updating contact:' : 'Error creating contact:',
+        error
+      )
+      toast.error(editingContact ? 'Failed to update contact' : 'Failed to create contact')
+    } finally {
+      setIsSubmittingContact(false)
+    }
+  }, [contactFormData, editingContact, localCustomer, returnToDetailsView])
+
+  useEffect(() => {
+    if (open) {
+      return
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      restoreOverlayInteraction('details_sheet_pointer_events_restored')
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [open, restoreOverlayInteraction])
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className='w-[500px] sm:max-w-[600px] p-0'>
+      <Sheet open={open} onOpenChange={handleSheetOpenChange}>
+        <SheetContent
+          className='w-[500px] sm:max-w-[600px] p-0 flex flex-col'
+          onCloseAutoFocus={event => {
+            event.preventDefault()
+            restoreOverlayInteraction('details_sheet_close_auto_focus', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+          onEscapeKeyDown={() => {
+            restoreOverlayInteraction('details_sheet_escape_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+          onPointerDownOutside={() => {
+            restoreOverlayInteraction('details_sheet_outside_closed', {
+              customerId: localCustomer?.id ?? null
+            })
+          }}
+        >
           <div className='flex flex-col gap-2 relative z-10 bg-background'>
             <SheetHeader className='p-6 pb-4'>
-              <SheetTitle>
-                {isCreateMode
-                  ? 'Create New Sign Order'
-                  : 'Edit Sign Order Details'}
-              </SheetTitle>
+              <SheetTitle>{sheetTitle}</SheetTitle>
             </SheetHeader>
             <Separator className='w-full -mt-2' />
           </div>
 
-          <div className='mt-4 space-y-6 px-6 h-full overflow-y-auto'>
-            {/* Job Information Section */}
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Job Information</h3>
+          {drawerView === 'details' && (
+            <>
+              <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
+                <div className='space-y-6'>
+                  <div className='space-y-4'>
+                    <h3 className='text-lg font-semibold'>Job Information</h3>
 
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {/* <div className="space-y-2">
-                  <Label>Job Number</Label>
-                  <Input
-                    type="text"
-                    value={localJobNumber}
-                    onChange={(e) => setLocalJobNumber(e.target.value)}
-                    placeholder="Job number"
-                    disabled={mode === 'create'}
-                  />
-                </div> */}
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <div className='space-y-2'>
+                        <Label>
+                          Contract Number <span className='text-red-600'>*</span>
+                        </Label>
+                        <Input
+                          type='text'
+                          value={localContractNumber}
+                          onChange={e =>
+                            setLocalContractNumber(e.target.value.toUpperCase())
+                          }
+                          placeholder='Contract number'
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                <div className='space-y-2'>
-                  <Label>
-                    Contract Number <span className='text-red-600'>*</span>
-                  </Label>
-                  <Input
-                    type='text'
-                    value={localContractNumber}
-                    onChange={e =>
-                      setLocalContractNumber(e.target.value.toUpperCase())
-                    }
-                    placeholder='Contract number'
-                  />
+                  <div className='space-y-4'>
+                    <h3 className='text-lg font-semibold'>Order Details</h3>
+
+                    <div className='space-y-4'>
+                      <div className='space-y-2'>
+                        <Label>
+                          Requestor<span className='text-red-600'>*</span>
+                        </Label>
+                        <RequestorSelector
+                          source='sign-order-requestor'
+                          users={allUsers}
+                          selectedUser={localRequestor}
+                          onSelect={user => {
+                            console.debug('[SignOrderDetailsSheet] requestor-updated', {
+                              requestor: user.name,
+                              email: user.email ?? null,
+                              branch: user.branches?.name ?? null
+                            })
+                            logSignOrderDebug('requestor_updated', {
+                              requestor: user.name,
+                              email: user.email ?? null,
+                              branch: user.branches?.name ?? null,
+                              mode
+                            })
+                            setLocalRequestor(user)
+                            if (user.branches?.name) {
+                              setLocalSelectedBranch(user.branches.name)
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <div className='space-y-2'>
+                          <Label>
+                            Customer <span className='text-red-600'>*</span>
+                          </Label>
+                          <Button
+                            variant='outline'
+                            onClick={openCustomerSelection}
+                            className='w-full justify-start text-left font-normal'
+                          >
+                            <span className='truncate'>
+                              {localCustomer
+                                ? localCustomer.displayName || localCustomer.name
+                                : 'Select customer...'}
+                            </span>
+                          </Button>
+                          {localCustomer && (
+                            <div className='text-xs text-muted-foreground'>
+                              {[localCustomer.address, localCustomer.city, localCustomer.state, localCustomer.zip]
+                                .filter(Boolean)
+                                .join(', ') || 'Customer selected'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className='space-y-2'>
+                          <Label>
+                            Contact <span className='text-red-600'>*</span>
+                          </Label>
+                          <Button
+                            variant='outline'
+                            onClick={openContactSelection}
+                            className='w-full justify-start text-left font-normal'
+                            disabled={!localCustomer}
+                          >
+                            <span className='truncate'>
+                              {localContact
+                                ? localContact.name
+                                : localCustomer
+                                  ? 'Select contact...'
+                                  : 'Select customer first'}
+                            </span>
+                          </Button>
+                          {localContact && (
+                            <div className='space-y-2'>
+                              <div className='space-y-1 text-xs text-muted-foreground'>
+                                {localContact.email && <div>{localContact.email}</div>}
+                                {localContact.phone && <div>{localContact.phone}</div>}
+                              </div>
+                              <Button
+                                type='button'
+                                variant='ghost'
+                                size='sm'
+                                className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
+                                onClick={() => openContactEdit(localContact, 'details')}
+                              >
+                                Edit Contact
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <div className='space-y-2 mt-auto'>
+                          <Label>Order Date</Label>
+                          <Input
+                            type='date'
+                            placeholder='Select a date'
+                            value={localOrderDate.toISOString().split('T')[0]}
+                            onChange={e =>
+                              setLocalOrderDate(new Date(e.target.value))
+                            }
+                          />
+                        </div>
+
+                        <div className='space-y-2'>
+                          <Label>
+                            Need Date <span className='text-red-600'>*</span>
+                          </Label>
+                          <Input
+                            type='date'
+                            value={
+                              localNeedDate
+                                ? localNeedDate.toISOString().split('T')[0]
+                                : ''
+                            }
+                            onChange={e =>
+                              setLocalNeedDate(new Date(e.target.value))
+                            }
+                            placeholder='Select a date'
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label>
+                        Order Type <span className='text-red-600'>*</span>
+                      </Label>
+                      <div className='flex flex-wrap gap-4 pt-2'>
+                        <div className='flex items-center space-x-2'>
+                          <Checkbox
+                            id='sale-checkbox-sheet'
+                            checked={localOrderType.includes('sale')}
+                            onCheckedChange={checked =>
+                              handleOrderTypeChange('sale', checked as boolean)
+                            }
+                          />
+                          <Label htmlFor='sale-checkbox-sheet'>Sale</Label>
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          <Checkbox
+                            id='rental-checkbox-sheet'
+                            checked={localOrderType.includes('rental')}
+                            onCheckedChange={checked =>
+                              handleOrderTypeChange('rental', checked as boolean)
+                            }
+                          />
+                          <Label htmlFor='rental-checkbox-sheet'>Rental</Label>
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          <Checkbox
+                            id='perm-signs-checkbox-sheet'
+                            checked={localOrderType.includes('permanent signs')}
+                            onCheckedChange={checked =>
+                              handleOrderTypeChange(
+                                'permanent signs',
+                                checked as boolean
+                              )
+                            }
+                          />
+                          <Label htmlFor='perm-signs-checkbox-sheet'>
+                            Permanent Signs
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {localOrderType.includes('rental') && (
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <div className='space-y-2'>
+                          <Label>Start Date</Label>
+                          <Input
+                            type='date'
+                            value={
+                              localStartDate
+                                ? localStartDate.toISOString().split('T')[0]
+                                : new Date().toISOString().split('T')[0]
+                            }
+                            onChange={e =>
+                              setLocalStartDate(new Date(e.target.value))
+                            }
+                          />
+                        </div>
+                        <div className='space-y-2'>
+                          <Label>End Date</Label>
+                          <Input
+                            type='date'
+                            value={
+                              localEndDate
+                                ? localEndDate.toISOString().split('T')[0]
+                                : new Date().toISOString().split('T')[0]
+                            }
+                            onChange={e =>
+                              setLocalEndDate(new Date(e.target.value))
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Order Details Section */}
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold'>Order Details</h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {/* Requestor */}
-                <div className='space-y-2'>
-                  <Label>
-                    Requestor<span className='text-red-600'>*</span>
-                  </Label>
-                  <Popover open={openRequestor} onOpenChange={setOpenRequestor}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openRequestor}
-                        className='w-full justify-between'
-                      >
-                        {localRequestor
-                          ? localRequestor.name
-                          : 'Select requestor...'}
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search requestor...' />
-                        <CommandEmpty>No requestor found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {allUsers.map(user => (
-                            <CommandItem
-                              key={user.id}
-                              value={user.name}
-                              onSelect={() => {
-                                setLocalRequestor(user)
-                                setOpenRequestor(false)
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  localRequestor?.id === user.id
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                              {user.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Branch */}
-                {/* <div className="space-y-2">
-                  <Label>Branch {isCreateMode && <span className="text-red-500">*</span>}</Label>
-                  <Select 
-                    value={localSelectedBranch} 
-                    onValueChange={setLocalSelectedBranch}
-                    disabled={!isCreateMode && !!localRequestor?.branches}
-                  >
-                    <SelectTrigger className={!isCreateMode && localRequestor?.branches ? "bg-muted" : ""}>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BRANCHES.map(branch => (
-                        <SelectItem key={branch.value} value={branch.value}>
-                          {branch.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-
-                {/* Customer */}
-                <div className='space-y-2'>
-                  <Label>
-                    Customer <span className='text-red-600'>*</span>
-                  </Label>
-                  <Button
-                    variant='outline'
-                    onClick={() => setCustomerModalOpen(true)}
-                    className='w-full justify-start text-left font-normal'
-                  >
-                    <span className='truncate'>
-                      {localCustomer
-                        ? localCustomer.displayName
-                        : 'Select customer...'}
+              <Separator />
+              <div className='flex flex-col gap-2 w-full'>
+                {!areAllRequiredFieldsFilled() && (
+                  <div className='flex items-center mt-2 px-6 text-sm gap-2 text-amber-500'>
+                    <AlertCircle size={14} />
+                    <span>
+                      Please fill in all required fields before proceeding.
                     </span>
+                  </div>
+                )}
+                <div className='flex justify-end p-4 px-6'>
+                  <div className='flex justify-between items-center gap-2 h-full'>
+                    <Button
+                      variant='outline'
+                      className='flex-1'
+                      onClick={() =>
+                        closeSheet('details_sheet_cancel_closed', {
+                          customerId: localCustomer?.id ?? null,
+                          contactId: localContact?.id ?? null
+                        })
+                      }
+                      disabled={isSavingDetails}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      disabled={!areAllRequiredFieldsFilled() || isSavingDetails}
+                      onClick={handleSave}
+                      variant='default'
+                    >
+                      {isSavingDetails
+                        ? 'Saving...'
+                        : isCreateMode
+                          ? 'Create Sign Order'
+                          : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {drawerView === 'customer-selection' && (
+            <>
+              <div className='px-6 py-4 space-y-4 border-b'>
+                <div className='flex items-center justify-between gap-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    onClick={() =>
+                      returnToDetailsView('customer_selection_back_clicked', {
+                        customerId: localCustomer?.id ?? null
+                      })
+                    }
+                  >
+                    <ArrowLeft className='h-4 w-4' />
+                    Back
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={openCustomerCreate}
+                  >
+                    Add New Customer
                   </Button>
                 </div>
-                {/* Contact dropdown, always shown, next to customer dropdown */}
-                <div className='space-y-2'>
-                  <Label>
-                    Contact <span className='text-red-600'>*</span>
-                  </Label>
-                  <Popover
-                    open={openCustomerContact}
-                    onOpenChange={setOpenCustomerContact}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant='outline'
-                        role='combobox'
-                        aria-expanded={openCustomerContact}
-                        className='w-full justify-between'
-                        disabled={!localCustomer}
-                      >
-                        <span className='truncate'>
-                          {localContact
-                            ? localContact.name
-                            : 'Select contact...'}
-                        </span>
-                        <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className='w-[var(--radix-popover-trigger-width)] p-0'>
-                      <Command>
-                        <CommandInput placeholder='Search contact...' />
-                        <CommandEmpty>No contact found.</CommandEmpty>
-                        <CommandGroup className='max-h-[200px] overflow-y-auto'>
-                          {/* Add new contact button always visible */}
-                          <CommandItem
-                            onSelect={() => {
-                              setOpenCustomerContact(false)
-                              if (!localCustomer) {
-                                toast.error(
-                                  'Please select a customer before adding a contact.'
-                                )
-                                return
-                              }
-                              setContactDrawerOpen(true)
-                            }}
-                            value='__add_new_contact__'
-                            className='font-medium text-primary cursor-pointer'
-                          >
-                            + Add new contact
-                          </CommandItem>
-                          {/* List contacts if a customer is selected */}
-                          {localCustomer &&
-                            Array.isArray(localCustomer.contactIds) &&
-                            localCustomer.contactIds.length > 0 &&
-                            localCustomer.contactIds.map(
-                              (id: number, idx: number) => (
-                                <CommandItem
-                                  key={id}
-                                  value={localCustomer.names[idx]}
-                                  onSelect={() => {
-                                    setLocalContact({
-                                      id,
-                                      name: localCustomer.names[idx],
-                                      email: localCustomer.emails[idx],
-                                      phone: localCustomer.phones[idx],
-                                      role: localCustomer.roles[idx]
-                                    })
-                                    setOpenCustomerContact(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      localContact?.id === id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {localCustomer.names[idx]}{' '}
-                                  {localCustomer.emails[idx] && (
-                                    <span className='text-xs text-muted-foreground ml-2'>
-                                      {localCustomer.emails[idx]}
+
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    autoFocus
+                    placeholder='Search customers by name or email...'
+                    value={customerSearchQuery}
+                    onChange={event => setCustomerSearchQuery(event.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+
+              <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
+                <table className='w-full'>
+                  <thead className='bg-muted/50 border-b'>
+                    <tr>
+                      <th className='text-left px-4 py-3 font-medium text-sm'>Name</th>
+                      <th className='text-left px-4 py-3 font-medium text-sm'>Last Ordered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={2}
+                          className='text-center py-8 text-muted-foreground'
+                        >
+                          {customerSearchQuery
+                            ? 'No customers found matching your search.'
+                            : 'No customers available.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustomers.map((customer, index) => (
+                        <tr
+                          key={customer.id}
+                          onClick={() => void handleSelectCustomer(customer)}
+                          className={cn(
+                            'cursor-pointer transition-colors hover:bg-muted/50 border-b last:border-b-0',
+                            index % 2 === 0 ? 'bg-background' : 'bg-muted/20',
+                            localCustomer?.id === customer.id && 'bg-primary/5'
+                          )}
+                        >
+                          <td className='px-4 py-3'>
+                            <div className='flex items-center gap-2'>
+                              <div className='flex-1 min-w-0'>
+                                <div className='flex items-center gap-2'>
+                                  <span className='font-medium text-sm truncate'>
+                                    {customer.displayName || customer.name}
+                                  </span>
+                                  {localCustomer?.id === customer.id && (
+                                    <Check className='h-4 w-4 text-primary flex-shrink-0' />
+                                  )}
+                                </div>
+                                <div className='flex gap-4 mt-1'>
+                                  {(customer.address ||
+                                    customer.city ||
+                                    customer.state ||
+                                    customer.zip) && (
+                                    <span className='text-xs text-muted-foreground truncate'>
+                                      {[customer.address, customer.city, customer.state, customer.zip]
+                                        .filter(Boolean)
+                                        .join(', ')}
                                     </span>
                                   )}
-                                </CommandItem>
-                              )
-                            )}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Order Date */}
-                <div className='space-y-2 mt-auto'>
-                  <Label>Order Date</Label>
-                  <Input
-                    type='date'
-                    placeholder='Select a date'
-                    value={localOrderDate.toISOString().split('T')[0]}
-                    onChange={e => setLocalOrderDate(new Date(e.target.value))}
-                  />
-                </div>
-
-                {/* Need Date */}
-                <div className='space-y-2'>
-                  {/* <Tooltip>
-                    <TooltipTrigger>
-                      <div className="flex gap-x-2"> */}
-                  <Label>
-                    Need Date <span className='text-red-600'>*</span>
-                  </Label>
-                  {/* <IconBulb className="h-5" color="gray" />
-                      </div> */}
-                  {/* </TooltipTrigger>
-                  <TooltipContent>
-                    <div>Sale = date requested by customer</div>
-                    <div>Rental = 1 week before job start</div>
-                  </TooltipContent>
-                </Tooltip> */}
-                  <Input
-                    type='date'
-                    value={
-                      localNeedDate
-                        ? localNeedDate.toISOString().split('T')[0]
-                        : ''
-                    }
-                    onChange={e => setLocalNeedDate(new Date(e.target.value))}
-                    placeholder='Select a date'
-                  />
-                </div>
+                                  {customer.mainPhone && (
+                                    <span className='text-xs text-muted-foreground'>
+                                      {customer.mainPhone}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className='px-4 py-3'>
+                            <span className='text-sm text-muted-foreground'>
+                              {formatLastOrdered(customer.lastOrdered)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
 
-              {/* Order Type */}
-              <div className='space-y-2'>
-                <Label>
-                  Order Type <span className='text-red-600'>*</span>
-                </Label>
-                <div className='flex flex-wrap gap-4 pt-2'>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='sale-checkbox-sheet'
-                      checked={localOrderType.includes('sale')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange('sale', checked as boolean)
-                      }
-                    />
-                    <Label htmlFor='sale-checkbox-sheet'>Sale</Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='rental-checkbox-sheet'
-                      checked={localOrderType.includes('rental')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange('rental', checked as boolean)
-                      }
-                    />
-                    <Label htmlFor='rental-checkbox-sheet'>Rental</Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Checkbox
-                      id='perm-signs-checkbox-sheet'
-                      checked={localOrderType.includes('permanent signs')}
-                      onCheckedChange={checked =>
-                        handleOrderTypeChange(
-                          'permanent signs',
-                          checked as boolean
-                        )
-                      }
-                    />
-                    <Label htmlFor='perm-signs-checkbox-sheet'>
-                      Permanent Signs
-                    </Label>
-                  </div>
+              <Separator />
+              <div className='flex items-center justify-between p-4 px-6 gap-2'>
+                <div>
+                  {localCustomer && (
+                    <Button
+                      variant='outline'
+                      onClick={handleClearCustomerSelection}
+                      className='text-muted-foreground'
+                    >
+                      Clear Selection
+                    </Button>
+                  )}
                 </div>
-              </div>
-
-              {/* Rental Dates - Only show if rental is selected */}
-              {localOrderType.includes('rental') && (
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Start Date</Label>
-                    <Input
-                      type='date'
-                      value={
-                        localStartDate
-                          ? localStartDate.toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0]
-                      }
-                      onChange={e =>
-                        setLocalStartDate(new Date(e.target.value))
-                      }
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>End Date</Label>
-                    <Input
-                      type='date'
-                      value={
-                        localEndDate
-                          ? localEndDate.toISOString().split('T')[0]
-                          : new Date().toISOString().split('T')[0]
-                      }
-                      onChange={e => setLocalEndDate(new Date(e.target.value))}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-          <div className='flex flex-col gap-2 w-full'>
-            {!areAllRequiredFieldsFilled() && (
-              <div className='flex items-center mt-2 px-6 text-sm gap-2 text-amber-500'>
-                <AlertCircle size={14} />
-                <span>
-                  Please fill in all required fields before proceeding.
-                </span>
-              </div>
-            )}
-            <div className='flex justify-end p-4 px-6'>
-              <div className='flex justify-between items-center gap-2 h-full'>
                 <Button
                   variant='outline'
-                  className='flex-1'
-                  onClick={() => onOpenChange(false)}
+                  onClick={() =>
+                    returnToDetailsView('customer_selection_cancelled', {
+                      customerId: localCustomer?.id ?? null
+                    })
+                  }
+                >
+                  Back to Edit
+                </Button>
+              </div>
+            </>
+          )}
+
+          {drawerView === 'customer-create' && (
+            <>
+              <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
+                <div className='space-y-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    onClick={() =>
+                      setDrawerView('customer-selection')
+                    }
+                  >
+                    <ArrowLeft className='h-4 w-4' />
+                    Back to Customers
+                  </Button>
+
+                  <div>
+                    <Label>Company Name</Label>
+                    <Input
+                      className='mt-1.5'
+                      value={newCustomerName}
+                      onChange={event => setNewCustomerName(event.target.value)}
+                      placeholder='Enter company name'
+                      onKeyDown={event => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          void handleCreateCustomer()
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+              <div className='flex justify-end gap-2 p-4 px-6'>
+                <Button
+                  variant='outline'
+                  onClick={() => setDrawerView('customer-selection')}
+                  disabled={isCreatingCustomer}
                 >
                   Cancel
                 </Button>
                 <Button
-                  disabled={!areAllRequiredFieldsFilled()}
-                  onClick={handleSave}
-                  variant='default'
+                  onClick={() => void handleCreateCustomer()}
+                  disabled={!newCustomerName.trim() || isCreatingCustomer}
                 >
-                  {isCreateMode ? 'Create Sign Order' : 'Save Changes'}
+                  {isCreatingCustomer ? 'Creating...' : 'Create Customer'}
                 </Button>
               </div>
-            </div>
-          </div>
+            </>
+          )}
+
+          {drawerView === 'contact-selection' && (
+            <>
+              <div className='px-6 py-4 space-y-4 border-b'>
+                <div className='flex items-center justify-between gap-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    onClick={() =>
+                      returnToDetailsView('contact_selection_back_clicked', {
+                        customerId: localCustomer?.id ?? null,
+                        contactId: localContact?.id ?? null
+                      })
+                    }
+                  >
+                    <ArrowLeft className='h-4 w-4' />
+                    Back
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={openContactCreate}
+                  >
+                    Add New Contact
+                  </Button>
+                </div>
+
+                <div className='space-y-1'>
+                  <div className='text-sm font-medium'>
+                    {localCustomer?.displayName || localCustomer?.name}
+                  </div>
+                  <div className='text-xs text-muted-foreground'>
+                    Select a contact for this customer.
+                  </div>
+                </div>
+
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    autoFocus
+                    placeholder='Search contacts by name, email, phone, or role...'
+                    value={contactSearchQuery}
+                    onChange={event => setContactSearchQuery(event.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+
+              <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
+                {filteredContacts.length === 0 ? (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    {contactSearchQuery
+                      ? 'No contacts found matching your search.'
+                      : 'No contacts available for this customer yet.'}
+                  </div>
+                ) : (
+                  <div className='space-y-2'>
+                    {filteredContacts.map(contact => (
+                      <div
+                        key={contact.id}
+                        className={cn(
+                          'flex items-start gap-2 rounded-md border px-4 py-3 transition-colors hover:bg-muted/50',
+                          localContact?.id === contact.id && 'border-primary bg-primary/5'
+                        )}
+                      >
+                        <button
+                          type='button'
+                          onClick={() => handleSelectContact(contact)}
+                          className='flex-1 text-left'
+                        >
+                          <div className='flex items-center gap-2'>
+                            <span className='font-medium text-sm'>
+                              {contact.name || 'Unnamed Contact'}
+                            </span>
+                            {localContact?.id === contact.id && (
+                              <Check className='h-4 w-4 text-primary' />
+                            )}
+                          </div>
+                          <div className='mt-1 space-y-1 text-xs text-muted-foreground'>
+                            {contact.role && <div>{contact.role}</div>}
+                            {contact.email && <div>{contact.email}</div>}
+                            {contact.phone && <div>{contact.phone}</div>}
+                          </div>
+                        </button>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          aria-label='Edit contact'
+                          className='h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground'
+                          onClick={() => openContactEdit(contact, 'contact-selection')}
+                        >
+                          <Edit className='h-4 w-4' />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+              <div className='flex items-center justify-between p-4 px-6 gap-2'>
+                <div>
+                  {localContact && (
+                    <Button
+                      variant='outline'
+                      onClick={handleClearContactSelection}
+                      className='text-muted-foreground'
+                    >
+                      Clear Selection
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  variant='outline'
+                  onClick={() =>
+                    returnToDetailsView('contact_selection_cancelled', {
+                      customerId: localCustomer?.id ?? null,
+                      contactId: localContact?.id ?? null
+                    })
+                  }
+                >
+                  Back to Edit
+                </Button>
+              </div>
+            </>
+          )}
+
+          {(drawerView === 'contact-create' || drawerView === 'contact-edit') &&
+            localCustomer && (
+            <>
+              <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
+                <div className='space-y-4'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    className='gap-2'
+                    onClick={() => setDrawerView(contactEditorReturnView)}
+                  >
+                    <ArrowLeft className='h-4 w-4' />
+                    {contactEditorReturnView === 'details'
+                      ? 'Back to Details'
+                      : 'Back to Contacts'}
+                  </Button>
+
+                  <div className='border rounded-md p-4 bg-muted/20 space-y-2'>
+                    <h3 className='text-base font-semibold'>
+                      {localCustomer.displayName || localCustomer.name}
+                    </h3>
+                    {(localCustomer.address ||
+                      localCustomer.city ||
+                      localCustomer.state ||
+                      localCustomer.zip) && (
+                      <div className='text-sm text-muted-foreground'>
+                        {[localCustomer.address, localCustomer.city, localCustomer.state, localCustomer.zip]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </div>
+                    )}
+                    {localCustomer.paymentTerms && (
+                      <div className='text-sm text-muted-foreground'>
+                        Payment Terms: {localCustomer.paymentTerms}
+                      </div>
+                    )}
+                    {localCustomer.url && (
+                      <div className='text-sm text-muted-foreground break-all'>
+                        Website: {localCustomer.url}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className='grid gap-4'>
+                    <div className='space-y-2'>
+                      <Label>
+                        Name <span className='text-red-600'>*</span>
+                      </Label>
+                      <Input
+                        value={contactFormData.name}
+                        onChange={event =>
+                          handleContactFieldChange('name', event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label>Role</Label>
+                      <Select
+                        value={contactFormData.role}
+                        onValueChange={value =>
+                          handleContactFieldChange('role', value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select role' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CONTACT_ROLE_OPTIONS.map(role => (
+                            <SelectItem key={role} value={role}>
+                              {role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label>Email</Label>
+                      <Input
+                        type='email'
+                        value={contactFormData.email}
+                        onChange={event =>
+                          handleContactFieldChange('email', event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label>Phone</Label>
+                      <Input
+                        value={contactFormData.phone}
+                        onChange={event =>
+                          handleContactFieldChange('phone', event.target.value)
+                        }
+                        placeholder='(123) 456-7890'
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+              <div className='flex justify-end gap-2 p-4 px-6'>
+                <Button
+                  variant='outline'
+                  onClick={() => setDrawerView(contactEditorReturnView)}
+                  disabled={isSubmittingContact}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => void handleSubmitContact()}
+                  disabled={isSubmittingContact}
+                >
+                  {isSubmittingContact
+                    ? drawerView === 'contact-edit'
+                      ? 'Saving...'
+                      : 'Creating...'
+                    : drawerView === 'contact-edit'
+                      ? 'Save Contact'
+                      : 'Create Contact'}
+                </Button>
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
-      {/* CustomerDrawer for creating new customer */}
-      <CustomerDrawer
-        open={customerDrawerOpen}
-        onOpenChange={setCustomerDrawerOpen}
-        customer={null}
-        isViewMode={false}
-        onSuccess={async (newCustomerId?: number) => {
-          setCustomerDrawerOpen(false)
-          if (newCustomerId) {
-            lastCreatedCustomerId.current = newCustomerId
-          }
-          await getCustomers()
-          if (lastCreatedCustomerId.current) {
-            const created = customers.find(
-              c => c.id === lastCreatedCustomerId.current
-            )
-            if (created) {
-              setLocalCustomer(created)
-            }
-            lastCreatedCustomerId.current = null
-          }
-        }}
-      />
-      {/* Contact creation drawer: only render if localCustomer is defined */}
-      {localCustomer && (
-        <CustomerProvider initialCustomer={localCustomer}>
-          <Drawer
-            open={contactDrawerOpen}
-            onOpenChange={setContactDrawerOpen}
-            direction='right'
-          >
-            <DrawerContent>
-              <CustomerContactForm
-                customerId={localCustomer.id}
-                isOpen={contactDrawerOpen}
-                onClose={() => setContactDrawerOpen(false)}
-                onSuccess={async (newContactId?: number) => {
-                  setContactDrawerOpen(false)
-                  if (localCustomer?.id) {
-                    const updatedCustomer = await fetchCustomerById(
-                      localCustomer.id
-                    )
-                    if (updatedCustomer) {
-                      setLocalCustomer(updatedCustomer) // Update the local customer state with fresh data
-                      if (typeof newContactId === 'number') {
-                        lastCreatedContactId.current = newContactId
-                      }
-                    }
-                  }
-                }}
-                customer={localCustomer}
-              />
-            </DrawerContent>
-          </Drawer>
-        </CustomerProvider>
-      )}
-      {/* Customer Selection Modal */}
-      <CustomerSelectionModal
-        open={customerModalOpen}
-        onOpenChange={setCustomerModalOpen}
-        customers={customers}
-        selectedCustomer={localCustomer}
-        onSelectCustomer={setLocalCustomer}
-        onAddNewCustomer={() => {
-          setCustomerModalOpen(false)
-          setCustomerDrawerOpen(true)
-        }}
-      />
     </>
   )
 }

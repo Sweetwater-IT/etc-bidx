@@ -6,11 +6,13 @@ interface CustomerContact {
     email: string;
     phone?: string;
     address?: string;
+    role?: string;
 }
 
 interface Customer {
     id: number;
     name: string;
+    display_name?: string | null;
     customer_contacts?: CustomerContact[];
     email: string;
     main_phone: string;
@@ -36,22 +38,37 @@ export const useCustomerSelection = () => {
                     a.name.localeCompare(b.name)
                 );
                 setCustomers(sorted);
+                return sorted;
             }
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
         }
+
+        return [];
     };
 
     useEffect(() => {
         getCustomers();
     }, []);
 
-    const selectCustomer = (id: string) => {
+    const selectCustomer = (id: string, contactId?: string) => {
         const customer = customers.find(c => c.id.toString() === id) || null;
         setSelectedCustomer(customer);
-        setSelectedContact(customer?.customer_contacts?.[0] || null);
+        if (!customer) {
+            setSelectedContact(null);
+            return;
+        }
+
+        if (contactId) {
+            const contact =
+                customer.customer_contacts?.find(c => c.id.toString() === contactId) || null;
+            setSelectedContact(contact);
+            return;
+        }
+
+        setSelectedContact(null); // Don't auto-select first contact
     };
 
     const selectContact = (id: string) => {
@@ -63,6 +80,25 @@ export const useCustomerSelection = () => {
         setCustomers(prev => [...prev, customer]);
         setSelectedCustomer(customer);
         setSelectedContact(customer.customer_contacts?.[0] || null);
+    };
+
+    const upsertCustomer = (customer: Customer) => {
+        setCustomers(prev => {
+            const existingIndex = prev.findIndex(c => c.id === customer.id);
+            if (existingIndex === -1) {
+                return [...prev, customer];
+            }
+
+            return prev.map(c => (c.id === customer.id ? customer : c));
+        });
+
+        setSelectedCustomer(customer);
+
+        if (selectedContact) {
+            const refreshedContact =
+                customer.customer_contacts?.find(c => c.id === selectedContact.id) || null;
+            setSelectedContact(refreshedContact);
+        }
     };
 
     const addContact = (contact: CustomerContact) => {
@@ -88,9 +124,9 @@ export const useCustomerSelection = () => {
         selectCustomer,
         selectContact,
         addCustomer,
+        upsertCustomer,
         addContact,
         refreshCustomers: getCustomers,
         loading,
     };
 };
-

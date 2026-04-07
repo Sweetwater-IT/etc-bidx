@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface Estimate {
   contract_number: string;
@@ -20,9 +21,29 @@ interface Job {
   contractorName?: string;
 }
 
+interface SignItem {
+  designation: string
+  description: string
+  quantity: number
+  width: number
+  height: number
+  sheeting: string
+  substrate: string
+  stiffener: string
+  bLights: string | number
+  cover: boolean
+  inStock: number
+  order: number
+  displayStructure: string
+  primarySignId?: string
+  id?: string
+}
+
 interface SignOrderJobSelectorProps {
   allJobs: Job[];
-  selectedContractJob: Estimate | Job | null;
+  hasSelection: boolean;
+  selectedDisplayValue?: string;
+  selectedJobId?: string;
   onSelect: (job: Estimate | Job | null) => void;
   onAddNew: () => void;
   onEdit: () => void;
@@ -45,13 +66,16 @@ interface SignOrderJobSelectorProps {
     role: string
     email: string
     phone: string
-  }
+  };
+  onImport?: (signs: SignItem[]) => void;
 }
 
 export function SignOrderJobSelector({
   contractNumber,
   allJobs = [],
-  selectedContractJob,
+  hasSelection,
+  selectedDisplayValue,
+  selectedJobId,
   onSelect,
   onAddNew,
   onEdit,
@@ -66,7 +90,8 @@ export function SignOrderJobSelector({
   endDate,
   orderType,
   showInitialAdminState,
-  contact
+  contact,
+  onImport
 }: SignOrderJobSelectorProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const inputRef = useRef(null);
@@ -80,11 +105,13 @@ export function SignOrderJobSelector({
       (j.contractNumber && j.contractNumber.toLowerCase().includes(searchValue.toLowerCase()))
   );
 
+  const jobId = selectedJobId;
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <div className="text-xl font-semibold">Job Information</div>
-        {(selectedContractJob || showInitialAdminState) && (
+        {(hasSelection || showInitialAdminState) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded hover:bg-muted focus:outline-none">
@@ -104,34 +131,32 @@ export function SignOrderJobSelector({
       <div className="mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           {(!contractNumber || contractNumber === '') && <div className="md:col-span-2 col-span-1">
-            <div className={`${selectedContractJob ? "" : "mb-2"} font-medium text-sm`}>
+            <div className={`${hasSelection ? "" : "mb-2"} font-medium text-sm`}>
               Contract / Job Number
             </div>
             <div className="relative">
               <input
                 ref={inputRef}
-                disabled={!!selectedContractJob}
-                className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${selectedContractJob ? "" : "border border-border px-2"
+                disabled={hasSelection}
+                className={`w-full rounded-md pr-3 py-2 mb-1 text-muted-foreground ${hasSelection ? "" : "border border-border px-2"
                   }`}
                 placeholder="Search or add a contract/job..."
                 value={
-                  selectedContractJob
-                    ? "contract_number" in selectedContractJob
-                      ? selectedContractJob.contract_number
-                      : selectedContractJob.job_number
+                  hasSelection
+                    ? selectedDisplayValue || contractNumber || ''
                     : searchValue
                 }
                 onChange={(e) => {
                   setSearchValue(e.target.value);
                   setDropdownOpen(true);
-                  if (selectedContractJob) onSelect(null);
+                  if (hasSelection) onSelect(null);
                 }}
                 onFocus={() => setDropdownOpen(true)}
                 onBlur={handleBlur}
-                readOnly={!!selectedContractJob}
+                readOnly={hasSelection}
               />
               {/* Dropdown */}
-              {dropdownOpen && !selectedContractJob && (
+              {dropdownOpen && !hasSelection && (
                 <div className="absolute left-0 right-0 z-20 bg-popover border border-border rounded shadow max-h-64 overflow-auto mt-1">
                   <div
                     className="cursor-pointer px-3 py-2 hover:bg-muted border-b font-medium"
@@ -172,7 +197,7 @@ export function SignOrderJobSelector({
         </div>
       </div>
 
-      {(selectedContractJob || showInitialAdminState) && (
+      {(hasSelection || showInitialAdminState) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4">
           <div className="flex flex-col">
             <label className="text-sm font-semibold">
@@ -188,7 +213,7 @@ export function SignOrderJobSelector({
               Branch
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {branch && branch !== "All" ? branch : selectedContractJob ? selectedContractJob.branch : "-"}
+              {branch && branch !== "All" ? branch : "-"}
             </div>
           </div>
 
@@ -197,9 +222,7 @@ export function SignOrderJobSelector({
               Contract Number
             </label>
             <div className="pr-3 py-1 select-text cursor-default text-muted-foreground">
-              {!selectedContractJob ? contractNumber : "contract_number" in selectedContractJob
-                ? selectedContractJob.contract_number : 'contractNumber' in selectedContractJob ?
-                  selectedContractJob.contractNumber : "-"}
+              {contractNumber || "-"}
             </div>
           </div>
 

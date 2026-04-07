@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -13,7 +13,7 @@ import { MoreVertical } from 'lucide-react'
 import { useAuth } from "@/contexts/auth-context";
 
 export interface Note {
-  id?: number;
+  id?: number | string;
   text: string;
   timestamp: number;
   user_email?: string
@@ -30,6 +30,15 @@ interface QuoteNotesProps {
   activities?: { type: string; date: string; icon?: React.ReactNode }[]
   showNoActivities?: boolean;
   showBorder?: boolean;
+  emptyState?: ReactNode;
+  addButtonClassName?: string;
+  submitButtonClassName?: string;
+  containerClassName?: string;
+  addButtonInHeader?: boolean;
+  headerContent?: ReactNode;
+  submitLabel?: string;
+  updateLabel?: string;
+  actionAlignment?: 'left' | 'right';
 }
 
 function formatDateTime(ts: number) {
@@ -83,7 +92,16 @@ export function QuoteNotes({
   canEdit = true,
   activities,
   showNoActivities = true,
-  showBorder = true
+  showBorder = true,
+  emptyState,
+  addButtonClassName,
+  submitButtonClassName,
+  containerClassName,
+  addButtonInHeader = false,
+  headerContent,
+  submitLabel = 'Add note',
+  updateLabel = 'Update note',
+  actionAlignment = 'left',
 }: QuoteNotesProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -92,6 +110,7 @@ export function QuoteNotes({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const { user } = useAuth();
+  const actionRowClassName = actionAlignment === 'right' ? 'flex justify-end gap-2' : 'flex gap-2'
 
   const handleAddNote = () => {
     setIsAdding(true)
@@ -139,9 +158,29 @@ export function QuoteNotes({
     setDeleteIndex(null)
   }
 
+  const addButton = canEdit && !isAdding ? (
+    <Button
+      variant={addButtonClassName ? 'default' : 'outline'}
+      className={addButtonClassName}
+      onClick={handleAddNote}
+    >
+      + Add note
+    </Button>
+  ) : null
+
   return (
-    <div className={`rounded-lg ${showBorder && "border" }  p-6`}>
-      <h2 className='mb-4 text-lg font-semibold'>{title}</h2>
+    <div className={`rounded-lg ${showBorder ? 'border' : ''} p-6 ${containerClassName || ''}`}>
+      {headerContent ? (
+        <div className='mb-4 flex items-center justify-between gap-3'>
+          <div className='min-w-0 flex-1'>{headerContent}</div>
+          {addButtonInHeader ? addButton : null}
+        </div>
+      ) : (
+        <div className='mb-4 flex items-center justify-between gap-3'>
+          <h2 className='text-lg font-semibold'>{title}</h2>
+          {addButtonInHeader ? addButton : null}
+        </div>
+      )}
       {activities?.length ? (
         <div className="mb-4 space-y-1 text-sm text-muted-foreground">
           {activities.map((activity, i) => (
@@ -163,9 +202,13 @@ export function QuoteNotes({
             Loading activity...
           </div>
         ) : (notes.length === 0 && !isAdding && showNoActivities) ? (
-          <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
-            No {title}
-          </div>
+          emptyState ? (
+            <>{emptyState}</>
+          ) : (
+            <div className='text-muted-foreground border border-dashed rounded p-4 text-center'>
+              No {title}
+            </div>
+          )
         ) : null}
         {notes.length > 0 && !loading && (
           <div className='relative'>
@@ -191,19 +234,19 @@ export function QuoteNotes({
                           className='min-h-[80px]'
                           autoFocus
                         />
-                        <div className='flex gap-2'>
-                          <Button
-                            onClick={handleUpdateNote}
-                            disabled={editValue.trim() === ''}
-                          >
-                            Update note
-                          </Button>
+                        <div className={actionRowClassName}>
                           <Button
                             variant='outline'
                             onClick={() => setEditIndex(null)}
                             type='button'
                           >
                             Cancel
+                          </Button>
+                          <Button
+                            onClick={handleUpdateNote}
+                            disabled={editValue.trim() === ''}
+                          >
+                            {updateLabel}
                           </Button>
                         </div>
                       </div>
@@ -261,10 +304,7 @@ export function QuoteNotes({
               onChange={e => setNewNote(e.target.value)}
               autoFocus
             />
-            <div className='flex gap-2'>
-              <Button onClick={handleSaveNote} disabled={newNote.trim() === ''}>
-                Add note
-              </Button>
+            <div className={actionRowClassName}>
               <Button
                 variant='outline'
                 onClick={() => setIsAdding(false)}
@@ -272,18 +312,21 @@ export function QuoteNotes({
               >
                 Cancel
               </Button>
+              <Button
+                onClick={handleSaveNote}
+                disabled={newNote.trim() === ''}
+                className={submitButtonClassName}
+              >
+                {submitLabel}
+              </Button>
             </div>
           </div>
-        ) : canEdit && (
-          <Button variant='outline' onClick={handleAddNote}>
-            + Add note
-          </Button>
-        )}
+        ) : !addButtonInHeader ? addButton : null}
       </div>
       {/* Delete confirmation modal */}
       {showDeleteModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30'>
-          <div className='bg-white rounded-lg p-6 shadow-lg w-80'>
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-slate-900/10 backdrop-blur-[1px]'>
+          <div className='w-80 rounded-lg bg-white p-6 shadow-lg ring-1 ring-black/5'>
             <h3 className='text-lg font-semibold mb-4'>Delete Note</h3>
             <p className='mb-6'>Are you sure you want to delete this note?</p>
             <div className='flex justify-end gap-2'>
