@@ -64,16 +64,16 @@ export const data = {
     },
     {
       title: "Bid / Job List",
-      url: "/jobs",
+      url: "/bid-board",
       icon: IconListDetails,
       items: [
         {
           title: "Bid Board",
-          url: "/jobs/available",
+          url: "/bid-board",
         },
         {
           title: "Bid List",
-          url: "/jobs/active-bids",
+          url: "/bid-list",
         },
         {
           title: "Job List",
@@ -268,7 +268,7 @@ export const quickActions = [
   {
     label: "Bid Board Entry",
     icon: IconBriefcase,
-    route: "/jobs/available",
+    route: "/bid-board",
   },
   {
     label: "Bid",

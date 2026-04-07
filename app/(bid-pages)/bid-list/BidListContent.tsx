@@ -48,19 +48,15 @@ const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | 
     return undefined;
 };
 
-interface JobPageContentProps {
-    job: string;
-}
-
 export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
-export function JobPageContent({ job }: JobPageContentProps) {
+export function BidListContent() {
     const router = useRouter();
     const { customers, getCustomers } = useCustomers();
 
-    const isAvailableJobs = job === "available";
-    const isActiveBids = job === "active-bids";
-    const isActiveJobs = job === "active-jobs";
+    const isAvailableJobs = false;
+    const isActiveBids = true;
+    const isActiveJobs = false;
 
     const [openBidSheetOpen, setOpenBidSheetOpen] = useState(false);
     const [createJobSheetOpen, setCreateJobSheetOpen] = useState(false);
@@ -951,7 +947,6 @@ export function JobPageContent({ job }: JobPageContentProps) {
         fetchActiveBidCounts,
         fetchActiveJobCounts,
         fetchNextJobNumber,
-        job,
         activeSegment,
         activeFilters,
         sortBy,

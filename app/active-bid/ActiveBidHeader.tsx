@@ -144,7 +144,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
   const handleSubmit = async () => {
     if (!adminData.contractNumber || adminData.contractNumber.trim() === '') {
-      router.replace('/jobs/active-bids')
+      router.replace('/bid-list')
       return;
     }
     else {
@@ -154,7 +154,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
         serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, statusToUse, notes, id ?? undefined);
         toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
-        router.replace('/jobs/active-bids')
+        router.replace('/bid-list')
       } catch (error) {
         console.error("Error creating bid:", error);
         toast.error('Bid not successfully saved as draft: ' + error)
