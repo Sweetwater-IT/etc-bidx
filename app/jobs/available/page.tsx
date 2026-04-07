@@ -1,5 +1,10 @@
-import { JobPageContent } from "../[job]/content";
+import { JobPageContent } from "../_components/JobPageContent";
+import { JobsPageShell } from "../_components/JobsPageShell";
 
 export default function AvailableJobsPage() {
-  return <JobPageContent job="available" />;
+  return (
+    <JobsPageShell showTitleBlock={false}>
+      <JobPageContent job="available" />
+    </JobsPageShell>
+  );
 }

@@ -1,5 +1,10 @@
-import { JobPageContent } from "@/app/jobs/[job]/content"
+import { JobPageContent } from "../_components/JobPageContent";
+import { JobsPageShell } from "../_components/JobsPageShell";
 
 export default function ActiveJobsPage() {
-  return <JobPageContent job="active-jobs" />
+  return (
+    <JobsPageShell>
+      <JobPageContent job="active-jobs" />
+    </JobsPageShell>
+  );
 }
