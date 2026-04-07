@@ -305,7 +305,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   role="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => router.back()}
+                  onClick={() => router.push("/quotes")}
                   className="rounded-full flex flex-row"
                 >
                   <ArrowLeft className="h-6 w-6" />
