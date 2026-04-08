@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
   cellRow: { width: '6%', textAlign: 'center' },
   cellItem: { width: '18%', textAlign: 'center' },
   cellDescription: { width: '36%', textAlign: 'center', paddingRight: 4 },
+  cellDescriptionDeliveryTicket: { width: '56%' },
   cellUOM: { width: '10%', textAlign: 'center' },
   cellQuantity: { width: '10%', textAlign: 'center' },
   cellUnitPrice: { width: '10%', textAlign: 'right' },
@@ -287,7 +288,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.header1}>
-              <Image src="/logo.jpg" style={styles.logo} />
+              <Image src="/logo.jpg" style={styles.logo} alt="" />
               <Text style={{ color: 'blue' }}>www.establishedtraffic.com</Text>
             </View>
             <View style={styles.header2}>
@@ -331,7 +332,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 style={[
                   styles.tableHeader,
                   styles.cellDescription,
-                  isDeliveryTicket && { width: '56%' }
+                  ...(isDeliveryTicket ? [styles.cellDescriptionDeliveryTicket] : [])
                 ]}
               >
                 Description
@@ -356,7 +357,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                     style={[
                       styles.tableCell,
                       styles.cellDescription,
-                      isDeliveryTicket && { width: '56%' }
+                      ...(isDeliveryTicket ? [styles.cellDescriptionDeliveryTicket] : [])
                     ]}
                   >
                     {item.description}
