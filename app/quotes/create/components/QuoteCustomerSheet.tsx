@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Check } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { CustomerForm } from "@/components/customer-form"
+import { SimpleCustomerCreateForm } from "@/components/simple-customer-create-form"
 import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 type QuoteCustomer = {
@@ -460,9 +460,9 @@ export function QuoteCustomerSheet({
           {view === "add-contact" && renderContactForm()}
           {view === "add-customer" && (
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-              <CustomerForm
+              <SimpleCustomerCreateForm
                 onCancel={() => setView("select-customer")}
-                onSuccess={async (customer) => {
+                onCreated={async customer => {
                   if (!customer?.id) {
                     setView("select-customer")
                     return

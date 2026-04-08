@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { SimpleCustomerCreateForm } from '@/components/simple-customer-create-form'
 import { formatPhoneNumber } from '@/lib/utils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -340,8 +341,6 @@ const CustomersContent = () => {
   const [detailLoading, setDetailLoading] = useState(false)
 
   const [newDialogOpen, setNewDialogOpen] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [creatingCustomer, setCreatingCustomer] = useState(false)
 
   const [editing, setEditing] = useState(false)
   const [savingCustomer, setSavingCustomer] = useState(false)
@@ -406,10 +405,6 @@ const CustomersContent = () => {
         customer_contacts: activeContacts,
       })
       setContacts(activeContacts)
-
-      if (editing) {
-        setEditing(false)
-      }
 
       const [jobsResult, quotesResult, signOrdersResult] = await Promise.allSettled([
         supabase
@@ -487,7 +482,7 @@ const CustomersContent = () => {
     } finally {
       setDetailLoading(false)
     }
-  }, [editing])
+  }, [])
 
   useEffect(() => {
     fetchCustomers()
@@ -552,49 +547,6 @@ const CustomersContent = () => {
 
     return { jobs, quotes, signOrders }
   }, [linkedJobs, linkedQuotes, linkedSignOrders])
-
-  const handleCreateCustomer = async () => {
-    if (!newName.trim()) {
-      return
-    }
-
-    setCreatingCustomer(true)
-
-    try {
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newName.trim(),
-          display_name: newName.trim(),
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || result.message || 'Failed to create customer')
-      }
-
-      toast.success('Customer created')
-      setNewDialogOpen(false)
-      setNewName('')
-
-      const nextId = result.customer?.id ?? null
-      await fetchCustomers()
-
-      if (nextId) {
-        setSelectedId(nextId)
-      }
-    } catch (error) {
-      console.error('Failed to create customer:', error)
-      toast.error('Failed to create customer')
-    } finally {
-      setCreatingCustomer(false)
-    }
-  }
 
   const startEditing = () => {
     if (!selectedCustomer) {
@@ -1692,35 +1644,17 @@ const CustomersContent = () => {
           <DialogHeader>
             <DialogTitle>New Customer</DialogTitle>
           </DialogHeader>
+          <SimpleCustomerCreateForm
+            onCancel={() => setNewDialogOpen(false)}
+            onCreated={async customer => {
+              setNewDialogOpen(false)
+              await fetchCustomers()
 
-          <div className='py-2'>
-            <label className='text-sm font-medium text-foreground'>
-              Company Name
-            </label>
-            <Input
-              className='mt-1.5'
-              value={newName}
-              onChange={event => setNewName(event.target.value)}
-              placeholder='Enter company name'
-              onKeyDown={event => {
-                if (event.key === 'Enter') {
-                  void handleCreateCustomer()
-                }
-              }}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setNewDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateCustomer}
-              disabled={!newName.trim() || creatingCustomer}
-            >
-              {creatingCustomer ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
+              if (customer.id) {
+                setSelectedId(customer.id)
+              }
+            }}
+          />
         </DialogContent>
       </Dialog>
 
