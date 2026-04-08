@@ -85,7 +85,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     fetchQuote();
   }, [quoteId]);
 
-  const handleGenerateAndUpload = async (type: 'saleTicket' | 'quote'): Promise<string | null> => {
+  const handleGenerateAndUpload = async (type: 'quote' | 'deliveryTicket'): Promise<string | null> => {
     setDownloading(true)
     try {
       if (!quote || !quote.id) {
@@ -104,15 +104,19 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
           quoteData={quote as any}
           quoteType={quote?.type_quote || "straight_sale"}
           termsAndConditions={quote?.aditionalTerms}
+          documentVariant={type === 'deliveryTicket' ? 'delivery_ticket' : 'quote'}
         />
       ).toBlob();
 
       const formData = new FormData();
       formData.append("quoteId", quote.id.toString());
       formData.append("uniqueIdentifier", quote.id.toString());
+      const pdfFileName = type === 'deliveryTicket'
+        ? `Delivery-Ticket-${quote.quote_number}.pdf`
+        : `Quote-${quote.quote_number}.pdf`;
       formData.append(
         "file",
-        new File([pdfBlob], `Quote-${quote.quote_number}.pdf`, { type: "application/pdf" })
+        new File([pdfBlob], pdfFileName, { type: "application/pdf" })
       );
 
       const filesToUpload = quote?.files?.filter((f) =>
@@ -147,9 +151,10 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   };
 
 
-  const handleDownload = async (type: 'saleTicket' | 'quote') => {
+  const handleDownload = async (type: 'quote' | 'deliveryTicket') => {
     try {
       const url: any = await handleGenerateAndUpload(type);
+      if (!url) return;
       window.open(url, "_blank");
     } catch (err) {
       console.error(err);
@@ -322,32 +327,32 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   Edit Quote
                 </Button>
 
-                <Button role="button"
-                  variant="outline" size={'sm'} onClick={() => handleDownload('quote')}>
-                  <Download />
-                  {downloading ? (
-                    <>
-                      <p>Downloading </p>
-                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                    </>
-                  ) : (
-                    "Download Quote"
-                  )}
-                </Button>
-                {
-                  quote.status === 'Accepted' &&
-                  <Button variant="outline" size={'sm'} onClick={() => handleDownload('saleTicket')}>
-                    <Download />
-                    {downloading ? (
-                      <>
-                        <p>Downloading </p>
-                        <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                      </>
-                    ) : (
-                      "Download Sale Ticket"
-                    )}
-                  </Button>
-                }
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button role="button" variant="outline" size={'sm'} disabled={downloading}>
+                      <Download />
+                      {downloading ? (
+                        <>
+                          <p>Downloading</p>
+                          <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                        </>
+                      ) : (
+                        <>
+                          <span>Download</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleDownload('quote')}>
+                      Download Quote
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownload('deliveryTicket')}>
+                      Download Delivery Ticket
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 

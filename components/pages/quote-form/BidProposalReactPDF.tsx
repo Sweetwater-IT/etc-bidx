@@ -21,6 +21,7 @@ interface Props {
   exclusions?: string;
   terms: string;
   quoteStatus: string;
+  documentVariant?: 'quote' | 'delivery_ticket';
 }
 
 const styles = StyleSheet.create({
@@ -122,9 +123,11 @@ export const BidProposalReactPDF: React.FC<Props> = ({
   termsAndConditions,
   exclusions,
   terms,
-  quoteStatus
+  quoteStatus,
+  documentVariant = 'quote',
 
 }) => {
+  const isDeliveryTicket = documentVariant === 'delivery_ticket';
 
   const formatMoney = (v: number) =>
     v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -298,9 +301,11 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               </Text>
             </View>
             <View style={styles.header3}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteStatus === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>
+                {isDeliveryTicket ? "Delivery Ticket" : quoteStatus === "Accepted" ? "Sale Ticket" : "Proposal"}
+              </Text>
               {
-                quoteStatus !== "Accepted" &&
+                !isDeliveryTicket && quoteStatus !== "Accepted" &&
                 <View>
                   <Text style={styles.centerText}>Quote Date: {quoteDate.toLocaleDateString('en-US')}</Text>
                   <Text style={styles.centerText}>
@@ -308,7 +313,9 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                   </Text>
                 </View>
               }
-              <Text style={[styles.centerText]}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
+              {!isDeliveryTicket && (
+                <Text style={[styles.centerText]}>THIS IS NOT A BILL/INVOICE DO NOT PAY</Text>
+              )}
             </View>
           </View>
 
@@ -320,11 +327,23 @@ export const BidProposalReactPDF: React.FC<Props> = ({
             <View style={styles.tableRowWithBorder}>
               <Text style={[styles.tableHeader, styles.cellRow]}>Row</Text>
               <Text style={[styles.tableHeader, styles.cellItem]}>Item #</Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}>Description</Text>
+              <Text
+                style={[
+                  styles.tableHeader,
+                  styles.cellDescription,
+                  isDeliveryTicket && { width: '56%' }
+                ]}
+              >
+                Description
+              </Text>
               <Text style={[styles.tableHeader, styles.cellUOM]}>UOM</Text>
               <Text style={[styles.tableHeader, styles.cellQuantity]}>Qty</Text>
-              <Text style={[styles.tableHeader, styles.cellUnitPrice]}>Unit Price</Text>
-              <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
+              {!isDeliveryTicket && (
+                <Text style={[styles.tableHeader, styles.cellUnitPrice]}>Unit Price</Text>
+              )}
+              {!isDeliveryTicket && (
+                <Text style={[styles.tableHeader, styles.cellExtended]}>Ext. Price</Text>
+              )}
             </View>
 
             {items.filter((i)=> i.itemNumber).map((item, idx) => {
@@ -333,56 +352,70 @@ export const BidProposalReactPDF: React.FC<Props> = ({
                 <View key={idx} style={styles.tableRow}>
                   <Text style={[styles.tableCell, styles.cellRow]}>{idx + 1}</Text>
                   <Text style={[styles.tableCell, styles.cellItem]}>{item.itemNumber || idx + 1}</Text>
-                  <Text style={[styles.tableCell, styles.cellDescription]}>{item.description}</Text>
+                  <Text
+                    style={[
+                      styles.tableCell,
+                      styles.cellDescription,
+                      isDeliveryTicket && { width: '56%' }
+                    ]}
+                  >
+                    {item.description}
+                  </Text>
                   <Text style={[styles.tableCell, styles.cellUOM]}>{item.uom || 'EA'}</Text>
                   <Text style={[styles.tableCell, styles.cellQuantity]}>{item.quantity}</Text>
-                  <Text style={[styles.tableCell, styles.cellUnitPrice]}>{formatMoney(item.unitPrice || 0)}</Text>
-                  <Text style={[styles.tableCell, styles.cellExtended]}>{formatMoney(ext)}</Text>
+                  {!isDeliveryTicket && (
+                    <Text style={[styles.tableCell, styles.cellUnitPrice]}>{formatMoney(item.unitPrice || 0)}</Text>
+                  )}
+                  {!isDeliveryTicket && (
+                    <Text style={[styles.tableCell, styles.cellExtended]}>{formatMoney(ext)}</Text>
+                  )}
                 </View>
               );
             })}
-            <View style={styles.lineSeparator}></View>
-            {/* Totals */}
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableHeader, styles.cellRow]}></Text>
-              <Text style={[styles.tableHeader, styles.cellItem]}></Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
-              <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
-              <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
-              <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>SUBTOTAL</Text>
-              </View>
-              <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total)}</Text>
-              </View>
-
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableHeader, styles.cellRow]}></Text>
-              <Text style={[styles.tableHeader, styles.cellItem]}></Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
-              <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
-              <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
-              <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TAX</Text>
-              </View>
-              <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(totalTax)}</Text>
-              </View>
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableHeader, styles.cellRow]}></Text>
-              <Text style={[styles.tableHeader, styles.cellItem]}></Text>
-              <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
-              <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
-              <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
-              <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TOTAL</Text>
-              </View>
-              <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total + totalTax)}</Text>
-              </View>
-            </View>
+            {!isDeliveryTicket && (
+              <>
+                <View style={styles.lineSeparator}></View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableHeader, styles.cellRow]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellItem]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
+                  <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>SUBTOTAL</Text>
+                  </View>
+                  <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total)}</Text>
+                  </View>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableHeader, styles.cellRow]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellItem]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
+                  <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TAX</Text>
+                  </View>
+                  <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(totalTax)}</Text>
+                  </View>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableHeader, styles.cellRow]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellItem]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellDescription]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellUOM]}></Text>
+                  <Text style={[styles.tableHeader, styles.cellQuantity]}></Text>
+                  <View style={[styles.tableCell, styles.cellUnitPrice, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'center' }}>TOTAL</Text>
+                  </View>
+                  <View style={[styles.tableCell, styles.cellExtended, { justifyContent: 'center' }]}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 8, textAlign: 'right' }}>{formatMoney(total + totalTax)}</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           <View style={styles.notesSection}>
@@ -417,10 +450,12 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <View style={styles.signatureLine}></View>
             </View>
           </View>
-          <Text style={styles.disclaimerText}>
-            Due to extreme market volatility, all pricing and availability are subject to change without notice.{"\n"}
-            All quotes to be confirmed at time of order placement.
-          </Text>
+          {!isDeliveryTicket && (
+            <Text style={styles.disclaimerText}>
+              Due to extreme market volatility, all pricing and availability are subject to change without notice.{"\n"}
+              All quotes to be confirmed at time of order placement.
+            </Text>
+          )}
         </View>
 
       </Page>
