@@ -288,7 +288,8 @@ export const BidProposalReactPDF: React.FC<Props> = ({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.header1}>
-              <Image src="/logo.jpg" style={styles.logo} alt="" />
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src="/logo.jpg" style={styles.logo} />
               <Text style={{ color: 'blue' }}>www.establishedtraffic.com</Text>
             </View>
             <View style={styles.header2}>
