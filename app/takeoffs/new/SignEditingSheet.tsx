@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
-import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse } from '@/types/MPTEquipment';
+import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse, KitVariant } from '@/types/MPTEquipment';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
@@ -95,6 +95,9 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
     const [kitStepperOpen, setKitStepperOpen] = useState(false);
     const [selectedKit, setSelectedKit] = useState<PataKit | PtsKit | null>(null);
+    const [selectedKitForVariant, setSelectedKitForVariant] = useState<PataKit | PtsKit | null>(null);
+    const [selectedKitTypeForVariant, setSelectedKitTypeForVariant] = useState<'pata' | 'pts' | null>(null);
+    const [kitVariantOpen, setKitVariantOpen] = useState(false);
     const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
     const [signOrderStep, setSignOrderStep] = useState<'designation' | 'dimension' | 'configuration'>('designation');
     const [activePickerTab, setActivePickerTab] = useState<'mutcd' | 'pata' | 'pts'>('mutcd');
@@ -158,6 +161,19 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         });
     };
 
+    const applyKitVariant = (kit: PataKit | PtsKit, variant: KitVariant) => {
+        const filteredContents = kit.contents.filter(
+            (content) => content.kit_variant_id == null || content.kit_variant_id === variant.id
+        );
+
+        return {
+            ...kit,
+            selectedVariant: variant,
+            contents: filteredContents,
+            signCount: filteredContents.length,
+        };
+    };
+
     // Fetch sign designations data
     useEffect(() => {
         const loadSignData = async () => {
@@ -208,11 +224,34 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     count: pataKitsData?.length ?? 0,
                 });
 
+                const { data: pataVariantsData, error: pataVariantsError } = await supabase
+                    .from('kit_variants')
+                    .select('id, kit_id, variant_label, description, finished, blights, created_at');
+
+                if (pataVariantsError) {
+                    throw new Error(`Failed to fetch PATA kit variants: ${pataVariantsError.message}`);
+                }
+
+                const pataVariantsMap = new Map<number, KitVariant[]>();
+                (pataVariantsData || []).forEach((variant) => {
+                    const existing = pataVariantsMap.get(Number(variant.kit_id)) || [];
+                    existing.push({
+                        id: Number(variant.id),
+                        kit_id: Number(variant.kit_id),
+                        label: variant.variant_label,
+                        description: variant.description || undefined,
+                        finished: variant.finished || false,
+                        bLights: variant.blights || 0,
+                        created_at: variant.created_at || undefined,
+                    });
+                    pataVariantsMap.set(Number(variant.kit_id), existing);
+                });
+
                 const pataKitsWithContents = await Promise.all(
                     (pataKitsData || []).map(async (kit) => {
                         const { data: contents, error: contentsError } = await supabase
                             .from('pata_kit_contents')
-                            .select('sign_designation, quantity, blight_quantity')
+                            .select('sign_designation, quantity, blight_quantity, kit_variant_id')
                             .eq('pata_kit_code', kit.code);
 
                         if (contentsError) {
@@ -223,7 +262,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             ...kit,
                             contents: contents || [],
                             signCount: contents?.length || 0,
-                            variants: [],
+                            variants: pataVariantsMap.get(Number(kit.id)) || [],
+                            selectedVariant: null,
                         };
                     })
                 );
@@ -246,11 +286,34 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     count: ptsKitsData?.length ?? 0,
                 });
 
+                const { data: ptsVariantsData, error: ptsVariantsError } = await supabase
+                    .from('kit_variants')
+                    .select('id, kit_id, variant_label, description, finished, blights, created_at');
+
+                if (ptsVariantsError) {
+                    throw new Error(`Failed to fetch PTS kit variants: ${ptsVariantsError.message}`);
+                }
+
+                const ptsVariantsMap = new Map<number, KitVariant[]>();
+                (ptsVariantsData || []).forEach((variant) => {
+                    const existing = ptsVariantsMap.get(Number(variant.kit_id)) || [];
+                    existing.push({
+                        id: Number(variant.id),
+                        kit_id: Number(variant.kit_id),
+                        label: variant.variant_label,
+                        description: variant.description || undefined,
+                        finished: variant.finished || false,
+                        bLights: variant.blights || 0,
+                        created_at: variant.created_at || undefined,
+                    });
+                    ptsVariantsMap.set(Number(variant.kit_id), existing);
+                });
+
                 const ptsKitsWithContents = await Promise.all(
                     (ptsKitsData || []).map(async (kit) => {
                         const { data: contents, error: contentsError } = await supabase
                             .from('pts_kit_contents')
-                            .select('sign_designation, quantity')
+                            .select('sign_designation, quantity, kit_variant_id')
                             .eq('pts_kit_code', kit.code);
 
                         if (contentsError) {
@@ -261,7 +324,8 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                             ...kit,
                             contents: contents || [],
                             signCount: contents?.length || 0,
-                            variants: [],
+                            variants: ptsVariantsMap.get(Number(kit.id)) || [],
+                            selectedVariant: null,
                         };
                     })
                 );
@@ -683,7 +747,7 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
         }));
     };
 
-    const handleKitSelect = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+    const openKitStepper = (kit: PataKit | PtsKit) => {
         setSelectedKit(kit);
 
         // Initialize configurations for each sign in the kit
@@ -710,6 +774,27 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
 
         setKitSignConfigurations(configurations);
         setKitStepperOpen(true);
+    };
+
+    const handleKitSelect = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
+        if (kit.has_variants && kit.variants.length > 0) {
+            setSelectedKitForVariant(kit);
+            setSelectedKitTypeForVariant(kitType);
+            setKitVariantOpen(true);
+            return;
+        }
+
+        openKitStepper(kit);
+    };
+
+    const handleVariantSelected = (variant: KitVariant) => {
+        if (!selectedKitForVariant || !selectedKitTypeForVariant) return;
+
+        const variantKit = applyKitVariant(selectedKitForVariant, variant);
+        setKitVariantOpen(false);
+        setSelectedKitForVariant(null);
+        setSelectedKitTypeForVariant(null);
+        openKitStepper(variantKit);
     };
 
     const handleKitStepperComplete = () => {
@@ -1920,6 +2005,43 @@ const SignEditingSheet = ({ open, onOpenChange, mode, sign, currentPhase = 0, is
                     <Button onClick={handleKitStepperComplete}>
                         Add All Signs to Order
                     </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+        <Dialog
+            open={kitVariantOpen}
+            onOpenChange={(nextOpen) => {
+                setKitVariantOpen(nextOpen);
+                if (!nextOpen) {
+                    setSelectedKitForVariant(null);
+                    setSelectedKitTypeForVariant(null);
+                }
+            }}
+        >
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>
+                        Select {selectedKitTypeForVariant?.toUpperCase()} Kit Variant
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                    {selectedKitForVariant?.variants.map((variant) => (
+                        <button
+                            key={variant.id}
+                            type="button"
+                            onClick={() => handleVariantSelected(variant)}
+                            className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                        >
+                            <div className="font-medium">
+                                Option {variant.label}
+                            </div>
+                            {variant.description && (
+                                <div className="text-sm text-muted-foreground">
+                                    {variant.description}
+                                </div>
+                            )}
+                        </button>
+                    ))}
                 </div>
             </DialogContent>
         </Dialog>
