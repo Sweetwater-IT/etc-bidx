@@ -66,7 +66,7 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
       try {
         // Fetch standard dimensions
         const { data: standardDims, error: standardError } = await supabase
-          .from("sign_dimensions")
+          .from("sign_dimensions_2")
           .select("*")
           .order("id", { ascending: true })
         

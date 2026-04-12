@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
-import { supabaseSignAnalytics } from "@/lib/supabase-sign-analytics"
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser"
 
 type ProductivityClient = SupabaseClient<any, "public", any>
 
@@ -37,9 +37,10 @@ async function fetchAllEntries(client: ProductivityClient) {
 }
 
 async function insertEntries(entries: ProductivityEntry[]) {
-  const { error } = await supabaseSignAnalytics.from("sign_production").insert(entries)
+  const client = getSupabaseBrowserClient()
+  const { error } = await client.from("sign_production").insert(entries)
   if (error) {
-    console.error("[daily-tracker] insert failed against analytics database", error)
+    console.error("[daily-tracker] insert failed against primary database", error)
     throw error
   }
 }
@@ -51,9 +52,9 @@ export function useProductivityData() {
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const result = await fetchAllEntries(supabaseSignAnalytics)
+      const result = await fetchAllEntries(getSupabaseBrowserClient())
       if (result.error) {
-        console.error("[daily-tracker] analytics fetch failed", result.error)
+        console.error("[daily-tracker] fetch failed against primary database", result.error)
         setData([])
         return
       }
