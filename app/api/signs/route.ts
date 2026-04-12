@@ -42,7 +42,8 @@ export async function GET() {
         pata_kit_contents!pata_kit_code (
           sign_designation,
           quantity,
-          blight_quantity
+          blight_quantity,
+          kit_variant_id
         )
       `)
       .order('code');
@@ -63,7 +64,8 @@ export async function GET() {
         id, code, description, image_url, finished, reviewed, has_variants,
         pts_kit_contents!pts_kit_code (
           sign_designation,
-          quantity
+          quantity,
+          kit_variant_id
         )
       `)
       .order('code');

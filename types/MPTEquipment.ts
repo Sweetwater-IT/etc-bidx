@@ -69,6 +69,7 @@ export interface KitContent {
   sign_designation: string;
   quantity: number;
   blight_quantity?: number;
+  kit_variant_id?: number | null;
 }
 
 export interface KitVariant {
@@ -88,6 +89,7 @@ export interface PataKit {
   variants: KitVariant[];
   contents: KitContent[];
   signCount: number;
+  selectedVariant?: KitVariant | null;
 }
 
 export interface PtsKit {
@@ -99,6 +101,7 @@ export interface PtsKit {
   variants: KitVariant[];
   contents: KitContent[];
   signCount: number;
+  selectedVariant?: KitVariant | null;
 }
 
 export interface SignsApiResponse {

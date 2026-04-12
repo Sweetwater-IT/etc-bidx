@@ -17,6 +17,7 @@ import {
   PataKit,
   PtsKit,
   SignDesignation,
+  KitVariant,
 } from '@/types/MPTEquipment';
 import { Check, Search, Plus, Package } from 'lucide-react';
 import React, {
@@ -45,6 +46,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+const applyKitVariant = (kit: PataKit | PtsKit, variant?: KitVariant | null): PataKit | PtsKit => {
+  if (!variant) {
+    return {
+      ...kit,
+      selectedVariant: null,
+    };
+  }
+
+  return {
+    ...kit,
+    selectedVariant: variant,
+    contents: kit.contents.filter(
+      (content) => content.kit_variant_id == null || content.kit_variant_id === variant.id
+    ),
+    signCount: kit.contents.filter(
+      (content) => content.kit_variant_id == null || content.kit_variant_id === variant.id
+    ).length,
+  };
+};
 
 const DesignationSearcher = ({
   localSign,
@@ -148,18 +169,37 @@ const DesignationSearcher = ({
           .select('id, code, description, image_url, finished, reviewed, has_variants')
           .order('code');
 
+        const { data: pataVariantsData } = await supabase
+          .from('kit_variants')
+          .select('id, kit_id, variant_label, description, finished, blights')
+          .order('variant_label');
+
+        const pataVariantsMap = new Map<number, KitVariant[]>();
+        (pataVariantsData || []).forEach((variant) => {
+          const existing = pataVariantsMap.get(variant.kit_id) || [];
+          existing.push({
+            id: variant.id,
+            label: variant.variant_label,
+            description: variant.description,
+            finished: variant.finished,
+            blights: variant.blights,
+          });
+          pataVariantsMap.set(variant.kit_id, existing);
+        });
+
         const pataKitsWithContents = await Promise.all(
           (pataKitsData || []).map(async (kit) => {
             const { data: contents } = await supabase
               .from('pata_kit_contents')
-              .select('sign_designation, quantity, blight_quantity')
+              .select('sign_designation, quantity, blight_quantity, kit_variant_id')
               .eq('pata_kit_code', kit.code);
 
             return {
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
-              variants: [],
+              variants: pataVariantsMap.get(Number(kit.id)) || [],
+              selectedVariant: null,
             };
           })
         );
@@ -172,18 +212,37 @@ const DesignationSearcher = ({
           .select('id, code, description, image_url, finished, reviewed, has_variants')
           .order('code');
 
+        const { data: ptsVariantsData } = await supabase
+          .from('kit_variants')
+          .select('id, kit_id, variant_label, description, finished, blights')
+          .order('variant_label');
+
+        const ptsVariantsMap = new Map<number, KitVariant[]>();
+        (ptsVariantsData || []).forEach((variant) => {
+          const existing = ptsVariantsMap.get(variant.kit_id) || [];
+          existing.push({
+            id: variant.id,
+            label: variant.variant_label,
+            description: variant.description,
+            finished: variant.finished,
+            blights: variant.blights,
+          });
+          ptsVariantsMap.set(variant.kit_id, existing);
+        });
+
         const ptsKitsWithContents = await Promise.all(
           (ptsKitsData || []).map(async (kit) => {
             const { data: contents } = await supabase
               .from('pts_kit_contents')
-              .select('sign_designation, quantity')
+              .select('sign_designation, quantity, kit_variant_id')
               .eq('pts_kit_code', kit.code);
 
             return {
               ...kit,
               contents: contents || [],
               signCount: contents?.length || 0,
-              variants: [],
+              variants: ptsVariantsMap.get(Number(kit.id)) || [],
+              selectedVariant: null,
             };
           })
         );
@@ -314,8 +373,13 @@ const DesignationSearcher = ({
     setKitConfigurationModalOpen(true);
   };
 
-  const showKitPreview = async (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
-    setSelectedKitForPreview(kit);
+  const showKitPreview = async (
+    kit: PataKit | PtsKit,
+    kitType: 'pata' | 'pts',
+    variant?: KitVariant | null
+  ) => {
+    const resolvedKit = applyKitVariant(kit, variant);
+    setSelectedKitForPreview(resolvedKit);
     setKitPreviewType(kitType);
 
     // Enrich contents with sign images/descriptions
@@ -323,7 +387,7 @@ const DesignationSearcher = ({
       const signMap = new Map<string, SignDesignation>();
       signs.forEach((sign) => signMap.set(sign.designation, sign));
 
-      const enriched = kit.contents.map((content) => {
+      const enriched = resolvedKit.contents.map((content) => {
         const signData = signMap.get(content.sign_designation);
         return {
           ...content,
@@ -335,22 +399,21 @@ const DesignationSearcher = ({
 
       setKitContentsWithImages(enriched);
     } else {
-      setKitContentsWithImages(kit.contents);
+      setKitContentsWithImages(resolvedKit.contents);
     }
 
     setKitPreviewModalOpen(true);
   };
 
-  const handleVariantSelected = async (variant: any) => {
+  const handleVariantSelected = async (variant: KitVariant) => {
     if (!selectedKitForVariant || !kitVariantType) return;
     logSignOrderDebug('sign_kit_variant_selected', {
       kitCode: selectedKitForVariant.code,
       kitType: kitVariantType,
-      variant: variant?.name ?? variant?.code ?? null,
+      variant: variant?.label ?? null,
       signId: localSign?.id ?? null,
     });
-    // Variants use base kit contents for now
-    await showKitPreview(selectedKitForVariant, kitVariantType);
+    await showKitPreview(selectedKitForVariant, kitVariantType, variant);
     setVariantSelectionModalOpen(false);
     setSelectedKitForVariant(null);
     setKitVariantType(null);
