@@ -4,6 +4,13 @@
 # working directory name when running `supabase init`.
 project_id = "etc-bidx"
 
+[remotes.main-l-dev]
+project_id = "cicnkqjluqdolarciblp"
+
+[remotes.main-l-dev.db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [api]
 enabled = true
 # Port to use for the API URL.
