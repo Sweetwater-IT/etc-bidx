@@ -22,7 +22,7 @@ import { useProductivityData } from "@/hooks/daily-tracker/use-productivity-data
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
-import { ChevronDown, Plus, Upload, MoreHorizontal, CalendarPlus } from "lucide-react"
+import { ChevronDown, Plus, Upload, MoreHorizontal, FileText } from "lucide-react"
 import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
 
 export default function DailyTrackerDashboard() {
@@ -199,6 +199,7 @@ export default function DailyTrackerDashboard() {
 
   return (
     <SidebarProvider
+      className="h-svh overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 68)",
@@ -207,9 +208,53 @@ export default function DailyTrackerDashboard() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="@container/main flex flex-1 flex-col py-4 gap-2 md:gap-6 md:py-6 px-4 md:px-6 lg:px-8">
+      <SidebarInset className="h-full min-h-0 overflow-hidden">
+        <SiteHeader showTitleBlock={false} />
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
+          <header className="shrink-0 border-b bg-card">
+            <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-6">
+              <div className="flex items-center gap-2.5">
+                <div className="rounded bg-primary p-1.5">
+                  <FileText className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">
+                    Daily Tracker
+                  </h1>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {data.length} entr{data.length === 1 ? "y" : "ies"} recorded
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => router.push("/daily-tracker/daily-entry")} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      Import
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setShowEntryForm(!showEntryForm)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Entry
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowCsvImport(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload File
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </header>
+
+          <div className="@container/main flex flex-1 min-h-0 flex-col overflow-auto">
+            <div className="mx-auto w-full max-w-[1600px] px-6 py-6">
           <CsvImport open={showCsvImport} onOpenChange={setShowCsvImport} onImport={handleImportCsv} />
 
           <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
@@ -329,34 +374,6 @@ export default function DailyTrackerDashboard() {
               </div>
             </DialogContent>
           </Dialog>
-
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="font-semibold text-3xl tracking-tight">Daily Tracker Productivity Dashboard</h1>
-            <div className="flex gap-2">
-              <Button onClick={() => router.push("/daily-tracker/daily-entry")}>
-                <Plus className="mr-2 h-4 w-4" />
-                New
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    Import
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowEntryForm(!showEntryForm)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Entry
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowCsvImport(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload File
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
             <TabsList>
@@ -550,6 +567,8 @@ export default function DailyTrackerDashboard() {
               </div>
             </DialogContent>
           </Dialog>
+            </div>
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

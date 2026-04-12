@@ -940,15 +940,16 @@ const CustomersContent = () => {
   }
 
   return (
-    <div className='flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden px-6'>
-      <div className='flex items-center justify-between rounded-lg border bg-card px-5 py-4'>
-        <div className='flex items-center gap-3'>
-          <div className='rounded bg-primary p-2'>
+    <div className='flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]'>
+      <header className='shrink-0 border-b bg-card'>
+        <div className='mx-auto flex h-14 max-w-[1600px] items-center justify-between px-6'>
+          <div className='flex items-center gap-2.5'>
+            <div className='rounded bg-primary p-1.5'>
             <Building2 className='h-5 w-5 text-primary-foreground' />
           </div>
           <div>
-            <h1 className='text-lg font-bold tracking-tight'>Customers</h1>
-            <p className='text-xs text-muted-foreground'>
+            <h1 className='text-lg font-bold leading-none tracking-tight'>Customers</h1>
+            <p className='mt-0.5 text-xs text-muted-foreground'>
               {customers.length} customer{customers.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -958,9 +959,11 @@ const CustomersContent = () => {
           <Plus className='h-4 w-4' />
           New Customer
         </Button>
-      </div>
+        </div>
+      </header>
 
-      <div className='grid min-h-0 flex-1 grid-cols-12 gap-4 overflow-hidden'>
+      <div className='@container/main flex flex-1 min-h-0 flex-col overflow-auto'>
+        <div className='mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-12 gap-4 px-6 py-6'>
         <div className='col-span-3 flex min-h-0 flex-col rounded-lg border bg-card'>
           <div className='shrink-0 border-b p-3'>
             <div className='relative'>
@@ -1320,6 +1323,7 @@ const CustomersContent = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
 
