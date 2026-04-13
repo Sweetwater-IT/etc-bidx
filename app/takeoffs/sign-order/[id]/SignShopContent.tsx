@@ -40,7 +40,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { exportSignOrderToExcel } from '@/lib/exportSignOrderToExcel'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import '@/components/pages/active-bid/signs/no-spinner.css'
 import { QuoteNotes, Note } from '@/components/pages/quote-form/QuoteNotes'
 import SignOrderBidSummaryPDF from '@/components/sheets/SignOrderBidSummaryPDF'
@@ -52,6 +52,7 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover'
 import { FileMetadata } from '@/types/FileTypes'
+import { ArrowLeft } from 'lucide-react'
 
 interface Props {
   id: number
@@ -60,6 +61,10 @@ interface Props {
 const SignShopContent = ({ id }: Props) => {
   const { mptRental, dispatch } = useSignOrderBuilder()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const backToSignShopOrdersHref = searchParams?.toString()
+    ? `/takeoffs/sign-shop-orders?${searchParams.toString()}`
+    : '/takeoffs/sign-shop-orders'
 
   const [signOrder, setSignOrder] = useState<SignOrder>()
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -171,7 +176,12 @@ const SignShopContent = ({ id }: Props) => {
       toast.success('Changes saved successfully!')
 
       // Redirect to view page
-      router.push(`/takeoffs/sign-order/view/${id}`)
+      const query = searchParams?.toString()
+      router.push(
+        query
+          ? `/takeoffs/sign-order/view/${id}?${query}`
+          : `/takeoffs/sign-order/view/${id}`
+      )
     } catch (error: any) {
       console.error('Error updating sign order:', error)
       stopLoading()
@@ -516,12 +526,28 @@ const SignShopContent = ({ id }: Props) => {
           </DialogContent>
         </Dialog>
       )}
-      <SiteHeader>
-        <div className='flex items-center justify-between'>
-          <h1 className='text-3xl font-bold mt-2 ml-0'>
-            Sign Shop Order Tracker
-          </h1>
-          <div className='flex gap-2'>
+      <SiteHeader showTitleBlock={false} />
+      <header className='sticky top-11 z-30 shrink-0 border-b bg-card'>
+        <div className='mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between'>
+          <div className='flex items-center gap-3'>
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => router.push(backToSignShopOrdersHref)}
+              className='rounded-full'
+            >
+              <ArrowLeft className='h-5 w-5' />
+            </Button>
+            <div>
+              <h1 className='text-lg font-bold tracking-tight text-foreground'>
+                Sign Shop Order Tracker
+              </h1>
+              <p className='text-xs text-muted-foreground'>
+                Order #{signOrder?.id ?? id}
+              </p>
+            </div>
+          </div>
+          <div className='flex flex-wrap items-center justify-end gap-2'>
             <Button
               onClick={handleSaveChanges}
               className='bg-black text-white hover:bg-gray-900'
@@ -539,7 +565,7 @@ const SignShopContent = ({ id }: Props) => {
             </Button>
           </div>
         </div>
-      </SiteHeader>
+      </header>
       {!isLoading && signOrder && (
         <div className='w-full flex flex-1 flex-col'>
           <div className='@container/main flex flex-1 flex-col gap-2'>

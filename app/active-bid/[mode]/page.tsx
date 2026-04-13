@@ -20,7 +20,7 @@ export default async function ActiveBidPage({params} : {params : any}) {
         <AppSidebar variant="inset" />
         <SidebarInset>
           {mode === 'view' && <SiteHeader/>}
-          <div className="flex flex-1 flex-col -mt-8">
+          <div className="flex flex-1 flex-col">
             <ActiveBidContent mode={mode}/>
           </div>
         </SidebarInset>

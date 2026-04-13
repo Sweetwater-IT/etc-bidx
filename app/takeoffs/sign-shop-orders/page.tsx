@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
@@ -51,9 +51,20 @@ const SEGMENTS = [
 
 export default function SignOrderPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<SignOrderView[]>([]);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const [activeSegment, setActiveSegment] = useState("all");
+  const currentParams = useMemo(
+    () => new URLSearchParams(searchParams?.toString() ?? ""),
+    [searchParams]
+  );
+  const urlSegment = currentParams.get("segment") || "all";
+  const parsedPage = Number.parseInt(currentParams.get("page") || "1", 10);
+  const parsedPageSize = Number.parseInt(currentParams.get("limit") || "25", 10);
+  const urlPageIndex = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage - 1 : 0;
+  const urlPageSize = Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 25;
+  const [activeSegment, setActiveSegment] = useState(urlSegment);
   const [segmentCounts, setSegmentCounts] = useState({
     all: 0,
     "not-started": 0,
@@ -62,8 +73,8 @@ export default function SignOrderPage() {
     complete: 0,
     archived: 0,
   });
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageIndex, setPageIndex] = useState(urlPageIndex);
+  const [pageSize, setPageSize] = useState(urlPageSize);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [sortBy, setSortBy] = useState<string | undefined>("created_at");
@@ -425,12 +436,14 @@ export default function SignOrderPage() {
   }, [selectedRows, handleDeleteSelected]);
 
   const handleRowClick = useCallback((row: SignOrderView) => {
-    router.push(`/takeoffs/sign-order/${row.id}`);
-  }, [router]);
+    const query = currentParams.toString();
+    router.push(query ? `/takeoffs/sign-order/${row.id}?${query}` : `/takeoffs/sign-order/${row.id}`);
+  }, [currentParams, router]);
 
   const handleViewDetails = useCallback((row: SignOrderView) => {
-    router.push(`/takeoffs/sign-order/${row.id}`);
-  }, [router]);
+    const query = currentParams.toString();
+    router.push(query ? `/takeoffs/sign-order/${row.id}?${query}` : `/takeoffs/sign-order/${row.id}`);
+  }, [currentParams, router]);
 
   const handleUnarchiveSignOrder = useCallback(async (item: SignOrderView) => {
     try {
@@ -470,13 +483,46 @@ export default function SignOrderPage() {
   }, [fetchCounts, fetchQuotes]);
 
   useEffect(() => {
-    if (pageIndex !== 0) {
-      setPageIndex(0);
-      return;
-    }
     fetchCounts();
     fetchQuotes();
   }, [debouncedSignShopSearch, activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to, fetchCounts, fetchQuotes]);
+
+  useEffect(() => {
+    setActiveSegment(prev => (prev === urlSegment ? prev : urlSegment));
+    setPageIndex(prev => (prev === urlPageIndex ? prev : urlPageIndex));
+    setPageSize(prev => (prev === urlPageSize ? prev : urlPageSize));
+  }, [urlSegment, urlPageIndex, urlPageSize]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(currentParams.toString());
+
+    if (activeSegment !== "all") {
+      nextParams.set("segment", activeSegment);
+    } else {
+      nextParams.delete("segment");
+    }
+
+    if (pageIndex > 0) {
+      nextParams.set("page", String(pageIndex + 1));
+    } else {
+      nextParams.delete("page");
+    }
+
+    if (pageSize !== 25) {
+      nextParams.set("limit", String(pageSize));
+    } else {
+      nextParams.delete("limit");
+    }
+
+    const nextQuery = nextParams.toString();
+    const currentQuery = currentParams.toString();
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+        scroll: false,
+      });
+    }
+  }, [activeSegment, currentParams, pageIndex, pageSize, pathname, router]);
 
   const dateLabel = useMemo(() => {
     const today = new Date();

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { SiteHeader } from '@/components/site-header'
@@ -23,6 +23,7 @@ import { FileMetadata } from '@/types/FileTypes'
 import FileViewingContainer from '@/components/file-viewing-container'
 import { SendEmailDialog } from './SendEmailDialog'
 import { Note } from '@/components/pages/quote-form/QuoteNotes'
+import { ArrowLeft } from 'lucide-react'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -94,6 +95,7 @@ const determineBranch = (id: number): string => {
 export default function SignOrderViewContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { dispatch, mptRental } = useSignOrderBuilder()
   const [signOrder, setSignOrder] = useState<SignOrder | null>(null)
   const [signItems, setSignItems] = useState<SignItem[]>([])
@@ -103,6 +105,9 @@ export default function SignOrderViewContent() {
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [openEmailDialog, setOpenEmailDialog] = useState(false)
   const [notes, setNotes] = useState<Note[]>([])
+  const backToSignShopOrdersHref = searchParams?.toString()
+    ? `/takeoffs/sign-shop-orders?${searchParams.toString()}`
+    : '/takeoffs/sign-shop-orders'
   // Order type checkboxes state
   const [isSale, setIsSale] = useState(false)
   const [isRental, setIsRental] = useState(false)
@@ -473,7 +478,12 @@ export default function SignOrderViewContent() {
 
   const handleEditOrder = () => {
     // Navigate to the sign shop page for editing
-    router.push(`/takeoffs/sign-order/edit/${params?.id}`)
+    const query = searchParams?.toString()
+    router.push(
+      query
+        ? `/takeoffs/sign-order/edit/${params?.id}?${query}`
+        : `/takeoffs/sign-order/edit/${params?.id}`
+    )
   }
 
   if (loading) {
@@ -495,10 +505,28 @@ export default function SignOrderViewContent() {
   return (
     <>
       <SendEmailDialog open={openEmailDialog} onOpenChange={setOpenEmailDialog} mptRental={mptRental} adminInfo={adminInfo} notes={notes} />
-      <SiteHeader>
-        <div className='flex items-center justify-between'>
-          <h1 className='text-3xl font-bold mt-2 ml-0'>View Sign Order</h1>
-          <div className='flex gap-2'>
+      <SiteHeader showTitleBlock={false} />
+      <header className='sticky top-11 z-30 shrink-0 border-b bg-card'>
+        <div className='mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between'>
+          <div className='flex items-center gap-3'>
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => router.push(backToSignShopOrdersHref)}
+              className='rounded-full'
+            >
+              <ArrowLeft className='h-5 w-5' />
+            </Button>
+            <div>
+              <h1 className='text-lg font-bold tracking-tight text-foreground'>
+                View Sign Order
+              </h1>
+              <p className='text-xs text-muted-foreground'>
+                Order #{signOrder?.id ?? params?.id}
+              </p>
+            </div>
+          </div>
+          <div className='flex flex-wrap items-center justify-end gap-2'>
             <Button
               onClick={handleEditOrder}
               className='bg-primary text-white hover:bg-primary/90'
@@ -525,7 +553,7 @@ export default function SignOrderViewContent() {
             </Button>
           </div>
         </div>
-      </SiteHeader>
+      </header>
       <div className='flex min-w-0 flex-1 flex-col overflow-x-hidden'>
         <div className='@container/main flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden'>
           <div className='flex min-w-0 flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6'>

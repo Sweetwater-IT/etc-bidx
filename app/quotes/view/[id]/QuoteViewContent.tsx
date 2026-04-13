@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { SiteHeader } from "@/components/site-header";
@@ -9,8 +9,6 @@ import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { QuoteNotes } from "@/components/pages/quote-form/QuoteNotes";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
@@ -41,12 +39,16 @@ function formatDateTime(ts: number | string) {
 
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [quoteType, setQuoteType] = useState<'quote' | 'sale_ticket'>('quote');
 
   const { user } = useAuth();
   const [downloading, setDownloading] = useState(false)
+  const backToQuotesHref = searchParams?.toString()
+    ? `/quotes?${searchParams.toString()}`
+    : "/quotes";
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -284,19 +286,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   };
   
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 68)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-
-      <SidebarInset>
-        <SiteHeader paddingTop={12} marginBottom={6}>
-        </SiteHeader>
+    <>
+      <SiteHeader paddingTop={12} marginBottom={6}>
+      </SiteHeader>
         <div className="flex w-full px-8 items-center justify-between">
           <div className="flex w-full flex-col items-center gap-3">
             <div className="flex w-full flex-row items-center justify-between">
@@ -305,7 +297,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   role="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => router.back()}
+                  onClick={() => router.push(backToQuotesHref)}
                   className="rounded-full flex flex-row"
                 >
                   <ArrowLeft className="h-6 w-6" />
@@ -502,8 +494,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             </div>
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
-
+    </>
   );
 }
