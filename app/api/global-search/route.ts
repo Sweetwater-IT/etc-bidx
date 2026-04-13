@@ -362,7 +362,7 @@ export async function GET(request: NextRequest) {
               ? buildSearchTarget("/l/contracts", { search: query })
               : `/l/contracts/view/${item.id}`,
         };
-      }));
+      });
 
     const allSignOrderItems = (signOrdersResult.data || [])
       .filter((item) => {
@@ -405,7 +405,7 @@ export async function GET(request: NextRequest) {
               ? buildSearchTarget("/takeoffs/sign-shop-orders", { search: query })
               : `/takeoffs/sign-order/view/${item.id}`,
         };
-      }));
+      });
 
     const allQuoteItems = (quotesResult.data || [])
       .filter((item) => {
@@ -446,7 +446,7 @@ export async function GET(request: NextRequest) {
               ? buildSearchTarget("/quotes", { search: query })
               : `/quotes/view/${item.id}`,
         };
-      }));
+      });
 
     const allCustomerItems = customers.map((item) => ({
       id: String(item.id),
