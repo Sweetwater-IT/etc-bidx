@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 import { cn } from "@/lib/utils"
 
 export interface CountyOption {
@@ -46,12 +48,29 @@ export function CountySelector({
   className,
   contentClassName,
 }: CountySelectorProps) {
+  const [open, setOpen] = useState(false)
+  const interactionLogRef = useRef({ wheel: false, scroll: false, touch: false })
+
+  useEffect(() => {
+    if (!open) {
+      interactionLogRef.current = { wheel: false, scroll: false, touch: false }
+    }
+  }, [open])
+
   return (
-    <Popover modal={false}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        restorePointerEvents()
+      }}
+      modal={false}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
+          aria-expanded={open}
           disabled={disabled}
           className={cn("w-full justify-between", className)}
         >
@@ -60,19 +79,49 @@ export function CountySelector({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className={cn("w-[var(--radix-popover-trigger-width)] p-0", contentClassName)}
+        align="start"
+        className={cn("z-[70] w-[var(--radix-popover-trigger-width)] p-0", contentClassName)}
         avoidCollisions={false}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          restorePointerEvents()
+        }}
       >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandEmpty>{emptyMessage}</CommandEmpty>
-          <CommandList className="max-h-80 overflow-y-auto" data-testid="county-selector-list">
+          <CommandList
+            className="max-h-80 overflow-y-auto overflow-x-hidden overscroll-contain"
+            data-testid="county-selector-list"
+            onWheelCapture={(event) => {
+              event.stopPropagation()
+              restorePointerEvents()
+              interactionLogRef.current.wheel = true
+            }}
+            onScrollCapture={(event) => {
+              event.stopPropagation()
+              interactionLogRef.current.scroll = true
+            }}
+            onTouchMoveCapture={(event) => {
+              event.stopPropagation()
+              restorePointerEvents()
+              interactionLogRef.current.touch = true
+            }}
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             <CommandGroup>
-              {counties.map(county => (
+              {counties.map((county) => (
                 <CommandItem
                   key={county.id}
                   value={county.name}
-                  onSelect={() => onSelect(String(county.id))}
+                  onPointerDownCapture={() => {
+                    restorePointerEvents()
+                  }}
+                  onSelect={() => {
+                    restorePointerEvents()
+                    onSelect(String(county.id))
+                    setOpen(false)
+                  }}
                 >
                   <Check
                     className={cn(

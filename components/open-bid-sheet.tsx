@@ -828,12 +828,6 @@ export function OpenBidSheet({
                     (!job && !areAllRequiredFieldsFilled()) ||
                     !isValid
                   }
-                  onClick={(e) => {
-                    console.log("Submit button clicked");
-                    if (!isSubmitting) {
-                      handleSubmit(e as unknown as React.FormEvent);
-                    }
-                  }}
                 >
                   {isSubmitting
                     ? job

@@ -49,6 +49,20 @@ const mapUiStatusToDbStatus = (uiStatus?: string): "Bid" | "No Bid" | "Unset" | 
     return undefined;
 };
 
+const buildUniqueOptions = <T,>(items: T[], getValue: (item: T) => string) => {
+    const seen = new Set<string>();
+
+    return items.flatMap((item) => {
+        const value = getValue(item).trim();
+        if (!value || seen.has(value)) {
+            return [];
+        }
+
+        seen.add(value);
+        return [{ label: value, value }];
+    });
+};
+
 export type JobPageData = AvailableJob | ActiveBid | ActiveJob;
 
 export function BidBoardContent() {
@@ -123,9 +137,6 @@ export function BidBoardContent() {
         contractors: [],
     });
 
-    // Define filter options for the Available Jobs table
-    const [filterOptions, setFilterOptions] = useState<FilterOption[]>([]);
-
     useEffect(() => {
         getCustomers();
     }, [getCustomers])
@@ -169,41 +180,32 @@ export function BidBoardContent() {
         fetchReferenceData();
     }, []);
 
-    // Initialize filter options when reference data is loaded
-    useEffect(() => {
-        if (referenceData.counties.length > 0 || referenceData.owners.length > 0 || referenceData.branches.length > 0) {
-            const options: FilterOption[] = isAvailableJobs ? [
+    const filterOptions = useMemo<FilterOption[]>(() => {
+        if (referenceData.counties.length === 0 && referenceData.owners.length === 0 && referenceData.branches.length === 0) {
+            return [];
+        }
+
+        if (isAvailableJobs) {
+            return [
                 {
                     label: 'County',
                     field: 'county',
-                    options: referenceData.counties.map(county => ({
-                        label: county.name,
-                        value: county.name
-                    }))
+                    options: buildUniqueOptions(referenceData.counties, county => county.name)
                 },
                 {
                     label: 'Owner',
                     field: 'owner',
-                    options: referenceData.owners.map(owner => ({
-                        label: owner.name,
-                        value: owner.name
-                    }))
+                    options: buildUniqueOptions(referenceData.owners, owner => owner.name)
                 },
                 {
-                    label: isAvailableJobs ? 'Requestor' : 'Estimator',
+                    label: 'Requestor',
                     field: 'requestor',
-                    options: referenceData.estimators.map(estimator => ({
-                        label: estimator.name,
-                        value: estimator.name
-                    }))
+                    options: buildUniqueOptions(referenceData.estimators, estimator => estimator.name)
                 },
                 {
                     label: 'Branch',
                     field: 'branch',
-                    options: referenceData.branches.map(branch => ({
-                        label: branch.name,
-                        value: branch.name
-                    }))
+                    options: buildUniqueOptions(referenceData.branches, branch => branch.name)
                 },
                 {
                     label: 'Status',
@@ -214,30 +216,25 @@ export function BidBoardContent() {
                         { label: 'Unset', value: 'Unset' }
                     ]
                 }
-            ] : isActiveBids ? [
+            ];
+        }
+
+        if (isActiveBids) {
+            return [
                 {
                     label: 'County',
                     field: 'county',
-                    options: referenceData.counties.map(county => ({
-                        label: county.name,
-                        value: county.name
-                    }))
+                    options: buildUniqueOptions(referenceData.counties, county => county.name)
                 },
                 {
                     label: 'Owner',
                     field: 'owner',
-                    options: referenceData.owners.map(owner => ({
-                        label: owner.name,
-                        value: owner.name
-                    }))
+                    options: buildUniqueOptions(referenceData.owners, owner => owner.name)
                 },
                 {
                     label: 'Branch',
                     field: 'branch',
-                    options: referenceData.branches.map(branch => ({
-                        label: branch.name,
-                        value: branch.name
-                    }))
+                    options: buildUniqueOptions(referenceData.branches, branch => branch.name)
                 },
                 {
                     label: 'Status',
@@ -250,53 +247,48 @@ export function BidBoardContent() {
                         { label: 'Won - Pending', value: 'Won - Pending' }
                     ]
                 }
-            ] : [
-                {
-                    label: 'Contractor',
-                    field: 'contractor',
-                    options: referenceData.contractors.map(contractor => ({
-                        label: contractor.name,
-                        value: contractor.name
-                    }))
-                },
-                {
-                    label: 'Project Status',
-                    field: 'projectStatus',
-                    options: [
-                        { label: 'NOT STARTED', value: 'NOT_STARTED' },
-                        { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
-                        { label: 'COMPLETE', value: 'COMPLETE' }
-                    ]
-                },
-                {
-                    label: 'Billing Status',
-                    field: 'billingStatus',
-                    options: [
-                        { label: 'NOT STARTED', value: 'NOT_STARTED' },
-                        { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
-                        { label: 'COMPLETE', value: 'COMPLETE' }
-                    ]
-                },
-                {
-                    label: 'County',
-                    field: 'county',
-                    options: referenceData.counties.map(county => ({
-                        label: county.name,
-                        value: county.name
-                    }))
-                },
-                {
-                    label: 'Branch',
-                    field: 'branch',
-                    options: referenceData.branches.filter(branch => branch.name !== 'tes').map(branch => ({
-                        label: branch.name,
-                        value: branch.name
-                    }))
-                }
             ];
-            setFilterOptions(options);
         }
-    }, [referenceData, isAvailableJobs, isActiveBids, customers]);
+
+        return [
+            {
+                label: 'Contractor',
+                field: 'contractor',
+                options: buildUniqueOptions(referenceData.contractors, contractor => contractor.name)
+            },
+            {
+                label: 'Project Status',
+                field: 'projectStatus',
+                options: [
+                    { label: 'NOT STARTED', value: 'NOT_STARTED' },
+                    { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
+                    { label: 'COMPLETE', value: 'COMPLETE' }
+                ]
+            },
+            {
+                label: 'Billing Status',
+                field: 'billingStatus',
+                options: [
+                    { label: 'NOT STARTED', value: 'NOT_STARTED' },
+                    { label: 'IN PROGRESS', value: 'IN_PROGRESS' },
+                    { label: 'COMPLETE', value: 'COMPLETE' }
+                ]
+            },
+            {
+                label: 'County',
+                field: 'county',
+                options: buildUniqueOptions(referenceData.counties, county => county.name)
+            },
+            {
+                label: 'Branch',
+                field: 'branch',
+                options: buildUniqueOptions(
+                    referenceData.branches.filter(branch => branch.name !== 'tes'),
+                    branch => branch.name
+                )
+            }
+        ];
+    }, [isActiveBids, isAvailableJobs, referenceData]);
 
     // Extract filter options from filterOptions state
     const branchOptions = useMemo(() => filterOptions?.find(opt => opt.field === 'branch')?.options || [], [filterOptions]);

@@ -42,7 +42,6 @@ import type { ContractListItem } from "@/types/contract";
 import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 import { cn } from "@/lib/utils";
 import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
-import { TableSearchBar } from "@/components/TableSearchBar";
 import { useTableSearchState } from "@/hooks/use-table-search-state";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
@@ -674,12 +673,6 @@ const ContractManager = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <TableSearchBar
-              value={search}
-              onChange={setSearch}
-              placeholder="Search contracts..."
-              className="hidden min-w-[280px] lg:block"
-            />
             <div className="hidden lg:flex items-center gap-2">
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger asChild>

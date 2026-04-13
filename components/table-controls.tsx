@@ -133,6 +133,7 @@ export function FilterDropdowns({
   const [dateTo, setDateTo] = useState<Date | undefined>(
     activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined
   );
+  const [openFilterField, setOpenFilterField] = useState<string | null>(null);
 
   // Initialize filter values from activeFilters
   useEffect(() => {
@@ -146,6 +147,12 @@ export function FilterDropdowns({
     setDateFrom(activeFilters?.dateFrom ? new Date(activeFilters.dateFrom[0]) : undefined);
     setDateTo(activeFilters?.dateTo ? new Date(activeFilters.dateTo[0]) : undefined);
   }, [activeFilters, filterOptions]);
+
+  useEffect(() => {
+    if (!showFilters) {
+      setOpenFilterField(null);
+    }
+  }, [showFilters]);
 
   // Apply filters function
   const applyFilters = useCallback(() => {
@@ -178,13 +185,43 @@ export function FilterDropdowns({
     onFilterChange(filters);
   }, [filterValues, dateField, dateFrom, dateTo, onFilterChange, activeFilters, filterOptions]);
 
-  // Update individual filter value
-  const updateFilterValue = useCallback((field: string, value: string) => {
-    setFilterValues(prev => ({
-      ...prev,
+  const applySingleFilter = useCallback((field: string, value: string) => {
+    const nextValues = {
+      ...filterValues,
       [field]: value
-    }));
-  }, []);
+    };
+
+    setFilterValues(nextValues);
+
+    if (onFilterChange) {
+      const filters: Record<string, any> = { ...activeFilters };
+
+      filterOptions.forEach(option => {
+        const optionValue = nextValues[option.field];
+        if (optionValue && optionValue !== "all") {
+          filters[option.field] = [optionValue];
+        } else {
+          delete filters[option.field];
+        }
+      });
+
+      if (dateField && dateField !== "none") {
+        filters.dateField = [dateField];
+        if (dateFrom) filters.dateFrom = [dateFrom.toISOString().split('T')[0]];
+        else delete filters.dateFrom;
+        if (dateTo) filters.dateTo = [dateTo.toISOString().split('T')[0]];
+        else delete filters.dateTo;
+      } else {
+        delete filters.dateField;
+        delete filters.dateFrom;
+        delete filters.dateTo;
+      }
+
+      onFilterChange(filters);
+    }
+
+    setOpenFilterField(null);
+  }, [activeFilters, dateField, dateFrom, dateTo, filterOptions, filterValues, onFilterChange]);
 
   // Simple pluralization function
   const pluralize = (word: string): string => {
@@ -216,7 +253,10 @@ export function FilterDropdowns({
       {/* Dynamic Filter Options */}
       {filterOptions.map((option) => (
         <div key={option.field} className="w-40 sm:w-44">
-          <Popover>
+          <Popover
+            open={openFilterField === option.field}
+            onOpenChange={(open) => setOpenFilterField(open ? option.field : null)}
+          >
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -237,8 +277,7 @@ export function FilterDropdowns({
                     key="all"
                     value="all"
                     onSelect={() => {
-                      updateFilterValue(option.field, "all");
-                      console.log(`${option.label} selected: all`);
+                      applySingleFilter(option.field, "all");
                     }}
                   >
                     <Check
@@ -254,8 +293,7 @@ export function FilterDropdowns({
                       key={optionItem.value}
                       value={optionItem.label}
                       onSelect={() => {
-                        updateFilterValue(option.field, optionItem.value);
-                        console.log(`${option.label} selected:`, optionItem.value);
+                        applySingleFilter(option.field, optionItem.value);
                       }}
                     >
                       <Check
@@ -268,18 +306,6 @@ export function FilterDropdowns({
                     </CommandItem>
                   ))}
                 </CommandGroup>
-                <div className="p-2 border-t">
-                  <Button
-                    variant="default"
-                    className="w-full"
-                    onClick={() => {
-                      console.log(`Apply ${option.label} Filter clicked`);
-                      applyFilters();
-                    }}
-                  >
-                    Apply Filter
-                  </Button>
-                </div>
               </Command>
             </PopoverContent>
           </Popover>
