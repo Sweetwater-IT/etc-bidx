@@ -4,12 +4,10 @@ import QuoteFormContent from "./QuoteFormContent";
 
 export default function CreateQuotePage() {
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="flex-1 overflow-auto">
-        <QuoteFormProvider>
-          <QuoteFormContent />
-        </QuoteFormProvider>
-      </div>
+    <div className="flex flex-1 flex-col">
+      <QuoteFormProvider>
+        <QuoteFormContent />
+      </QuoteFormProvider>
     </div>
   );
 }

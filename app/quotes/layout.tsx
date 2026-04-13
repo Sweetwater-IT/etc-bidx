@@ -11,7 +11,7 @@ export default function QuotesLayout({
 }>) {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/quotes/edit/")) {
+  if (pathname === "/quotes/create" || pathname?.startsWith("/quotes/edit/")) {
     return <>{children}</>;
   }
 
