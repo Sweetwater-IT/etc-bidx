@@ -451,8 +451,6 @@ const SignShopAdminInfo = ({
     )
 
     setEditing(false)
-    setCustomerPopoverOpen(false)
-    setContactPopoverOpen(false)
     setOrderTypePopoverOpen(false)
     toast.success('Admin info updated')
   }
