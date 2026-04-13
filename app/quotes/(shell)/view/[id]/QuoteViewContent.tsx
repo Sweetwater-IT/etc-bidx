@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { ChevronDown, ArrowLeft, Loader, Download, Loader2, FileText, Send } from "lucide-react"
 import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
 import ReactPDF from '@react-pdf/renderer'
-import BidProposalWorksheet from "../../create/BidProposalWorksheet";
+import BidProposalWorksheet from "@/app/quotes/(shell)/create/BidProposalWorksheet";
 import { Quote } from "@/types/MPTEquipmentCost";
 
 

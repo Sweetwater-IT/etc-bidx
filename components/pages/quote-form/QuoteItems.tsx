@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/quotes/(shell)/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
 import { useEffect, useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";

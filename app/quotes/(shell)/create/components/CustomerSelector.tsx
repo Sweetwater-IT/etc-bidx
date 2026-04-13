@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
-import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider'
+import { useQuoteForm } from '@/app/quotes/(shell)/create/QuoteFormProvider'
 import type { Customer as QuoteCustomer } from '@/types/Customer'
 import { CustomerSelector as SharedCustomerSelector } from '@/components/CustomerSelector'
 import { ContactSelector as SharedContactSelector } from '@/components/ContactSelector'

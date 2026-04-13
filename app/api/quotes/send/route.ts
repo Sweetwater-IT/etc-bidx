@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { createQuoteEmailHtml } from "@/app/quotes/create/ProposalHTML";
+import { createQuoteEmailHtml } from "@/app/quotes/(shell)/create/ProposalHTML";
 import { AdminData } from "@/types/TAdminData";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
 import { AdminDataEntry } from "@/types/TAdminDataEntry";
