@@ -27,6 +27,8 @@ interface SearchSection {
   key: string;
   label: string;
   items: SearchResultItem[];
+  totalCount: number;
+  seeAllTarget: string;
 }
 
 interface GlobalSearchModalProps {
@@ -131,10 +133,17 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
             <div className="space-y-5">
               {sections.map((section) => (
                 <section key={section.key} className="space-y-2">
-                  <div className="border-b pb-2">
+                  <div className="flex items-center justify-between border-b pb-2">
                     <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                       {section.label}
                     </h3>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(section.seeAllTarget)}
+                      className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+                    >
+                      See all ({section.totalCount})
+                    </button>
                   </div>
                   <div className="space-y-2">
                     {section.items.map((item) => (
@@ -168,6 +177,13 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
               ))}
             </div>
           )}
+        </div>
+
+        <div className="flex items-center justify-between border-t bg-muted/20 px-6 py-3 text-xs text-muted-foreground">
+          <span>Press Enter on a result to open it, or use See all to open the filtered table.</span>
+          <span className="rounded-full border bg-background px-2 py-1 font-medium">
+            Esc to close
+          </span>
         </div>
       </DialogContent>
     </Dialog>

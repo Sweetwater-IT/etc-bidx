@@ -210,7 +210,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     <div className={`flex w-full bg-white z-50 items-center sticky justify-between px-6 gap-2 pb-4 mb-6 ${
       mode === 'view'
         ? 'top-11 pt-4 border-b'
-        : 'top-0 pt-6 mt-2 border-b-1'
+        : 'top-0 pt-6 border-b'
     }`}>
       <div className='flex items-center gap-x-0'>
         {mode !== 'view' && <Button variant='ghost' onClick={handleSubmit}>
