@@ -33,6 +33,10 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
   const { startLoading, stopLoading } = useLoading()
 
   const router = useRouter();
+  const closeHref =
+    mode === 'edit' && bidId && !isNaN(Number(bidId))
+      ? `/active-bid/view?bidId=${bidId}`
+      : '/bid-list'
 
   const saveTimeoutRef = useRef<number | null>(null)
 
@@ -145,7 +149,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
   const handleSubmit = async () => {
     if (!adminData.contractNumber || adminData.contractNumber.trim() === '') {
-      router.replace('/bid-list')
+      router.replace(closeHref)
       return;
     }
     else {
@@ -155,7 +159,7 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
         await createActiveBid(adminData, mptRental, equipmentRental, flagging ?? defaultFlaggingObject, 
         serviceWork ?? defaultFlaggingObject, saleItems, permanentSigns ?? defaultPermanentSignsObject, statusToUse, notes, id ?? undefined);
         toast.success(`Bid number ${adminData.contractNumber} successfully saved.`)
-        router.replace('/bid-list')
+        router.replace(closeHref)
       } catch (error) {
         console.error("Error creating bid:", error);
         toast.error('Bid not successfully saved as draft: ' + error)

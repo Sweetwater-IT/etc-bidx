@@ -1,11 +1,20 @@
+"use client";
+
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { usePathname } from "next/navigation";
 
 export default function QuotesLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/quotes/edit/")) {
+    return <>{children}</>;
+  }
+
   return (
     <SidebarProvider
       style={
