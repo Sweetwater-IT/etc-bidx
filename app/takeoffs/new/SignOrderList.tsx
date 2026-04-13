@@ -31,7 +31,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import SignPickerModal from '@/components/pages/active-bid/signs/SignPickerModal';
+import SignPickerModal from '@/components/sign-picker-modal';
 import { safeNumber } from '@/lib/safe-number';
 import { Input } from '@/components/ui/input';
 import {

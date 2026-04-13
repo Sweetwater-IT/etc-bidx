@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
+import { useSignCatalog } from '@/hooks/use-sign-catalog';
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
-import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, SignsApiResponse, KitVariant } from '@/types/MPTEquipment';
+import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, KitVariant } from '@/types/MPTEquipment';
 import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-stable-id';
 import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
-import { createClient } from '@supabase/supabase-js';
 
 export interface RuntimeSignPickerModalProps {
     open: boolean;
@@ -78,19 +78,30 @@ const SIGN_ORDER_B_LIGHT_OPTIONS = [
 
 const SIGN_ORDER_SELECTED_CARD_CLASSES = "border-emerald-500/20 bg-emerald-500/5 text-emerald-700";
 const SIGN_ORDER_UNSELECTED_CARD_CLASSES = "border-border hover:bg-muted/50";
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
+function PickerEmptyState({
+    title,
+    description,
+}: {
+    title: string;
+    description: string;
+}) {
+    return (
+        <div className="rounded-xl border border-dashed bg-muted/20 px-5 py-8 text-center">
+            <div className="mx-auto max-w-sm space-y-2">
+                <div className="text-sm font-semibold text-foreground">{title}</div>
+                <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+            </div>
+        </div>
+    );
+}
 
 const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder, useSegmentedPicker = false }: RuntimeSignPickerModalProps) => {
     const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
-    const [apiData, setApiData] = useState<SignsApiResponse | null>(null);
     const [filteredSigns, setFilteredSigns] = useState<SignDesignation[]>([]);
     const [filteredPataKits, setFilteredPataKits] = useState<PataKit[]>([]);
     const [filteredPtsKits, setFilteredPtsKits] = useState<PtsKit[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [designationOpen, setDesignationOpen] = useState(false);
     const [isCustom, setIsCustom] = useState(sign.isCustom || false);
     const [kitStepperOpen, setKitStepperOpen] = useState(false);
@@ -104,6 +115,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
     const [mutcdSearch, setMutcdSearch] = useState('');
     const [pataSearch, setPataSearch] = useState('');
     const [ptsSearch, setPtsSearch] = useState('');
+    const { catalog: apiData, isLoading, error: signCatalogError } = useSignCatalog();
 
     const isSecondary = isSecondarySign(sign);
     const isSegmentedPickerFlow = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary);
@@ -174,203 +186,35 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
         };
     };
 
-    // Fetch sign designations data
     useEffect(() => {
-        const loadSignData = async () => {
-            setIsLoading(true);
-            try {
-                logSignOrderDebug('sign_picker_fetch_started', {
-                    open,
-                    currentPhase,
-                });
-
-                const { data: signsDataRaw, error: signsError } = await supabase
-                    .from('signs_all')
-                    .select('id, designation, description, category, sizes, sheeting, image_url')
-                    .order('designation');
-
-                if (signsError) {
-                    throw new Error(`Failed to fetch MUTCD signs: ${signsError.message}`);
-                }
-
-                const signsData: SignDesignation[] = (signsDataRaw || []).map((sign: any) => {
-                    const dimensions = (sign.sizes || []).map((sizeStr: string) => {
-                        const [widthStr, heightStr] = sizeStr.split(' x ');
-                        const width = parseFloat(widthStr);
-                        const height = parseFloat(heightStr);
-                        return !isNaN(width) && !isNaN(height) ? { width, height } : null;
-                    }).filter((dim): dim is { width: number; height: number } => dim !== null);
-
-                    return {
-                        ...sign,
-                        dimensions: dimensions.length > 0 ? dimensions : [{ width: 0, height: 0 }],
-                    };
-                });
-
-                logSignOrderDebug('sign_picker_fetch_signs_success', {
-                    count: signsData.length,
-                });
-
-                const { data: pataKitsData, error: pataKitsError } = await supabase
-                    .from('pata_kits')
-                    .select('id, code, description, image_url, finished, reviewed, has_variants')
-                    .order('code');
-
-                if (pataKitsError) {
-                    throw new Error(`Failed to fetch PATA kits: ${pataKitsError.message}`);
-                }
-
-                logSignOrderDebug('sign_picker_fetch_pata_kits_success', {
-                    count: pataKitsData?.length ?? 0,
-                });
-
-                const { data: pataVariantsData, error: pataVariantsError } = await supabase
-                    .from('kit_variants')
-                    .select('id, kit_id, variant_label, description, finished, blights, created_at');
-
-                if (pataVariantsError) {
-                    throw new Error(`Failed to fetch PATA kit variants: ${pataVariantsError.message}`);
-                }
-
-                const pataVariantsMap = new Map<number, KitVariant[]>();
-                (pataVariantsData || []).forEach((variant) => {
-                    const existing = pataVariantsMap.get(Number(variant.kit_id)) || [];
-                    existing.push({
-                        id: Number(variant.id),
-                        kit_id: Number(variant.kit_id),
-                        label: variant.variant_label,
-                        description: variant.description || undefined,
-                        finished: variant.finished || false,
-                        blights: variant.blights || 0,
-                        bLights: variant.blights || 0,
-                        created_at: variant.created_at || undefined,
-                    });
-                    pataVariantsMap.set(Number(variant.kit_id), existing);
-                });
-
-                const pataKitsWithContents = await Promise.all(
-                    (pataKitsData || []).map(async (kit) => {
-                        const { data: contents, error: contentsError } = await supabase
-                            .from('pata_kit_contents')
-                            .select('sign_designation, quantity, blight_quantity, kit_variant_id')
-                            .eq('pata_kit_code', kit.code);
-
-                        if (contentsError) {
-                            throw new Error(`Failed to fetch PATA kit contents for ${kit.code}: ${contentsError.message}`);
-                        }
-
-                        return {
-                            ...kit,
-                            contents: contents || [],
-                            signCount: contents?.length || 0,
-                            variants: pataVariantsMap.get(Number(kit.id)) || [],
-                            selectedVariant: null,
-                        };
-                    })
-                );
-
-                logSignOrderDebug('sign_picker_fetch_pata_contents_success', {
-                    count: pataKitsWithContents.length,
-                    populatedCount: pataKitsWithContents.filter((kit) => (kit.contents?.length ?? 0) > 0).length,
-                });
-
-                const { data: ptsKitsData, error: ptsKitsError } = await supabase
-                    .from('pts_kits')
-                    .select('id, code, description, image_url, finished, reviewed, has_variants')
-                    .order('code');
-
-                if (ptsKitsError) {
-                    throw new Error(`Failed to fetch PTS kits: ${ptsKitsError.message}`);
-                }
-
-                logSignOrderDebug('sign_picker_fetch_pts_kits_success', {
-                    count: ptsKitsData?.length ?? 0,
-                });
-
-                const { data: ptsVariantsData, error: ptsVariantsError } = await supabase
-                    .from('kit_variants')
-                    .select('id, kit_id, variant_label, description, finished, blights, created_at');
-
-                if (ptsVariantsError) {
-                    throw new Error(`Failed to fetch PTS kit variants: ${ptsVariantsError.message}`);
-                }
-
-                const ptsVariantsMap = new Map<number, KitVariant[]>();
-                (ptsVariantsData || []).forEach((variant) => {
-                    const existing = ptsVariantsMap.get(Number(variant.kit_id)) || [];
-                    existing.push({
-                        id: Number(variant.id),
-                        kit_id: Number(variant.kit_id),
-                        label: variant.variant_label,
-                        description: variant.description || undefined,
-                        finished: variant.finished || false,
-                        blights: variant.blights || 0,
-                        bLights: variant.blights || 0,
-                        created_at: variant.created_at || undefined,
-                    });
-                    ptsVariantsMap.set(Number(variant.kit_id), existing);
-                });
-
-                const ptsKitsWithContents = await Promise.all(
-                    (ptsKitsData || []).map(async (kit) => {
-                        const { data: contents, error: contentsError } = await supabase
-                            .from('pts_kit_contents')
-                            .select('sign_designation, quantity, kit_variant_id')
-                            .eq('pts_kit_code', kit.code);
-
-                        if (contentsError) {
-                            throw new Error(`Failed to fetch PTS kit contents for ${kit.code}: ${contentsError.message}`);
-                        }
-
-                        return {
-                            ...kit,
-                            contents: contents || [],
-                            signCount: contents?.length || 0,
-                            variants: ptsVariantsMap.get(Number(kit.id)) || [],
-                            selectedVariant: null,
-                        };
-                    })
-                );
-
-                logSignOrderDebug('sign_picker_fetch_pts_contents_success', {
-                    count: ptsKitsWithContents.length,
-                    populatedCount: ptsKitsWithContents.filter((kit) => (kit.contents?.length ?? 0) > 0).length,
-                });
-
-                const nextApiData = {
-                    signs: signsData,
-                    pataKits: pataKitsWithContents,
-                    ptsKits: ptsKitsWithContents,
-                };
-
-                setApiData(nextApiData as SignsApiResponse);
-                setFilteredSigns(signsData);
-                setFilteredPataKits(pataKitsWithContents);
-                setFilteredPtsKits(ptsKitsWithContents);
-
-                logSignOrderDebug('sign_picker_fetch_complete', {
-                    signsCount: signsData.length,
-                    pataCount: pataKitsWithContents.length,
-                    ptsCount: ptsKitsWithContents.length,
-                });
-            } catch (error) {
-                console.error("Error fetching sign data:", error);
-                logSignOrderDebug('sign_picker_fetch_failed', {
-                    error: error instanceof Error ? error.message : String(error),
-                });
-                setApiData({ signs: [], pataKits: [], ptsKits: [] });
-                setFilteredSigns([]);
-                setFilteredPataKits([]);
-                setFilteredPtsKits([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (open) {
-            loadSignData();
+        if (!signCatalogError) {
+            return;
         }
-    }, [open]);
+
+        console.error("Error fetching sign data:", signCatalogError);
+        logSignOrderDebug('sign_picker_fetch_failed', {
+            error: signCatalogError,
+        });
+    }, [signCatalogError]);
+
+    useEffect(() => {
+        if (!apiData) {
+            setFilteredSigns([]);
+            setFilteredPataKits([]);
+            setFilteredPtsKits([]);
+            return;
+        }
+
+        setFilteredSigns(apiData.signs || []);
+        setFilteredPataKits(apiData.pataKits || []);
+        setFilteredPtsKits(apiData.ptsKits || []);
+
+        logSignOrderDebug('sign_picker_fetch_complete', {
+            signsCount: apiData.signs?.length ?? 0,
+            pataCount: apiData.pataKits?.length ?? 0,
+            ptsCount: apiData.ptsKits?.length ?? 0,
+        });
+    }, [apiData]);
 
     // Update local sign when prop changes
     useEffect(() => {
@@ -1006,7 +850,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     </div>
                                 </button>
                                 {filteredSigns.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">No designations found.</div>
+                                    <PickerEmptyState
+                                        title="No matching MUTCD signs"
+                                        description={mutcdSearch.trim()
+                                            ? "Try a different designation or description, or create a custom sign instead."
+                                            : "No MUTCD signs are available right now. You can still create a custom sign."}
+                                    />
                                 ) : (
                                     filteredSigns.map((designation) => (
                                         <button
@@ -1059,7 +908,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     />
                                 </div>
                                 {filteredPataKits.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">No PATA kits found.</div>
+                                    <PickerEmptyState
+                                        title="No matching PATA kits"
+                                        description={pataSearch.trim()
+                                            ? "Try a different kit code or keyword."
+                                            : "No PATA kits are available right now."}
+                                    />
                                 ) : (
                                     filteredPataKits.map((kit) => (
                                         <button
@@ -1106,7 +960,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     />
                                 </div>
                                 {filteredPtsKits.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">No PTS kits found.</div>
+                                    <PickerEmptyState
+                                        title="No matching PTS kits"
+                                        description={ptsSearch.trim()
+                                            ? "Try a different kit code or keyword."
+                                            : "No PTS kits are available right now."}
+                                    />
                                 ) : (
                                     filteredPtsKits.map((kit) => (
                                         <button

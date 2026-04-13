@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Minus, Trash2, Copy, Search } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
-import SignPickerModal, { SignPickerModalResult } from "@/components/pages/active-bid/signs/SignPickerModal";
+import SignPickerModal, { SignPickerModalResult } from "@/components/sign-picker-modal";
 import { PrimarySign } from "@/types/MPTEquipment";
 import { createClient } from '@supabase/supabase-js';
 import { QuantityInput } from "@/components/ui/quantity-input";

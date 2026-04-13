@@ -1,1 +1,1 @@
-export { default } from '@/components/pages/active-bid/signs/SignPickerModal';
+export { default } from '@/components/sign-picker-modal';

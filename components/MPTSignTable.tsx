@@ -26,7 +26,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
 import { Fragment, useEffect, useState, useRef } from 'react';
-import SignPickerModal, { SignPickerModalResult } from "@/components/pages/active-bid/signs/SignPickerModal";
+import SignPickerModal, { SignPickerModalResult } from "@/components/sign-picker-modal";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { QuantityInput } from "@/components/ui/quantity-input";
 

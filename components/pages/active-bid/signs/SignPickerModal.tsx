@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import RuntimeSignPickerModal, {
   RuntimeSignPickerModalProps,
 } from '@/app/takeoffs/new/RuntimeSignPickerModal';
@@ -19,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSignCatalog } from '@/hooks/use-sign-catalog';
 import { cn } from '@/lib/utils';
 import {
   PrimarySign,
@@ -26,11 +26,6 @@ import {
   SignDesignation,
 } from '@/types/MPTEquipment';
 import { Check, Plus, Search } from 'lucide-react';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const MPT_B_LIGHT_OPTIONS = [
   { value: 'none', label: 'None' },
@@ -78,6 +73,23 @@ const isRuntimeProps = (
 ): props is RuntimeSignPickerModalProps =>
   props.mode === 'create' || props.mode === 'edit';
 
+function PickerEmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed bg-muted/20 px-5 py-8 text-center">
+      <div className="mx-auto max-w-sm space-y-2">
+        <div className="text-sm font-semibold text-foreground">{title}</div>
+        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
+
 const HostSignPickerModal = ({
   open,
   onOpenChange,
@@ -94,48 +106,17 @@ const HostSignPickerModal = ({
   const [step, setStep] = useState<PickerStep>('designation');
   const [activeTab, setActiveTab] = useState<'mutcd'>('mutcd');
   const [search, setSearch] = useState('');
-  const [signs, setSigns] = useState<SignDesignation[]>([]);
   const [selectedDesignation, setSelectedDesignation] = useState<SignDesignation | null>(null);
   const [draftSign, setDraftSign] = useState<PrimarySign | SecondarySign>(initialSign);
   const [structureType, setStructureType] = useState(initialStructureType);
   const [bLights, setBLights] = useState(initialBLights);
   const [includeCover, setIncludeCover] = useState(initialCover);
+  const { catalog } = useSignCatalog();
+  const signs = catalog?.signs ?? [];
 
   const isSecondary = useMemo(() => isSecondarySign(draftSign), [draftSign]);
   const modalTitle = intent === 'add' ? 'Add Sign' : 'Edit Sign';
   const showMptOptions = mode === 'mpt' && !isSecondary;
-
-  useEffect(() => {
-    const fetchSigns = async () => {
-      const { data } = await supabase
-        .from('signs_all')
-        .select('designation, description, sheeting, sizes, image_url')
-        .order('designation');
-
-      const mapped: SignDesignation[] = (data || []).map((sign: any) => {
-        const dimensions = (sign.sizes || [])
-          .map((sizeStr: string) => {
-            const [widthStr, heightStr] = sizeStr.split(' x ');
-            const width = parseFloat(widthStr);
-            const height = parseFloat(heightStr);
-            return !Number.isNaN(width) && !Number.isNaN(height) ? { width, height } : null;
-          })
-          .filter((dim): dim is { width: number; height: number } => dim !== null);
-
-        return {
-          designation: sign.designation,
-          description: sign.description,
-          sheeting: sign.sheeting,
-          image_url: sign.image_url,
-          dimensions,
-        };
-      });
-
-      setSigns(mapped);
-    };
-
-    fetchSigns();
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -288,7 +269,12 @@ const HostSignPickerModal = ({
                 </button>
 
                 {filteredSigns.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No designations found.</div>
+                  <PickerEmptyState
+                    title="No matching MUTCD signs"
+                    description={search.trim()
+                      ? "Try a different designation or description, or create a custom sign instead."
+                      : "No MUTCD signs are available right now. You can still create a custom sign."}
+                  />
                 ) : (
                   filteredSigns.map((designation) => (
                     <button

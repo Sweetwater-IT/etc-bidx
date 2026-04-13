@@ -38,6 +38,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconDownload, IconPlus, IconUpload, IconX } from "@tabler/icons-react";
 import { TableSearchBar } from "@/components/TableSearchBar";
+import { BidPageLoadingSkeleton } from "@/components/bid-page-loading-skeleton";
 import { useTableSearchState } from "@/hooks/use-table-search-state";
 import { format } from "date-fns";
 
@@ -1119,6 +1120,7 @@ export function BidListContent() {
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
+    const showInitialPageSkeleton = isTableLoading && data.length === 0;
 
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         // Pass the job ID and source as query parameters
@@ -2375,33 +2377,40 @@ export function BidListContent() {
                         </div>
                     </div>
 
-                    <SectionCards
-                        data={cardData}
-                        variant={isAvailableJobs || isActiveBids ? "productivity" : "default"}
-                    />
-
-                    {isAvailableJobs && (
-                        <div className="px-4 lg:px-6">
-                            <TableSearchBar
-                                value={availableJobsSearch}
-                                onChange={setAvailableJobsSearch}
-                                placeholder="Search open bids..."
+                    {showInitialPageSkeleton ? (
+                        <BidPageLoadingSkeleton
+                            showControls={false}
+                            showSearch={isAvailableJobs || isActiveBids}
+                        />
+                    ) : (
+                        <>
+                            <SectionCards
+                                data={cardData}
+                                variant={isAvailableJobs || isActiveBids ? "productivity" : "default"}
                             />
-                        </div>
-                    )}
 
-                    {isActiveBids && (
-                        <div className="px-4 lg:px-6">
-                            <TableSearchBar
-                                value={activeBidsSearch}
-                                onChange={setActiveBidsSearch}
-                                placeholder="Search active bids..."
-                            />
-                        </div>
-                    )}
+                            {isAvailableJobs && (
+                                <div className="px-4 lg:px-6">
+                                    <TableSearchBar
+                                        value={availableJobsSearch}
+                                        onChange={setAvailableJobsSearch}
+                                        placeholder="Search open bids..."
+                                    />
+                                </div>
+                            )}
 
-                    {isAvailableJobs ? (
-                        <DataTable<AvailableJob>
+                            {isActiveBids && (
+                                <div className="px-4 lg:px-6">
+                                    <TableSearchBar
+                                        value={activeBidsSearch}
+                                        onChange={setActiveBidsSearch}
+                                        placeholder="Search active bids..."
+                                    />
+                                </div>
+                            )}
+
+                            {isAvailableJobs ? (
+                                <DataTable<AvailableJob>
                             data={data as AvailableJob[]}
                             isLoading={isTableLoading}
                             columns={columns}
@@ -2469,9 +2478,9 @@ export function BidListContent() {
                             hideDropdown={true}
                             onUnarchive={handleUnarchiveAvailableJob}
                             onDeleteItem={onDeleteItems}
-                        />
-                    ) : isActiveBids ? (
-                        <DataTable<ActiveBid>
+                                />
+                            ) : isActiveBids ? (
+                                <DataTable<ActiveBid>
                             data={data as ActiveBid[]}
                             isLoading={isTableLoading}
                             columns={columns}
@@ -2534,9 +2543,9 @@ export function BidListContent() {
                             onUnarchive={handleUnarchiveActiveBid}
                             onDeleteItem={onDeleteItems}
 
-                        />
-                    ) : (
-                        <DataTable<ActiveJob>
+                                />
+                            ) : (
+                                <DataTable<ActiveJob>
                             data={data as ActiveJob[]}
                             isLoading={isTableLoading}
                             columns={columns}
@@ -2595,9 +2604,10 @@ export function BidListContent() {
                             setShowFilters={setShowFilters}
                             hideDropdown={true}
                             onDeleteItem={onDeleteItems}
-                        />
+                                />
+                            )}
+                        </>
                     )}
-
                     {isAvailableJobs && isCreatingAvailableJob ? (
                         <OpenBidSheet
                             open={isCreatingAvailableJob}
