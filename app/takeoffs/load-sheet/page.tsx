@@ -322,7 +322,7 @@ export default function SignOrderPage() {
 
       if (segmentData.success) {
         setBranchCounts({
-          all: segmentData.counts.all_active || 0,
+          all: segmentData.counts.all || 0,
           hatfield: segmentData.counts.hatfield || 0,
           turbotville: segmentData.counts.turbotville || 0,
           bedford: segmentData.counts.bedford || 0,
