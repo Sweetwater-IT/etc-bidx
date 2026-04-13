@@ -209,27 +209,26 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
   return (
     mode === 'view' ? (
-      <div className='sticky top-11 z-30'>
-        <PagePrimaryHeader
-          icon={<BriefcaseBusiness className='h-5 w-5 text-primary-foreground' />}
-          title={`Bid: ${adminData.location || adminData.contractNumber || 'Untitled Bid'}`}
-          subtitle={
-            <>
-              {adminData.contractNumber && <span className='truncate'>{adminData.contractNumber}</span>}
-              {createdAt && <span>Created {createdAt}</span>}
-              {status && (
-                <Badge
-                  variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
-                  className={status === 'PENDING' ? 'text-black' : ''}
-                >
-                  {status}
-                </Badge>
-              )}
-            </>
-          }
-          actions={<StepperSaveButtons key={status} mode={mode} status={status} />}
-        />
-      </div>
+      <PagePrimaryHeader
+        sticky
+        icon={<BriefcaseBusiness className='h-5 w-5' />}
+        title={`Bid: ${adminData.location || adminData.contractNumber || 'Untitled Bid'}`}
+        subtitle={
+          <>
+            {adminData.contractNumber && <span className='truncate'>{adminData.contractNumber}</span>}
+            {createdAt && <span>Created {createdAt}</span>}
+            {status && (
+              <Badge
+                variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
+                className={status === 'PENDING' ? 'text-black' : ''}
+              >
+                {status}
+              </Badge>
+            )}
+          </>
+        }
+        actions={<StepperSaveButtons key={status} mode={mode} status={status} />}
+      />
     ) : (
       <div className='sticky top-0 z-50 mb-6 flex w-full items-center justify-between gap-2 border-b bg-white px-6 pb-4 pt-6'>
         <div className='flex items-center gap-x-0'>

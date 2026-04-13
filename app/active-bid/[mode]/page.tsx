@@ -18,7 +18,7 @@ export default async function ActiveBidPage({params} : {params : any}) {
     >
       <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
         <AppSidebar variant="inset" />
-        <SidebarInset className={mode === 'view' ? 'h-full min-h-0 overflow-hidden' : 'md:mt-0'}>
+        <SidebarInset className={mode === 'view' ? undefined : 'md:mt-0'}>
           {mode === 'view' && <SiteHeader showTitleBlock={false} />}
           <div className="flex flex-1 flex-col">
             <ActiveBidContent mode={mode}/>

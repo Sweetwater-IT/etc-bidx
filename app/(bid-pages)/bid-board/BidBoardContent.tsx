@@ -361,6 +361,7 @@ export function BidBoardContent() {
     const availableJobsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const activeBidsTableRef = useRef<{ resetRowSelection: () => void }>(null);
     const [isTableLoading, setIsTableLoading] = useState(false);
+    const [isSummaryLoading, setIsSummaryLoading] = useState(false);
     const { startLoading, stopLoading } = useLoading();
 
     const handleSegmentChange = (value: string) => {
@@ -854,6 +855,7 @@ export function BidBoardContent() {
     const fetchAvailableJobCounts = useCallback(async (startDate?: string, endDate?: string) => {
         if (!isAvailableJobs) return;
         try {
+            setIsSummaryLoading(true);
             const options: any = { limit: 1000, includeStats: true };
             if (debouncedAvailableJobsSearch.trim()) {
                 options.search = debouncedAvailableJobsSearch.trim();
@@ -878,6 +880,8 @@ export function BidBoardContent() {
         } catch (error) {
             console.error("Error fetching job counts:", error);
             toast.error("Failed to fetch job counts");
+        } finally {
+            setIsSummaryLoading(false);
         }
     }, [debouncedAvailableJobsSearch, isAvailableJobs]);
 
@@ -886,6 +890,7 @@ export function BidBoardContent() {
         if (!isActiveJobs) return;
 
         try {
+            setIsSummaryLoading(true);
             startLoading();
 
             const response = await fetch('/api/jobs?counts=true');
@@ -907,6 +912,7 @@ export function BidBoardContent() {
             console.error("Error fetching active job counts:", error);
             toast.error("Failed to fetch active job counts");
         } finally {
+            setIsSummaryLoading(false);
             stopLoading();
         }
     }, [isActiveJobs, startLoading, stopLoading]);
@@ -915,6 +921,7 @@ export function BidBoardContent() {
 
         if (!isActiveBids) return;
         try {
+            setIsSummaryLoading(true);
             const params = new URLSearchParams({ counts: 'true' });
             if (debouncedActiveBidsSearch.trim()) {
                 params.set('search', debouncedActiveBidsSearch.trim());
@@ -939,6 +946,8 @@ export function BidBoardContent() {
         } catch (error) {
             console.error("Error fetching active bid counts:", error);
             toast.error("Failed to fetch active bid counts");
+        } finally {
+            setIsSummaryLoading(false);
         }
     }, [debouncedActiveBidsSearch, isActiveBids]);
 
@@ -1112,7 +1121,9 @@ export function BidBoardContent() {
     ];
 
     const columns = isAvailableJobs ? availableJobsColumns : isActiveBids ? ACTIVE_BIDS_COLUMNS : DISPLAYED_ACTIVE_JOBS_COLUMNS;
-    const showInitialPageSkeleton = isTableLoading && data.length === 0;
+    const showInitialPageSkeleton =
+        (isTableLoading || isSummaryLoading) &&
+        (data.length === 0 || cardData.length === 0);
 
     const handleMarkAsBidJob = useCallback((job: AvailableJob) => {
         // Pass the job ID and source as query parameters
@@ -2371,6 +2382,7 @@ export function BidBoardContent() {
 
                     {showInitialPageSkeleton ? (
                         <BidPageLoadingSkeleton
+                            cardCount={3}
                             showControls={false}
                             showSearch={isAvailableJobs || isActiveBids}
                         />
