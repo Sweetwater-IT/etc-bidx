@@ -90,6 +90,17 @@ const CustomerSelect = ({
     lastOrdered: customer.lastOrdered || null,
   })
 
+  const toSharedContact = (contact: typeof selectedContact) =>
+    contact
+      ? {
+          id: contact.id,
+          name: contact.name || '',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          role: contact.role || '',
+        }
+      : null
+
   useEffect(() => {
     if (!data.customer || customers.length === 0) return
 
@@ -266,7 +277,7 @@ const CustomerSelect = ({
           <label className="font-semibold block mb-1">{columnContactTitle || 'Contact'}</label>
           <SharedContactSelector
             customer={selectedCustomer ? toQuoteCustomer(selectedCustomer) : null}
-            selectedContact={selectedContact}
+            selectedContact={toSharedContact(selectedContact)}
             onSelectContact={async contact => {
               if (!contact) {
                 return
