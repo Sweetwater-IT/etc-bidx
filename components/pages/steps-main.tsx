@@ -160,8 +160,8 @@ const StepsMain = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    const shouldTuckSidebar = tuckedSidebar === 'true'
-    const shouldStartFullscreen = setFullscreen === 'true'
+    const shouldTuckSidebar = tuckedSidebar === 'true' || !isEditingBid
+    const shouldStartFullscreen = setFullscreen === 'true' || !isEditingBid
 
     if (shouldTuckSidebar) {
       setOpen(false)
@@ -176,7 +176,7 @@ const StepsMain = () => {
         setOpen(true)
       }
     }
-  }, [setFullscreen, setOpen, tuckedSidebar])
+  }, [isEditingBid, setFullscreen, setOpen, tuckedSidebar])
 
   return (
     <div
