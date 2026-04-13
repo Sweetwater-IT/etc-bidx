@@ -207,30 +207,53 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
   };
 
   return (
-    <div className={`flex w-full bg-white z-50 items-center sticky justify-between px-6 gap-2 pb-4 mb-6 ${
-      mode === 'view'
-        ? 'top-11 pt-4 border-b'
-        : 'top-0 pt-6 border-b'
-    }`}>
-      <div className='flex items-center gap-x-0'>
-        {mode !== 'view' && <Button variant='ghost' onClick={handleSubmit}>
-          <XIcon className="cursor-pointer" />
-        </Button>}
-        {mode !== 'view' && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1' />}
-        <div>
-          <h1 className="text-3xl whitespace-nowrap font-bold">
-            {mode === 'new' ? 'Create New Bid' : adminData.contractNumber}
-          </h1>
-          {mode === 'view' && <p className="text-muted-foreground whitespace-nowrap">Created At: {createdAt}</p>}
+    mode === 'view' ? (
+      <header className='sticky top-11 z-30 shrink-0 border-b bg-card'>
+        <div className='mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between'>
+          <div className='flex items-start gap-3'>
+            <div>
+              <h1 className='text-lg font-bold tracking-tight text-foreground'>
+                {adminData.contractNumber || 'Active Bid'}
+              </h1>
+              <div className='mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+                {createdAt && <span>Created {createdAt}</span>}
+                {status && (
+                  <Badge
+                    variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
+                    className={status === 'PENDING' ? 'text-black' : ''}
+                  >
+                    {status}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className='flex flex-wrap items-center justify-end gap-2'>
+            <StepperSaveButtons key={status} mode={mode} status={status} />
+          </div>
         </div>
-        {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
-          className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
+      </header>
+    ) : (
+      <div className='sticky top-0 z-50 mb-6 flex w-full items-center justify-between gap-2 border-b bg-white px-6 pb-4 pt-6'>
+        <div className='flex items-center gap-x-0'>
+          <Button variant='ghost' onClick={handleSubmit}>
+            <XIcon className="cursor-pointer" />
+          </Button>
+          <Separator className='max-w-8 rotate-90 -ml-2 -mr-1' />
+          <div>
+            <h1 className="text-3xl whitespace-nowrap font-bold">
+              {mode === 'new' ? 'Create New Bid' : adminData.contractNumber}
+            </h1>
+          </div>
+          {mode !== 'new' && <Badge variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
+            className={`ml-2 mt-1 text-sm ${status === 'PENDING' ? 'text-black' : ''}`}>{status}</Badge>}
+        </div>
+        <div className='flex gap-x-2 items-center'>
+          <div className="text-sm text-muted-foreground">{!firstSaveTimestamp ? '' : firstSaveTimestamp === 0 ? 'Saving...' : getSaveStatusMessage()}</div>
+          <StepperSaveButtons key={status} mode={mode} status={status} />
+        </div>
       </div>
-      <div className='flex gap-x-2 items-center'>
-        {mode !== 'view' && <div className="text-sm text-muted-foreground">{!firstSaveTimestamp ? '' : firstSaveTimestamp === 0 ? 'Saving...' : getSaveStatusMessage()}</div>}
-        <StepperSaveButtons key={status} mode={mode} status={status} />
-      </div>
-    </div>
+    )
   )
 }
 

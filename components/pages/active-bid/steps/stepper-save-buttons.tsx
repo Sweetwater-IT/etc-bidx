@@ -10,7 +10,6 @@ import { createActiveBid } from '@/lib/api-client';
 import { exportSignListToExcel } from '@/lib/exportSignListToExcel';
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject';
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
-import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner';
@@ -115,8 +114,7 @@ const StepperSaveButtons = ({ mode, status }: Props) => {
                             </Command>
                         </PopoverContent>
                     </Popover>
-                    <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button>
-                    <Button className='p-4' size='sm'><Link href={`/quotes/create?contractNumber=${adminData.contractNumber}`}>Create Proposal</Link></Button></>}
+                    <Button className='p-4' size='sm' onClick={() => exportSignListToExcel(adminData.contractNumber, mptRental)}>Export Sign List</Button></>}
                 <Button
                     variant="outline"
                     size='sm'
