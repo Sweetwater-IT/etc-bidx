@@ -230,11 +230,11 @@ export default function SignOrderViewContent() {
 
         // Set dates if available
         if (data.data.order_date) {
-          const parsedOrderDate = new Date(formatDate(data.data.order_date))
+          const parsedOrderDate = new Date(data.data.order_date)
           setOrderDate(parsedOrderDate)
         }
         if (data.data.need_date) {
-          const parsedNeedDate = new Date(formatDate(data.data.need_date))
+          const parsedNeedDate = new Date(data.data.need_date)
           setNeedDate(parsedNeedDate)
         }
 
@@ -258,17 +258,17 @@ export default function SignOrderViewContent() {
             role: ''
           },
           orderDate: data.data.order_date
-            ? new Date(formatDate(data.data.order_date))
+            ? new Date(data.data.order_date)
             : new Date(),
           needDate: data.data.need_date
-            ? new Date(formatDate(data.data.need_date))
+            ? new Date(data.data.need_date)
             : null,
           jobNumber: data.data.job_number || '',
           startDate: data.data.start_date
-            ? new Date(formatDate(data.data.start_date))
+            ? new Date(data.data.start_date)
             : undefined,
           endDate: data.data.end_date
-            ? new Date(formatDate(data.data.end_date))
+            ? new Date(data.data.end_date)
             : undefined,
           selectedBranch: orderWithBranch.branch,
           customer: {

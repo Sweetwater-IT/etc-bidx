@@ -478,7 +478,7 @@ export function BidBoardContent() {
                 const requestorValue = job.requestor || job.admin_data?.requestor || '';
                 const ownerValue = job.owner || job.admin_data?.owner || '';
                 const contractNumberValue = job.contract_number || job.customer_contract_number || job.admin_data?.contractNumber || '';
-                const dbeValue = job.dbe_percentage || job.admin_data?.dbePercentage || null;
+                const dbeValue = job.dbe_percentage ?? job.admin_data?.dbePercentage ?? null;
                 const noBidReason = job.no_bid_reason || null;
                 const stateRoute = job.state_route || null;
 

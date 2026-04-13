@@ -214,7 +214,7 @@ export function OpenBidSheet({
       setStatus(job.status as "Bid" | "No Bid" | "Unset");
       setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined);
       setDueDate(job.dueDate ? new Date(job.dueDate) : undefined);
-      setDbe(job.dbe ? job.dbe.toString() : "");
+      setDbe(job.dbe != null ? job.dbe.toString() : "");
       setStateRoute(job.stateRoute || "");
       setSelectedServices(job.services);
 

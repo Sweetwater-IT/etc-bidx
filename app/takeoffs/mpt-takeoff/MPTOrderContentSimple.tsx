@@ -172,20 +172,20 @@ export default function MPTOrderContentSimple ({
         },
         orderDate:
           data.data.order_date && data.data.order_date !== ''
-            ? new Date(formatDate(data.data.order_date))
+            ? new Date(data.data.order_date)
             : new Date(),
         needDate:
           data.data.need_date && data.data.need_date !== ''
-            ? new Date(formatDate(data.data.need_date))
+            ? new Date(data.data.need_date)
             : new Date(),
         jobNumber: data.data.job_number,
         startDate:
           data.data.start_date && data.data.start_date !== ''
-            ? new Date(formatDate(data.data.start_date))
+            ? new Date(data.data.start_date)
             : undefined,
         endDate:
           data.data.end_date && data.data.end_date !== ''
-            ? new Date(formatDate(data.data.end_date))
+            ? new Date(data.data.end_date)
             : undefined,
         selectedBranch: orderWithBranch.branch,
         customer: {
