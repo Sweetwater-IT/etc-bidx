@@ -1,6 +1,6 @@
 import React from "react"
 import "@testing-library/jest-dom"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { OwnerSelector } from "@/components/OwnerSelector"
@@ -113,9 +113,9 @@ describe("standardized selector components", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: /2026-04-15/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /15-04-2026/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /2026-04-15/i }))
+    await user.click(screen.getByRole("button", { name: /15-04-2026/i }))
     await user.click(screen.getByRole("gridcell", { name: "22" }))
 
     await waitFor(() => {
@@ -135,9 +135,9 @@ describe("standardized selector components", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: /2026-04-20/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /20-04-2026/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /2026-04-20/i }))
+    await user.click(screen.getByRole("button", { name: /20-04-2026/i }))
     await user.click(screen.getByRole("gridcell", { name: "24" }))
 
     await waitFor(() => {
@@ -146,6 +146,7 @@ describe("standardized selector components", () => {
   })
 
   test("StartDateSelector formats dates and emits changed values", async () => {
+    const user = userEvent.setup()
     const handleChange = jest.fn()
 
     render(
@@ -156,10 +157,10 @@ describe("standardized selector components", () => {
       />
     )
 
-    const input = screen.getByDisplayValue("2026-05-01")
-    expect(input).toHaveValue("2026-05-01")
+    expect(screen.getByRole("button", { name: /01-05-2026/i })).toBeInTheDocument()
 
-    fireEvent.change(input, { target: { value: "2026-05-10" } })
+    await user.click(screen.getByRole("button", { name: /01-05-2026/i }))
+    await user.click(screen.getByRole("gridcell", { name: "10" }))
 
     await waitFor(() => {
       expect(handleChange).toHaveBeenLastCalledWith("2026-05-10")
@@ -167,6 +168,7 @@ describe("standardized selector components", () => {
   })
 
   test("EndDateSelector supports a min date and emits changed values", async () => {
+    const user = userEvent.setup()
     const handleChange = jest.fn()
 
     render(
@@ -178,11 +180,10 @@ describe("standardized selector components", () => {
       />
     )
 
-    const input = screen.getByDisplayValue("2026-05-12")
-    expect(input).toHaveValue("2026-05-12")
-    expect(input).toHaveAttribute("min", "2026-05-01")
+    expect(screen.getByRole("button", { name: /12-05-2026/i })).toBeInTheDocument()
 
-    fireEvent.change(input, { target: { value: "2026-05-18" } })
+    await user.click(screen.getByRole("button", { name: /12-05-2026/i }))
+    await user.click(screen.getByRole("gridcell", { name: "18" }))
 
     await waitFor(() => {
       expect(handleChange).toHaveBeenLastCalledWith("2026-05-18")
