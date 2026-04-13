@@ -27,24 +27,22 @@ function parseDateValue(value?: Date | string | null) {
   }
 
   if (value instanceof Date) {
-    return value
+    return new Date(
+      value.getUTCFullYear(),
+      value.getUTCMonth(),
+      value.getUTCDate()
+    )
   }
 
   const normalized = value.includes("T") ? value.split("T")[0] : value
-  const parsed = new Date(`${normalized}T00:00:00`)
+  const [year, month, day] = normalized.split("-").map(Number)
+  const parsed = new Date(year, month - 1, day)
   return Number.isNaN(parsed.getTime()) ? undefined : parsed
 }
 
-function formatDateValue(value?: Date | string | null) {
-  if (!value) {
-    return ""
-  }
-
-  if (typeof value === "string") {
-    return value.includes("T") ? value.split("T")[0] : value
-  }
-
-  return value.toISOString().split("T")[0]
+function formatDisplayValue(value?: Date | string | null) {
+  const parsed = parseDateValue(value)
+  return parsed ? format(parsed, "dd-MM-yyyy") : ""
 }
 
 export function DueDateSelector({
@@ -55,7 +53,7 @@ export function DueDateSelector({
 }: DueDateSelectorProps) {
   const [open, setOpen] = useState(false)
   const selectedDate = useMemo(() => parseDateValue(value), [value])
-  const displayValue = formatDateValue(value)
+  const displayValue = formatDisplayValue(value)
 
   return (
     <Popover
