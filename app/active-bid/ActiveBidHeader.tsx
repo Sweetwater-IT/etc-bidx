@@ -2,6 +2,7 @@
 import { useEstimate } from '@/contexts/EstimateContext'
 import { Button, buttonVariants } from '../../components/ui/button'
 import { BriefcaseBusiness, XIcon } from 'lucide-react'
+import { PagePrimaryHeader } from '@/components/page-primary-header'
 import { useSearchParams } from 'next/navigation'
 import React, { useEffect, useRef, useState } from 'react'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
@@ -208,35 +209,27 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
 
   return (
     mode === 'view' ? (
-      <header className='sticky top-11 z-30 shrink-0 border-b bg-card'>
-        <div className='mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between'>
-          <div className='flex items-center gap-3'>
-            <div className='rounded-md bg-primary p-2 text-primary-foreground shadow-sm'>
-              <BriefcaseBusiness className='h-5 w-5' />
-            </div>
-            <div>
-              <h1 className='text-lg font-bold tracking-tight text-foreground'>
-                View Bid
-              </h1>
-              <div className='mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-                {adminData.location && <span>{adminData.location}</span>}
-                {createdAt && <span>Created {createdAt}</span>}
-                {status && (
-                  <Badge
-                    variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
-                    className={status === 'PENDING' ? 'text-black' : ''}
-                  >
-                    {status}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className='flex flex-wrap items-center justify-end gap-2'>
-            <StepperSaveButtons key={status} mode={mode} status={status} />
-          </div>
-        </div>
-      </header>
+      <div className='sticky top-11 z-30'>
+        <PagePrimaryHeader
+          icon={<BriefcaseBusiness className='h-5 w-5 text-primary-foreground' />}
+          title={`Bid: ${adminData.location || adminData.contractNumber || 'Untitled Bid'}`}
+          subtitle={
+            <>
+              {adminData.contractNumber && <span className='truncate'>{adminData.contractNumber}</span>}
+              {createdAt && <span>Created {createdAt}</span>}
+              {status && (
+                <Badge
+                  variant={status === 'PENDING' ? 'warning' : status === 'WON' ? 'successful' : status === 'DRAFT' ? 'secondary' : 'destructive'}
+                  className={status === 'PENDING' ? 'text-black' : ''}
+                >
+                  {status}
+                </Badge>
+              )}
+            </>
+          }
+          actions={<StepperSaveButtons key={status} mode={mode} status={status} />}
+        />
+      </div>
     ) : (
       <div className='sticky top-0 z-50 mb-6 flex w-full items-center justify-between gap-2 border-b bg-white px-6 pb-4 pt-6'>
         <div className='flex items-center gap-x-0'>

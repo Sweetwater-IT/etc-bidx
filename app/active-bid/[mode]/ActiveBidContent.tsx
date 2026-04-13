@@ -82,7 +82,7 @@ function ActiveBidContent({ mode }: { mode: string }) {
     return (
         <div className={`flex flex-1 flex-col ${mode === 'view' ? 'bg-white' : 'bg-[#F9FAFC]'}`}>
             <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className={mode === 'view' ? "flex flex-col gap-4 py-4 md:gap-6 md:py-6" : "flex flex-col gap-4 pb-4 md:gap-6 md:pb-6"}>
+                <div className={mode === 'view' ? "flex flex-col gap-4 pb-4 md:gap-6 md:pb-6" : "flex flex-col gap-4 pb-4 md:gap-6 md:pb-6"}>
                     <div className="relative">
                         <EstimateProvider>
                             <ActiveBidHeader createdAt={createdAt ? formatCreatedAt(createdAt) : ''} status={bidStatus ?? ''} mode={mode as 'view' | 'new' | 'edit'} />
