@@ -301,7 +301,7 @@ const AdminInformationAccordion = () => {
               }}
               className="w-48 h-8"
             />
-          ) : field === "startDate" || field === "endDate" || field === "winterStart" || field === "winterEnd" ? (
+          ) : field === "winterStart" || field === "winterEnd" ? (
             <Input
               type="date"
               value={
