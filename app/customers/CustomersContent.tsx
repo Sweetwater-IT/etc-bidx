@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import {
@@ -173,6 +173,7 @@ const CustomersContent = () => {
   const [deleteContactConfirm, setDeleteContactConfirm] = useState<number | null>(null)
   const [deletingContact, setDeletingContact] = useState(false)
   const [deletingCustomer, setDeletingCustomer] = useState(false)
+  const customerButtonRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -444,6 +445,20 @@ const CustomersContent = () => {
     }
   }
 
+  const focusCustomerAtIndex = useCallback(
+    (index: number) => {
+      const nextCustomer = filteredCustomers[index]
+      if (!nextCustomer) {
+        return
+      }
+
+      setSelectedId(nextCustomer.id)
+      setEditing(false)
+      customerButtonRefs.current[index]?.focus()
+    },
+    [filteredCustomers]
+  )
+
   return (
     <div className='flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]'>
       <header className='shrink-0 border-b bg-card'>
@@ -494,15 +509,41 @@ const CustomersContent = () => {
               </div>
             ) : (
               <div className='space-y-1.5 p-2'>
-                {filteredCustomers.map(customer => {
+                {filteredCustomers.map((customer, currentIndex) => {
                   const isSelected = selectedId === customer.id
                   return (
                     <button
                       key={customer.id}
+                      ref={element => {
+                        customerButtonRefs.current[currentIndex] = element
+                      }}
                       type='button'
                       onClick={() => {
                         setSelectedId(customer.id)
                         setEditing(false)
+                      }}
+                      onKeyDown={event => {
+                        if (event.key === 'ArrowDown') {
+                          event.preventDefault()
+                          focusCustomerAtIndex(
+                            Math.min(currentIndex + 1, filteredCustomers.length - 1)
+                          )
+                        }
+
+                        if (event.key === 'ArrowUp') {
+                          event.preventDefault()
+                          focusCustomerAtIndex(Math.max(currentIndex - 1, 0))
+                        }
+
+                        if (event.key === 'Home') {
+                          event.preventDefault()
+                          focusCustomerAtIndex(0)
+                        }
+
+                        if (event.key === 'End') {
+                          event.preventDefault()
+                          focusCustomerAtIndex(filteredCustomers.length - 1)
+                        }
                       }}
                       className={`w-full rounded-md border px-3 py-2.5 text-left transition-colors ${
                         isSelected

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database.types';
 import { safeNumber } from '@/lib/safe-number';
+import { buildIlikeSearchClauses, sanitizePostgrestSearchTerm } from '@/lib/postgrest-search';
 
 type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 
@@ -9,6 +10,7 @@ type AvailableJob = Database['public']['Tables']['available_jobs']['Insert'];
 export async function GET(request: NextRequest) {
   try {    
     const searchParams = request.nextUrl.searchParams;
+    const search = sanitizePostgrestSearchTerm(searchParams.get('search') || '');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
     const includeStats = searchParams.get('includeStats') === 'true';
@@ -160,6 +162,24 @@ export async function GET(request: NextRequest) {
       }
       dataQuery = dataQuery.eq('status', dbStatus);
       countQuery = countQuery.eq('status', dbStatus);
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        'contract_number',
+        'owner',
+        'county',
+        'branch',
+        'estimator',
+        'requestor',
+        'location',
+        'platform',
+        'status',
+        'no_bid_reason',
+        'state_route',
+      ], search);
+      dataQuery = dataQuery.or(searchClauses.join(','));
+      countQuery = countQuery.or(searchClauses.join(','));
     }
 
     // Execute main queries
@@ -359,4 +379,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

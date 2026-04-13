@@ -12,11 +12,7 @@
     "test:components:watch": "jest --config jest.config.js --watch",
     "test:api": "jest --config jest.config.api.js",
     "test:api:watch": "jest --config jest.config.api.js --watch",
-    "test:all": "jest --config jest.config.js && jest --config jest.config.api.js",
-    "cypress": "cypress open",
-    "cypress:run": "cypress run",
-    "cypress:available-jobs": "cypress run --spec 'cypress/e2e/available-jobs.cy.js'",
-    "cypress:integration": "cypress run --spec 'cypress/e2e/available-jobs-integration.cy.js'"
+    "test:all": "jest --config jest.config.js && jest --config jest.config.api.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -94,7 +90,6 @@
     "@types/react-dom": "^19",
     "@types/supertest": "^6.0.3",
     "babel-jest": "^29.7.0",
-    "cypress": "^14.4.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
     "identity-obj-proxy": "^3.0.0",

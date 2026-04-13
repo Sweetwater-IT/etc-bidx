@@ -1,6 +1,12 @@
 // app/api/quotes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import {
+  getQuoteCreatorSegment,
+  QUOTE_CREATOR_NAME_BY_IDENTIFIER,
+  QUOTE_CREATOR_SEGMENTS,
+} from "@/lib/quote-creator-segments";
+import { buildIlikeSearchClauses, sanitizePostgrestSearchTerm } from "@/lib/postgrest-search";
 
 function stripSystemManagedQuoteFields<T extends Record<string, any>>(input: T): T {
   const copy = { ...input };
@@ -20,6 +26,8 @@ function stripSystemManagedQuoteFields<T extends Record<string, any>>(input: T):
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const search = sanitizePostgrestSearchTerm(searchParams.get("search") || "");
+    const normalizedSearch = search.toLowerCase();
     const status = searchParams.get("status");
     const created_by = searchParams.get("created_by");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 25;
@@ -31,6 +39,58 @@ export async function GET(request: NextRequest) {
     const detailed = searchParams.get("detailed") === "true";
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const shouldLoadCreatorDirectory = Boolean(search) || (!counts && !nextNumber);
+    const [authUsersResult, legacyUsersResult] = shouldLoadCreatorDirectory
+      ? await Promise.all([
+          supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+          supabase.from("users").select("email, name"),
+        ])
+      : [{ data: { users: [] }, error: null }, { data: [], error: null }];
+    const authUsers = authUsersResult.error ? [] : authUsersResult.data?.users ?? [];
+    const legacyUsers = legacyUsersResult.data ?? [];
+    const searchableQuoteCreatorIdentifiers = new Set<string>();
+
+    if (search) {
+      for (const segment of QUOTE_CREATOR_SEGMENTS) {
+        const matchesCreator =
+          segment.label.toLowerCase().includes(normalizedSearch) ||
+          segment.segmentLabel.toLowerCase().includes(normalizedSearch) ||
+          segment.aliases.some(alias => alias.toLowerCase().includes(normalizedSearch));
+
+        if (matchesCreator) {
+          segment.aliases.forEach(alias => searchableQuoteCreatorIdentifiers.add(alias));
+        }
+      }
+
+      for (const user of authUsers) {
+        const email = user.email || "";
+        const fullName =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          "";
+
+        if (
+          email.toLowerCase().includes(normalizedSearch) ||
+          fullName.toLowerCase().includes(normalizedSearch)
+        ) {
+          if (email) searchableQuoteCreatorIdentifiers.add(email);
+          if (fullName) searchableQuoteCreatorIdentifiers.add(fullName);
+        }
+      }
+
+      for (const user of legacyUsers ?? []) {
+        const email = user.email || "";
+        const name = user.name || "";
+
+        if (
+          email.toLowerCase().includes(normalizedSearch) ||
+          name.toLowerCase().includes(normalizedSearch)
+        ) {
+          if (email) searchableQuoteCreatorIdentifiers.add(email);
+          if (name) searchableQuoteCreatorIdentifiers.add(name);
+        }
+      }
+    }
 
     if (orderBy === "quote_created_at") orderBy = "created_at";
 
@@ -49,6 +109,23 @@ export async function GET(request: NextRequest) {
         countQuery = countQuery.lt("created_at", inclusiveEndDate.toISOString());
       }
 
+      if (search) {
+        const searchClauses = buildIlikeSearchClauses([
+          "quote_number",
+          "status",
+          "type_quote",
+          "customer_name",
+          "customer_contact",
+          "county",
+          "etc_job_number",
+          "user_created",
+        ], search);
+        if (searchableQuoteCreatorIdentifiers.size > 0) {
+          searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+        }
+        countQuery = countQuery.or(searchClauses.join(","));
+      }
+
       const { data: allQuotes, error: countError } = await countQuery;
 
       if (countError || !allQuotes) {
@@ -58,36 +135,11 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Direct mapping from segment names to email addresses
-      const userEmailMap: Record<string, string> = {
-        'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'efrye@establishedtraffic.com',
-        'Rad': 'rbodkin@establishedtraffic.com',
-        'Ken': 'kaustin@establishedtraffic.com',
-        'Turner': 'jturner@establishedtraffic.com',
-        'Redden': 'jredden@establishedtraffic.com',
-        'John': 'jnelson@establishedtraffic.com'
-      };
-
       // Compute counts
-      const countData: any = { all: allQuotes.length };
-      for (const [segmentName, email] of Object.entries(userEmailMap)) {
-        let segmentCountQuery = supabase
-          .from("quotes")
-          .select("id", { count: "exact", head: true })
-          .eq('user_created', email);
-
-        if (startDate) {
-          segmentCountQuery = segmentCountQuery.gte("created_at", startDate);
-        }
-        if (endDate) {
-          const inclusiveEndDate = new Date(endDate);
-          inclusiveEndDate.setDate(inclusiveEndDate.getDate() + 1);
-          segmentCountQuery = segmentCountQuery.lt("created_at", inclusiveEndDate.toISOString());
-        }
-
-        const { count } = await segmentCountQuery;
-        countData[segmentName] = count || 0;
+      const countData: Record<string, number> = { all: allQuotes.length };
+      for (const segment of QUOTE_CREATOR_SEGMENTS) {
+        const segmentAliases = new Set(segment.aliases);
+        countData[segment.value] = allQuotes.filter(quote => segmentAliases.has(quote.user_created)).length;
       }
 
       return NextResponse.json(countData);
@@ -166,21 +218,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      // Direct mapping from segment names to email addresses
-      const userEmailMap: Record<string, string> = {
-        'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'efrye@establishedtraffic.com',
-        'Rad': 'rbodkin@establishedtraffic.com',
-        'Ken': 'kaustin@establishedtraffic.com',
-        'Turner': 'jturner@establishedtraffic.com',
-        'Redden': 'jredden@establishedtraffic.com',
-        'John': 'jnelson@establishedtraffic.com'
-      };
-
-      const userEmail = userEmailMap[created_by];
-      if (userEmail) {
-        query = query.eq('user_created', userEmail);
+      const creatorSegment = QUOTE_CREATOR_SEGMENTS.find(segment => segment.value === created_by);
+      if (creatorSegment) {
+        query = query.in("user_created", creatorSegment.aliases);
+      } else {
+        query = query.eq("user_created", created_by);
       }
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        "quote_number",
+        "status",
+        "type_quote",
+        "customer_name",
+        "customer_contact",
+        "county",
+        "etc_job_number",
+        "user_created",
+      ], search);
+      if (searchableQuoteCreatorIdentifiers.size > 0) {
+        searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+      }
+      query = query.or(searchClauses.join(","));
     }
 
     const { data: rawData, error } = await query;
@@ -194,19 +254,16 @@ export async function GET(request: NextRequest) {
 
     console.log("🪵 [GET /quotes] Raw data:", JSON.stringify(rawData, null, 2));
 
-    // Fetch all users for creator name mapping
-    const { data: allUsers, error: usersError } = await supabase
-      .from("users")
-      .select("email, name");
-
-    if (usersError) {
-      return NextResponse.json(
-        { success: false, message: "Failed to fetch users", error: usersError },
-        { status: 500 }
-      );
-    }
-
-    const emailToName = Object.fromEntries(allUsers.map(u => [u.email, u.name]));
+    const authEmailToName = Object.fromEntries(
+      authUsers.map(user => [
+        user.email,
+        user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email ||
+          "-",
+      ])
+    );
+    const legacyEmailToName = Object.fromEntries((legacyUsers ?? []).map(u => [u.email, u.name]));
 
     const transformedData: any[] = [];
 
@@ -252,7 +309,12 @@ export async function GET(request: NextRequest) {
         estimate_contract_number: adminData?.contract_number ?? null,
         etc_job_number: row.etc_job_number || "",
         job_number: row.job_id ?? null,
-        created_by_name: emailToName[row.user_created] || '-',
+        created_by_name:
+          QUOTE_CREATOR_NAME_BY_IDENTIFIER[row.user_created] ||
+          getQuoteCreatorSegment(row.user_created)?.label ||
+          authEmailToName[row.user_created] ||
+          legacyEmailToName[row.user_created] ||
+          "-",
       };
 
       console.log("🪵 [GET /quotes] Transformed row:", JSON.stringify(transformedRow, null, 2));
@@ -277,21 +339,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (created_by) {
-      // Direct mapping from segment names to email addresses
-      const userEmailMap: Record<string, string> = {
-        'Napoleon': 'ndunn@establishedtraffic.com',
-        'Eric': 'efrye@establishedtraffic.com',
-        'Rad': 'rbodkin@establishedtraffic.com',
-        'Ken': 'kaustin@establishedtraffic.com',
-        'Turner': 'jturner@establishedtraffic.com',
-        'Redden': 'jredden@establishedtraffic.com',
-        'John': 'jnelson@establishedtraffic.com'
-      };
-
-      const userEmail = userEmailMap[created_by];
-      if (userEmail) {
-        countQuery = countQuery.eq('user_created', userEmail);
+      const creatorSegment = QUOTE_CREATOR_SEGMENTS.find(segment => segment.value === created_by);
+      if (creatorSegment) {
+        countQuery = countQuery.in("user_created", creatorSegment.aliases);
+      } else {
+        countQuery = countQuery.eq("user_created", created_by);
       }
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        "quote_number",
+        "status",
+        "type_quote",
+        "customer_name",
+        "customer_contact",
+        "county",
+        "etc_job_number",
+        "user_created",
+      ], search);
+      if (searchableQuoteCreatorIdentifiers.size > 0) {
+        searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+      }
+      countQuery = countQuery.or(searchClauses.join(","));
     }
 
     const { count } = await countQuery;

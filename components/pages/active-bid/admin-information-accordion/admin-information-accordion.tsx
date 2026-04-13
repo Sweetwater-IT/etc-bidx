@@ -19,6 +19,11 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { County } from "@/types/TCounty";
 import { fetchReferenceData } from "@/lib/api-client";
+import { OwnerSelector } from "@/components/OwnerSelector";
+import { CountySelector } from "@/components/CountySelector";
+import { LettingDateSelector } from "@/components/LettingDateSelector";
+import { StartDateSelector } from "@/components/StartDateSelector";
+import { EndDateSelector } from "@/components/EndDateSelector";
 
 const AdminInformationAccordion = () => {
   const [value, setValue] = useState<string[]>([]);
@@ -191,42 +196,12 @@ const AdminInformationAccordion = () => {
         <div className="text-muted-foreground">{label}</div>
         <div className="text-right flex items-center justify-end">
           {field === "county" ? (
-            <Popover open={openStates.county} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openStates.county}
-                  className="w-34 justify-between text-muted-foreground"
-                >
-                  {tempData.county?.name || adminData.county?.name || "Select county..."}
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search county..." />
-                  <CommandEmpty>No county found.</CommandEmpty>
-                  <CommandGroup className="h-50 overflow-y-auto">
-                    {counties.map((county) => (
-                      <CommandItem
-                        key={county.id}
-                        value={county.name}
-                        onSelect={() => handleCountyChange(county.id.toString())}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            (tempData.county?.name || adminData.county?.name) === county.name ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {county.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <CountySelector
+              counties={counties}
+              value={tempData.county?.name || adminData.county?.name || ""}
+              onSelect={handleCountyChange}
+              className="w-34 justify-between text-muted-foreground"
+            />
           ) : field === "estimator" ? (
             <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>
               <PopoverTrigger asChild>
@@ -265,42 +240,16 @@ const AdminInformationAccordion = () => {
               </PopoverContent>
             </Popover>
           ) : field === "owner" ? (
-            <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openStates.owner}
-                  className="w-34 justify-between text-muted-foreground"
-                >
-                  {tempData.owner || adminData.owner || "Select owner..."}
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search owner..." />
-                  <CommandEmpty>No owner found.</CommandEmpty>
-                  <CommandGroup>
-                    {owners.map((owner) => (
-                      <CommandItem
-                        key={owner.id}
-                        value={owner.name}
-                        onSelect={() => handleOwnerChange(owner.name as 'PENNDOT' | 'TURNPIKE' | 'PRIVATE' | 'SEPTA' | 'OTHER')}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            (tempData.owner || adminData.owner) === owner.name ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {owner.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <OwnerSelector
+              owners={owners}
+              value={(tempData.owner as string) || adminData.owner || ""}
+              onValueChange={value =>
+                handleOwnerChange(
+                  value as 'PENNDOT' | 'TURNPIKE' | 'PRIVATE' | 'SEPTA' | 'OTHER'
+                )
+              }
+              className="w-34 justify-between text-muted-foreground"
+            />
           ) : field === "division" ? (
             <RadioGroup
               value={tempData.division || adminData.division || undefined}
@@ -318,7 +267,41 @@ const AdminInformationAccordion = () => {
                 </div>
               ))}
             </RadioGroup>
-          ) : field === "startDate" || field === "endDate" || field === "lettingDate" || field === "winterStart" || field === "winterEnd" ? (
+          ) : field === "lettingDate" ? (
+            <LettingDateSelector
+              value={(tempData.lettingDate as Date | string | null | undefined) ?? (adminData.lettingDate as Date | string | null | undefined)}
+              onChange={(value) => {
+                setTempData(prev => ({
+                  ...prev,
+                  lettingDate: value ? new Date(value) : null
+                }));
+              }}
+              className="w-48 h-8"
+            />
+          ) : field === "startDate" ? (
+            <StartDateSelector
+              value={(tempData.startDate as Date | string | null | undefined) ?? (adminData.startDate as Date | string | null | undefined)}
+              onChange={(value) => {
+                setTempData(prev => ({
+                  ...prev,
+                  startDate: value ? new Date(value) : null
+                }));
+              }}
+              className="w-48 h-8"
+            />
+          ) : field === "endDate" ? (
+            <EndDateSelector
+              value={(tempData.endDate as Date | string | null | undefined) ?? (adminData.endDate as Date | string | null | undefined)}
+              min={(tempData.startDate as Date | string | null | undefined) ?? (adminData.startDate as Date | string | null | undefined)}
+              onChange={(value) => {
+                setTempData(prev => ({
+                  ...prev,
+                  endDate: value ? new Date(value) : null
+                }));
+              }}
+              className="w-48 h-8"
+            />
+          ) : field === "startDate" || field === "endDate" || field === "winterStart" || field === "winterEnd" ? (
             <Input
               type="date"
               value={

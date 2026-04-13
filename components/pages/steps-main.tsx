@@ -169,7 +169,7 @@ const StepsMain = () => {
 
   return (
     <div
-      className={`relative min-h-screen ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
+      className={`relative min-h-screen bg-[#F9FAFC] ${isFullscreen ? "px-6" : "flex gap-20 justify-between pr-12"
         }`}
       style={{ transition: "all 0.3s ease-in-out" }}
     >
@@ -247,8 +247,8 @@ const StepsMain = () => {
             </div>
           </div>
           <div className="space-y-10">
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+            <section className="rounded-lg border bg-white p-6 shadow-sm">
+              <h3 className="mb-6 border-b pb-2 text-xl font-semibold">
                 Admin Information
               </h3>
               {renderStepWithoutNavigation(
@@ -256,15 +256,14 @@ const StepsMain = () => {
                 />
               )}
             </section>
-            <section>
-              <h3 className="text-xl font-semibold pb-2 border-b mb-6">
+            <section className="rounded-lg border bg-white p-6 shadow-sm">
+              <h3 className="mb-6 border-b pb-2 text-xl font-semibold">
                 Bid Items
               </h3>
               {renderStepWithoutNavigation(
                 <BidItemsStep5
                   currentPhase={currentPhase}
                   setCurrentPhase={setCurrentPhase}
-                // setIsViewSummaryOpen={setIsViewSummaryOpen}
                 />
               )}
             </section>
@@ -295,6 +294,7 @@ const StepsMain = () => {
               onEdit={handleEdit}
               onDelete={handleDelete}
               title="Notes"
+              containerClassName="bg-white shadow-sm"
             />
           </div>
         )}

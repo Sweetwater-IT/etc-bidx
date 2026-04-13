@@ -30,6 +30,11 @@ import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingOb
 import { useAuth } from "@/contexts/auth-context";
 import { defaultPermanentSignsObject } from "@/types/default-objects/defaultPermanentSignsObject";
 import { INote } from "@/types/TEstimate";
+import { OwnerSelector } from "@/components/OwnerSelector";
+import { CountySelector } from "@/components/CountySelector";
+import { LettingDateSelector } from "@/components/LettingDateSelector";
+import { StartDateSelector } from "@/components/StartDateSelector";
+import { EndDateSelector } from "@/components/EndDateSelector";
 
 
 const step: Step = {
@@ -563,45 +568,11 @@ const AdminInformationStep1 = () => {
                     </Label>
                   )}
                   {field.name === "county" ? (
-                    <Popover open={openStates.county} modal={false} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, county: open }))}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openStates.county}
-                          className="w-full justify-between"
-                        >
-                          {adminData.county?.name || "Select county..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-full p-0"
-                        avoidCollisions={false} // Prevents auto-repositioning
-                      >
-                        <Command>
-                          <CommandInput placeholder="Search county..." />
-                          <CommandEmpty>No county found.</CommandEmpty>
-                          <CommandGroup className="h-80 overflow-y-auto">
-                            {counties.map((county) => (
-                              <CommandItem
-                                key={county.id}
-                                value={county.name}
-                                onSelect={() => handleCountyChange(county.id.toString())}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    adminData.county?.name === county.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {county.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <CountySelector
+                      counties={counties}
+                      value={adminData.county?.name || ""}
+                      onSelect={handleCountyChange}
+                    />
                   ) : field.name === "estimator" ? (
                     <Popover open={openStates.estimator} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, estimator: open }))}>
                       <PopoverTrigger asChild>
@@ -640,42 +611,12 @@ const AdminInformationStep1 = () => {
                       </PopoverContent>
                     </Popover>
                   ) : field.name === "owner" ? (
-                    <Popover open={openStates.owner} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, owner: open }))}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openStates.owner}
-                          className="w-full justify-between"
-                        >
-                          {adminData.owner || "Select owner..."}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
-                        <Command>
-                          <CommandInput placeholder="Search owner..." />
-                          <CommandEmpty>No owner found.</CommandEmpty>
-                          <CommandGroup>
-                            {owners.map((owner) => (
-                              <CommandItem
-                                key={owner.id}
-                                value={owner.name}
-                                onSelect={() => handleOwnerChange(owner.name)}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    adminData.owner === owner.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {owner.name}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <OwnerSelector
+                      owners={owners}
+                      value={adminData.owner || ""}
+                      onValueChange={handleOwnerChange}
+                      className="w-full justify-between"
+                    />
                   ) : field.name === "etcRep" ? (
                     <Popover open={openStates.etcRep} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, etcRep: open }))}>
                       <PopoverTrigger asChild>
@@ -856,6 +797,42 @@ const AdminInformationStep1 = () => {
                         </p>
                       </div>
                     </div>
+                  ) : field.name === "lettingDate" ? (
+                    <LettingDateSelector
+                      id={field.name}
+                      value={adminData.lettingDate}
+                      onChange={(value) => handleInputChange(field.name, value)}
+                      className="h-10"
+                    />
+                  ) : field.name === "startDate" ? (
+                    <StartDateSelector
+                      id={field.name}
+                      value={adminData.startDate}
+                      onChange={(value) => handleInputChange(field.name, value)}
+                      className="h-10"
+                    />
+                  ) : field.name === "endDate" ? (
+                    <EndDateSelector
+                      id={field.name}
+                      value={adminData.endDate}
+                      min={adminData.startDate}
+                      onChange={(value) => handleInputChange(field.name, value)}
+                      className="h-10"
+                    />
+                  ) : field.type === "date" ? (
+                    <Input
+                      id={field.name}
+                      type="date"
+                      value={
+                        adminData[field.name as keyof typeof adminData]
+                          ? (typeof adminData[field.name as keyof typeof adminData] === "string"
+                              ? adminData[field.name as keyof typeof adminData] as string
+                              : (adminData[field.name as keyof typeof adminData] as Date).toISOString().split("T")[0])
+                          : ""
+                      }
+                      onChange={(e) => handleInputChange(field.name, e.target.value)}
+                      className="h-10"
+                    />
                   ) : (
                     <div className="relative space-y-2">
                       <Input

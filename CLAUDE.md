@@ -10,7 +10,7 @@ ETC-BIDX is a comprehensive business management application built for ETC (a con
 - **UI Framework**: Tailwind CSS v4, Radix UI components, shadcn/ui
 - **State Management**: Zustand, React Context API, SWR for data fetching
 - **Database**: Supabase (PostgreSQL)
-- **Testing**: Jest, React Testing Library, Cypress
+- **Testing**: Jest, React Testing Library
 - **Email**: SendGrid
 - **PDF Generation**: React PDF, pdf-lib
 - **Forms**: React Hook Form with Zod validation
@@ -68,19 +68,6 @@ npm run test:api:watch
 npm run test:all
 ```
 
-#### End-to-End Tests
-```bash
-# Open Cypress interactive test runner
-npm run cypress
-
-# Run Cypress tests headlessly
-npm run cypress:run
-
-# Run specific Cypress test suites
-npm run cypress:available-jobs
-npm run cypress:integration
-```
-
 ## High-Level Architecture
 
 ### Directory Structure
@@ -100,7 +87,6 @@ etc-bidx/
 ├── lib/                  # Utility functions and configurations
 ├── types/                # TypeScript type definitions
 ├── __tests__/            # Test files
-├── cypress/              # E2E tests
 └── supabase/             # Database migrations
 ```
 
@@ -209,7 +195,7 @@ Views are used to aggregate complex data:
    - Create feature branch from main
    - Implement components in isolation
    - Add tests (component + API)
-   - Test with Cypress for critical paths
+   - Test critical paths before deploy
 
 2. **API Development**:
    - Create route handler in `/app/api/`

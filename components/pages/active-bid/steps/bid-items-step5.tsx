@@ -69,6 +69,8 @@ import { handleNextDigits } from '@/lib/handleNextDigits'
 import EmptyContainer from '@/components/BidItems/empty-container'
 import MutcdSignsStep3 from './mutcd-signs-step3'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { StartDateSelector } from '@/components/StartDateSelector'
+import { EndDateSelector } from '@/components/EndDateSelector'
 //import { TripAndLaborSummary } from './trip-and-labor-summary'
 import { log } from 'node:console'
 
@@ -343,8 +345,6 @@ const BidItemsStep5 = ({
   setCurrentPhase: React.Dispatch<React.SetStateAction<number>>
 }) => {
   const { mptRental, adminData, dispatch } = useEstimate()
-  const [startDateOpen, setStartDateOpen] = useState<boolean>(false)
-  const [endDateOpen, setEndDateOpen] = useState<boolean>(false)
   const [sandbagQuantity, setSandbagQuantity] = useState<number>(0)
   const [newCustomItem, setNewCustomItem] = useState<
     Omit<CustomLightAndDrumItem, 'id'>
@@ -530,11 +530,6 @@ const BidItemsStep5 = ({
     }
 
     setPhaseFormData(updatedFormData)
-    if (name === 'startDate') {
-      setStartDateOpen(false)
-    } else {
-      setEndDateOpen(false)
-    }
   }
 
   const setEndDateFromDays = (days: number) => {
@@ -2121,71 +2116,33 @@ const BidItemsStep5 = ({
                   <div className='grid grid-cols-2 gap-4'>
                     <div className='space-y-2'>
                       <Label htmlFor='startDate'>Start Date</Label>
-                      <Popover
-                        open={startDateOpen}
-                        onOpenChange={setStartDateOpen}
-                        modal={true}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
-                          >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
-                            {phaseFormData.startDate ? (
-                              format(phaseFormData.startDate, 'PPP')
-                            ) : (
-                              <span>Select start date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
-                          <Calendar
-                            mode='single'
-                            selected={phaseFormData.startDate ?? undefined}
-                            onSelect={date =>
-                              handleDateChange(date, 'startDate')
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <StartDateSelector
+                        id='startDate'
+                        value={phaseFormData.startDate}
+                        onChange={value =>
+                          handleDateChange(
+                            value ? new Date(`${value}T00:00:00`) : undefined,
+                            'startDate'
+                          )
+                        }
+                        className='w-full'
+                      />
                     </div>
 
                     <div className='space-y-2'>
                       <Label htmlFor='endDate'>End Date</Label>
-                      <Popover
-                        open={endDateOpen}
-                        onOpenChange={setEndDateOpen}
-                        modal={true}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant='outline'
-                            className='w-full justify-start text-left font-normal'
-                          >
-                            <CalendarIcon className='mr-2 h-4 w-4' />
-                            {phaseFormData.endDate ? (
-                              format(phaseFormData.endDate, 'PPP')
-                            ) : (
-                              <span>Select end date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className='w-auto p-0'>
-                          <Calendar
-                            mode='single'
-                            selected={phaseFormData.endDate ?? undefined}
-                            onSelect={date => handleDateChange(date, 'endDate')}
-                            initialFocus
-                            disabled={date =>
-                              phaseFormData.startDate
-                                ? date < phaseFormData.startDate
-                                : false
-                            }
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <EndDateSelector
+                        id='endDate'
+                        value={phaseFormData.endDate}
+                        min={phaseFormData.startDate}
+                        onChange={value =>
+                          handleDateChange(
+                            value ? new Date(`${value}T00:00:00`) : undefined,
+                            'endDate'
+                          )
+                        }
+                        className='w-full'
+                      />
                     </div>
                   </div>
 

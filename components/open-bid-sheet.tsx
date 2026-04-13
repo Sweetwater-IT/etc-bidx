@@ -61,6 +61,10 @@ import { formatDate } from "@/lib/formatUTCDate";
 import { Separator } from "./ui/separator";
 import { useAuth } from "@/contexts/auth-context";
 import { RequestorSelector } from "./requestor-selector";
+import { OwnerSelector } from "./OwnerSelector";
+import { CountySelector } from "./CountySelector";
+import { LettingDateSelector } from "./LettingDateSelector";
+import { DueDateSelector } from "./DueDateSelector";
 
 interface OpenBidSheetProps {
   open: boolean;
@@ -588,50 +592,13 @@ export function OpenBidSheet({
                   <Label className="text-sm font-medium text-muted-foreground">
                     Owner <span className="text-red-500">*</span>
                   </Label>
-                  <Popover
-                    open={openStates.owner}
-                    onOpenChange={(open) =>
-                      setOpenStates((prev) => ({ ...prev, owner: open }))
-                    }
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStates.owner}
-                        className="w-full justify-between text-muted-foreground"
-                        disabled={isLoading}
-                      >
-                        {owner || "Select owner..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput placeholder="Search owner..." />
-                        <CommandEmpty>No owner found.</CommandEmpty>
-                        <CommandGroup>
-                          {owners.map((ownerItem) => (
-                            <CommandItem
-                              key={ownerItem.id}
-                              value={ownerItem.name}
-                              onSelect={() => handleOwnerChange(ownerItem.name)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  owner === ownerItem.name
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {ownerItem.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <OwnerSelector
+                    owners={owners}
+                    value={owner}
+                    onValueChange={handleOwnerChange}
+                    disabled={isLoading}
+                    className="w-full"
+                  />
                 </div>
 
                 <div className="space-y-2 w-full">
@@ -655,15 +622,10 @@ export function OpenBidSheet({
                   <Label className="text-sm font-medium text-muted-foreground">
                     Letting Date <span className="text-red-500">*</span>
                   </Label>
-                  <Input
+                  <LettingDateSelector
                     id="letting-date"
-                    type="date"
-                    pattern="^\\d*(\\.\\d{0,2})?$"
-                    placeholder={"Letting date"}
-                    value={
-                      lettingDate ? lettingDate.toISOString().split("T")[0] : ""
-                    }
-                    onChange={(e) => setLettingDate(new Date(e.target.value))}
+                    value={lettingDate}
+                    onChange={value => setLettingDate(value ? new Date(value) : undefined)}
                     className="h-10"
                   />
                   {/* <Popover open={openStates.lettingDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, lettingDate: open }))}>
@@ -698,13 +660,10 @@ export function OpenBidSheet({
                   {/**Leaving popover in in case this needs to be editable again */}
                   {/* <Popover open={openStates.dueDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, dueDate: open }))}>
                     <PopoverTrigger asChild> */}
-                  <Input
+                  <DueDateSelector
                     id="due-date"
-                    type="date"
-                    pattern="^\\d*(\\.\\d{0,2})?$"
-                    placeholder={"Due date"}
-                    value={dueDate ? dueDate.toISOString().split("T")[0] : ""}
-                    onChange={(e) => setDueDate(new Date(e.target.value))}
+                    value={dueDate}
+                    onChange={value => setDueDate(value ? new Date(value) : undefined)}
                     className="h-10"
                   />
                   {/* </PopoverTrigger>
@@ -726,55 +685,20 @@ export function OpenBidSheet({
                   <Label className="text-sm font-medium text-muted-foreground">
                     County <span className="text-red-500">*</span>
                   </Label>
-                  <Popover
-                    open={openStates.county}
-                    onOpenChange={(open) =>
-                      setOpenStates((prev) => ({ ...prev, county: open }))
-                    }
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openStates.county}
-                        className="w-full font-medium text-muted-foreground justify-between"
-                        disabled={isLoading}
-                      >
-                        {county || "Select county..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-full p-0"
-                      avoidCollisions={false}
-                    >
-                      <Command>
-                        <CommandInput placeholder="Search county..." />
-                        <CommandEmpty>No county found.</CommandEmpty>
-                        <CommandGroup>
-                          {counties.map((countyItem) => (
-                            <CommandItem
-                              key={countyItem.id}
-                              value={countyItem.name}
-                              onSelect={() =>
-                                handleCountyChange(countyItem.name)
-                              }
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  county === countyItem.name
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {countyItem.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <CountySelector
+                    counties={counties}
+                    value={county}
+                    onSelect={countyId => {
+                      const countyItem = counties.find(
+                        item => item.id.toString() === countyId
+                      )
+                      if (countyItem) {
+                        handleCountyChange(countyItem.name)
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="w-full font-medium text-muted-foreground justify-between"
+                  />
                 </div>
 
                 <div className="space-y-2 w-full">

@@ -10,10 +10,12 @@ import { SaleItem } from '@/types/TSaleItem';
 import { EstimateCompleteView, EstimateGridView } from '@/types/estimate-view';
 import { defaultPermanentSignsObject } from '@/types/default-objects/defaultPermanentSignsObject';
 import { determineItemType, PermanentSigns } from '@/types/TPermanentSigns';
+import { buildIlikeSearchClauses, sanitizePostgrestSearchTerm } from '@/lib/postgrest-search';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const search = sanitizePostgrestSearchTerm(searchParams.get('search') || '');
     const status = searchParams.get('status');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 25;
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1;
@@ -88,8 +90,26 @@ export async function GET(request: NextRequest) {
         const wonBidIds = allBids.filter(bid => bid.status === 'WON').map(bid => bid.id);
         const jobsData = await getJobsDataForBids(wonBidIds);
 
+        const normalizedSearch = search.toLowerCase();
+        const matchingBids = search
+          ? allBids.filter((bid: any) => {
+              const searchableFields = [
+                bid.admin_data?.contractNumber,
+                bid.admin_data?.owner,
+                bid.admin_data?.county?.name,
+                bid.admin_data?.estimator,
+                bid.contractor_name,
+                bid.subcontractor_name,
+                bid.status,
+              ];
+              return searchableFields.some(field =>
+                String(field || '').toLowerCase().includes(normalizedSearch)
+              );
+            })
+          : allBids;
+
         // FIXED: Only count non-archived items for main counts
-        const nonArchivedBids = allBids.filter(bid => bid.archived !== true);
+        const nonArchivedBids = matchingBids.filter(bid => bid.archived !== true);
 
         const countData = {
           all: nonArchivedBids.length,
@@ -98,7 +118,7 @@ export async function GET(request: NextRequest) {
           pending: nonArchivedBids.filter(bid => bid.status === 'PENDING').length,
           lost: nonArchivedBids.filter(bid => bid.status === 'LOST').length,
           draft: nonArchivedBids.filter(bid => bid.status === 'DRAFT').length,
-          archived: allBids.filter(bid => bid.archived === true).length
+          archived: matchingBids.filter(bid => bid.archived === true).length
         };
 
         return NextResponse.json(countData);
@@ -220,6 +240,19 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        'admin_data->>contractNumber',
+        'admin_data->>owner',
+        'admin_data->county->>name',
+        'admin_data->>estimator',
+        'contractor_name',
+        'subcontractor_name',
+        'status',
+      ], search);
+      countQuery = countQuery.or(searchClauses.join(','));
     }
 
     // Get the filtered count data first
@@ -378,6 +411,19 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        'admin_data->>contractNumber',
+        'admin_data->>owner',
+        'admin_data->county->>name',
+        'admin_data->>estimator',
+        'contractor_name',
+        'subcontractor_name',
+        'status',
+      ], search);
+      query = query.or(searchClauses.join(','));
     }
 
     // For won/won-pending filtering, we need to fetch more records than we need

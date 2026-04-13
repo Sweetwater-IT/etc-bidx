@@ -21,7 +21,7 @@ import { ActiveJobDetailsSheet } from "../../../components/active-job-details-sh
 import { EditActiveJobSheet } from "../../../components/edit-active-job-sheet"
 import { ActiveBidDetailsSheet } from "../../../components/active-bid-details-sheet"
 import { EditJobNumberDialog } from "../../../components/edit-job-number-dialog";
-import { BriefcaseBusiness, Calendar as CalendarIcon, PencilIcon, RefreshCw, Search } from "lucide-react";
+import { BriefcaseBusiness, Calendar as CalendarIcon, PencilIcon, RefreshCw } from "lucide-react";
 import { AvailableJob } from "../../../data/available-jobs";
 import { JobDetailsSheet } from "../../../components/job-details-sheet";
 import BidItemsStep5 from "../../../components/pages/active-bid/steps/bid-items-step5";
@@ -33,11 +33,12 @@ import { EstimateProvider } from "@/contexts/EstimateContext";
 import { BidSummaryDrawer } from "@/components/bid-summary-drawer";
 import { safeNumber } from "@/lib/safe-number";
 import { formatDate } from "@/lib/formatUTCDate";
-import { Input } from "@/components/ui/input";
 import { ImportSheet } from "@/components/import-sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconDownload, IconPlus, IconUpload, IconX } from "@tabler/icons-react";
+import { TableSearchBar } from "@/components/TableSearchBar";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 import { format } from "date-fns";
 
 // Map between UI status and database status
@@ -90,8 +91,16 @@ export function BidBoardContent() {
     const [cardData, setCardData] = useState<{ title: string, value: string }[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [showFilters, setShowFilters] = useState(false);
-    const [availableJobsSearch, setAvailableJobsSearch] = useState("");
-    const [activeBidsSearch, setActiveBidsSearch] = useState("");
+    const {
+        search: availableJobsSearch,
+        setSearch: setAvailableJobsSearch,
+        debouncedSearch: debouncedAvailableJobsSearch,
+    } = useTableSearchState({ paramName: "availableSearch" });
+    const {
+        search: activeBidsSearch,
+        setSearch: setActiveBidsSearch,
+        debouncedSearch: debouncedActiveBidsSearch,
+    } = useTableSearchState({ paramName: "activeBidSearch" });
     const [availableJobsImportOpen, setAvailableJobsImportOpen] = useState(false);
     const [availableJobsCalendarOpen, setAvailableJobsCalendarOpen] = useState(false);
     const [activeBidsCalendarOpen, setActiveBidsCalendarOpen] = useState(false);
@@ -290,7 +299,7 @@ export function BidBoardContent() {
     }, [referenceData, isAvailableJobs, isActiveBids, customers]);
 
     // Extract filter options from filterOptions state
-    const branchOptions = filterOptions?.find(opt => opt.field === 'branch')?.options || [];
+    const branchOptions = useMemo(() => filterOptions?.find(opt => opt.field === 'branch')?.options || [], [filterOptions]);
     const ownerOptions = filterOptions?.find(opt => opt.field === 'owner')?.options || [];
     const countyOptions = filterOptions?.find(opt => opt.field === 'county')?.options || [];
     const estimatorOptions = filterOptions?.find(opt => opt.field === 'requestor')?.options || [];
@@ -396,6 +405,9 @@ export function BidBoardContent() {
                 limit: availableJobsPageSize,
                 page: availableJobsPageIndex + 1, // API uses 1-based indexing
             };
+            if (debouncedAvailableJobsSearch.trim()) {
+                options.search = debouncedAvailableJobsSearch.trim();
+            }
 
             // Add sorting parameters if available
             if (sortBy) {
@@ -517,7 +529,7 @@ export function BidBoardContent() {
         } finally {
             setIsTableLoading(false);
         }
-    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, sortBy, sortOrder, activeFilters]);
+    }, [activeSegment, availableJobsPageIndex, availableJobsPageSize, sortBy, sortOrder, activeFilters, debouncedAvailableJobsSearch]);
 
     // Load active bids data
     const handleJobNavigation = (direction: 'up' | 'down') => {
@@ -547,6 +559,9 @@ export function BidBoardContent() {
                 page: 1,
                 detailed: true
             }
+            if (debouncedActiveBidsSearch.trim()) {
+                ops.search = debouncedActiveBidsSearch.trim();
+            }
 
             if (sortBy) {
                 ops.sortBy = sortBy
@@ -566,6 +581,9 @@ export function BidBoardContent() {
                 page: activeBidsPageIndex + 1, // API uses 1-based indexing
                 detailed: true
             };
+            if (debouncedActiveBidsSearch.trim()) {
+                options.search = debouncedActiveBidsSearch.trim();
+            }
 
             // Add filter parameters if any are active
             if (Object.keys(activeFilters).length > 0) {
@@ -674,7 +692,7 @@ export function BidBoardContent() {
         } finally {
             setIsTableLoading(false);
         }
-    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, customers, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeBidsPageIndex, activeBidsPageSize, customers, activeFilters, sortBy, sortOrder, debouncedActiveBidsSearch, activeBidsTotalCount]);
 
     const loadActiveJobs = useCallback(async () => {        
         try {
@@ -844,6 +862,9 @@ export function BidBoardContent() {
         if (!isAvailableJobs) return;
         try {
             const options: any = { limit: 1000, includeStats: true };
+            if (debouncedAvailableJobsSearch.trim()) {
+                options.search = debouncedAvailableJobsSearch.trim();
+            }
 
             // Add date filters if provided
             if (startDate && endDate) {
@@ -865,7 +886,7 @@ export function BidBoardContent() {
             console.error("Error fetching job counts:", error);
             toast.error("Failed to fetch job counts");
         }
-    }, [isAvailableJobs]);
+    }, [debouncedAvailableJobsSearch, isAvailableJobs]);
 
     const fetchActiveJobCounts = useCallback(async () => {
 
@@ -901,7 +922,11 @@ export function BidBoardContent() {
 
         if (!isActiveBids) return;
         try {
-            const response = await fetch('/api/active-bids?counts=true');
+            const params = new URLSearchParams({ counts: 'true' });
+            if (debouncedActiveBidsSearch.trim()) {
+                params.set('search', debouncedActiveBidsSearch.trim());
+            }
+            const response = await fetch(`/api/active-bids?${params.toString()}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch active bid counts');
             }
@@ -922,7 +947,15 @@ export function BidBoardContent() {
             console.error("Error fetching active bid counts:", error);
             toast.error("Failed to fetch active bid counts");
         }
-    }, [isActiveBids]);
+    }, [debouncedActiveBidsSearch, isActiveBids]);
+
+    useEffect(() => {
+        setAvailableJobsPageIndex(0);
+    }, [debouncedAvailableJobsSearch]);
+
+    useEffect(() => {
+        setActiveBidsPageIndex(0);
+    }, [debouncedActiveBidsSearch]);
 
     useEffect(() => {
         if (isAvailableJobs) {
@@ -1028,7 +1061,7 @@ export function BidBoardContent() {
 
     const data = useMemo(() => {
         return isAvailableJobs ? availableJobs : isActiveBids ? activeBids : activeJobs;
-    }, [isAvailableJobs, isActiveBids, isActiveJobs, availableJobs, activeBids, activeJobs]);
+    }, [isAvailableJobs, isActiveBids, availableJobs, activeBids, activeJobs]);
     console.log('el lenth del data es', data.length);
 
     //borrar
@@ -1127,7 +1160,7 @@ export function BidBoardContent() {
         } finally {
             stopLoading();
         }
-    }, [startLoading, stopLoading]);
+    }, [loadActiveBids, startLoading, stopLoading]);
 
     const fetchAllFilteredJobs = async () => {
         const options: any = {
@@ -1780,7 +1813,7 @@ export function BidBoardContent() {
             allCount = data.pagination?.totalCount || 0;
         }
         setFilteredBranchCounts({ ...counts, all: allCount });
-    }, [isActiveJobs, branchOptions, activeFilters, sortBy, sortOrder]);
+    }, [isActiveJobs, branchOptions, activeFilters]);
 
     // Update branch counts when filters, sorting, or data reloads
     useEffect(() => {
@@ -2349,29 +2382,21 @@ export function BidBoardContent() {
 
                     {isAvailableJobs && (
                         <div className="px-4 lg:px-6">
-                            <div className="relative max-w-sm">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search open bids..."
-                                    value={availableJobsSearch}
-                                    onChange={(e) => setAvailableJobsSearch(e.target.value)}
-                                    className="h-9 border-border bg-card pl-9 shadow-sm"
-                                />
-                            </div>
+                            <TableSearchBar
+                                value={availableJobsSearch}
+                                onChange={setAvailableJobsSearch}
+                                placeholder="Search open bids..."
+                            />
                         </div>
                     )}
 
                     {isActiveBids && (
                         <div className="px-4 lg:px-6">
-                            <div className="relative max-w-sm">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search active bids..."
-                                    value={activeBidsSearch}
-                                    onChange={(e) => setActiveBidsSearch(e.target.value)}
-                                    className="h-9 border-border bg-card pl-9 shadow-sm"
-                                />
-                            </div>
+                            <TableSearchBar
+                                value={activeBidsSearch}
+                                onChange={setActiveBidsSearch}
+                                placeholder="Search active bids..."
+                            />
                         </div>
                     )}
 
@@ -2389,12 +2414,6 @@ export function BidBoardContent() {
                             onArchiveSelected={initiateArchiveJobs}
                             onDeleteSelected={initiateDeleteJobs}
                             tableRef={availableJobsTableRef}                           
-                            enableSearch={true}  
-                            searchPlaceholder="Search by contract, requestor, status, owner, letting, or due date..."
-                            searchableColumns={["contractNumber", "requestor", "status", "owner", "county", "lettingDate", "dueDate"]}
-                            searchValue={availableJobsSearch}
-                            onSearchChange={setAvailableJobsSearch}
-                            showSearchBar={false}
                             onViewDetails={handleViewDetails}
                             onRowClick={handleViewDetails}
                             onEdit={handleEdit}
@@ -2458,12 +2477,6 @@ export function BidBoardContent() {
                             columns={columns}
                             variant="job-list"
                             segmentsVariant="productivity"
-                            enableSearch={true}
-                            searchPlaceholder="Search by letting date, contract number, contractor, owner, estimator, county, or status..."
-                            searchableColumns={["lettingDate", "contractNumber", "contractor", "owner", "estimator", "county", "status"]}
-                            searchValue={activeBidsSearch}
-                            onSearchChange={setActiveBidsSearch}
-                            showSearchBar={false}
                             segments={segments}
                             segmentValue={activeSegment}
                             segmentCounts={activeBidCounts}

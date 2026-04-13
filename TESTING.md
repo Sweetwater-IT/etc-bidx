@@ -8,7 +8,6 @@ This document provides an overview of the testing structure for the ETC-BIDX pro
 - [Test Structure](#test-structure)
 - [Component Tests](#component-tests)
 - [API Tests](#api-tests)
-- [Cypress Tests](#cypress-tests)
 - [Running Tests](#running-tests)
 - [Adding New Tests](#adding-new-tests)
 
@@ -18,7 +17,6 @@ The ETC-BIDX project uses a comprehensive testing approach with three main types
 
 1. **Component Tests**: Unit tests for React components using Jest and React Testing Library
 2. **API Tests**: Tests for backend API endpoints using Jest
-3. **Cypress Tests**: End-to-end tests for UI interactions and integration
 
 ## Test Structure
 
@@ -35,10 +33,6 @@ etc-bidx/
 │   └── mocks/                  # Mock data and components
 │       ├── components/         # Mock components
 │       └── data/               # Mock data
-├── cypress/                    # Cypress tests
-│   ├── e2e/                    # End-to-end test files
-│   ├── fixtures/               # Test fixtures (mock data)
-│   └── support/                # Support files and commands
 ├── jest.config.js              # Jest configuration for component tests
 └── jest.config.api.js          # Jest configuration for API tests
 ```
@@ -119,44 +113,6 @@ describe('API Endpoint', () => {
 });
 ```
 
-## Cypress Tests
-
-Cypress tests are end-to-end tests that simulate user interactions with the application.
-
-### Key Files and Directories
-
-- `cypress/e2e/`: Contains end-to-end test files
-- `cypress/fixtures/`: Contains test fixtures (mock data)
-- `cypress/support/`: Contains support files and commands
-
-### Example Cypress Test
-
-```javascript
-describe('Available Jobs Page', () => {
-  beforeEach(() => {
-    // Mock API responses
-    cy.intercept('GET', '/api/bids?status=Unset&limit=1000', { fixture: 'unset-jobs.json' }).as('getUnsetJobs');
-    cy.intercept('GET', '/api/reference-data?type=counties', { fixture: 'counties.json' }).as('getCounties');
-    
-    // Visit the page
-    cy.visit('/available-jobs');
-    cy.wait('@getUnsetJobs');
-  });
-
-  it('displays the jobs table', () => {
-    cy.get('[data-testid="jobs-table"]').should('be.visible');
-    cy.get('[data-testid="jobs-table"] th').should('have.length', 7);
-  });
-
-  it('filters jobs by status', () => {
-    cy.intercept('GET', '/api/bids?status=Bid&limit=1000', { fixture: 'bid-jobs.json' }).as('getBidJobs');
-    cy.get('[data-testid="filter-bid"]').click({ force: true });
-    cy.wait('@getBidJobs');
-    cy.get('[data-testid="jobs-table"] tbody tr').should('have.length', 2);
-  });
-});
-```
-
 ## Running Tests
 
 The following npm scripts are available for running tests:
@@ -165,9 +121,6 @@ The following npm scripts are available for running tests:
 - `npm run test:components`: Run component tests only
 - `npm run test:api`: Run API tests only
 - `npm run test:all`: Run both component and API tests
-- `npm run cypress`: Open Cypress test runner
-- `npm run cypress:run`: Run Cypress tests in headless mode
-- `npm run cypress:available-jobs`: Run Cypress tests for the Available Jobs page
 
 ## Adding New Tests
 
@@ -249,46 +202,6 @@ describe('Jobs API', () => {
 });
 ```
 
-### Adding a New Cypress Test
-
-1. Create a new test file in `cypress/e2e/` with the naming convention `feature-name.cy.js`
-2. Create any necessary fixtures in `cypress/fixtures/`
-3. Write test cases using Cypress commands
-4. Run the test using `npm run cypress`
-
-Example:
-
-```javascript
-// cypress/e2e/job-details.cy.js
-describe('Job Details Page', () => {
-  beforeEach(() => {
-    // Mock API responses
-    cy.intercept('GET', '/api/jobs/123', { fixture: 'job-details.json' }).as('getJobDetails');
-    
-    // Visit the page
-    cy.visit('/jobs/123');
-    cy.wait('@getJobDetails');
-  });
-
-  it('displays job details', () => {
-    cy.get('[data-testid="job-title"]').should('contain.text', 'Test Job');
-    cy.get('[data-testid="job-status"]').should('contain.text', 'Active');
-  });
-
-  it('allows editing job details', () => {
-    cy.intercept('PUT', '/api/jobs/123', { statusCode: 200 }).as('updateJob');
-    
-    cy.get('[data-testid="edit-button"]').click({ force: true });
-    cy.get('[data-testid="job-title-input"]').clear().type('Updated Job Title');
-    cy.get('[data-testid="save-button"]').click();
-    
-    cy.wait('@updateJob').its('request.body').should('include', {
-      title: 'Updated Job Title'
-    });
-  });
-});
-```
-
 ## Best Practices
 
 ### Component Tests
@@ -302,10 +215,3 @@ describe('Job Details Page', () => {
 - Test both success and error responses
 - Use mock data to simulate database responses
 - Test edge cases and validation
-
-### Cypress Tests
-- Use `{ force: true }` for click operations when dealing with CSS issues like `pointer-events: none`
-- Implement flexible selectors to adapt to potential UI changes
-- Mock API responses to test different scenarios
-- Focus on testing functionality rather than implementation details
-- Use data-testid attributes for reliable element selection

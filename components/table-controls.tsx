@@ -188,9 +188,25 @@ export function FilterDropdowns({
 
   // Simple pluralization function
   const pluralize = (word: string): string => {
-    const lastChar = word.toLowerCase().slice(-1);
-    const vowels = ['a', 'e', 'i', 'o', 'u', 'r'];
-    return vowels.includes(lastChar) ? `${word}s` : `${word}es`;
+    const lowerWord = word.toLowerCase();
+
+    if (lowerWord.endsWith("y")) {
+      const beforeY = lowerWord.slice(-2, -1);
+      const vowels = ["a", "e", "i", "o", "u"];
+      return vowels.includes(beforeY) ? `${word}s` : `${word.slice(0, -1)}ies`;
+    }
+
+    if (
+      lowerWord.endsWith("s") ||
+      lowerWord.endsWith("x") ||
+      lowerWord.endsWith("z") ||
+      lowerWord.endsWith("ch") ||
+      lowerWord.endsWith("sh")
+    ) {
+      return `${word}es`;
+    }
+
+    return `${word}s`;
   };
 
   if (!showFilters) return null;

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { buildIlikeSearchClauses, sanitizePostgrestSearchTerm } from '@/lib/postgrest-search';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const search = sanitizePostgrestSearchTerm(searchParams.get('search') || '');
+    const normalizedSearch = search.toLowerCase();
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '25');
     const orderBy = searchParams.get('orderBy') || 'created_at';
@@ -30,191 +33,16 @@ export async function GET(request: NextRequest) {
       return inclusiveEndDate.toISOString();
     };
 
+    const [
+      { data: users },
+      { data: branches },
+      { data: contractors },
+    ] = await Promise.all([
+      supabase.from('users').select('name, branch_id'),
+      supabase.from('branches').select('id, name'),
+      supabase.from('contractors').select('id, display_name'),
+    ]);
 
-    //        if (counts) {
-    //   const { data, error } = await supabase
-    //     .rpc('get_sign_orders_counts_full', { include_drafts: includeDrafts });
-
-    //   if (error) {
-    //     return NextResponse.json({ success: false, error: 'Failed to get counts' }, { status: 500 });
-    //   }
-
-    //   return NextResponse.json({
-    //     success: true,
-    //     counts: data?.[0] || {}
-    //   });
-    // }
-
-if (counts) {
-  try {
-    const includeDrafts = searchParams.get('includeDrafts') === 'true';
-    const statuses = includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'];
-    const shopStatuses = ['not-started', 'in-process', 'on-order', 'complete'];
-    const branchMap: Record<string, number> = { turbotville: 1, hatfield: 2, bedford: 3 };
-
-    // i bring all active and archived orders
-    const { data: allOrders } = await supabase
-      .from('sign_orders')
-      .select('requestor, archived, shop_status, order_status, created_at')
-      .in('order_status', statuses);
-
-    if (!allOrders) throw new Error('Failed to fetch orders');
-
-    // i bring the users
-    const { data: users } = await supabase.from('users').select('name, branch_id');
-    if (!users) throw new Error('Failed to fetch users');
-
-    const userBranchMap = users.reduce((acc: Record<string, number>, u: any) => {
-      acc[u.name] = u.branch_id;
-      return acc;
-    }, {});
-
-    
-    const result = {
-      all: 0,
-      archived: 0,
-      turbotville: 0,
-      hatfield: 0,
-      bedford: 0,
-      "not-started": 0,
-      "in-process": 0,
-      "on-order": 0,
-      complete: 0
-    };
-
-    for (const order of allOrders) {
-      if (startDate && order.created_at && new Date(order.created_at) < new Date(startDate)) {
-        continue;
-      }
-      if (endDate && order.created_at && new Date(order.created_at) >= new Date(getInclusiveEndDate(endDate))) {
-        continue;
-      }
-
-      const isArchived = order.archived;
-      const branchId = userBranchMap[order.requestor];
-
-      // the total count
-      if (!isArchived) result.all += 1;
-      if (isArchived) result.archived += 1;
-
-      // the totals for branches
-      if (!isArchived && branchId) {
-        if (branchId === branchMap.turbotville) result.turbotville += 1;
-        if (branchId === branchMap.hatfield) result.hatfield += 1;
-        if (branchId === branchMap.bedford) result.bedford += 1;
-      }
-
-      // for shop_status 
-      if (!isArchived && shopStatuses.includes(order.shop_status)) {
-        result[order.shop_status as keyof typeof result] += 1;
-      }
-    }
-
-    return NextResponse.json({ success: true, counts: result });
-  } catch (err) {
-    console.error('Error fetching counts:', err);
-    return NextResponse.json({ success: false, error: 'Failed to fetch counts' }, { status: 500 });
-  }
-}
-
-
-
-
-    // If we're just getting counts
-    if (counts) {
-      // Estados posibles de shop_status
-      const shopStatuses = ["not-started", "in-process", "on-order", "complete"];
-
-      // Si el filtro de archivados está activo
-      if (isArchivedFilter) {
-        const { data, error } = await supabase
-          .rpc("get_sign_orders_counts", { include_drafts: true });
-
-        if (error) {
-          return NextResponse.json({ success: false, error: 'Failed to get archived counts' }, { status: 500 });
-        }
-
-        return NextResponse.json({
-          success: true,
-          counts: data?.[0] || {}
-        });
-      }
-
-      // Caso normal (no archivados)
-      const countsResult: Record<string, number> = {
-        all: 0,
-        "not-started": 0,
-        "in-process": 0,
-        "on-order": 0,
-        complete: 0,
-      };
-
-      // Query base para activos
-      let baseQuery = supabase
-        .from("sign_orders")
-        .select("*", { count: "exact", head: true })
-        .or("archived.is.null,archived.eq.false")
-        .in("order_status", includeDrafts ? ["SUBMITTED", "DRAFT"] : ["SUBMITTED"]);
-
-      // Filtro por `status` si aplica
-      const statusValues: string[] = [];
-      if (statusParam && statusParam.includes("Draft")) {
-        const statuses = statusParam.split(",").map((s) => s.trim());
-        statuses.forEach((status) => {
-          statusValues.push(status, status.toLowerCase(), status.toUpperCase());
-        });
-        baseQuery = baseQuery.in("status", statusValues);
-      }
-
-      // Total activos
-      const { count: allCount, error: allCountError } = await baseQuery;
-      if (allCountError) {
-        return NextResponse.json({ success: false, error: 'Failed to get counts' }, { status: 500 });
-      }
-      countsResult.all = allCount || 0;
-
-      // Totales por shop_status
-      for (const status of shopStatuses) {
-        let statusQuery = supabase
-          .from("sign_orders")
-          .select("*", { count: "exact", head: true })
-          .or("archived.is.null,archived.eq.false")
-          .in("order_status", includeDrafts ? ["SUBMITTED", "DRAFT"] : ["SUBMITTED"])
-          .eq("shop_status", status);
-
-        if (statusValues.length > 0) {
-          statusQuery = statusQuery.in("status", statusValues);
-        }
-
-        const { count: statusCount, error: statusError } = await statusQuery;
-        if (!statusError) {
-          countsResult[status] = statusCount || 0;
-        }
-      }
-
-      return NextResponse.json({ success: true, counts: countsResult });
-    }
-
-
-    // Get reference data for joins
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('name, branch_id');
-
-    const { data: branches, error: branchesError } = await supabase
-      .from('branches')
-      .select('id, name');
-
-    const { data: contractors, error: contractorsError } = await supabase
-      .from('contractors')
-      .select('id, display_name');
-
-    if (usersError || branchesError || contractorsError) {
-      console.error('Error fetching reference data:', { usersError, branchesError, contractorsError });
-      return NextResponse.json({ success: false, error: 'Failed to fetch reference data' }, { status: 500 });
-    }
-
-    // Create lookup maps
     const userBranchMap = (users || []).reduce((map: any, user: any) => {
       map[user.name] = user.branch_id;
       return map;
@@ -229,6 +57,112 @@ if (counts) {
       map[contractor.id] = contractor.display_name;
       return map;
     }, {});
+
+    const matchingContractorIds = search
+      ? (contractors || [])
+          .filter((contractor: any) =>
+            String(contractor.display_name || '').toLowerCase().includes(normalizedSearch)
+          )
+          .map((contractor: any) => contractor.id)
+      : [];
+    if (counts) {
+      const statuses = includeDrafts ? ['SUBMITTED', 'DRAFT'] : ['SUBMITTED'];
+      const shopStatuses = ['not-started', 'in-process', 'on-order', 'complete'];
+      const branchMap: Record<string, number> = { turbotville: 1, hatfield: 2, bedford: 3 };
+      const { data: allOrders } = await supabase
+        .from('sign_orders')
+        .select('requestor, archived, shop_status, order_status, status, created_at, contractor_id, contract_number, job_number, assigned_to, order_number, order_date, need_date')
+        .in('order_status', statuses);
+
+      if (!allOrders) {
+        throw new Error('Failed to fetch orders');
+      }
+
+      const countsResult: Record<string, number> = {
+        all: 0,
+        archived: 0,
+        turbotville: 0,
+        hatfield: 0,
+        bedford: 0,
+        "not-started": 0,
+        "in-process": 0,
+        "on-order": 0,
+        complete: 0,
+      };
+
+      for (const order of allOrders) {
+        const searchableFields = [
+          order.requestor,
+          order.shop_status,
+          order.order_status,
+          order.contract_number,
+          order.job_number,
+          order.assigned_to,
+          order.order_number,
+          order.order_date,
+          order.need_date,
+          contractorNameMap[order.contractor_id],
+        ];
+
+        const matchesSearch = !search || searchableFields.some(field =>
+          String(field || '').toLowerCase().includes(normalizedSearch)
+        ) || matchingContractorIds.includes(order.contractor_id);
+
+        if (!matchesSearch) {
+          continue;
+        }
+
+        if (startDate && order.created_at && new Date(order.created_at) < new Date(startDate)) {
+          continue;
+        }
+        if (endDate && order.created_at && new Date(order.created_at) >= new Date(getInclusiveEndDate(endDate))) {
+          continue;
+        }
+
+        if (isArchivedFilter && !order.archived) {
+          continue;
+        }
+        if (excludeArchived && order.archived) {
+          continue;
+        }
+
+        if (statusParam && statusParam.includes('Draft')) {
+          const statusesToMatch = statusParam.split(',').flatMap(status => [
+            status.trim(),
+            status.trim().toLowerCase(),
+            status.trim().toUpperCase(),
+          ]);
+          if (!(order as any).status || !statusesToMatch.includes((order as any).status)) {
+            continue;
+          }
+        }
+
+        const isArchived = order.archived === true;
+        const branchId = userBranchMap[order.requestor];
+
+        if (!isArchived) {
+          countsResult.all += 1;
+        }
+        if (isArchived) {
+          countsResult.archived += 1;
+        }
+
+        if (!isArchived && branchId) {
+          if (branchId === branchMap.turbotville) countsResult.turbotville += 1;
+          if (branchId === branchMap.hatfield) countsResult.hatfield += 1;
+          if (branchId === branchMap.bedford) countsResult.bedford += 1;
+        }
+
+        if (!isArchived && shopStatuses.includes(order.shop_status)) {
+          countsResult[order.shop_status as keyof typeof countsResult] += 1;
+        }
+      }
+
+      return NextResponse.json({ success: true, counts: countsResult });
+    }
+
+
+    // Reference maps were loaded above and reused for search / display transforms.
 
     // Build the main query for sign orders
     let query = supabase
@@ -437,6 +371,22 @@ if (counts) {
       }
     }
 
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        'order_number',
+        'requestor',
+        'contract_number',
+        'job_number',
+        'assigned_to',
+        'shop_status',
+        'status',
+      ], search);
+      if (matchingContractorIds.length > 0) {
+        searchClauses.push(`contractor_id.in.(${matchingContractorIds.join(",")})`);
+      }
+      query = query.or(searchClauses.join(","));
+    }
+
     // Handle date filtering
     if (filters.dateField && filters.dateField[0] === 'created_at') {
       if (filters.dateFrom && filters.dateFrom[0]) {
@@ -489,6 +439,22 @@ if (counts) {
           }
         }
       }
+    }
+
+    if (search) {
+      const searchClauses = buildIlikeSearchClauses([
+        'order_number',
+        'requestor',
+        'contract_number',
+        'job_number',
+        'assigned_to',
+        'shop_status',
+        'status',
+      ], search);
+      if (matchingContractorIds.length > 0) {
+        searchClauses.push(`contractor_id.in.(${matchingContractorIds.join(",")})`);
+      }
+      paginationCountQuery = paginationCountQuery.or(searchClauses.join(","));
     }
 
     // Apply the same archived filtering

@@ -2,17 +2,18 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
+import { TableSearchBar } from "@/components/TableSearchBar";
 import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 import { FilterOption } from "@/components/table-controls";
 import { toast } from "sonner";
 import { IconPlus, IconX } from "@tabler/icons-react";
@@ -22,7 +23,7 @@ import { useCustomers } from "@/hooks/use-customers";
 import { fetchReferenceData } from "@/lib/api-client";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { Factory, RefreshCw, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Factory, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 
 const SIGN_ORDER_COLUMNS = [
   { key: "order_number", title: "Order Number" },
@@ -73,7 +74,7 @@ export default function SignOrderPage() {
   const [showArchiveDialog, setShowArchiveDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [signShopSearch, setSignShopSearch] = useState("");
+  const { search: signShopSearch, setSearch: setSignShopSearch, debouncedSearch: debouncedSignShopSearch } = useTableSearchState();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
   const tableRef = useRef<{ resetRowSelection: () => void }>(null);
@@ -179,20 +180,21 @@ export default function SignOrderPage() {
     setFilterOptions(options);
   }, [referenceData]);
 
-  const buildDateParams = () => {
+  const buildDateParams = useCallback(() => {
     const params: { startDate?: string; endDate?: string } = {};
     if (dateRange?.from) params.startDate = dateRange.from.toISOString().split("T")[0];
     if (dateRange?.to) params.endDate = dateRange.to.toISOString().split("T")[0];
     return params;
-  };
+  }, [dateRange?.from, dateRange?.to]);
 
-  const fetchQuotes = useCallback(async () => {
+  const fetchQuotes = useCallback(async (searchTerm = debouncedSignShopSearch) => {
     setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
       params.append("page", (pageIndex + 1).toString());
       params.append("limit", pageSize.toString());
+      if (searchTerm.trim()) params.append("search", searchTerm.trim());
 
       if (sortBy) {
         params.append("orderBy", sortBy);
@@ -245,12 +247,13 @@ export default function SignOrderPage() {
     } finally {
       setIsTableLoading(false);
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, buildDateParams, debouncedSignShopSearch]);
 
-  const fetchCounts = useCallback(async () => {
+  const fetchCounts = useCallback(async (searchTerm = debouncedSignShopSearch) => {
     try {
       const countParams = new URLSearchParams();
       countParams.append("counts", "true");
+      if (searchTerm.trim()) countParams.append("search", searchTerm.trim());
       const dateParams = buildDateParams();
       if (dateParams.startDate) countParams.append("startDate", dateParams.startDate);
       if (dateParams.endDate) countParams.append("endDate", dateParams.endDate);
@@ -270,7 +273,7 @@ export default function SignOrderPage() {
     } catch (error) {
       console.error("Error fetching segment counts:", error);
     }
-  }, [dateRange?.from, dateRange?.to]);
+  }, [buildDateParams, debouncedSignShopSearch]);
 
   const handleSegmentChange = useCallback((value: string) => {
     setActiveSegment(value);
@@ -282,10 +285,11 @@ export default function SignOrderPage() {
     setPageIndex(0);
   }, []);
 
-  const fetchAllFilteredOrders = async (): Promise<SignOrderView[]> => {
+  const fetchAllFilteredOrders = useCallback(async (searchTerm: string): Promise<SignOrderView[]> => {
     const params = new URLSearchParams();
     params.append("page", "1");
     params.append("limit", totalCount.toString() || "10000");
+    if (searchTerm.trim()) params.append("search", searchTerm.trim());
 
     let filters = { ...activeFilters };
     if (activeSegment === "archived") {
@@ -324,14 +328,14 @@ export default function SignOrderPage() {
     }
 
     return [];
-  };
+  }, [activeSegment, activeFilters, sortBy, sortOrder, buildDateParams, totalCount]);
 
   const handleArchiveSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
       let ordersToArchive: SignOrderView[] = [];
       if (allRowsSelected) {
-        ordersToArchive = await fetchAllFilteredOrders();
+        ordersToArchive = await fetchAllFilteredOrders(debouncedSignShopSearch);
         ordersToArchive = ordersToArchive.filter(order => !order.archived);
       } else {
         ordersToArchive = rows.filter(order => !order.archived);
@@ -361,14 +365,14 @@ export default function SignOrderPage() {
     } finally {
       stopLoading();
     }
-  }, [allRowsSelected, fetchCounts, fetchQuotes, startLoading, stopLoading, totalCount, activeFilters, activeSegment, sortBy, sortOrder, dateRange?.from, dateRange?.to]);
+  }, [allRowsSelected, fetchAllFilteredOrders, fetchCounts, fetchQuotes, startLoading, stopLoading, debouncedSignShopSearch]);
 
   const handleDeleteSelected = useCallback(async (rows: SignOrderView[]) => {
     try {
       startLoading();
       let ordersToDelete: SignOrderView[] = [];
       if (allRowsSelected) {
-        const allOrders = await fetchAllFilteredOrders();
+        const allOrders = await fetchAllFilteredOrders(debouncedSignShopSearch);
         ordersToDelete = allOrders.filter(order => order.archived);
       } else {
         ordersToDelete = rows.filter(order => order.archived);
@@ -398,7 +402,7 @@ export default function SignOrderPage() {
     } finally {
       stopLoading();
     }
-  }, [allRowsSelected, fetchCounts, fetchQuotes, startLoading, stopLoading, totalCount, activeFilters, activeSegment, sortBy, sortOrder, dateRange?.from, dateRange?.to]);
+  }, [allRowsSelected, fetchAllFilteredOrders, fetchCounts, fetchQuotes, startLoading, stopLoading, debouncedSignShopSearch]);
 
   const initiateArchiveOrders = useCallback((selectedOrders: SignOrderView[]) => {
     setSelectedRows(selectedOrders);
@@ -419,14 +423,6 @@ export default function SignOrderPage() {
     const success = await handleDeleteSelected(selectedRows);
     if (success) setShowDeleteDialog(false);
   }, [selectedRows, handleDeleteSelected]);
-
-  useEffect(() => {
-    fetchQuotes();
-  }, [fetchQuotes]);
-
-  useEffect(() => {
-    fetchCounts();
-  }, [fetchCounts, activeSegment]);
 
   const handleRowClick = useCallback((row: SignOrderView) => {
     router.push(`/takeoffs/sign-order/${row.id}`);
@@ -472,6 +468,15 @@ export default function SignOrderPage() {
     await fetchCounts();
     await fetchQuotes();
   }, [fetchCounts, fetchQuotes]);
+
+  useEffect(() => {
+    if (pageIndex !== 0) {
+      setPageIndex(0);
+      return;
+    }
+    fetchCounts();
+    fetchQuotes();
+  }, [debouncedSignShopSearch, activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to, fetchCounts, fetchQuotes]);
 
   const dateLabel = useMemo(() => {
     const today = new Date();
@@ -592,15 +597,11 @@ export default function SignOrderPage() {
               <SectionCards data={summaryCards} variant="productivity" />
 
               <div className="px-4 lg:px-6">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search sign shop orders..."
-                    value={signShopSearch}
-                    onChange={(e) => setSignShopSearch(e.target.value)}
-                    className="h-9 border-border bg-card pl-9 shadow-sm"
-                  />
-                </div>
+                <TableSearchBar
+                  value={signShopSearch}
+                  onChange={setSignShopSearch}
+                  placeholder="Search sign shop orders..."
+                />
               </div>
 
               <DataTable<SignOrderView>
@@ -641,11 +642,6 @@ export default function SignOrderPage() {
                 showFilters={showFilters}
                 setShowFilters={setShowFilters}
                 onUnarchive={handleUnarchiveSignOrder}
-                enableSearch
-                searchableColumns={["order_number", "requestor", "branch", "customer", "order_date", "need_date", "order_type", "assigned_to", "contract_number", "job_number", "shop_status", "created_at"]}
-                searchValue={signShopSearch}
-                onSearchChange={setSignShopSearch}
-                showSearchBar={false}
               />
             </div>
           </div>

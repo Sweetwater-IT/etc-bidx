@@ -4,14 +4,16 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { DataTable } from "@/components/data-table";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { QuoteGridView } from "@/types/QuoteGridView";
+import { QUOTE_CREATOR_SEGMENTS } from "@/lib/quote-creator-segments";
 import { IconPlus } from "@tabler/icons-react";
-import { FileText, RefreshCw, Search } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { TableSearchBar } from "@/components/TableSearchBar";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -26,43 +28,36 @@ const QUOTES_COLUMNS = [
 
 const SEGMENTS = [
   { label: "All", value: "all" },
-  { label: "Napoleon", value: "Napoleon" },
-  { label: "Eric", value: "Eric" },
-  { label: "Rad", value: "Rad" },
-  { label: "Ken", value: "Ken" },
-  { label: "Turner", value: "Turner" },
-  { label: "Redden", value: "Redden" },
-  { label: "John", value: "John" },
+  ...QUOTE_CREATOR_SEGMENTS.map(segment => ({
+    label: segment.segmentLabel,
+    value: segment.value,
+  })),
 ];
 
 export default function QuotesPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
   const [activeFilter, setActiveFilter] = useState("all");
-  const [quoteCounts, setQuoteCounts] = useState({
-    all: 0,
-    Napoleon: 0,
-    Eric: 0,
-    Rad: 0,
-    Ken: 0,
-    Turner: 0,
-    Redden: 0,
-    John: 0,
-  });
+  const [quoteCounts, setQuoteCounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries([["all", 0], ...QUOTE_CREATOR_SEGMENTS.map(segment => [segment.value, 0])])
+  );
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(25);
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [isTableLoading, setIsTableLoading] = useState(false);
-  const [quotesSearch, setQuotesSearch] = useState("");
+  const { search: quotesSearch, setSearch: setQuotesSearch, debouncedSearch: debouncedQuotesSearch } = useTableSearchState();
 
-  const fetchQuotes = async (filter = "all", page = 1, limit = 25) => {
+  const fetchQuotes = useCallback(async (filter = "all", page = 1, limit = 25, search = "") => {
     setIsTableLoading(true);
 
     try {
       const params = new URLSearchParams();
       if (filter !== "all") {
         params.append("created_by", filter);
+      }
+      if (search.trim()) {
+        params.append("search", search.trim());
       }
       params.append("page", page.toString());
       params.append("limit", limit.toString());
@@ -85,12 +80,15 @@ export default function QuotesPage() {
     } finally {
       setIsTableLoading(false);
     }
-  };
+  }, []);
 
-  const fetchQuoteCounts = async () => {
+  const fetchQuoteCounts = useCallback(async (search = "") => {
     try {
       const params = new URLSearchParams();
       params.append("counts", "true");
+      if (search.trim()) {
+        params.append("search", search.trim());
+      }
 
       const response = await fetch(`/api/quotes?${params.toString()}`);
       const data = await response.json();
@@ -98,7 +96,7 @@ export default function QuotesPage() {
     } catch (error) {
       console.error("Error fetching quote counts:", error);
     }
-  };
+  }, []);
 
   const handleDeleteQuote = async (quote: QuoteGridView) => {
     setIsTableLoading(true);
@@ -110,8 +108,8 @@ export default function QuotesPage() {
 
       if (res.ok && data.success) {
         toast.success(`Quote ${quote.quote_number} deleted`);
-        fetchQuotes(activeFilter, pageIndex + 1, pageSize);
-        fetchQuoteCounts();
+        fetchQuotes(activeFilter, pageIndex + 1, pageSize, debouncedQuotesSearch);
+        fetchQuoteCounts(debouncedQuotesSearch);
       } else {
         toast.error(data.message || "Failed to delete quote");
       }
@@ -126,18 +124,16 @@ export default function QuotesPage() {
   const handleFilterChange = (value: string) => {
     setActiveFilter(value);
     setPageIndex(0);
-    fetchQuotes(value, 1, pageSize);
-  };
-
-  const handleRefreshQuotes = () => {
-    fetchQuoteCounts();
-    fetchQuotes(activeFilter, pageIndex + 1, pageSize);
   };
 
   useEffect(() => {
-    fetchQuoteCounts();
-    fetchQuotes(activeFilter, pageIndex + 1, pageSize);
-  }, [activeFilter, pageIndex, pageSize]);
+    if (pageIndex !== 0) {
+      setPageIndex(0);
+      return;
+    }
+    fetchQuoteCounts(debouncedQuotesSearch);
+    fetchQuotes(activeFilter, pageIndex + 1, pageSize, debouncedQuotesSearch);
+  }, [activeFilter, pageIndex, pageSize, debouncedQuotesSearch, fetchQuoteCounts, fetchQuotes]);
 
   const handleRowClick = (quote: QuoteGridView) => {
     router.push(`/quotes/view/${quote.id}`);
@@ -182,22 +178,11 @@ export default function QuotesPage() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="px-4 lg:px-6">
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="outline" size="sm" className="gap-2 font-semibold shadow-sm" onClick={handleRefreshQuotes}>
-                    <RefreshCw className={`h-4 w-4 ${isTableLoading ? "animate-spin" : ""}`} />
-                  </Button>
-                </div>
-              </div>
-              <div className="px-4 lg:px-6">
-                <div className="relative max-w-sm">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search quotes..."
-                    value={quotesSearch}
-                    onChange={(e) => setQuotesSearch(e.target.value)}
-                    className="h-9 border-border bg-card pl-9 shadow-sm"
-                  />
-                </div>
+                <TableSearchBar
+                  value={quotesSearch}
+                  onChange={setQuotesSearch}
+                  placeholder="Search quotes..."
+                />
               </div>
 
               <DataTable<QuoteGridView>
@@ -219,11 +204,6 @@ export default function QuotesPage() {
                 totalCount={totalCount}
                 isLoading={isTableLoading}
                 onDelete={(quote) => handleDeleteQuote(quote)}
-                enableSearch
-                searchableColumns={["quote_number", "status", "type", "customer_name", "point_of_contact", "county", "created_by_name", "created_at"]}
-                searchValue={quotesSearch}
-                onSearchChange={setQuotesSearch}
-                showSearchBar={false}
               />
             </div>
           </div>
