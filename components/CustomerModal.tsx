@@ -63,6 +63,10 @@ export function CustomerModal({
     )
   }
 
+  if (!open) {
+    return null
+  }
+
   return (
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-4xl">

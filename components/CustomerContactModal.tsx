@@ -8,5 +8,9 @@ import {
 export type CustomerContactModalProps = CustomerContactFormProps
 
 export function CustomerContactModal(props: CustomerContactModalProps) {
+  if (!props.isOpen) {
+    return null
+  }
+
   return <CustomerContactForm {...props} />
 }
