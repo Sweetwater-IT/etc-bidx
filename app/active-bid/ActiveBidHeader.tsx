@@ -1,7 +1,7 @@
 'use client'
 import { useEstimate } from '@/contexts/EstimateContext'
 import { Button, buttonVariants } from '../../components/ui/button'
-import { XIcon } from 'lucide-react'
+import { BriefcaseBusiness, XIcon } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import React, { useEffect, useRef, useState } from 'react'
 import { defaultFlaggingObject } from '@/types/default-objects/defaultFlaggingObject'
@@ -210,12 +210,16 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
     mode === 'view' ? (
       <header className='sticky top-11 z-30 shrink-0 border-b bg-card'>
         <div className='mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between'>
-          <div className='flex items-start gap-3'>
+          <div className='flex items-center gap-3'>
+            <div className='rounded-md bg-primary p-2 text-primary-foreground shadow-sm'>
+              <BriefcaseBusiness className='h-5 w-5' />
+            </div>
             <div>
               <h1 className='text-lg font-bold tracking-tight text-foreground'>
-                {adminData.contractNumber || 'Active Bid'}
+                View Bid
               </h1>
-              <div className='mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+              <div className='mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
+                {adminData.location && <span>{adminData.location}</span>}
                 {createdAt && <span>Created {createdAt}</span>}
                 {status && (
                   <Badge
