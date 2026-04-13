@@ -516,9 +516,10 @@ export default function SignOrderPage() {
 
     const nextQuery = nextParams.toString();
     const currentQuery = currentParams.toString();
+    const currentPath = pathname ?? "/takeoffs/sign-shop-orders";
 
     if (nextQuery !== currentQuery) {
-      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      router.replace(nextQuery ? `${currentPath}?${nextQuery}` : currentPath, {
         scroll: false,
       });
     }
