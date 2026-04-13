@@ -30,6 +30,8 @@ import { useCustomers } from '@/hooks/use-customers'
 import { RequestorSelector } from '@/components/requestor-selector'
 import { restorePointerEvents } from '@/lib/pointer-events-fix'
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
+import { CustomerSelector } from '@/components/CustomerSelector'
+import { ContactSelector } from '@/components/ContactSelector'
 
 interface IContact {
   id: number
@@ -914,17 +916,32 @@ export function SignOrderDetailsSheet({
                           <Label>
                             Customer <span className='text-red-600'>*</span>
                           </Label>
-                          <Button
-                            variant='outline'
-                            onClick={openCustomerSelection}
-                            className='w-full justify-start text-left font-normal'
-                          >
-                            <span className='truncate'>
-                              {localCustomer
-                                ? localCustomer.displayName || localCustomer.name
-                                : 'Select customer...'}
-                            </span>
-                          </Button>
+                          <CustomerSelector
+                            customers={customerOptions}
+                            selectedCustomer={localCustomer}
+                            onSelectCustomer={async customer => {
+                              if (!customer) {
+                                return
+                              }
+                              const hydratedCustomer =
+                                (await fetchCustomerById(customer.id)) || customer
+                              applyCustomerSelection(hydratedCustomer)
+                            }}
+                            onCustomerCreated={async createdCustomer => {
+                              await getCustomers()
+                              const hydratedCustomer =
+                                (await fetchCustomerById(createdCustomer.id)) ||
+                                normalizeCustomer(createdCustomer)
+                              setCustomerOptions(prevCustomers => {
+                                const nextCustomers = prevCustomers.filter(
+                                  customer => customer.id !== hydratedCustomer.id
+                                )
+                                return [hydratedCustomer, ...nextCustomers]
+                              })
+                              applyCustomerSelection(hydratedCustomer)
+                            }}
+                            createDescription='Create a customer with a company name, then it will be available in this sign order.'
+                          />
                           {localCustomer && (
                             <div className='text-xs text-muted-foreground'>
                               {[localCustomer.address, localCustomer.city, localCustomer.state, localCustomer.zip]
@@ -938,35 +955,23 @@ export function SignOrderDetailsSheet({
                           <Label>
                             Contact <span className='text-red-600'>*</span>
                           </Label>
-                          <Button
-                            variant='outline'
-                            onClick={openContactSelection}
-                            className='w-full justify-start text-left font-normal'
-                            disabled={!localCustomer}
-                          >
-                            <span className='truncate'>
-                              {localContact
-                                ? localContact.name
-                                : localCustomer
-                                  ? 'Select contact...'
-                                  : 'Select customer first'}
-                            </span>
-                          </Button>
+                          <ContactSelector
+                            customer={localCustomer}
+                            selectedContact={localContact}
+                            onSelectContact={async contact => {
+                              setLocalContact(contact)
+                            }}
+                            onCustomerChange={async customer => {
+                              setLocalCustomer(customer)
+                            }}
+                            showEditButton
+                          />
                           {localContact && (
                             <div className='space-y-2'>
                               <div className='space-y-1 text-xs text-muted-foreground'>
                                 {localContact.email && <div>{localContact.email}</div>}
                                 {localContact.phone && <div>{localContact.phone}</div>}
                               </div>
-                              <Button
-                                type='button'
-                                variant='ghost'
-                                size='sm'
-                                className='h-7 px-0 text-xs text-muted-foreground hover:text-foreground'
-                                onClick={() => openContactEdit(localContact, 'details')}
-                              >
-                                Edit Contact
-                              </Button>
                             </div>
                           )}
                         </div>

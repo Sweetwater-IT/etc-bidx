@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { CustomerContactForm } from "@/components/customer-contact-form"
+import { CustomerContactModal } from "@/components/CustomerContactModal"
 import { useCustomer } from "@/contexts/customer-context"
 
 interface CustomerContactsProps {
@@ -213,7 +213,7 @@ export const CustomerContacts = memo(function CustomerContacts({
 
       {/* Edit Contact Form */}
       {customer && (
-        <CustomerContactForm
+        <CustomerContactModal
           customerId={customer.id}
           isOpen={isEditFormOpen}
           onClose={() => setIsEditFormOpen(false)}

@@ -18,7 +18,7 @@ import { toast } from "sonner"
 import { useCustomer } from "@/contexts/customer-context"
 import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
-interface CustomerContactFormProps {
+export interface CustomerContactFormProps {
   customerId: number
   isOpen: boolean
   onClose: () => void
@@ -42,6 +42,24 @@ interface CustomerContactFormProps {
   }
 }
 
+const CONTACT_ROLE_OPTIONS = [
+  'PRIMARY CONTACT',
+  'PROJECT MANAGER',
+  'ESTIMATOR',
+  'ADMIN',
+  'FIELD / SUPERVISOR',
+  'BILLING',
+  'ACCOUNTING',
+  'PUBLIC WORKS DIRECTOR',
+  'ROADMASTER',
+  'TOWNSHIP MANAGER',
+  'OTHER',
+] as const
+
+function isPresetRole(role?: string | null) {
+  return CONTACT_ROLE_OPTIONS.some(option => option === role)
+}
+
 export function CustomerContactForm({
   customerId,
   isOpen,
@@ -56,18 +74,22 @@ export function CustomerContactForm({
     email: "",
     phone: ""
   })
+  const [roleSelection, setRoleSelection] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const isEditMode = !!contactToEdit
 
   // Initialize form data when editing a contact
   useEffect(() => {
     if (contactToEdit) {
+      const nextRole = contactToEdit.role || ""
+
       setFormData({
         name: contactToEdit.name || "",
-        role: contactToEdit.role || "",
+        role: isPresetRole(nextRole) ? nextRole : nextRole,
         email: contactToEdit.email || "",
         phone: contactToEdit.phone || ""
       })
+      setRoleSelection(isPresetRole(nextRole) ? nextRole : nextRole ? "OTHER" : "")
     } else {
       setFormData({
         name: "",
@@ -75,6 +97,7 @@ export function CustomerContactForm({
         email: "",
         phone: ""
       })
+      setRoleSelection("")
     }
   }, [contactToEdit])
 
@@ -120,27 +143,42 @@ export function CustomerContactForm({
       return
     }
 
+    const resolvedRole = roleSelection === 'OTHER' ? formData.role.trim() : roleSelection
+
+    if (roleSelection === 'OTHER' && !resolvedRole) {
+      toast.error("Custom role is required when Other is selected")
+      return
+    }
+
     try {
       setIsSubmitting(true)
 
       if (isEditMode && contactToEdit) {
         const success = await updateContact(contactToEdit.id, {
           name: formData.name,
-          role: formData.role,
+          role: resolvedRole,
           email: formData.email,
           phone: formData.phone
         })
 
         if (success) {
+          const updatedContactData = {
+            name: formData.name,
+            role: resolvedRole,
+            email: formData.email,
+            phone: formData.phone
+          }
+
           setFormData({
             name: "",
             role: "",
             email: "",
             phone: ""
           })
+          setRoleSelection("")
 
           onClose()
-          onSuccess()
+          onSuccess(contactToEdit.id, updatedContactData)
           restorePointerEvents()
           toast.success('Contact updated successfully');
         } else {
@@ -157,7 +195,7 @@ export function CustomerContactForm({
           body: JSON.stringify({
             contractor_id: customerId,
             name: formData.name,
-            role: formData.role,
+            role: resolvedRole,
             email: formData.email,
             phone: formData.phone
           }),
@@ -173,6 +211,7 @@ export function CustomerContactForm({
             email: "",
             phone: ""
           })
+          setRoleSelection("")
 
           onClose()
           onSuccess(newContact.id, {
@@ -210,7 +249,7 @@ export function CustomerContactForm({
     >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add Contact'}</DialogTitle>
           <DialogDescription>
             {isEditMode
               ? 'Update the contact details below.'
@@ -274,23 +313,46 @@ export function CustomerContactForm({
                 Role
               </Label>
               <Select
-                value={formData.role}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
+                value={roleSelection}
+                onValueChange={(value) => {
+                  setRoleSelection(value)
+                  setFormData(prev => ({
+                    ...prev,
+                    role:
+                      value === 'OTHER'
+                        ? isPresetRole(prev.role) ? '' : prev.role
+                        : value,
+                  }))
+                }}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ESTIMATOR">ESTIMATOR</SelectItem>
-                  <SelectItem value="PROJECT MANAGER">PROJECT MANAGER</SelectItem>
-                  <SelectItem value="ADMIN">ADMIN</SelectItem>
-                  <SelectItem value="FIELD / SUPERVISOR">FIELD / SUPERVISOR</SelectItem>
-                  <SelectItem value="OTHER">OTHER</SelectItem>
+                  {CONTACT_ROLE_OPTIONS.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {roleSelection === 'OTHER' ? (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="custom-role" className="text-right">
+                  Custom Title
+                </Label>
+                <Input
+                  id="custom-role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  placeholder="Enter custom contact title"
+                  className="col-span-3"
+                />
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">

@@ -3,14 +3,13 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Customer } from '../../../types/Customer';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '../../../components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { Check, ChevronsUpDown, AlertCircle, Edit } from 'lucide-react';
+import { AlertCircle, Edit } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { useCustomers } from '../../../hooks/use-customers';
 import { validateEmail } from '@/lib/emailValidation';
 import { handlePhoneInput } from '@/lib/phone-number-functions';
-import { ContactSelector } from '@/components/SelectContacts';
+import { ContactSelector } from '@/components/ContactSelector';
+import { CustomerSelector } from '@/components/CustomerSelector';
 import { toast } from 'sonner';
 
 interface FormInputProps {
@@ -129,8 +128,6 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
     const { customers = [] } = useCustomers();
     const [localContact, setLocalContact] = useState<any | null>(null);
     const [modeEdit, setModeEdit] = useState(false);
-    const [contactModalOpen, setContactModalOpen] = useState(false);
-    const [openCustomer, setOpenCustomer] = useState(false);
     const [emailError, setEmailError] = useState<string>();
 
     const [localValues, setLocalValues] = useState({
@@ -275,45 +272,15 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
                     ) : (
                         <>
                             <Label>Contractor</Label>
-                            <Popover open={openCustomer} onOpenChange={setOpenCustomer}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={openCustomer}
-                                        className="w-full justify-between bg-muted/50"
-                                    >
-                                        {customer ? customer.name : 'Select contractor...'}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search contractor..." />
-                                        <CommandEmpty>No contractor found.</CommandEmpty>
-                                        <CommandGroup className="max-h-[200px] overflow-y-auto">
-                                            {customers.map((c) => (
-                                                <CommandItem
-                                                    key={c.id}
-                                                    value={c.name}
-                                                    onSelect={() => {
-                                                        onCustomerChange(c);
-                                                        setOpenCustomer(false);
-                                                    }}
-                                                >
-                                                    <Check
-                                                        className={cn(
-                                                            'mr-2 h-4 w-4',
-                                                            customer && customer.id === c.id ? 'opacity-100' : 'opacity-0'
-                                                        )}
-                                                    />
-                                                    {c.name}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                            <CustomerSelector
+                                customers={customers}
+                                selectedCustomer={customer}
+                                onSelectCustomer={async selectedCustomer => {
+                                    onCustomerChange(selectedCustomer);
+                                }}
+                                placeholder="Select contractor..."
+                                searchPlaceholder="Search contractor..."
+                            />
                         </>
                     )}
                 </div>
@@ -330,12 +297,10 @@ const CustomerInformationSection: React.FC<CustomerInformationSectionProps> = ({
                         <>
                             <Label>Contact Name</Label>
                             <ContactSelector
-                                localCustomer={customer}
-                                setLocalCustomer={(customer: any) => onCustomerChange(customer)}
-                                localContact={localContact}
-                                setLocalContact={setLocalContact}
-                                contactModalOpen={contactModalOpen}
-                                setContactModalOpen={setContactModalOpen}
+                                customer={customer}
+                                selectedContact={localContact}
+                                onSelectContact={setLocalContact}
+                                onCustomerChange={(nextCustomer) => onCustomerChange(nextCustomer)}
                             />
                         </>
                     )}

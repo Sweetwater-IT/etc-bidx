@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { useCustomerSelection } from '@/hooks/use-csutomers-selection'
 import { useQuoteForm } from '@/app/quotes/create/QuoteFormProvider'
-import { Pencil, Users } from 'lucide-react'
 import type { Customer as QuoteCustomer } from '@/types/Customer'
-import { QuoteCustomerSheet } from './QuoteCustomerSheet'
+import { CustomerSelector as SharedCustomerSelector } from '@/components/CustomerSelector'
+import { ContactSelector as SharedContactSelector } from '@/components/ContactSelector'
 
 const CustomerSelect = ({
   data,
@@ -30,8 +29,6 @@ const CustomerSelect = ({
     loading,
     upsertCustomer,
   } = useCustomerSelection()
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [sheetView, setSheetView] = useState<'select-customer' | 'select-contact'>('select-customer')
 
   const buildCustomerAddress = (customer: any) =>
     [customer?.address || '', customer?.city || '', customer?.state || '', customer?.zip || '']
@@ -67,6 +64,29 @@ const CustomerSelect = ({
     customerNumber: customer.customer_number || customer.customerNumber || 0,
     mainPhone: customer.main_phone || customer.mainPhone || '',
     paymentTerms: customer.payment_terms || customer.paymentTerms || '',
+    lastOrdered: customer.lastOrdered || null,
+  })
+
+  const toHookCustomer = (customer: QuoteCustomer) => ({
+    id: customer.id,
+    name: customer.name,
+    display_name: customer.displayName,
+    email: customer.emails?.[0] || '',
+    main_phone: customer.mainPhone || '',
+    address: customer.address || '',
+    city: customer.city || '',
+    state: customer.state || '',
+    zip: customer.zip || '',
+    customer_contacts: (customer.contactIds || []).map((id, index) => ({
+      id,
+      name: customer.names?.[index] || '',
+      email: customer.emails?.[index] || '',
+      phone: customer.phones?.[index] || '',
+      role: customer.roles?.[index] || '',
+    })),
+    customer_number: customer.customerNumber || 0,
+    payment_terms: customer.paymentTerms || '',
+    web: customer.url || '',
     lastOrdered: customer.lastOrdered || null,
   })
 
@@ -201,55 +221,64 @@ const CustomerSelect = ({
       <div className={`flex ${direction === 'row' ? 'flex-row' : 'flex-col'} justify-between gap-4 mb-4 flex-1`}>
         <div className={`${direction === 'row' ? 'w-1/2' : 'w-full mb-2'} flex flex-col`}>
           <label className="font-semibold block mb-1">{columnCustomerTitle || 'Customer'}</label>
-          <Button
-            variant="outline"
-            className="justify-between"
-            onClick={() => {
-              setSheetView('select-customer')
-              setSheetOpen(true)
+          <SharedCustomerSelector
+            customers={customers.map(toQuoteCustomer)}
+            selectedCustomer={selectedCustomer ? toQuoteCustomer(selectedCustomer) : null}
+            onSelectCustomer={async customer => {
+              if (!customer) {
+                return
+              }
+              handleCustomerClick(customer.id.toString())
             }}
-          >
-            <span className="truncate text-left">
-              {loading ? 'Loading...' : selectedCustomer?.name || data.customer_name || 'Select Customer'}
-            </span>
-            <Users className="ml-2 h-4 w-4 opacity-60" />
-          </Button>
+            onCustomerCreated={async createdCustomer => {
+              const refreshedCustomers = await refreshCustomers()
+              const nextCustomer =
+                refreshedCustomers.find(customer => customer.id === createdCustomer.id) ||
+                toHookCustomer({
+                  id: createdCustomer.id,
+                  name: createdCustomer.name || createdCustomer.display_name || '',
+                  displayName: createdCustomer.display_name || createdCustomer.name || '',
+                  emails: [],
+                  address: createdCustomer.address || '',
+                  phones: [],
+                  roles: [],
+                  names: [],
+                  contactIds: [],
+                  url: '',
+                  created: '',
+                  updated: '',
+                  city: createdCustomer.city || '',
+                  state: createdCustomer.state || '',
+                  zip: createdCustomer.zip || '',
+                  customerNumber: 0,
+                  mainPhone: createdCustomer.main_phone || '',
+                  paymentTerms: '',
+                })
+
+              upsertCustomer(nextCustomer as any)
+              handleCustomerClick(createdCustomer.id.toString())
+            }}
+            placeholder={loading ? 'Loading...' : 'Select Customer'}
+          />
         </div>
 
         <div className={`${direction === 'row' ? 'w-1/2' : 'w-full mb-2'} flex flex-col`}>
           <label className="font-semibold block mb-1">{columnContactTitle || 'Contact'}</label>
-          <Button
-            variant="outline"
-            className="justify-between"
-            disabled={!selectedCustomer || loading}
-            onClick={() => {
-              setSheetView('select-contact')
-              setSheetOpen(true)
+          <SharedContactSelector
+            customer={selectedCustomer ? toQuoteCustomer(selectedCustomer) : null}
+            selectedContact={selectedContact}
+            onSelectContact={async contact => {
+              if (!contact) {
+                return
+              }
+              handleContactClick(contact.id.toString())
             }}
-          >
-            <span className="truncate text-left">
-              {loading
-                ? 'Loading...'
-                : selectedContact?.name || data.customer_contact || (selectedCustomer || data.customer ? 'Please select contact' : 'Select Contact')}
-            </span>
-            <Pencil className="ml-2 h-4 w-4 opacity-60" />
-          </Button>
+            onCustomerChange={async customer => {
+              upsertCustomer(toHookCustomer(customer) as any)
+            }}
+          />
         </div>
       </div>
-
-      <QuoteCustomerSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        initialView={sheetView}
-        customers={customers}
-        selectedCustomer={selectedCustomer}
-        selectedContact={selectedContact}
-        loading={loading}
-        onSelectCustomer={handleCustomerClick}
-        onSelectContact={handleContactClick}
-        onCustomerUpsert={(customer) => upsertCustomer(customer as any)}
-        refreshCustomers={refreshCustomers}
-      />
     </div>
   )
 }

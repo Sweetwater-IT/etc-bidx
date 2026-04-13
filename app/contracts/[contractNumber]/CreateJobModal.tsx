@@ -32,7 +32,7 @@ import {
 import { formatCurrencyValue } from '@/lib/formatDecimals'
 import { validateEmail } from '@/lib/emailValidation'
 import { handlePhoneInput } from '@/lib/phone-number-functions'
-import { ContactSelector } from '@/components/SelectContacts'
+import { ContactSelector } from '@/components/ContactSelector'
 
 // Define item structure
 interface JobItem {
@@ -106,8 +106,6 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
   const [jobCreated, setJobCreated] = useState(false)
 
   const [localContact, setLocalContact] = useState<any | null>(null);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
-
   useEffect(() => {
     setFormValues(prev => ({
       ...prev,
@@ -547,13 +545,10 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({
               <div className="space-y-2">
                 <Label>Contact Name</Label>
                 <ContactSelector
-                  localCustomer={customer}
-                  localContact={localContact}
-                  setLocalContact={setLocalContact}
-                  setLocalCustomer={(customer: any) => onCustomerChange(customer)}
-
-                  contactModalOpen={contactModalOpen}
-                  setContactModalOpen={setContactModalOpen}
+                  customer={customer}
+                  selectedContact={localContact}
+                  onSelectContact={setLocalContact}
+                  onCustomerChange={(nextCustomer) => onCustomerChange(nextCustomer)}
                 />
               </div>
 

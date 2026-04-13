@@ -14,7 +14,6 @@ import {
   Phone,
   Plus,
   Receipt,
-  Save,
   Search,
   Trash2,
   User,
@@ -27,13 +26,6 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,30 +35,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { formatPhoneNumber } from '@/lib/utils'
+import { CustomerModal } from '@/components/CustomerModal'
+import { CustomerContactModal } from '@/components/CustomerContactModal'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-const CONTACT_ROLE_OPTIONS = [
-  'PRIMARY CONTACT',
-  'PROJECT MANAGER',
-  'ESTIMATOR',
-  'BILLING',
-  'ACCOUNTING',
-  'OTHER',
-] as const
-
-type ContactRole = (typeof CONTACT_ROLE_OPTIONS)[number]
 
 interface CustomerListItem {
   id: number
@@ -125,81 +99,12 @@ interface SignOrderDocument {
   created_at: string | null
 }
 
-interface CustomerEditForm {
-  name: string
-  display_name: string
-  customer_number: string
-  main_phone: string
-  web: string
-  address: string
-  city: string
-  state: string
-  zip: string
-  billToSameAsMain: boolean
-  bill_to_street: string
-  bill_to_city: string
-  bill_to_state: string
-  bill_to_zip: string
-  personOrderingContactId: number | null
-  personOrderingName: string
-  personOrderingTitle: string
-  primaryContactId: number | null
-  primaryContactName: string
-  primaryContactPhone: string
-  primaryContactEmail: string
-  primaryContactSameAsPersonOrdering: boolean
-  projectManagerContactId: number | null
-  projectManagerName: string
-  projectManagerPhone: string
-  projectManagerEmail: string
-  payment_terms: string
-  would_like_to_apply_for_credit: boolean
-}
-
 interface LinkedDocumentSectionItem {
   id: number
   code: string
   name: string
   status: string
   href: string
-}
-
-const EMPTY_EDIT_FORM: CustomerEditForm = {
-  name: '',
-  display_name: '',
-  customer_number: '',
-  main_phone: '',
-  web: '',
-  address: '',
-  city: '',
-  state: '',
-  zip: '',
-  billToSameAsMain: false,
-  bill_to_street: '',
-  bill_to_city: '',
-  bill_to_state: '',
-  bill_to_zip: '',
-  personOrderingContactId: null,
-  personOrderingName: '',
-  personOrderingTitle: '',
-  primaryContactId: null,
-  primaryContactName: '',
-  primaryContactPhone: '',
-  primaryContactEmail: '',
-  primaryContactSameAsPersonOrdering: false,
-  projectManagerContactId: null,
-  projectManagerName: '',
-  projectManagerPhone: '',
-  projectManagerEmail: '',
-  payment_terms: '',
-  would_like_to_apply_for_credit: false,
-}
-
-const EMPTY_CONTACT_FORM = {
-  name: '',
-  phone: '',
-  email: '',
-  role: 'PRIMARY CONTACT' as ContactRole,
 }
 
 function formatCustomerName(customer: Pick<CustomerListItem, 'name' | 'display_name' | 'id'>) {
@@ -243,88 +148,6 @@ function normalizeQuoteRows(rows: any[] | null): QuoteDocument[] {
     })
 }
 
-function normalizeRole(role?: string | null) {
-  return role?.trim().toUpperCase() || ''
-}
-
-function getLegacyDrawerContacts(contacts: CustomerContactRecord[]) {
-  const primaryContact =
-    contacts.find(contact => normalizeRole(contact.role) === 'PRIMARY CONTACT') || null
-  const projectManager =
-    contacts.find(contact => normalizeRole(contact.role) === 'PROJECT MANAGER') || null
-
-  const reservedIds = new Set(
-    [primaryContact?.id, projectManager?.id].filter(
-      (value): value is number => typeof value === 'number'
-    )
-  )
-
-  const personOrdering =
-    contacts.find(contact => {
-      if (reservedIds.has(contact.id)) {
-        return false
-      }
-
-      const role = normalizeRole(contact.role)
-      return role !== 'BILLING' && role !== 'ACCOUNTING'
-    }) || null
-
-  return {
-    personOrdering,
-    primaryContact,
-    projectManager,
-  }
-}
-
-function mapCustomerToEditForm(customer: CustomerRecord): CustomerEditForm {
-  const { personOrdering, primaryContact, projectManager } = getLegacyDrawerContacts(
-    customer.customer_contacts || []
-  )
-  const billToSameAsMain =
-    (customer.bill_to_street || '') === (customer.address || '') &&
-    (customer.bill_to_city || '') === (customer.city || '') &&
-    (customer.bill_to_state || '') === (customer.state || '') &&
-    (customer.bill_to_zip || '') === (customer.zip || '')
-
-  return {
-    name: customer.name || '',
-    display_name: customer.display_name || '',
-    customer_number: customer.customer_number || '',
-    main_phone: customer.main_phone || '',
-    web: customer.web || '',
-    address: customer.address || '',
-    city: customer.city || '',
-    state: customer.state || '',
-    zip: customer.zip || '',
-    billToSameAsMain,
-    bill_to_street: customer.bill_to_street || '',
-    bill_to_city: customer.bill_to_city || '',
-    bill_to_state: customer.bill_to_state || '',
-    bill_to_zip: customer.bill_to_zip || '',
-    personOrderingContactId: personOrdering?.id ?? null,
-    personOrderingName: personOrdering?.name || '',
-    personOrderingTitle:
-      normalizeRole(personOrdering?.role) === 'PERSON ORDERING'
-        ? ''
-        : personOrdering?.role || '',
-    primaryContactId: primaryContact?.id ?? null,
-    primaryContactName: primaryContact?.name || '',
-    primaryContactPhone: primaryContact?.phone || '',
-    primaryContactEmail: primaryContact?.email || '',
-    primaryContactSameAsPersonOrdering:
-      !!primaryContact?.name &&
-      !!personOrdering?.name &&
-      primaryContact.name.trim().toLowerCase() ===
-        personOrdering.name.trim().toLowerCase(),
-    projectManagerContactId: projectManager?.id ?? null,
-    projectManagerName: projectManager?.name || '',
-    projectManagerPhone: projectManager?.phone || '',
-    projectManagerEmail: projectManager?.email || '',
-    payment_terms: customer.payment_terms || '',
-    would_like_to_apply_for_credit: !!customer.would_like_to_apply_for_credit,
-  }
-}
-
 const CustomersContent = () => {
   const router = useRouter()
 
@@ -340,20 +163,12 @@ const CustomersContent = () => {
   const [detailLoading, setDetailLoading] = useState(false)
 
   const [newDialogOpen, setNewDialogOpen] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [creatingCustomer, setCreatingCustomer] = useState(false)
 
   const [editing, setEditing] = useState(false)
-  const [savingCustomer, setSavingCustomer] = useState(false)
-  const [editForm, setEditForm] = useState<CustomerEditForm>(EMPTY_EDIT_FORM)
 
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const [creatingContact, setCreatingContact] = useState(false)
-  const [newContact, setNewContact] = useState({ ...EMPTY_CONTACT_FORM })
   const [editingContact, setEditingContact] = useState<CustomerContactRecord | null>(null)
   const [editContactDialogOpen, setEditContactDialogOpen] = useState(false)
-  const [savingEditedContact, setSavingEditedContact] = useState(false)
-  const [editContactForm, setEditContactForm] = useState({ ...EMPTY_CONTACT_FORM })
   const [deleteCustomerConfirm, setDeleteCustomerConfirm] = useState(false)
   const [deleteContactConfirm, setDeleteContactConfirm] = useState<number | null>(null)
   const [deletingContact, setDeletingContact] = useState(false)
@@ -553,229 +368,11 @@ const CustomersContent = () => {
     return { jobs, quotes, signOrders }
   }, [linkedJobs, linkedQuotes, linkedSignOrders])
 
-  const handleCreateCustomer = async () => {
-    if (!newName.trim()) {
-      return
-    }
-
-    setCreatingCustomer(true)
-
-    try {
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newName.trim(),
-          display_name: newName.trim(),
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || result.message || 'Failed to create customer')
-      }
-
-      toast.success('Customer created')
-      setNewDialogOpen(false)
-      setNewName('')
-
-      const nextId = result.customer?.id ?? null
-      await fetchCustomers()
-
-      if (nextId) {
-        setSelectedId(nextId)
-      }
-    } catch (error) {
-      console.error('Failed to create customer:', error)
-      toast.error('Failed to create customer')
-    } finally {
-      setCreatingCustomer(false)
-    }
-  }
-
   const startEditing = () => {
     if (!selectedCustomer) {
       return
     }
-
-    setEditForm(mapCustomerToEditForm(selectedCustomer))
     setEditing(true)
-  }
-
-  const saveLegacyContact = useCallback(
-    async ({
-      contactId,
-      name,
-      role,
-      email,
-      phone,
-    }: {
-      contactId: number | null
-      name: string
-      role: string
-      email?: string
-      phone?: string
-    }) => {
-      if (!selectedId) {
-        return
-      }
-
-      const trimmedName = name.trim()
-      const trimmedRole = role.trim()
-      const trimmedEmail = email?.trim() || null
-      const trimmedPhone = phone?.trim() || null
-      const hasValues = !!trimmedName || !!trimmedEmail || !!trimmedPhone
-
-      if (!hasValues) {
-        if (contactId) {
-          const deleteResponse = await fetch(`/api/customer-contacts/${contactId}`, {
-            method: 'DELETE',
-          })
-
-          if (!deleteResponse.ok) {
-            const errorResult = await deleteResponse.json().catch(() => null)
-            throw new Error(errorResult?.error || 'Failed to remove customer contact')
-          }
-        }
-
-        return
-      }
-
-      const payload = {
-        contractor_id: selectedId,
-        name: trimmedName || null,
-        role: trimmedRole || null,
-        email: trimmedEmail,
-        phone: trimmedPhone,
-      }
-
-      if (contactId) {
-        const updateResponse = await fetch(`/api/customer-contacts/${contactId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
-
-        if (!updateResponse.ok) {
-          const errorResult = await updateResponse.json().catch(() => null)
-          throw new Error(errorResult?.error || 'Failed to update customer contact')
-        }
-
-        return
-      }
-
-      const createResponse = await fetch('/api/customer-contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      const createResult = await createResponse.json().catch(() => null)
-
-      if (!createResponse.ok || !createResult?.success) {
-        throw new Error(createResult?.error || 'Failed to create customer contact')
-      }
-    },
-    [selectedId]
-  )
-
-  const handleSaveCustomer = async () => {
-    if (!selectedId) {
-      return
-    }
-
-    const resolvedBillToStreet = editForm.billToSameAsMain
-      ? editForm.address
-      : editForm.bill_to_street
-    const resolvedBillToCity = editForm.billToSameAsMain
-      ? editForm.city
-      : editForm.bill_to_city
-    const resolvedBillToState = editForm.billToSameAsMain
-      ? editForm.state
-      : editForm.bill_to_state
-    const resolvedBillToZip = editForm.billToSameAsMain
-      ? editForm.zip
-      : editForm.bill_to_zip
-    const resolvedPrimaryContactName = editForm.primaryContactSameAsPersonOrdering
-      ? editForm.personOrderingName
-      : editForm.primaryContactName
-
-    if (editForm.primaryContactSameAsPersonOrdering && !editForm.personOrderingName.trim()) {
-      toast.error('Add a person ordering name before using same as person ordering')
-      return
-    }
-
-    setSavingCustomer(true)
-
-    try {
-      const response = await fetch(`/api/contractors/${selectedId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: editForm.name,
-          display_name: editForm.display_name,
-          customer_number: editForm.customer_number,
-          main_phone: editForm.main_phone,
-          web: editForm.web,
-          address: editForm.address,
-          city: editForm.city,
-          state: editForm.state,
-          zip: editForm.zip,
-          bill_to_street: resolvedBillToStreet,
-          bill_to_city: resolvedBillToCity,
-          bill_to_state: resolvedBillToState,
-          bill_to_zip: resolvedBillToZip,
-          payment_terms: editForm.payment_terms,
-          would_like_to_apply_for_credit: editForm.would_like_to_apply_for_credit,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || 'Failed to update customer')
-      }
-
-      await Promise.all([
-        saveLegacyContact({
-          contactId: editForm.personOrderingContactId,
-          name: editForm.personOrderingName,
-          role: editForm.personOrderingTitle || 'PERSON ORDERING',
-        }),
-        saveLegacyContact({
-          contactId: editForm.primaryContactId,
-          name: resolvedPrimaryContactName,
-          role: 'PRIMARY CONTACT',
-          phone: editForm.primaryContactPhone,
-          email: editForm.primaryContactEmail,
-        }),
-        saveLegacyContact({
-          contactId: editForm.projectManagerContactId,
-          name: editForm.projectManagerName,
-          role: 'PROJECT MANAGER',
-          phone: editForm.projectManagerPhone,
-          email: editForm.projectManagerEmail,
-        }),
-      ])
-
-      toast.success('Customer updated')
-      setEditing(false)
-      await Promise.all([fetchCustomers(), fetchCustomerDetails(selectedId)])
-    } catch (error) {
-      console.error('Failed to update customer:', error)
-      toast.error('Failed to save customer')
-    } finally {
-      setSavingCustomer(false)
-    }
   }
 
   const handleDeleteCustomer = async () => {
@@ -809,106 +406,14 @@ const CustomersContent = () => {
     }
   }
 
-  const handleAddContact = async () => {
-    if (!selectedId || !newContact.name.trim()) {
-      return
-    }
-
-    setCreatingContact(true)
-
-    try {
-      const response = await fetch('/api/customer-contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contractor_id: selectedId,
-          name: newContact.name.trim(),
-          phone: newContact.phone.trim() || null,
-          email: newContact.email.trim() || null,
-          role: newContact.role,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to add contact')
-      }
-
-      toast.success('Contact added')
-      setContactDialogOpen(false)
-      setNewContact({ ...EMPTY_CONTACT_FORM })
-      await fetchCustomerDetails(selectedId)
-    } catch (error) {
-      console.error('Failed to add contact:', error)
-      toast.error('Failed to add contact')
-    } finally {
-      setCreatingContact(false)
-    }
-  }
-
   const openEditContactDialog = (contact: CustomerContactRecord) => {
-    const normalizedRole = CONTACT_ROLE_OPTIONS.includes(
-      (contact.role || 'OTHER') as ContactRole
-    )
-      ? ((contact.role || 'OTHER') as ContactRole)
-      : 'OTHER'
-
     setEditingContact(contact)
-    setEditContactForm({
-      name: contact.name || '',
-      phone: contact.phone || '',
-      email: contact.email || '',
-      role: normalizedRole,
-    })
     setEditContactDialogOpen(true)
   }
 
   const closeEditContactDialog = () => {
     setEditContactDialogOpen(false)
     setEditingContact(null)
-    setEditContactForm({ ...EMPTY_CONTACT_FORM })
-  }
-
-  const handleSaveEditedContact = async () => {
-    if (!selectedId || !editingContact || !editContactForm.name.trim()) {
-      return
-    }
-
-    setSavingEditedContact(true)
-
-    try {
-      const response = await fetch(`/api/customer-contacts/${editingContact.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contractor_id: selectedId,
-          name: editContactForm.name.trim(),
-          phone: editContactForm.phone.trim() || null,
-          email: editContactForm.email.trim() || null,
-          role: editContactForm.role,
-        }),
-      })
-
-      const result = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        throw new Error(result?.error || 'Failed to update contact')
-      }
-
-      toast.success('Contact updated')
-      closeEditContactDialog()
-      await fetchCustomerDetails(selectedId)
-    } catch (error) {
-      console.error('Failed to update contact:', error)
-      toast.error('Failed to update contact')
-    } finally {
-      setSavingEditedContact(false)
-    }
   }
 
   const handleDeleteContact = async (contactId: number) => {
@@ -1327,595 +832,99 @@ const CustomersContent = () => {
         </div>
       </div>
 
-      <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className='max-h-[90vh] max-w-4xl overflow-hidden'>
-          <DialogHeader>
-            <DialogTitle>Edit Customer</DialogTitle>
-          </DialogHeader>
+      <CustomerModal
+        open={editing}
+        onOpenChange={setEditing}
+        mode='edit'
+        customerId={selectedId ?? undefined}
+        initialData={selectedCustomer}
+        onSuccess={async () => {
+          if (!selectedId) {
+            return
+          }
 
-          <div className='max-h-[calc(90vh-9rem)] overflow-y-auto pr-4'>
-            <div className='space-y-6 py-2'>
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Company Information
-                </h3>
-                <div className='grid grid-cols-2 gap-3'>
-                  <LabeledInput
-                    label='Company Legal Name'
-                    value={editForm.name}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, name: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Display Name'
-                    value={editForm.display_name}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, display_name: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Customer Number'
-                    value={editForm.customer_number}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, customer_number: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Website URL'
-                    value={editForm.web}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, web: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Main Phone'
-                    value={editForm.main_phone}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, main_phone: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Payment Terms'
-                    value={editForm.payment_terms}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        payment_terms: value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
+          toast.success('Customer updated')
+          await Promise.all([fetchCustomers(), fetchCustomerDetails(selectedId)])
+        }}
+      />
 
-              <Separator />
+      <CustomerModal
+        open={newDialogOpen}
+        onOpenChange={setNewDialogOpen}
+        mode='create'
+        createVariant='simple'
+        title='New Customer'
+        onSuccess={async customer => {
+          toast.success('Customer created')
+          await fetchCustomers()
 
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Main Address
-                </h3>
-                <div className='space-y-2'>
-                  <LabeledInput
-                    label='Street Address'
-                    value={editForm.address}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        address: value,
-                        bill_to_street: current.billToSameAsMain
-                          ? value
-                          : current.bill_to_street,
-                      }))
-                    }
-                  />
-                  <div className='grid grid-cols-3 gap-2'>
-                    <LabeledInput
-                      label='City'
-                      value={editForm.city}
-                      onChange={value =>
-                        setEditForm(current => ({
-                          ...current,
-                          city: value,
-                          bill_to_city: current.billToSameAsMain
-                            ? value
-                            : current.bill_to_city,
-                        }))
-                      }
-                    />
-                    <LabeledInput
-                      label='State'
-                      value={editForm.state}
-                      onChange={value =>
-                        setEditForm(current => ({
-                          ...current,
-                          state: value,
-                          bill_to_state: current.billToSameAsMain
-                            ? value
-                            : current.bill_to_state,
-                        }))
-                      }
-                    />
-                    <LabeledInput
-                      label='ZIP'
-                      value={editForm.zip}
-                      onChange={value =>
-                        setEditForm(current => ({
-                          ...current,
-                          zip: value,
-                          bill_to_zip: current.billToSameAsMain
-                            ? value
-                            : current.bill_to_zip,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Bill To Address
-                </h3>
-                <div className='flex items-center gap-2'>
-                  <Checkbox
-                    id='bill-to-same-as-main'
-                    checked={editForm.billToSameAsMain}
-                    onCheckedChange={checked => {
-                      const nextChecked = checked === true
-                      setEditForm(current => ({
-                        ...current,
-                        billToSameAsMain: nextChecked,
-                        bill_to_street: nextChecked
-                          ? current.address
-                          : current.bill_to_street,
-                        bill_to_city: nextChecked ? current.city : current.bill_to_city,
-                        bill_to_state: nextChecked
-                          ? current.state
-                          : current.bill_to_state,
-                        bill_to_zip: nextChecked ? current.zip : current.bill_to_zip,
-                      }))
-                    }}
-                  />
-                  <label
-                    htmlFor='bill-to-same-as-main'
-                    className='text-sm text-foreground'
-                  >
-                    Same as main address
-                  </label>
-                </div>
-                <div className='space-y-2'>
-                  <LabeledInput
-                    label='Street Address'
-                    value={editForm.bill_to_street}
-                    disabled={editForm.billToSameAsMain}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        bill_to_street: value,
-                      }))
-                    }
-                  />
-                  <div className='grid grid-cols-3 gap-2'>
-                    <LabeledInput
-                      label='City'
-                      value={editForm.bill_to_city}
-                      disabled={editForm.billToSameAsMain}
-                      onChange={value =>
-                        setEditForm(current => ({ ...current, bill_to_city: value }))
-                      }
-                    />
-                    <LabeledInput
-                      label='State'
-                      value={editForm.bill_to_state}
-                      disabled={editForm.billToSameAsMain}
-                      onChange={value =>
-                        setEditForm(current => ({
-                          ...current,
-                          bill_to_state: value,
-                        }))
-                      }
-                    />
-                    <LabeledInput
-                      label='ZIP'
-                      value={editForm.bill_to_zip}
-                      disabled={editForm.billToSameAsMain}
-                      onChange={value =>
-                        setEditForm(current => ({ ...current, bill_to_zip: value }))
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Person Ordering
-                </h3>
-                <div className='grid grid-cols-2 gap-3'>
-                  <LabeledInput
-                    label='Name'
-                    value={editForm.personOrderingName}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        personOrderingName: value,
-                        primaryContactName: current.primaryContactSameAsPersonOrdering
-                          ? value
-                          : current.primaryContactName,
-                      }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Title'
-                    value={editForm.personOrderingTitle}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, personOrderingTitle: value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Primary Contact
-                </h3>
-                <div className='flex items-center gap-2'>
-                  <Checkbox
-                    id='primary-same-as-ordering'
-                    checked={editForm.primaryContactSameAsPersonOrdering}
-                    onCheckedChange={checked => {
-                      const nextChecked = checked === true
-                      setEditForm(current => ({
-                        ...current,
-                        primaryContactSameAsPersonOrdering: nextChecked,
-                        primaryContactName: nextChecked
-                          ? current.personOrderingName
-                          : current.primaryContactName,
-                      }))
-                    }}
-                  />
-                  <label
-                    htmlFor='primary-same-as-ordering'
-                    className='text-sm text-foreground'
-                  >
-                    Same as person ordering
-                  </label>
-                </div>
-                <div className='grid grid-cols-3 gap-3'>
-                  <LabeledInput
-                    label='Name'
-                    value={editForm.primaryContactName}
-                    disabled={editForm.primaryContactSameAsPersonOrdering}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, primaryContactName: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Phone'
-                    value={editForm.primaryContactPhone}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        primaryContactPhone: value,
-                      }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Email'
-                    value={editForm.primaryContactEmail}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        primaryContactEmail: value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className='space-y-3'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  Project Manager
-                </h3>
-                <div className='grid grid-cols-3 gap-3'>
-                  <LabeledInput
-                    label='Name'
-                    value={editForm.projectManagerName}
-                    onChange={value =>
-                      setEditForm(current => ({ ...current, projectManagerName: value }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Phone'
-                    value={editForm.projectManagerPhone}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        projectManagerPhone: value,
-                      }))
-                    }
-                  />
-                  <LabeledInput
-                    label='Email'
-                    value={editForm.projectManagerEmail}
-                    onChange={value =>
-                      setEditForm(current => ({
-                        ...current,
-                        projectManagerEmail: value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className='flex items-center gap-2'>
-                <Checkbox
-                  id='customer-credit-application'
-                  checked={editForm.would_like_to_apply_for_credit}
-                  onCheckedChange={checked =>
-                    setEditForm(current => ({
-                      ...current,
-                      would_like_to_apply_for_credit: checked === true,
-                    }))
-                  }
-                />
-                <label
-                  htmlFor='customer-credit-application'
-                  className='text-sm text-foreground'
-                >
-                  Customer would like to apply for credit
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveCustomer} disabled={savingCustomer}>
-              <Save className='mr-2 h-4 w-4' />
-              {savingCustomer ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
-        <DialogContent className='sm:max-w-sm'>
-          <DialogHeader>
-            <DialogTitle>New Customer</DialogTitle>
-          </DialogHeader>
-
-          <div className='py-2'>
-            <label className='text-sm font-medium text-foreground'>
-              Company Name
-            </label>
-            <Input
-              className='mt-1.5'
-              value={newName}
-              onChange={event => setNewName(event.target.value)}
-              placeholder='Enter company name'
-              onKeyDown={event => {
-                if (event.key === 'Enter') {
-                  void handleCreateCustomer()
-                }
-              }}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setNewDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateCustomer}
-              disabled={!newName.trim() || creatingCustomer}
-            >
-              {creatingCustomer ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
-        <DialogContent className='sm:max-w-sm'>
-          <DialogHeader>
-            <DialogTitle>Add Contact</DialogTitle>
-          </DialogHeader>
-
-          <div className='space-y-3 py-2'>
-            <div>
-              <label className='text-sm font-medium'>Name</label>
-              <Input
-                className='mt-1'
-                value={newContact.name}
-                onChange={event =>
-                  setNewContact(current => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className='grid grid-cols-2 gap-3'>
-              <div>
-                <label className='text-sm font-medium'>Phone</label>
-                <Input
-                  className='mt-1'
-                  value={newContact.phone}
-                  onChange={event =>
-                    setNewContact(current => ({
-                      ...current,
-                      phone: formatPhoneNumber(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <div>
-                <label className='text-sm font-medium'>Email</label>
-                <Input
-                  className='mt-1'
-                  value={newContact.email}
-                  onChange={event =>
-                    setNewContact(current => ({
-                      ...current,
-                      email: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className='text-sm font-medium'>Role</label>
-              <Select
-                value={newContact.role}
-                onValueChange={value =>
-                  setNewContact(current => ({
-                    ...current,
-                    role: value as ContactRole,
-                  }))
-                }
-              >
-                <SelectTrigger className='mt-1'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTACT_ROLE_OPTIONS.map(role => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setContactDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddContact}
-              disabled={!newContact.name.trim() || creatingContact}
-            >
-              {creatingContact ? 'Adding...' : 'Add Contact'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={editContactDialogOpen}
-        onOpenChange={open => {
-          if (!open) {
-            closeEditContactDialog()
+          if (customer?.id) {
+            setSelectedId(customer.id)
           }
         }}
-      >
-        <DialogContent className='sm:max-w-sm'>
-          <DialogHeader>
-            <DialogTitle>Edit Contact</DialogTitle>
-          </DialogHeader>
+      />
 
-          <div className='space-y-3 py-2'>
-            <div>
-              <label className='text-sm font-medium'>Name</label>
-              <Input
-                className='mt-1'
-                value={editContactForm.name}
-                onChange={event =>
-                  setEditContactForm(current => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-              />
-            </div>
+      {selectedCustomer ? (
+        <CustomerContactModal
+          customerId={selectedCustomer.id}
+          isOpen={contactDialogOpen}
+          onClose={() => setContactDialogOpen(false)}
+          onSuccess={async () => {
+            if (!selectedId) {
+              return
+            }
 
-            <div className='grid grid-cols-2 gap-3'>
-              <div>
-                <label className='text-sm font-medium'>Phone</label>
-                <Input
-                  className='mt-1'
-                  value={editContactForm.phone}
-                  onChange={event =>
-                    setEditContactForm(current => ({
-                      ...current,
-                      phone: formatPhoneNumber(event.target.value),
-                    }))
-                  }
-                />
-              </div>
-              <div>
-                <label className='text-sm font-medium'>Email</label>
-                <Input
-                  className='mt-1'
-                  value={editContactForm.email}
-                  onChange={event =>
-                    setEditContactForm(current => ({
-                      ...current,
-                      email: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
+            toast.success('Contact added')
+            await fetchCustomerDetails(selectedId)
+          }}
+          customer={{
+            name: selectedCustomer.name || '',
+            displayName:
+              selectedCustomer.display_name || selectedCustomer.name || '',
+            address: selectedCustomer.address || '',
+            city: selectedCustomer.city || '',
+            state: selectedCustomer.state || '',
+            zip: selectedCustomer.zip || '',
+            paymentTerms: selectedCustomer.payment_terms || '',
+            url: selectedCustomer.web || '',
+          }}
+        />
+      ) : null}
 
-            <div>
-              <label className='text-sm font-medium'>Role</label>
-              <Select
-                value={editContactForm.role}
-                onValueChange={value =>
-                  setEditContactForm(current => ({
-                    ...current,
-                    role: value as ContactRole,
-                  }))
-                }
-              >
-                <SelectTrigger className='mt-1'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTACT_ROLE_OPTIONS.map(role => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      {selectedCustomer && editingContact ? (
+        <CustomerContactModal
+          customerId={selectedCustomer.id}
+          isOpen={editContactDialogOpen}
+          onClose={closeEditContactDialog}
+          onSuccess={async () => {
+            if (!selectedId) {
+              return
+            }
 
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={closeEditContactDialog}
-              disabled={savingEditedContact}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveEditedContact}
-              disabled={!editContactForm.name.trim() || savingEditedContact}
-            >
-              {savingEditedContact ? 'Saving...' : 'Save Contact'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            toast.success('Contact updated')
+            closeEditContactDialog()
+            await fetchCustomerDetails(selectedId)
+          }}
+          contactToEdit={{
+            id: editingContact.id,
+            name: editingContact.name || '',
+            role: editingContact.role || '',
+            email: editingContact.email || '',
+            phone: editingContact.phone || '',
+          }}
+          customer={{
+            name: selectedCustomer.name || '',
+            displayName:
+              selectedCustomer.display_name || selectedCustomer.name || '',
+            address: selectedCustomer.address || '',
+            city: selectedCustomer.city || '',
+            state: selectedCustomer.state || '',
+            zip: selectedCustomer.zip || '',
+            paymentTerms: selectedCustomer.payment_terms || '',
+            url: selectedCustomer.web || '',
+          }}
+        />
+      ) : null}
 
       <AlertDialog
         open={deleteCustomerConfirm}
@@ -1976,32 +985,6 @@ const CustomersContent = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  )
-}
-
-function LabeledInput({
-  label,
-  value,
-  disabled = false,
-  onChange,
-}: {
-  label: string
-  value: string
-  disabled?: boolean
-  onChange: (value: string) => void
-}) {
-  return (
-    <div>
-      <label className='text-[11px] font-medium text-muted-foreground'>
-        {label}
-      </label>
-      <Input
-        className='mt-1 h-8 text-sm'
-        value={value}
-        disabled={disabled}
-        onChange={event => onChange(event.target.value)}
-      />
     </div>
   )
 }

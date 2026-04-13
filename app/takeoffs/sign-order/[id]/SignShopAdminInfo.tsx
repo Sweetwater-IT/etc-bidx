@@ -34,9 +34,8 @@ import FileViewingContainer from '@/components/file-viewing-container'
 import { User } from '@/types/User'
 import { Customer } from '@/types/Customer'
 import { RequestorSelector } from '@/components/requestor-selector'
-import { SimpleCustomerCreateDialog } from '@/components/simple-customer-create-dialog'
-import { CustomerContactForm } from '@/components/customer-contact-form'
-import { CustomerProvider } from '@/contexts/customer-context'
+import { CustomerSelector } from '@/components/CustomerSelector'
+import { ContactSelector } from '@/components/ContactSelector'
 import { useCustomers } from '@/hooks/use-customers'
 import { cn } from '@/lib/utils'
 
@@ -179,11 +178,7 @@ const SignShopAdminInfo = ({
   const [editing, setEditing] = useState(false)
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
-  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false)
-  const [contactPopoverOpen, setContactPopoverOpen] = useState(false)
   const [orderTypePopoverOpen, setOrderTypePopoverOpen] = useState(false)
-  const [simpleCustomerDialogOpen, setSimpleCustomerDialogOpen] = useState(false)
-  const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const { customers, getCustomers } = useCustomers()
   const [draft, setDraft] = useState<DraftState>({
     requestor: null,
@@ -380,8 +375,6 @@ const SignShopAdminInfo = ({
   const cancelEditing = () => {
     setDraft(buildDraftFromSignOrder(signOrder))
     setEditing(false)
-    setCustomerPopoverOpen(false)
-    setContactPopoverOpen(false)
     setOrderTypePopoverOpen(false)
   }
 
@@ -391,8 +384,6 @@ const SignShopAdminInfo = ({
       customer,
       contact: null
     }))
-    setCustomerPopoverOpen(false)
-    setContactPopoverOpen(false)
   }
 
   const toggleOrderType = (value: OrderTypeValue) => {
@@ -634,133 +625,48 @@ const SignShopAdminInfo = ({
                     )}
                   </div>
                   <div className='space-y-2'>
-                    <div className='flex items-center justify-between gap-2'>
-                      <Label>
-                        Customer <span className='text-red-600'>*</span>
-                      </Label>
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='sm'
-                        className='h-7 px-2 text-xs'
-                        onClick={() => setSimpleCustomerDialogOpen(true)}
-                      >
-                        Add New
-                      </Button>
-                    </div>
-                    <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant='outline' className='w-full justify-between font-normal'>
-                          <span className='truncate'>
-                            {draft.customer?.displayName || 'Select customer...'}
-                          </span>
-                          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align='start'
-                        className='w-[var(--radix-popover-trigger-width)] p-0'
-                      >
-                        <Command>
-                          <CommandInput placeholder='Search customer...' />
-                          <CommandList>
-                            <CommandEmpty>No customer found.</CommandEmpty>
-                            <CommandGroup className='max-h-[240px] overflow-y-auto'>
-                              {customers.map(customer => (
-                                <CommandItem
-                                  key={customer.id}
-                                  value={`${customer.displayName} ${customer.name}`.trim()}
-                                  onSelect={async () => {
-                                    const hydratedCustomer =
-                                      (await fetchCustomerById(customer.id)) || customer
-                                    applyCustomerSelection(hydratedCustomer)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      draft.customer?.id === customer.id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  <span className='truncate'>
-                                    {customer.displayName}
-                                  </span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Label>
+                      Customer <span className='text-red-600'>*</span>
+                    </Label>
+                    <CustomerSelector
+                      customers={customers}
+                      selectedCustomer={draft.customer}
+                      onSelectCustomer={async customer => {
+                        if (!customer) {
+                          return
+                        }
+                        const hydratedCustomer =
+                          (await fetchCustomerById(customer.id)) || customer
+                        applyCustomerSelection(hydratedCustomer)
+                      }}
+                      onCustomerCreated={async createdCustomer => {
+                        await getCustomers()
+                        const hydratedCustomer =
+                          (await fetchCustomerById(createdCustomer.id)) ||
+                          normalizeCustomer(createdCustomer)
+                        applyCustomerSelection(hydratedCustomer)
+                      }}
+                      createDescription='Create a customer with a company name, then it will be available in this sign order.'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Contact</Label>
-                    <Popover open={contactPopoverOpen} onOpenChange={setContactPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant='outline'
-                          className='w-full justify-between font-normal'
-                          disabled={!draft.customer}
-                        >
-                          <span className='truncate'>
-                            {draft.contact?.name || 'Select contact...'}
-                          </span>
-                          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align='start'
-                        className='w-[var(--radix-popover-trigger-width)] p-0'
-                      >
-                        <Command>
-                          <CommandInput placeholder='Search contact...' />
-                          <CommandList>
-                            <CommandEmpty>No contact found.</CommandEmpty>
-                            <CommandGroup className='max-h-[220px] overflow-y-auto'>
-                              <CommandItem
-                                value='__add_new_contact__'
-                                className='font-medium text-primary'
-                                onSelect={() => {
-                                  setContactPopoverOpen(false)
-                                  if (!draft.customer) {
-                                    toast.error('Select a customer first')
-                                    return
-                                  }
-                                  setContactDialogOpen(true)
-                                }}
-                              >
-                                + Add new contact
-                              </CommandItem>
-                              {contactSummary.map(contact => (
-                                <CommandItem
-                                  key={contact.id}
-                                  value={`${contact.name} ${contact.email}`.trim()}
-                                  onSelect={() => {
-                                    setDraft(current => ({
-                                      ...current,
-                                      contact
-                                    }))
-                                    setContactPopoverOpen(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      draft.contact?.id === contact.id
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  <span className='truncate'>{contact.name || contact.email || `Contact #${contact.id}`}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <ContactSelector
+                      customer={draft.customer}
+                      selectedContact={draft.contact}
+                      onSelectContact={async contact => {
+                        setDraft(current => ({
+                          ...current,
+                          contact
+                        }))
+                      }}
+                      onCustomerChange={async customer => {
+                        setDraft(current => ({
+                          ...current,
+                          customer
+                        }))
+                      }}
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Contact Phone</Label>
@@ -944,57 +850,6 @@ const SignShopAdminInfo = ({
           </div>
         </div>
       </div>
-
-      <SimpleCustomerCreateDialog
-        open={simpleCustomerDialogOpen}
-        onOpenChange={setSimpleCustomerDialogOpen}
-        description='Create a customer with a company name, then it will be available in this sign order.'
-        onCreated={async createdCustomer => {
-          await getCustomers()
-          const hydratedCustomer =
-            (await fetchCustomerById(createdCustomer.id)) ||
-            normalizeCustomer(createdCustomer)
-          applyCustomerSelection(hydratedCustomer)
-        }}
-      />
-
-      {draft.customer && (
-        <CustomerProvider initialCustomer={draft.customer}>
-          <CustomerContactForm
-            customerId={draft.customer.id}
-            isOpen={contactDialogOpen}
-            onClose={() => setContactDialogOpen(false)}
-            onSuccess={async (newContactId?: number, newContactData?: any) => {
-              setContactDialogOpen(false)
-              if (!draft.customer || typeof newContactId !== 'number' || !newContactData) {
-                return
-              }
-
-              const updatedCustomer: Customer = {
-                ...draft.customer,
-                contactIds: [...(draft.customer.contactIds || []), newContactId],
-                names: [...(draft.customer.names || []), newContactData.name || ''],
-                emails: [...(draft.customer.emails || []), newContactData.email || ''],
-                phones: [...(draft.customer.phones || []), newContactData.phone || ''],
-                roles: [...(draft.customer.roles || []), newContactData.role || '']
-              }
-
-              setDraft(current => ({
-                ...current,
-                customer: updatedCustomer,
-                contact: {
-                  id: newContactId,
-                  name: newContactData.name || '',
-                  email: newContactData.email || '',
-                  phone: newContactData.phone || '',
-                  role: newContactData.role || ''
-                }
-              }))
-            }}
-            customer={draft.customer}
-          />
-        </CustomerProvider>
-      )}
     </>
   )
 }
