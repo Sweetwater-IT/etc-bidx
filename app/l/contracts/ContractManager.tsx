@@ -42,6 +42,8 @@ import type { ContractListItem } from "@/types/contract";
 import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 import { cn } from "@/lib/utils";
 import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
+import { TableSearchBar } from "@/components/TableSearchBar";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -159,6 +161,7 @@ const ContractManager = () => {
   // Fetch contracts
   const [jobs, setJobs] = useState<ContractListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { search, setSearch } = useTableSearchState();
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [countyFilter, setCountyFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
@@ -309,13 +312,30 @@ const ContractManager = () => {
     customerFilter !== "all" || countyFilter !== "all" || branchFilter !== "all";
 
   const displayedPipelineJobs = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
     return pipelineJobs.filter((job) => {
       if (customerFilter !== "all" && (job.customerName || "") !== customerFilter) return false;
       if (countyFilter !== "all" && (job.county || "") !== countyFilter) return false;
       if (branchFilter !== "all" && (job.etcBranch || "") !== branchFilter) return false;
-      return true;
+      if (!normalizedSearch) return true;
+
+      const searchableFields = [
+        job.contractNumber,
+        job.customerName,
+        job.projectName,
+        job.projectOwner,
+        job.etcJobNumber,
+        job.county,
+        job.etcBranch,
+        job.etcProjectManager,
+      ];
+
+      return searchableFields.some((field) =>
+        String(field || "").toLowerCase().includes(normalizedSearch)
+      );
     });
-  }, [pipelineJobs, customerFilter, countyFilter, branchFilter]);
+  }, [pipelineJobs, customerFilter, countyFilter, branchFilter, search]);
   const jobsByStage = useMemo(() => {
     const map: Record<string, ContractListItem[]> = {};
     PIPELINE_STAGES.forEach((s) => { map[s.id] = []; });
@@ -654,6 +674,12 @@ const ContractManager = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <TableSearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="Search contracts..."
+              className="hidden min-w-[280px] lg:block"
+            />
             <div className="hidden lg:flex items-center gap-2">
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger asChild>

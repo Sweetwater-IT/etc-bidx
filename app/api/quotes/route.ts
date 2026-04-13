@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const shouldLoadCreatorDirectory = Boolean(search) || (!counts && !nextNumber);
+    let matchingEstimateIds: number[] = [];
+    let matchingJobIds: number[] = [];
     const [authUsersResult, legacyUsersResult] = shouldLoadCreatorDirectory
       ? await Promise.all([
           supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
@@ -51,6 +53,27 @@ export async function GET(request: NextRequest) {
     const searchableQuoteCreatorIdentifiers = new Set<string>();
 
     if (search) {
+      const { data: matchingAdminRows } = await supabase
+        .from("admin_data_entries")
+        .select("bid_estimate_id, job_id")
+        .ilike("contract_number", `%${search}%`)
+        .limit(100);
+
+      matchingEstimateIds = Array.from(
+        new Set(
+          (matchingAdminRows || [])
+            .map((row: any) => row.bid_estimate_id)
+            .filter((value: unknown): value is number => typeof value === "number")
+        )
+      );
+      matchingJobIds = Array.from(
+        new Set(
+          (matchingAdminRows || [])
+            .map((row: any) => row.job_id)
+            .filter((value: unknown): value is number => typeof value === "number")
+        )
+      );
+
       for (const segment of QUOTE_CREATOR_SEGMENTS) {
         const matchesCreator =
           segment.label.toLowerCase().includes(normalizedSearch) ||
@@ -122,6 +145,12 @@ export async function GET(request: NextRequest) {
         ], search);
         if (searchableQuoteCreatorIdentifiers.size > 0) {
           searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+        }
+        if (matchingEstimateIds.length > 0) {
+          searchClauses.push(`estimate_id.in.(${matchingEstimateIds.join(",")})`);
+        }
+        if (matchingJobIds.length > 0) {
+          searchClauses.push(`job_id.in.(${matchingJobIds.join(",")})`);
         }
         countQuery = countQuery.or(searchClauses.join(","));
       }
@@ -239,6 +268,12 @@ export async function GET(request: NextRequest) {
       ], search);
       if (searchableQuoteCreatorIdentifiers.size > 0) {
         searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+      }
+      if (matchingEstimateIds.length > 0) {
+        searchClauses.push(`estimate_id.in.(${matchingEstimateIds.join(",")})`);
+      }
+      if (matchingJobIds.length > 0) {
+        searchClauses.push(`job_id.in.(${matchingJobIds.join(",")})`);
       }
       query = query.or(searchClauses.join(","));
     }
@@ -360,6 +395,12 @@ export async function GET(request: NextRequest) {
       ], search);
       if (searchableQuoteCreatorIdentifiers.size > 0) {
         searchClauses.push(`user_created.in.(${Array.from(searchableQuoteCreatorIdentifiers).join(",")})`);
+      }
+      if (matchingEstimateIds.length > 0) {
+        searchClauses.push(`estimate_id.in.(${matchingEstimateIds.join(",")})`);
+      }
+      if (matchingJobIds.length > 0) {
+        searchClauses.push(`job_id.in.(${matchingJobIds.join(",")})`);
       }
       countQuery = countQuery.or(searchClauses.join(","));
     }

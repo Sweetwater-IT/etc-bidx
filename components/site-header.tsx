@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import React from "react";
+import { GlobalSearchModal } from "@/components/global-search-modal";
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -44,6 +45,19 @@ export function SiteHeader({
   const pathname = usePathname();
   const router = useRouter();
   const { signOut } = useAuth();
+  const [searchOpen, setSearchOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleNewItem = (route: string) => {
     router.push(route);
@@ -104,12 +118,20 @@ export function SiteHeader({
 
   return (
     <>
+      <GlobalSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
       <header className="h-11 border-b bg-card px-3 sticky top-0 z-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1 max-w-xl">
             <div className="relative">
-              <Input placeholder="Search..." className="h-9 pl-10 pr-16" />
+              <Input
+                readOnly
+                value=""
+                placeholder="Search everything..."
+                className="h-9 cursor-pointer pl-10 pr-16"
+                onClick={() => setSearchOpen(true)}
+                onFocus={() => setSearchOpen(true)}
+              />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 <svg
                   width="18"

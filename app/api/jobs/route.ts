@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { ActiveJob } from '@/data/active-jobs';
+import { sanitizePostgrestSearchTerm } from '@/lib/postgrest-search';
 
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
+    const search = sanitizePostgrestSearchTerm(url.searchParams.get('search') || '');
     const branch = url.searchParams.get('branch');
     const status = url.searchParams.get('status');
     const counts = url.searchParams.get('counts');
@@ -222,6 +224,22 @@ export async function GET(request: NextRequest) {
     } else {
       // Default sorting
       query = query.order('created_at', { ascending: false });
+    }
+
+    if (search) {
+      const searchLike = `%${search}%`;
+      query = query.or([
+        `job_number.ilike.${searchLike}`,
+        `bid_number.ilike.${searchLike}`,
+        `project_status.ilike.${searchLike}`,
+        `billing_status.ilike.${searchLike}`,
+        `contractor_name.ilike.${searchLike}`,
+        `customer_contract_number.ilike.${searchLike}`,
+        `admin_data->>contractNumber.ilike.${searchLike}`,
+        `admin_data->>location.ilike.${searchLike}`,
+        `admin_data->county->>name.ilike.${searchLike}`,
+        `admin_data->county->>branch.ilike.${searchLike}`
+      ].join(','));
     }
 
     // Apply pagination

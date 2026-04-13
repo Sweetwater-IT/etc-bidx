@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import {
   Building2,
@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CustomerModal } from '@/components/CustomerModal'
 import { CustomerContactModal } from '@/components/CustomerContactModal'
+import { useTableSearchState } from '@/hooks/use-table-search-state'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -150,6 +151,17 @@ function normalizeQuoteRows(rows: any[] | null): QuoteDocument[] {
 
 const CustomersContent = () => {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const {
+    search,
+    setSearch,
+  } = useTableSearchState()
+  const currentParams = useMemo(
+    () => new URLSearchParams(searchParams?.toString() ?? ''),
+    [searchParams]
+  )
+  const selectedIdFromUrl = Number.parseInt(currentParams.get('selectedId') || '', 10)
 
   const [customers, setCustomers] = useState<CustomerListItem[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -158,7 +170,6 @@ const CustomersContent = () => {
   const [linkedJobs, setLinkedJobs] = useState<JobDocument[]>([])
   const [linkedQuotes, setLinkedQuotes] = useState<QuoteDocument[]>([])
   const [linkedSignOrders, setLinkedSignOrders] = useState<SignOrderDocument[]>([])
-  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
 
@@ -308,6 +319,54 @@ const CustomersContent = () => {
   useEffect(() => {
     fetchCustomers()
   }, [fetchCustomers])
+
+  useEffect(() => {
+    if (!customers.length) return
+
+    if (Number.isFinite(selectedIdFromUrl) && selectedIdFromUrl > 0) {
+      setSelectedId(selectedIdFromUrl)
+      return
+    }
+
+    if (!search.trim()) return
+
+    const query = search.trim().toLowerCase()
+    const firstMatch = customers.find(customer => {
+      const name = customer.name?.toLowerCase() || ''
+      const displayName = customer.display_name?.toLowerCase() || ''
+      const phone = customer.main_phone?.toLowerCase() || ''
+
+      return (
+        name.includes(query) ||
+        displayName.includes(query) ||
+        phone.includes(query)
+      )
+    })
+
+    if (firstMatch?.id) {
+      setSelectedId(firstMatch.id)
+    }
+  }, [customers, search, selectedIdFromUrl])
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(currentParams.toString())
+    const currentPath = pathname || '/customers'
+
+    if (selectedId) {
+      nextParams.set('selectedId', String(selectedId))
+    } else {
+      nextParams.delete('selectedId')
+    }
+
+    const nextQuery = nextParams.toString()
+    const currentQuery = currentParams.toString()
+
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${currentPath}?${nextQuery}` : currentPath, {
+        scroll: false,
+      })
+    }
+  }, [currentParams, pathname, router, selectedId])
 
   useEffect(() => {
     if (!selectedId) {

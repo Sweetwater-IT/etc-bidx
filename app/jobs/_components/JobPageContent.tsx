@@ -38,6 +38,8 @@ import { ImportSheet } from "@/components/import-sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { IconDownload, IconPlus, IconUpload, IconX } from "@tabler/icons-react";
+import { TableSearchBar } from "@/components/TableSearchBar";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 import { format } from "date-fns";
 
 // Map between UI status and database status
@@ -96,6 +98,11 @@ export function JobPageContent({ job }: JobPageContentProps) {
     const [showFilters, setShowFilters] = useState(false);
     const [availableJobsSearch, setAvailableJobsSearch] = useState("");
     const [activeBidsSearch, setActiveBidsSearch] = useState("");
+    const {
+        search: activeJobsSearch,
+        setSearch: setActiveJobsSearch,
+        debouncedSearch: debouncedActiveJobsSearch,
+    } = useTableSearchState({ paramName: "activeJobSearch" });
     const [availableJobsImportOpen, setAvailableJobsImportOpen] = useState(false);
     const [availableJobsCalendarOpen, setAvailableJobsCalendarOpen] = useState(false);
     const [activeBidsCalendarOpen, setActiveBidsCalendarOpen] = useState(false);
@@ -412,6 +419,10 @@ export function JobPageContent({ job }: JobPageContentProps) {
             if (Object.keys(activeFilters).length > 0) {
                 options.filters = JSON.stringify(activeFilters);
                 console.log(`Adding filters: ${JSON.stringify(activeFilters)}`);
+            }
+
+            if (debouncedActiveJobsSearch.trim()) {
+                options.search = debouncedActiveJobsSearch.trim();
             }
 
             // Correctly handle archived segment
@@ -771,7 +782,7 @@ export function JobPageContent({ job }: JobPageContentProps) {
         } finally {
             setIsTableLoading(false);
         }
-    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, activeFilters, sortBy, sortOrder]);
+    }, [activeSegment, activeJobsPageIndex, activeJobsPageSize, activeFilters, sortBy, sortOrder, debouncedActiveJobsSearch]);
 
 
     const fetchNextJobNumber = useCallback(async () => {
@@ -2380,6 +2391,16 @@ export function JobPageContent({ job }: JobPageContentProps) {
                         </div>
                     )}
 
+                    {isActiveJobs && (
+                        <div className="px-4 lg:px-6">
+                            <TableSearchBar
+                                value={activeJobsSearch}
+                                onChange={setActiveJobsSearch}
+                                placeholder="Search active jobs..."
+                            />
+                        </div>
+                    )}
+
                     {isAvailableJobs ? (
                         <DataTable<AvailableJob>
                             data={data as AvailableJob[]}
@@ -2540,6 +2561,9 @@ export function JobPageContent({ job }: JobPageContentProps) {
                             enableSearch={true}
                             searchPlaceholder="Search by job number, bid number, project status, contract number, contractor, location, or county..."
                             searchableColumns={["jobNumber", "bidNumber", "projectStatus", "contractNumber", "contractor", "location", "county"]}
+                            searchValue={activeJobsSearch}
+                            onSearchChange={setActiveJobsSearch}
+                            showSearchBar={false}
 
                             onArchiveSelected={initiateArchiveActiveJobs}
                             onDeleteSelected={initiateDeleteActiveJobs}

@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { safeNumber } from "@/lib/safe-number";
 import { getEquipmentTotalsPerPhase } from "@/lib/mptRentalHelperFunctions";
 import { Note } from "@/components/pages/quote-form/QuoteNotes";
+import { Fragment } from "react";
 
 interface Props {
   adminInfo: SignOrderAdminInformation;
@@ -107,16 +108,23 @@ const SignOrderWorksheet: React.FC<Props> = ({
           </thead>
           <tbody>
             {signList.map((item, idx) => (
-              <tr key={idx} className="border-b-2 border-black">
-                <td className={cellClass + " w-1/10"}>{item.designation}</td>
-                <td className={cellClass + " w-1/10"}>{item.width} in.</td>
-                <td className={cellClass + " w-1/10"}>{item.height} in.</td>
-                <td className={cellClass + " w-1/10"}>{item.quantity}</td>
-                <td className={cellClass + " w-1/10"}>{item.sheeting}</td>
-                <td className={cellClass + " w-1/10"}>{item.displayStructure || '-'}</td>
-                <td className={cellClass + " w-1/10"}>{item.bLights}</td>
-                <td className={cellClass + " w-1/10"}>{item.cover ? 'Yes' : 'No'}</td>
-              </tr>
+              <Fragment key={idx}>
+                <tr key={`${idx}-main`}>
+                  <td className={cellClass + " w-1/10"}>{item.designation}</td>
+                  <td className={cellClass + " w-1/10"}>{item.width} in.</td>
+                  <td className={cellClass + " w-1/10"}>{item.height} in.</td>
+                  <td className={cellClass + " w-1/10"}>{item.quantity}</td>
+                  <td className={cellClass + " w-1/10"}>{item.sheeting}</td>
+                  <td className={cellClass + " w-1/10"}>{item.displayStructure || '-'}</td>
+                  <td className={cellClass + " w-1/10"}>{item.bLights}</td>
+                  <td className={cellClass + " w-1/10"}>{item.cover ? 'Yes' : 'No'}</td>
+                </tr>
+                <tr key={`${idx}-description`} className="border-b-2 border-black">
+                  <td colSpan={8} className="py-1 px-3 text-left text-[10px] italic leading-tight">
+                    {item.description || '-'}
+                  </td>
+                </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>

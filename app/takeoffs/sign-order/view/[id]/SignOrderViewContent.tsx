@@ -24,6 +24,8 @@ import FileViewingContainer from '@/components/file-viewing-container'
 import { SendEmailDialog } from './SendEmailDialog'
 import { Note } from '@/components/pages/quote-form/QuoteNotes'
 import { ArrowLeft } from 'lucide-react'
+import { downloadSignOrderWorksheetPdf } from '@/lib/downloadSignOrderWorksheetPdf'
+import type { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -473,7 +475,34 @@ export default function SignOrderViewContent() {
   }
 
   const handleExport = () => {
-    alert('Export functionality not implemented yet')
+    const worksheetSigns: WorksheetSignItem[] = (mptRental?.phases?.[0]?.signs || []).map((sign: any) => ({
+      designation: sign.designation || '-',
+      description: sign.description || '-',
+      quantity: Number(sign.quantity) || 0,
+      width: Number(sign.width) || 0,
+      height: Number(sign.height) || 0,
+      sheeting: sign.sheeting || '-',
+      substrate: sign.substrate || '-',
+      stiffener: sign.stiffener ?? '',
+      inStock: sign.inStock ?? 0,
+      order: sign.order ?? 0,
+      make: sign.make ?? 0,
+      unitPrice: sign.unitPrice ?? 0,
+      totalPrice: sign.totalPrice ?? 0,
+      primarySignId: sign.primarySignId,
+      displayStructure: sign.displayStructure || sign.structure || '-',
+      bLights: Number(sign.bLights) || 0,
+      cover: Boolean(sign.cover || sign.covers > 0),
+      associated_structure: sign.associatedStructure || sign.associated_structure,
+    }))
+
+    void downloadSignOrderWorksheetPdf({
+      adminInfo,
+      signList: worksheetSigns,
+      mptRental,
+      notes,
+      filename: `sign-order-${params?.id || 'worksheet'}.pdf`,
+    })
   }
 
   const handleEditOrder = () => {
