@@ -26,7 +26,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from '@supabase/supabase-js';
 import { Fragment, useEffect, useState, useRef } from 'react';
-import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
+import SignPickerModal, { SignPickerModalResult } from "@/components/pages/active-bid/signs/SignPickerModal";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { QuantityInput } from "@/components/ui/quantity-input";
 
@@ -209,9 +209,9 @@ export const MPTSignTable = ({
   const [signs, setSigns] = useState<SignDesignation[]>([]);
   const [signsLoading, setSignsLoading] = useState(false);
 
-  // DesignationSearcher state
+  // SignPickerModal state
   const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
-  const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
+  const [signPickerOpen, setSignPickerOpen] = useState(false);
   const isTypeIIISection = sectionTitle.toLowerCase().includes('type iii');
   const [pendingDelete, setPendingDelete] = useState<{ type: "row" | "secondary"; rowId: string; secondaryId?: string } | null>(null);
 
@@ -604,8 +604,15 @@ export const MPTSignTable = ({
     setPendingDelete(null);
   };
 
-  // Handle designation selection from DesignationSearcher
-  const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
+  const handleSignPickerOpenChange = (open: boolean) => {
+    setSignPickerOpen(open);
+    if (!open) {
+      setLocalSign(undefined);
+    }
+  };
+
+  // Handle save from SignPickerModal
+  const handlePickerSave = ({ sign: updatedSign, structureType, bLights, cover }: SignPickerModalResult) => {
     if (!localSign) return;
 
     // Check if this is a secondary sign (has primarySignId)
@@ -624,6 +631,7 @@ export const MPTSignTable = ({
       });
     } else {
       // Update primary sign row
+      const existingRow = rows.find((row) => row.id === localSign.id);
       const primarySqft = roundToTwo((updatedSign.width * updatedSign.height) / 144);
       updateRow(localSign.id, {
         signDesignation: updatedSign.designation,
@@ -633,6 +641,7 @@ export const MPTSignTable = ({
         height: updatedSign.height,
         dimensionLabel: updatedSign.width && updatedSign.height ? `${updatedSign.width}" x ${updatedSign.height}"` : '',
         sheeting: updatedSign.sheeting as any,
+        structureType: structureType || '',
         sqft: primarySqft,
         totalSqft: getPrimaryTotalSqft({
           ...rows.find((row) => row.id === localSign.id),
@@ -640,18 +649,17 @@ export const MPTSignTable = ({
           height: updatedSign.height,
           sqft: primarySqft,
           quantity: updatedSign.quantity,
+          structureType: structureType || '',
         }),
         quantity: updatedSign.quantity,
-        cover: updatedSign.cover,
-        // Map bLights from the searcher format to our table format (e.g. 2Y, 1R)
-        bLights: !updatedSign.bLights || updatedSign.bLights === 'none'
-          ? 'none'
-          : `${updatedSign.bLights}${updatedSign.bLightsColor === 'Yellow' ? 'Y' : updatedSign.bLightsColor === 'Red' ? 'R' : 'W'}` as MPTSignRow["bLights"],
+        cover: typeof cover === 'boolean' ? cover : existingRow?.cover || false,
+        bLights: (bLights || 'none') as MPTSignRow["bLights"],
       });
     }
 
     // Reset localSign after selection
     setLocalSign(undefined);
+    setSignPickerOpen(false);
   };
 
   const renderCell = (row: MPTSignRow, column: { key: string; label: string; width: string }) => {
@@ -681,7 +689,7 @@ export const MPTSignTable = ({
                   substrate: 'Plastic',
                 };
                 setLocalSign(primarySign);
-                setDesignationSearcherOpen(true);
+                setSignPickerOpen(true);
               }}
               disabled={disabled}
             >
@@ -1024,7 +1032,7 @@ export const MPTSignTable = ({
                                         substrate: 'Plastic',
                                       };
                                       setLocalSign(secondarySign);
-                                      setDesignationSearcherOpen(true);
+                                      setSignPickerOpen(true);
                                     }}
                                     disabled={disabled}
                                   >
@@ -1133,17 +1141,32 @@ export const MPTSignTable = ({
         </div>
       )}
 
-      {/* Controlled DesignationSearcher */}
+      {/* Controlled SignPickerModal */}
       {localSign && (
-        <DesignationSearcher
-          localSign={localSign}
-          setLocalSign={setLocalSign}
-          onDesignationSelected={(updatedSign) => {
-            handleDesignationSelected(updatedSign);
-            setDesignationSearcherOpen(false);
-          }}
-          open={designationSearcherOpen}
-          onOpenChange={setDesignationSearcherOpen}
+        <SignPickerModal
+          open={signPickerOpen}
+          onOpenChange={handleSignPickerOpenChange}
+          intent={localSign.designation ? 'edit' : 'add'}
+          mode="mpt"
+          initialSign={localSign}
+          onSave={handlePickerSave}
+          structureOptions={structureOptions}
+          initialStructureType={
+            'primarySignId' in localSign
+              ? ''
+              : rows.find((row) => row.id === localSign.id)?.structureType || ''
+          }
+          initialBLights={
+            'primarySignId' in localSign
+              ? 'none'
+              : rows.find((row) => row.id === localSign.id)?.bLights || 'none'
+          }
+          initialCover={
+            'primarySignId' in localSign
+              ? false
+              : rows.find((row) => row.id === localSign.id)?.cover || false
+          }
+          sheetingOptions={SHEETING_OPTIONS}
         />
       )}
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>

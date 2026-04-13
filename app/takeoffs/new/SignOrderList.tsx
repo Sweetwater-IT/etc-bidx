@@ -31,7 +31,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import SignEditingSheet from './SignEditingSheet';
+import SignPickerModal from '@/components/pages/active-bid/signs/SignPickerModal';
 import { safeNumber } from '@/lib/safe-number';
 import { Input } from '@/components/ui/input';
 import {
@@ -112,7 +112,7 @@ export function SignOrderList({
   // Sign orders use a single modal with internal steps: designation -> dimension -> configuration.
 
   const handleClose = useCallback(() => {
-    console.log('Closing SignEditingSheet, resetting localSign and mode');
+    console.log('Closing SignPickerModal, resetting localSign and mode');
     logSignOrderDebug('sign_editor_closed', {
       currentPhase,
       mode,
@@ -310,7 +310,7 @@ export function SignOrderList({
   useEffect(() => {
       const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
       if (onlyTable && latestSign && latestSign.quantity === 0) {
-        console.log('Opening SignEditingSheet for latest sign in onlyTable mode:', latestSign.id);
+        console.log('Opening SignPickerModal for latest sign in onlyTable mode:', latestSign.id);
         setLocalSign(latestSign);
         setMode('edit');
         setOpen(true);
@@ -672,7 +672,7 @@ export function SignOrderList({
       </div>
       <div className="space-y-4 mt-4">
         {localSign && open && (
-          <SignEditingSheet
+          <SignPickerModal
             open={open}
             onOpenChange={handleClose}
             mode={mode}

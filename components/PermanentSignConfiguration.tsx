@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Minus, Trash2, Copy, Search } from "lucide-react";
 import { SignMaterial, SIGN_MATERIALS, abbreviateMaterial } from "@/utils/signMaterial";
-import DesignationSearcher from "@/components/pages/active-bid/signs/DesignationSearcher";
+import SignPickerModal, { SignPickerModalResult } from "@/components/pages/active-bid/signs/SignPickerModal";
 import { PrimarySign } from "@/types/MPTEquipment";
 import { createClient } from '@supabase/supabase-js';
 import { QuantityInput } from "@/components/ui/quantity-input";
@@ -100,9 +100,9 @@ export const PermanentSignConfiguration = ({
   const [sovItemNumbers, setSovItemNumbers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // DesignationSearcher state
+  // SignPickerModal state
   const [localSign, setLocalSign] = useState<PrimarySign | undefined>();
-  const [designationSearcherOpen, setDesignationSearcherOpen] = useState(false);
+  const [signPickerOpen, setSignPickerOpen] = useState(false);
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
   // Search state
@@ -154,7 +154,7 @@ export const PermanentSignConfiguration = ({
     fetchItems();
   }, [jobId]);
 
-  const handleDesignationSelected = (updatedSign: PrimarySign | any) => {
+  const handlePickerSave = ({ sign: updatedSign }: SignPickerModalResult) => {
     if (!localSign) return;
     const itemNumber = (localSign as any).itemNumber;
     const rows = signRows[itemNumber] || [];
@@ -177,6 +177,14 @@ export const PermanentSignConfiguration = ({
     onSignRowsChange(itemNumber, updatedRows);
 
     setLocalSign(undefined);
+    setSignPickerOpen(false);
+  };
+
+  const handleSignPickerOpenChange = (open: boolean) => {
+    setSignPickerOpen(open);
+    if (!open) {
+      setLocalSign(undefined);
+    }
   };
 
   if (loading) {
@@ -271,9 +279,8 @@ export const PermanentSignConfiguration = ({
                       onRowsChange={(rows) => onSignRowsChange(itemNumber, rows)}
                       disabled={disabled}
                       defaultMaterial={defaultSignMaterial}
-                      onDesignationSelected={handleDesignationSelected}
                       setLocalSign={setLocalSign}
-                      setDesignationSearcherOpen={setDesignationSearcherOpen}
+                      setSignPickerOpen={handleSignPickerOpenChange}
                     />
                   ) : (
                     <PermanentSignEntryTable
@@ -290,17 +297,16 @@ export const PermanentSignConfiguration = ({
         </div>
       </div>
 
-      {/* DesignationSearcher */}
+      {/* SignPickerModal */}
       {localSign && (
-        <DesignationSearcher
-          localSign={localSign}
-          setLocalSign={setLocalSign as any}
-          onDesignationSelected={(updatedSign) => {
-            handleDesignationSelected(updatedSign);
-            setDesignationSearcherOpen(false);
-          }}
-          open={designationSearcherOpen}
-          onOpenChange={setDesignationSearcherOpen}
+        <SignPickerModal
+          open={signPickerOpen}
+          onOpenChange={handleSignPickerOpenChange}
+          intent={localSign.designation ? 'edit' : 'add'}
+          mode="permanent-sign"
+          initialSign={localSign}
+          onSave={handlePickerSave}
+          sheetingOptions={SHEETING_OPTIONS.map((option) => option.value)}
         />
       )}
     </div>
@@ -314,18 +320,16 @@ const PermanentSignTable = ({
   onRowsChange,
   disabled,
   defaultMaterial,
-  onDesignationSelected,
   setLocalSign,
-  setDesignationSearcherOpen,
+  setSignPickerOpen,
 }: {
   item: PermanentSignItem;
   rows: PermSignRow[];
   onRowsChange: (rows: PermSignRow[]) => void;
   disabled?: boolean;
   defaultMaterial: SignMaterial;
-  onDesignationSelected: (sign: PrimarySign) => void;
   setLocalSign: (sign: PrimarySign | undefined) => void;
-  setDesignationSearcherOpen: (open: boolean) => void;
+  setSignPickerOpen: (open: boolean) => void;
 }) => {
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState<string | null>(null);
 
@@ -450,7 +454,7 @@ const PermanentSignTable = ({
                           };
                           (primarySign as any).itemNumber = item.item_number;
                           setLocalSign(primarySign);
-                          setDesignationSearcherOpen(true);
+                          setSignPickerOpen(true);
                         }}
                         disabled={disabled}
                       >

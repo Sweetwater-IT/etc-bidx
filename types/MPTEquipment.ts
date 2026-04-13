@@ -74,10 +74,13 @@ export interface KitContent {
 
 export interface KitVariant {
   id: number;
+  kit_id?: number;
   label: string;
   description: string;
   finished: boolean;
   blights: number;
+  bLights?: number;
+  created_at?: string;
 }
 
 export interface PataKit {
