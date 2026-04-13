@@ -55,7 +55,7 @@ const StepsMain = () => {
   const tuckedSidebar = searchParams?.get('tuckSidebar')
   const setFullscreen = searchParams?.get('fullscreen')
 
-  const { toggleSidebar } = useSidebar()
+  const { setOpen } = useSidebar()
   // Initialize currentStep based on the URL parameter or default to 1
   // When in edit mode, always default to step 6 unless explicitly overridden
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -160,12 +160,23 @@ const StepsMain = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    // if(tuckedSidebar && tuckedSidebar === 'true')
-    toggleSidebar();
+    const shouldTuckSidebar = tuckedSidebar === 'true'
+    const shouldStartFullscreen = setFullscreen === 'true'
 
-    // if(setFullscreen && setFullscreen === 'true')
-    setIsFullscreen(true)
-  }, [])
+    if (shouldTuckSidebar) {
+      setOpen(false)
+    }
+
+    if (shouldStartFullscreen) {
+      setIsFullscreen(true)
+    }
+
+    return () => {
+      if (shouldTuckSidebar) {
+        setOpen(true)
+      }
+    }
+  }, [setFullscreen, setOpen, tuckedSidebar])
 
   return (
     <div

@@ -68,7 +68,7 @@ export function CustomerModal({
   }
 
   return (
-    <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title ?? (isEditMode ? "Edit Customer" : "Add Customer")}</DialogTitle>

@@ -95,7 +95,7 @@ export function SimpleCustomerCreateDialog({
   }
 
   return (
-    <Dialog modal={false} open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

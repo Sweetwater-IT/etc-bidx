@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { useCustomer } from "@/contexts/customer-context"
+import { updateCustomerContact } from "@/lib/api-client"
 import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 export interface CustomerContactFormProps {
@@ -133,8 +133,6 @@ export function CustomerContactForm({
     }
   }
 
-  const { updateContact } = useCustomer()
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -154,14 +152,14 @@ export function CustomerContactForm({
       setIsSubmitting(true)
 
       if (isEditMode && contactToEdit) {
-        const success = await updateContact(contactToEdit.id, {
+        const result = await updateCustomerContact(contactToEdit.id, {
           name: formData.name,
           role: resolvedRole,
           email: formData.email,
           phone: formData.phone
         })
 
-        if (success) {
+        if (result) {
           const updatedContactData = {
             name: formData.name,
             role: resolvedRole,
@@ -238,7 +236,6 @@ export function CustomerContactForm({
 
   return (
     <Dialog
-      modal={false}
       open={isOpen}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
