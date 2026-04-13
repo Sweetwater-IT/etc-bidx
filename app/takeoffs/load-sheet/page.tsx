@@ -3,12 +3,13 @@
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import { TableSearchBar } from "@/components/TableSearchBar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { SignOrderView } from "@/types/SignOrderView";
 import { useLoading } from "@/hooks/use-loading";
+import { useTableSearchState } from "@/hooks/use-table-search-state";
 import { FilterOption } from "@/components/table-controls";
 import { toast } from "sonner";
 import { ConfirmArchiveDialog } from "@/components/confirm-archive-dialog";
@@ -18,7 +19,7 @@ import { fetchReferenceData } from "@/lib/api-client";
 import { formatDate } from "@/lib/formatUTCDate";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { ClipboardList, RefreshCw, Search, Calendar as CalendarIcon } from "lucide-react";
+import { ClipboardList, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import { IconPlus, IconX } from "@tabler/icons-react";
 
 const SIGN_ORDER_COLUMNS = [
@@ -80,7 +81,11 @@ export default function SignOrderPage() {
   const [showArchiveDialog, setShowArchiveDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
-  const [loadSheetSearch, setLoadSheetSearch] = useState("");
+  const {
+    search: loadSheetSearch,
+    setSearch: setLoadSheetSearch,
+    debouncedSearch: debouncedLoadSheetSearch,
+  } = useTableSearchState();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -224,6 +229,10 @@ export default function SignOrderPage() {
         params.append("ascending", sortOrder === 'asc' ? 'true' : 'false');
       }
 
+      if (debouncedLoadSheetSearch.trim()) {
+        params.append("search", debouncedLoadSheetSearch.trim());
+      }
+
       // FIXED: Add archived parameter handling like in active-bids
       if (activeSegment === "archived") {
         params.append("archived", "true");
@@ -291,7 +300,7 @@ export default function SignOrderPage() {
     } finally {
       setIsTableLoading(false);
     }
-  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to]);
+  }, [activeSegment, pageIndex, pageSize, sortBy, sortOrder, activeFilters, dateRange?.from, dateRange?.to, debouncedLoadSheetSearch]);
 
   // Fetch counts for each segment
   const fetchCounts = useCallback(async () => {
@@ -299,6 +308,9 @@ export default function SignOrderPage() {
       const countParams = new URLSearchParams();
       countParams.append("counts", "true");
       countParams.append("includeDrafts", "true");
+      if (debouncedLoadSheetSearch.trim()) {
+        countParams.append("search", debouncedLoadSheetSearch.trim());
+      }
       if (dateRange?.from) {
         countParams.append("startDate", dateRange.from.toISOString().split("T")[0]);
       }
@@ -322,7 +334,7 @@ export default function SignOrderPage() {
     } catch (error) {
       console.error("Error fetching counts:", error);
     }
-  }, [dateRange?.from, dateRange?.to]);
+  }, [dateRange?.from, dateRange?.to, debouncedLoadSheetSearch]);
 
   // Handle segment change
   const handleSegmentChange = useCallback((value: string) => {
@@ -471,6 +483,9 @@ export default function SignOrderPage() {
     // Get all records
     params.append("page", "1");
     params.append("limit", totalCount.toString() || "10000");
+    if (debouncedLoadSheetSearch.trim()) {
+      params.append("search", debouncedLoadSheetSearch.trim());
+    }
 
     // Apply current filters
     if (Object.keys(activeFilters).length > 0) {
@@ -552,6 +567,10 @@ export default function SignOrderPage() {
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts, activeSegment]);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [debouncedLoadSheetSearch]);
 
   const handleRowClick = useCallback((quote: SignOrderView) => {
     // Navigate to the sign order detail page when clicking a row
@@ -704,15 +723,11 @@ export default function SignOrderPage() {
               </div>
             </div>
             <div className="px-4 lg:px-6">
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search sign orders..."
-                  value={loadSheetSearch}
-                  onChange={(e) => setLoadSheetSearch(e.target.value)}
-                  className="h-9 border-border bg-card pl-9 shadow-sm"
-                />
-              </div>
+              <TableSearchBar
+                value={loadSheetSearch}
+                onChange={setLoadSheetSearch}
+                placeholder="Search sign orders..."
+              />
             </div>
 
             <DataTable<SignOrderView>
@@ -760,11 +775,6 @@ export default function SignOrderPage() {
               showFilters={showFilters}
               setShowFilters={setShowFilters}
               onUnarchive={handleUnarchiveSignOrder}
-              enableSearch
-              searchableColumns={["order_number", "order_type", "requestor", "branch", "order_status", "shop_status", "assigned_to", "customer", "contract_number", "job_number", "order_date", "need_date", "target_date", "created_at"]}
-              searchValue={loadSheetSearch}
-              onSearchChange={setLoadSheetSearch}
-              showSearchBar={false}
             />
           </div>
         </div>
