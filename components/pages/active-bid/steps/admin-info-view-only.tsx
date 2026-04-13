@@ -70,7 +70,7 @@ const AdminInfoViewOnly = () => {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 pl-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="flex flex-col col-span-3">
                 <label className="text-sm font-semibold">
                     Contract Number

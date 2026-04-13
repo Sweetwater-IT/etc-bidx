@@ -435,17 +435,23 @@ const BidViewOnlyContainer = () => {
           </div>
         </DialogContent>
       </Dialog>
-      <div className='flex pr-6'>
-        <div className='w-3/4'>
-          <div className='text-xl font-semibold pl-6 mb-4'>
-            Admin Information
-          </div>
-          <AdminInfoViewOnly />
-          <div className='text-xl font-semibold pl-6 mb-4 mt-8'>Bid Items</div>
-          <BidItemsViewOnly />
+      <div className='flex gap-6 px-6 pt-6 pb-6'>
+        <div className='w-3/4 space-y-6'>
+          <section className='rounded-xl border bg-card p-6 shadow-sm'>
+            <div className='text-xl font-semibold mb-4'>
+              Admin Information
+            </div>
+            <AdminInfoViewOnly />
+          </section>
+          <section className='rounded-xl border bg-card p-6 shadow-sm'>
+            <div className='text-xl font-semibold mb-4'>
+              Bid Items
+            </div>
+            <BidItemsViewOnly />
+          </section>
         </div>
-        <div className='w-1/4 space-y-4 pl-4 border-l'>
-          <div className='flex flex-col space-y-2 rounded-lg border p-4'>
+        <div className='w-1/4 space-y-4 border-l pl-6'>
+          <div className='flex flex-col space-y-2 rounded-xl border bg-card p-4 shadow-sm'>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -485,7 +491,7 @@ const BidViewOnlyContainer = () => {
             loading={loadingNotes}
             canEdit={true}
           />
-          <div className='rounded-lg border p-6'>
+          <div className='rounded-xl border bg-card p-6 shadow-sm'>
             <h2 className='mb-4 text-lg font-semibold'>Files</h2>
             <FileViewingContainer files={files} onFilesChange={setFiles} />
             <Dropzone {...fileUploadProps}>

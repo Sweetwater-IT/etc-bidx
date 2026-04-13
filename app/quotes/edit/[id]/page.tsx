@@ -11,7 +11,7 @@ export default function EditQuotePage({ params }: any) {
   const numericId = parseInt((resolvedParams).id, 10);
 
   return (
-    <div className="flex flex-col h-screen w-screen">
+    <div className="flex min-h-full flex-col">
       <div className="flex-1 overflow-auto">
         <QuoteFormProvider>
           <QuoteEditLoader quoteId={numericId} />

@@ -1,8 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export default function BidPagesLayout({
+export default function AppShellLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -17,10 +16,7 @@ export default function BidPagesLayout({
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader showTitleBlock={false} />
-        {children}
-      </SidebarInset>
+      <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>
   );
 }

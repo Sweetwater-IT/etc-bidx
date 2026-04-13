@@ -1,6 +1,6 @@
 'use client'
 import { useEstimate } from '@/contexts/EstimateContext'
-import { Button, buttonVariants } from '../../components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { BriefcaseBusiness, XIcon } from 'lucide-react'
 import { PagePrimaryHeader } from '@/components/page-primary-header'
 import { useSearchParams } from 'next/navigation'

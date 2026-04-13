@@ -1004,7 +1004,7 @@ const BidItemsViewOnly = () => {
     }, [equipmentRental]);
 
     return (
-        <div className="space-y-6 px-6">
+        <div className="space-y-6">
             <Tabs
                 defaultValue="mpt"
                 className="w-full"
@@ -1052,11 +1052,11 @@ const BidItemsViewOnly = () => {
 
                 {/* MPT Tab */}
                 <TabsContent value="mpt" className="mt-6">
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-6'>Phases</div>
+                    <div className='mb-4 mt-6 text-xl font-semibold'>Phases</div>
                     <PhasesViewOnly />
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>Signs</div>
+                    <div className='mb-4 mt-8 text-xl font-semibold'>Signs</div>
                     <SignsViewOnly />
-                    <div className='text-xl font-semibold pl-6 mb-4 mt-8'>
+                    <div className='mb-4 mt-8 text-xl font-semibold'>
                         Trip and Labor
                     </div>
                     <TripAndLaborViewOnlyAll />
@@ -1066,7 +1066,7 @@ const BidItemsViewOnly = () => {
                 {/* Equipment Rental Tab - MODIFICADO */}
                 <TabsContent value="equipment" className="mt-6">
                     {equipmentData.length > 0 ? (
-                        <div className="px-6">
+                        <div>
                             <DataTable
                                 columns={equipmentColumns}
                                 data={equipmentData}
@@ -1085,9 +1085,9 @@ const BidItemsViewOnly = () => {
 
                 {/* Permanent Signs Tab */}
                 <TabsContent value="permanent" className="mt-6">
-                    <div className="text-center py-6 text-muted-foreground pl-6">
-                        <PermanentSignsViewOnly />
-                    </div>
+                        <div className="py-6 text-center text-muted-foreground">
+                            <PermanentSignsViewOnly />
+                        </div>
                 </TabsContent>
 
                 {/* Flagging Tab */}
