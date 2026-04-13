@@ -17,7 +17,7 @@ import { Trash2, Pencil, MoreVertical, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuoteForm } from "@/app/quotes/(shell)/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";

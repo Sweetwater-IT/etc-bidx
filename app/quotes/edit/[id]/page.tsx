@@ -1,8 +1,8 @@
 // app/quotes/edit/[id]/page.tsx
 "use client";
 
-import QuoteFormProvider from "@/app/quotes/(shell)/create/QuoteFormProvider";
-import QuoteFormContent from "@/app/quotes/(shell)/create/QuoteFormContent";
+import QuoteFormProvider from "../../create/QuoteFormProvider";
+import QuoteFormContent from "../../create/QuoteFormContent";
 import QuoteEditLoader from "./QuoteEditLoader";
 import React from "react";
 

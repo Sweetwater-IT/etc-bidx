@@ -490,7 +490,6 @@ const BidViewOnlyContainer = () => {
             onDelete={handleDeleteNote}
             loading={loadingNotes}
             canEdit={true}
-            containerClassName='bg-white shadow-sm'
           />
           <div className='rounded-xl border bg-card p-6 shadow-sm'>
             <h2 className='mb-4 text-lg font-semibold'>Files</h2>

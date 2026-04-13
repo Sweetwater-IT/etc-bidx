@@ -2,7 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TermsNames, useQuoteForm } from "@/app/quotes/(shell)/create/QuoteFormProvider";
+import { TermsNames, useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { Textarea } from "@/components/ui/textarea";
 
 export function QuoteTermsAndConditions() {

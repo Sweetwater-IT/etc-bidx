@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useQuoteForm } from './QuoteFormProvider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation'
 import { QuoteItems } from '@/components/pages/quote-form/QuoteItems'
 import { QuoteAdditionalFiles } from '@/components/pages/quote-form/QuoteAdditionalFiles'

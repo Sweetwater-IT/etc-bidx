@@ -1,6 +1,6 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
-import { useQuoteForm } from "@/app/quotes/(shell)/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { useEffect, useState } from "react";
 
 export function QuoteNumber() {
