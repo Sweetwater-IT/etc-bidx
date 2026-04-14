@@ -55,6 +55,7 @@ export function QuoteItems() {
   const { quoteItems, setQuoteItems, quoteId, quoteMetadata, setQuoteMetadata } = useQuoteForm();
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
+  const [selectingItemId, setSelectingItemId] = useState<string | null>(null);
   const [applyToAll, setApplyToAll] = useState<boolean>(false);
 
   // --- Price calculations ---
@@ -114,7 +115,7 @@ export function QuoteItems() {
     const response = await createQuoteItem(newItem);
     if (response.success) {
       setQuoteItems((prevItems) => [...prevItems, { ...response.item, created: false }]);
-      setEditingItemId(response.item.id);
+      setSelectingItemId(response.item.id);
     }
   };
 
@@ -312,6 +313,8 @@ export function QuoteItems() {
           editingSubItemId={editingSubItemId}
           setEditingItemId={setEditingItemId}
           setEditingSubItemId={setEditingSubItemId}
+          selectingItemId={selectingItemId}
+          setSelectingItemId={setSelectingItemId}
           handleItemUpdate={handleItemUpdate}
           handleRemoveItem={handleRemoveItem}
           handleAddCompositeItem={handleAddCompositeItem}
@@ -320,6 +323,7 @@ export function QuoteItems() {
           UOM_TYPES={UOM_TYPES}
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
+          contractNumber={quoteMetadata?.ecsm_contract_number ?? null}
         />
       </div>
 

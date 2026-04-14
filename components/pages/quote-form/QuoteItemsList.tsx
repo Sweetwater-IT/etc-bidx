@@ -1,4 +1,4 @@
-import { useProductsSearch } from "@/hooks/useProductsSearch";
+import { useSovPickerItems } from "@/hooks/use-sov-picker-items";
 import QuoteItemRow from "./QuoteItemRow";
 import { QuoteItem, AssociatedItem } from "@/types/IQuoteItem";
 
@@ -25,11 +25,14 @@ interface QuoteItemsListProps {
   UOM_TYPES: any;
   calculateCompositeUnitPrice: (item: QuoteItem) => number;
   calculateExtendedPrice: (item: QuoteItem) => string;
+  selectingItemId: string | null;
+  setSelectingItemId: (id: string | null) => void;
+  contractNumber?: string | null;
 }
 
 // QuoteItemsList
 const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListProps) => {
-  const { products, loading } = useProductsSearch(""); // fetch global
+  const { items, loading } = useSovPickerItems("");
   return (
     <>
       {quoteItems.map((item, ix) => (
@@ -37,7 +40,7 @@ const QuoteItemsList = ({ quoteItems, editingItemId, ...rest }: QuoteItemsListPr
           key={item.id ?? `quote-item-${ix}`}
           item={item}
           isEditing={editingItemId === item.id}
-          products={products}
+          products={items}
           loading={loading}
           {...rest}
         />

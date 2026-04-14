@@ -1,13 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -19,8 +12,8 @@ import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
+import { SovItemPicker } from "./SovItemPicker";
 
 export default function QuoteItemRow({
   item,
@@ -37,13 +30,12 @@ export default function QuoteItemRow({
   calculateCompositeUnitPrice,
   calculateExtendedPrice,
   products,
-  loading
-}) {
-  const [productInput, setProductInput] = useState(item.itemNumber || "");
-  const [activeSection, setActiveSection] = useState<'all' | 'service_items' | 'sale' | 'rental'>('all');
-
+  loading,
+  selectingItemId,
+  setSelectingItemId,
+  contractNumber = null,
+}: any) {
   const [openProductSheet, setOpenProductSheet] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const { quoteMetadata } = useQuoteForm()
   // Keep the editor open if this row or one of its subitems is actively being edited.
@@ -72,10 +64,6 @@ export default function QuoteItemRow({
       ? (item.discount * 100).toString().padStart(3, "0")
       : "000",
   });
-
-  useEffect(() => {
-    setProductInput(item.itemNumber || "");
-  }, [item.itemNumber]);
 
   useEffect(() => {
     if (isEditing) {
@@ -151,31 +139,20 @@ export default function QuoteItemRow({
   }, [shouldOpenProductSheet, editingSubItemId, item.associatedItems]);
 
   const handleProductSelect = (product: any) => {
-
-    setShowDropdown(false);
+    setSelectingItemId(null);
 
     handleItemUpdate(item.id, "fullItem", {
       ...item,
-      itemNumber: product.item_number,
-      description: product.description,
+      itemNumber: product.display_item_number || product.item_number,
+      description: product.display_name || product.description,
       uom: product.uom,
-      notes: product.notes
+      notes: product.notes || "",
     });
 
     setOpenProductSheet(true);
     setEditingItemId(item.id);
     setEditingSubItemId(null);
   };
-
-  const filteredProducts = products?.filter((p) => {
-    const matchesSearch =
-      p.item_number.toLowerCase().includes(productInput.toLowerCase()) ||
-      p.description.toLowerCase().includes(productInput.toLowerCase());
-
-    const matchesSection = activeSection === 'all' || p.source === activeSection;
-
-    return matchesSearch && matchesSection;
-  });
 
   return (
     <>
@@ -186,91 +163,25 @@ export default function QuoteItemRow({
         }}
       >
         <div className="w-[150px]">
-          <Select
-            value={item.itemNumber || undefined}
-            open={showDropdown}
-            onOpenChange={setShowDropdown}
-            onValueChange={(value) => {
-              if (value === "add_new") {
-                setOpenProductSheet(true);
-                setEditingItemId(item.id);
-                setEditingSubItemId(null);
-                return;
+          <SovItemPicker
+            open={selectingItemId === item.id}
+            onOpenChange={(open) => {
+              setSelectingItemId(open ? item.id : null)
+
+              if (!open && !item.itemNumber && !item.description) {
+                handleRemoveItem(item.id)
               }
-              const selected = filteredProducts?.find(p => p.item_number === value);
-              if (selected) handleProductSelect(selected);
             }}
-          >
-            <SelectTrigger className="h-9 w-full bg-transparent text-sm text-foreground">
-              <SelectValue placeholder="Search or add a product...">
-                {item.itemNumber
-                  ? `${item.itemNumber} - ${item.description}`
-                  : "Search or add a product..."}
-              </SelectValue>
-            </SelectTrigger>
-
-            <SelectContent className="max-h-80 w-[450px] p-2">
-              <Command>
-                <CommandInput
-                  placeholder="Search..."
-                  value={productInput}
-                  onValueChange={(value) => setProductInput(value)}
-                  autoFocus
-                />
-                <CommandList>
-                  <CommandItem
-                    key="custom"
-                    value="custom"
-                    onSelect={() => {
-                      setOpenProductSheet(true);
-                      setEditingItemId(item.id);
-                      setEditingSubItemId(null);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <div className="flex items-center w-full">
-                      <span className="font-medium italic">+ Custom</span>
-                    </div>
-                  </CommandItem>
-
-                  <CommandGroup heading="Service Items">
-                    {filteredProducts
-                      .filter(p => p.source === 'service_items')
-                      .map((p) => (
-                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-                  <CommandGroup heading="Rental Items">
-                    {filteredProducts
-                      .filter(p => p.source === 'rental')
-                      .map((p) => (
-                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-
-                  <CommandGroup heading="Sale Items">
-                    {filteredProducts
-                      .filter(p => p.source === 'sale')
-                      .map((p) => (
-                        <CommandItem key={p.id} onSelect={() => handleProductSelect(p)}>
-                          {p.item_number} - {p.description}
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-
-                  {filteredProducts.length === 0 && !loading && (
-                    <div className="px-3 py-2 text-foreground">No products found</div>
-                  )}
-
-                  {loading && <div className="px-3 py-2 text-foreground">Loading...</div>}
-                </CommandList>
-              </Command>
-            </SelectContent>
-          </Select>
+            valueLabel={
+              item.itemNumber
+                ? `${item.itemNumber} - ${item.description}`
+                : loading
+                  ? "Loading items..."
+                  : "Search or add a product..."
+            }
+            onSelect={handleProductSelect}
+            contractNumber={contractNumber}
+          />
 
         </div>
 
@@ -432,7 +343,7 @@ export default function QuoteItemRow({
         editingSubItemId={editingSubItemId}
         handleItemUpdate={handleItemUpdate}
         item={item}
-        setProductInput={setProductInput}
+        setProductInput={() => undefined}
         setEditingItemId={setEditingItemId}
         setEditingSubItemId={setEditingSubItemId}
       />
