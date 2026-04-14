@@ -491,6 +491,7 @@ export async function generateBillingPacketPdf(data: BillingPacketData): Promise
 
   const filename = getWorkOrderPdfFilename(
     data.primaryTakeoffTitle || data.woTitle || data.woNumber,
+    data.woNumber,
     Boolean(data.isPickup)
   );
 
