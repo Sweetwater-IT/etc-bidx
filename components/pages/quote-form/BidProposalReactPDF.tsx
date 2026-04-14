@@ -298,7 +298,10 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               </Text>
             </View>
             <View style={styles.header3}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{quoteStatus === "Accepted" ? "Sale Ticket" : "Proposal"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>
+                {quoteStatus === "Accepted" ? "Sale Ticket" : "Proposal"}
+                {quoteData?.quote_number ? ` ${quoteData.quote_number}` : ""}
+              </Text>
               {
                 quoteStatus !== "Accepted" &&
                 <View>

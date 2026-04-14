@@ -12,6 +12,12 @@ import { useSovPickerItems, type SovPickerItem } from "@/hooks/use-sov-picker-it
 import { toast } from "sonner";
 
 function formatWorkTypeLabel(value: string) {
+  if (value === "CUSTOM") return "Custom";
+  if (value === "DELIVERY") return "Delivery";
+  if (value === "SERVICE") return "Service";
+  if (value === "RENTAL") return "Rental";
+  if (value === "SALE") return "Sale";
+
   return value
     .split("_")
     .filter(Boolean)
@@ -113,17 +119,22 @@ export function SovItemPicker({
           <div className="max-h-[420px] overflow-auto rounded-md border">
             <div className="sticky top-0 z-20 border-b bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               <div className="flex flex-col gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-start gap-2"
-                  onClick={() => {
-                    setCustomDialogOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Custom Item
-                </Button>
+                <div className="rounded-md border border-[#16335A]/15 bg-[#16335A]/5 p-2">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
+                    Custom
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="justify-start gap-2 bg-background"
+                    onClick={() => {
+                      setCustomDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Custom Item
+                  </Button>
+                </div>
                 <Input
                   placeholder="Search item #, display #, description, or category…"
                   value={search}

@@ -14,6 +14,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
 import { SovItemPicker } from "./SovItemPicker";
+import { getSovPickerItemUomOptions } from "@/hooks/use-sov-picker-items";
 
 export default function QuoteItemRow({
   item,
@@ -147,6 +148,7 @@ export default function QuoteItemRow({
       description: product.display_name || product.description,
       uom: product.uom,
       notes: product.notes || "",
+      availableUoms: getSovPickerItemUomOptions(product),
     });
 
     setOpenProductSheet(true);
@@ -174,7 +176,7 @@ export default function QuoteItemRow({
             }}
             valueLabel={
               item.itemNumber
-                ? `${item.itemNumber} - ${item.description}`
+                ? `${item.itemNumber}`
                 : loading
                   ? "Loading items..."
                   : "Search or add a product..."

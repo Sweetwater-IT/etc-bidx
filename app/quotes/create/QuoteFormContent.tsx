@@ -23,6 +23,7 @@ import RenderProjectQuoteFields from './components/RenderProjectQuoteFields';
 import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './types';
 import { Check, Edit2, Loader, Loader2, X } from 'lucide-react';
 import { restorePointerEvents } from '@/lib/pointer-events-fix';
+import { logQuoteNavigationDebug } from '@/lib/log-quote-navigation-debug';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import CustomerSelect from './components/CustomerSelector';
@@ -358,8 +359,25 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       body: JSON.stringify(payload),
       headers: { "Content-Type": "application/json" },
     });
+    const result = await res.json().catch(() => ({
+      success: false,
+      message: "Failed to parse quote API response",
+    }));
 
-    return res.json();
+    if (!res.ok) {
+      console.error("[QuoteCreate] createQuoteBase failed", {
+        status,
+        responseStatus: res.status,
+        result,
+      });
+      return {
+        success: false,
+        message: result?.message || "Quote request failed",
+        error: result?.error || null,
+      };
+    }
+
+    return result;
   };
 
   const handleCreateDraft = async () => {
@@ -380,6 +398,11 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
   const handleCreateQuote = async () => {
     try {
       setCreatingQuote(true);
+      logQuoteNavigationDebug("create_quote_submit_clicked", {
+        quoteId,
+        type_quote: quoteMetadata?.type_quote ?? null,
+        itemCount: quoteItems.length,
+      });
 
       const data = await createQuoteBase("NOT SENT");
 
@@ -414,10 +437,25 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
         router.push('/quotes')
         toast.success("Quote created successfully!");
+        logQuoteNavigationDebug("create_quote_submit_succeeded", {
+          quoteId: data?.data?.id ?? quoteId ?? null,
+        });
+      } else {
+        console.error("[QuoteCreate] API returned create failure", data);
+        logQuoteNavigationDebug("create_quote_submit_failed", {
+          quoteId,
+          message: data?.message || null,
+          error: data?.error || null,
+        });
+        toast.error(data?.message || "Could not create quote");
       }
 
     } catch (err) {
       console.error("Error creating quote", err);
+      logQuoteNavigationDebug("create_quote_submit_threw", {
+        quoteId,
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error("Could not create quote");
     } finally {
       setCreatingQuote(false);
@@ -796,6 +834,16 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     }
   }
 
+  const handleClosePage = () => {
+    logQuoteNavigationDebug("create_quote_close_clicked", {
+      quoteId,
+      hasDraft: Boolean(quoteId),
+      type_quote: quoteMetadata?.type_quote ?? null,
+    });
+    restorePointerEvents();
+    router.push('/quotes');
+  }
+
 
   React.useEffect(() => {
     if (quoteMetadata?.id && quoteMetadata?.type_quote && canAutosave) {
@@ -898,7 +946,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
     <div className="flex flex-1 flex-col">
       <PageHeaderWithSaving
         heading={(edit ? "Edit" : "Create") + " Quote"}
-        handleSubmit={handleSaveAndExit}
+        handleSubmit={handleClosePage}
         showX
         saveButtons={
           <div className="flex items-center gap-4">

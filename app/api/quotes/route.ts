@@ -19,6 +19,62 @@ function stripSystemManagedQuoteFields<T extends Record<string, any>>(input: T):
   return copy;
 }
 
+function normalizeQuoteWriteFields(input: Record<string, any>) {
+  const cleaned = stripSystemManagedQuoteFields(input);
+
+  return {
+    type_quote: cleaned.type_quote ?? null,
+    from_email: cleaned.from_email ?? null,
+    subject: cleaned.subject ?? null,
+    body: cleaned.body ?? null,
+    customer_name: cleaned.customer_name ?? null,
+    customer_contact: cleaned.customer_contact ?? null,
+    customer_email: cleaned.customer_email ?? null,
+    customer_phone: cleaned.customer_phone ?? null,
+    customer_address: cleaned.customer_address ?? null,
+    customer_job_number: cleaned.customer_job_number ?? null,
+    purchase_order: cleaned.purchase_order ?? null,
+    county: typeof cleaned.county === "string" ? cleaned.county : null,
+    township: cleaned.township ?? null,
+    sr_route: cleaned.sr_route ?? null,
+    job_address: cleaned.job_address ?? null,
+    ecsm_contract_number: cleaned.ecsm_contract_number ?? null,
+    bid_date: cleaned.bid_date || null,
+    start_date: cleaned.start_date || null,
+    end_date: cleaned.end_date || null,
+    duration: typeof cleaned.duration === "number" ? cleaned.duration : cleaned.duration ? Number(cleaned.duration) : null,
+    job_number: cleaned.job_number ?? null,
+    etc_job_number: cleaned.etc_job_number ?? null,
+    etc_point_of_contact: cleaned.etc_point_of_contact ?? null,
+    etc_poc_email: cleaned.etc_poc_email ?? null,
+    etc_poc_phone_number: cleaned.etc_poc_phone_number ?? null,
+    etc_branch: cleaned.etc_branch ?? null,
+    customer: typeof cleaned.customer === "string"
+      ? cleaned.customer
+      : cleaned.customer?.id != null
+        ? String(cleaned.customer.id)
+        : null,
+    selectedfilesids: Array.isArray(cleaned.selectedfilesids) ? cleaned.selectedfilesids : [],
+    aditionalFiles: typeof cleaned.aditionalFiles === "boolean" ? cleaned.aditionalFiles : null,
+    aditionalTerms: typeof cleaned.aditionalTerms === "boolean" ? cleaned.aditionalTerms : null,
+    pdf_url: cleaned.pdf_url ?? null,
+    notes: typeof cleaned.notes === "string" ? cleaned.notes : null,
+    exclusionsText: typeof cleaned.exclusionsText === "string" ? cleaned.exclusionsText : null,
+    termsText: typeof cleaned.termsText === "string" ? cleaned.termsText : null,
+    tax_rate: cleaned.tax_rate != null ? Number(cleaned.tax_rate) : null,
+    aditionalExclusions: typeof cleaned.aditionalExclusions === "boolean" ? cleaned.aditionalExclusions : null,
+    payment_terms: cleaned.payment_terms ?? cleaned.paymentTerms ?? null,
+    custom_terms_conditions: cleaned.custom_terms_conditions ?? null,
+    standard_terms: typeof cleaned.standard_terms === "boolean" ? cleaned.standard_terms : null,
+    rental_agreements: typeof cleaned.rental_agreements === "boolean" ? cleaned.rental_agreements : null,
+    equipment_sale: typeof cleaned.equipment_sale === "boolean" ? cleaned.equipment_sale : null,
+    flagging_terms: typeof cleaned.flagging_terms === "boolean" ? cleaned.flagging_terms : null,
+    user_created: cleaned.user_created ?? null,
+    user_sent: cleaned.user_sent ?? null,
+    created_by_name: cleaned.created_by_name ?? null,
+  };
+}
+
 // --------------------
 // GET → listado con filtros, paginación, counts y nextNumber
 // -------------------- 
@@ -440,22 +496,45 @@ export async function POST(request: NextRequest) {
       recipients,
       items,
       quoteId: quoteIdCreated,
+      status: requestedStatus,
       bid_date, start_date, end_date,
       userEmail,
       ...rest
     } = body;
 
+    const normalizedStatus =
+      requestedStatus === "NOT SENT" || requestedStatus === "Not Sent"
+        ? "Not Sent"
+        : "DRAFT";
+
+    console.info("[POST /api/quotes] incoming", {
+      quoteIdCreated,
+      estimate_id,
+      job_id,
+      type_quote: rest?.type_quote ?? null,
+      requestedStatus: requestedStatus ?? null,
+      hasCustomers: Array.isArray(customers) ? customers.length : 0,
+      hasRecipients: Array.isArray(recipients) ? recipients.length : 0,
+      hasItems: Array.isArray(items) ? items.length : 0,
+      keys: Object.keys(rest || {}).sort(),
+    });
+
+    const quoteFields = normalizeQuoteWriteFields({
+      ...rest,
+      bid_date: bid_date || null,
+      start_date: start_date || null,
+      end_date: end_date || null,
+      user_created: userEmail,
+    });
+
     if (quoteIdCreated) {
       const { data: updated, error: updateError } = await supabase
         .from("quotes")
         .update({
-          ...rest,
+          ...quoteFields,
           estimate_id,
           job_id,
-          bid_date: bid_date || null,
-          start_date: start_date || null,
-          end_date: end_date || null,
-          status: "Not Sent",
+          status: normalizedStatus,
           updated_at: new Date().toISOString(),
         })
         .eq("id", quoteIdCreated)
@@ -463,6 +542,13 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (updateError) {
+        console.error("[POST /api/quotes] Failed to update existing quote before create", {
+          quoteIdCreated,
+          estimate_id,
+          job_id,
+          error: updateError,
+          quoteFields,
+        });
         return NextResponse.json(
           { success: false, message: "Failed to update quote", error: updateError.message },
           { status: 500 }
@@ -497,31 +583,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const cleanRest = {
-      ...stripSystemManagedQuoteFields(rest),
-      bid_date: bid_date || null,
-      start_date: start_date || null,
-      end_date: end_date || null,
-    };
-
     const { data: quoteData, error: quoteError } = await supabase
       .from("quotes")
       .insert([{
         quote_number: nextQuoteNumber,
-        status: "DRAFT",
+        status: normalizedStatus,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         estimate_id,
         job_id,
-        user_created: userEmail,
-        ...cleanRest
+        ...quoteFields
       }])
       .select("id, quote_number, estimate_id, job_id")
       .single();
 
 
     if (quoteError || !quoteData) {
-      console.error("Error creating draft:", quoteError);
+      console.error("[POST /api/quotes] Error creating quote row", {
+        error: quoteError,
+        estimate_id,
+        job_id,
+        nextQuoteNumber,
+        quoteFields,
+      });
       return NextResponse.json(
         { success: false, message: "Failed to create draft", error: quoteError?.message || "No data" },
         { status: 500 }
@@ -602,7 +686,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: quoteData });
   } catch (err) {
-    console.error("Unexpected error POST /quotes:", err);
+    console.error("[POST /api/quotes] Unexpected error", err);
     return NextResponse.json(
       { success: false, message: "Unexpected error", error: String(err) },
       { status: 500 }

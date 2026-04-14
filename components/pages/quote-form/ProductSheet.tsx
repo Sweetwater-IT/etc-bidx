@@ -22,6 +22,7 @@ import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
 import { useState } from "react";
+import { QuantityInput } from "@/components/ui/quantity-input";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -54,6 +55,9 @@ export function ProductSheet({
 }) {
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   const [isSaving, setIsSaving] = useState(false)
+  const availableUoms = Array.isArray(item?.availableUoms) && item.availableUoms.length > 0
+    ? item.availableUoms
+    : Object.values(UOM_TYPES)
 
   useEffect(() => {
     if (open) {
@@ -351,7 +355,7 @@ export function ProductSheet({
                 <SelectValue placeholder="Select UOM" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(UOM_TYPES).map((uom: any) => (
+                {availableUoms.map((uom: any) => (
                   <SelectItem key={uom} value={uom}>
                     {uom}
                   </SelectItem>
@@ -363,17 +367,16 @@ export function ProductSheet({
             <Label className="text-[15px] font-medium text-muted-foreground">
               Quantity
             </Label>
-            <Input
-              type="number"
-              className="bg-background"
-              placeholder="Enter quantity"
-              value={newProduct.quantity}
-              onChange={(e) =>
+            <QuantityInput
+              value={Math.max(1, Number(newProduct.quantity) || 1)}
+              min={1}
+              onChange={(value) =>
                 setNewProduct((prev) => ({
                   ...prev,
-                  quantity: e.target.value,
+                  quantity: value,
                 }))
               }
+              className="mt-1"
             />
           </div>
           <div className="flex flex-col gap-1">

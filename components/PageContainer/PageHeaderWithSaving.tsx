@@ -19,7 +19,7 @@ const PageHeaderWithSaving = ({ heading, subheading, handleSubmit, showX, badgeT
     return (
         <div className={`flex w-full bg-background z-50 items-center sticky top-0 justify-between px-6 gap-2 pb-4 mb-6 ${showX ? 'mt-2 pt-6 border-b-1' : ''}`}>
             <div className='flex items-center gap-x-0'>
-                {showX && <Button variant='ghost' onClick={handleSubmit}>
+                {showX && <Button type="button" variant='ghost' onClick={handleSubmit}>
                     <XIcon className="cursor-pointer" />
                 </Button>}
                 {showX && <Separator className='max-w-8 rotate-90 -ml-2 -mr-1' />}

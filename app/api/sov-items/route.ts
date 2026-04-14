@@ -38,6 +38,13 @@ function mapCustomItem(item: any) {
     is_custom: true,
     work_type: item.work_type || 'CUSTOM',
     uom: resolvePrimaryUom(item),
+    uom_1: item.uom_1 || null,
+    uom_2: item.uom_2 || null,
+    uom_3: item.uom_3 || null,
+    uom_4: item.uom_4 || null,
+    uom_5: item.uom_5 || null,
+    uom_6: item.uom_6 || null,
+    uom_7: item.uom_7 || null,
   };
 }
 
@@ -118,6 +125,13 @@ export async function GET(request: NextRequest) {
       is_custom: false,
       uom: resolvePrimaryUom(item),
       work_type: item.work_type || 'OTHER',
+      uom_1: item.uom_1 || null,
+      uom_2: item.uom_2 || null,
+      uom_3: item.uom_3 || null,
+      uom_4: item.uom_4 || null,
+      uom_5: item.uom_5 || null,
+      uom_6: item.uom_6 || null,
+      uom_7: item.uom_7 || null,
     }));
 
     return NextResponse.json({ data: [...transformedData, ...customItems] });

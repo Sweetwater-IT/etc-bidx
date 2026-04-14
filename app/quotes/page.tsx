@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { TableSearchBar } from "@/components/TableSearchBar";
 import { useTableSearchState } from "@/hooks/use-table-search-state";
+import { logQuoteNavigationDebug } from "@/lib/log-quote-navigation-debug";
 
 const QUOTES_COLUMNS = [
   { key: "quote_number", title: "Quote #" },
@@ -183,6 +184,28 @@ export default function QuotesPage() {
     router.push(query ? `/quotes/view/${quote.id}?${query}` : `/quotes/view/${quote.id}`);
   };
 
+  const handleCreateQuoteClick = () => {
+    const sourcePath = `${pathname ?? "/quotes"}${currentParams.toString() ? `?${currentParams.toString()}` : ""}`;
+    logQuoteNavigationDebug("create_quote_click", {
+      sourcePath,
+      totalCount,
+      activeFilter,
+      search: debouncedQuotesSearch,
+    });
+
+    window.setTimeout(() => {
+      if (window.location.pathname === "/quotes") {
+        logQuoteNavigationDebug("create_quote_navigation_stalled", {
+          sourcePath,
+          activeFilter,
+          search: debouncedQuotesSearch,
+        });
+      }
+    }, 1500);
+
+    router.push("/quotes/create");
+  };
+
   return (
     <>
       <SiteHeader showTitleBlock={false} />
@@ -202,7 +225,7 @@ export default function QuotesPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={() => router.push("/quotes/create")}>
+              <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={handleCreateQuoteClick}>
                 <IconPlus className="h-4 w-4" />
                 Create Quote
               </Button>

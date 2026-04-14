@@ -224,7 +224,10 @@ export const BidProposalWorksheet: React.FC<BidProposalWorksheetProps> = ({
               <p>Email: <span className='underline text-blue-600'>estimating@establishedtraffic.com</span></p>
             </div>
             <div className="text-center w-1/4 ">
-              <h2 className="text-xl font-bold">{quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}</h2>
+              <h2 className="text-xl font-bold">
+                {quoteData?.status === "Accepted" ? "Sale Ticket" : "Proposal"}
+                {quoteData?.quote_number ? ` ${quoteData.quote_number}` : ""}
+              </h2>
               {
                 quoteData?.status !== "Accepted" &&
                 <div>
