@@ -139,6 +139,25 @@ export default function QuoteItemRow({
     }
   }, [shouldOpenProductSheet, editingSubItemId, item.associatedItems]);
 
+  const matchedSovItem = products?.find((product: any) => {
+    const candidateNumbers = [
+      product?.display_item_number,
+      product?.item_number,
+    ].filter(Boolean);
+
+    return candidateNumbers.includes(item.itemNumber);
+  });
+
+  const hydratedItem = {
+    ...item,
+    availableUoms:
+      Array.isArray(item.availableUoms) && item.availableUoms.length > 0
+        ? item.availableUoms
+        : matchedSovItem
+          ? getSovPickerItemUomOptions(matchedSovItem)
+          : item.availableUoms,
+  };
+
   const handleProductSelect = (product: any) => {
     setSelectingItemId(null);
 
@@ -344,7 +363,7 @@ export default function QuoteItemRow({
         handleNextDigits={handleNextDigits}
         editingSubItemId={editingSubItemId}
         handleItemUpdate={handleItemUpdate}
-        item={item}
+        item={hydratedItem}
         setProductInput={() => undefined}
         setEditingItemId={setEditingItemId}
         setEditingSubItemId={setEditingSubItemId}

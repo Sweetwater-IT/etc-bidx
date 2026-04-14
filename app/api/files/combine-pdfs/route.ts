@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { PDFDocument } from 'pdf-lib';
+import { getQuotePdfFilename } from '@/utils/pdfFilename';
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,8 +13,7 @@ export async function POST(req: NextRequest) {
         }
 
         const folder = `quotes/${quoteId}/pdf`;
-        const timestamp = Date.now();
-        const mergedFileName = `finalPdf_${quoteId}_${timestamp}.pdf`;
+        const mergedFileName = getQuotePdfFilename(quoteId);
         const storagePath = `${folder}/${mergedFileName}`;
 
         const files = formData.getAll('file').filter(f => f instanceof File) as File[];
@@ -40,28 +40,6 @@ export async function POST(req: NextRequest) {
             mergedBuffer = Buffer.from(mergedBytes);
         }
 
-        const { data: existingFiles, error: listError } = await supabase.storage
-            .from('files')
-            .list(folder);
-
-        if (listError) {
-            console.error('Error listing folder:', listError);
-        } else if (existingFiles?.some(f => f.name === mergedFileName)) {
-            await supabase.storage.from('files').remove([storagePath]);
-        }
-
-        const { error: storageError } = await supabase.storage
-            .from('files')
-            .upload(storagePath, mergedBuffer, { contentType: 'application/pdf', upsert: true });
-
-        if (storageError) {
-            console.error('Storage error:', storageError);
-            return NextResponse.json(
-                { error: 'Failed to upload merged PDF', details: storageError.message },
-                { status: 500 }
-            );
-        }
-
         const { data: urlData } = supabase.storage.from('files').getPublicUrl(storagePath);
 
         const { data: oldFiles } = await supabase
@@ -84,6 +62,18 @@ export async function POST(req: NextRequest) {
                         .map(f => f.id)
                 );
             }
+        }
+
+        const { error: storageError } = await supabase.storage
+            .from('files')
+            .upload(storagePath, mergedBuffer, { contentType: 'application/pdf', upsert: true });
+
+        if (storageError) {
+            console.error('Storage error:', storageError);
+            return NextResponse.json(
+                { error: 'Failed to upload merged PDF', details: storageError.message },
+                { status: 500 }
+            );
         }
 
         const { data: dbData, error: dbError } = await supabase

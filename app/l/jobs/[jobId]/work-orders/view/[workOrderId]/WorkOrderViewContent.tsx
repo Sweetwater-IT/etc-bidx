@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, ClipboardList, Download, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getBillingPacketPdfFilename, getTakeoffPdfFilename, getWorkOrderPdfFilename } from "@/utils/pdfFilename";
 import WorkOrderDetail from "../../[workOrderId]/WorkOrderDetail";
 import { formatWorkOrderPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 
@@ -127,7 +128,11 @@ export default function WorkOrderViewContent({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `work-order-${workOrderData?.wo_number || workOrderId}.pdf`;
+      link.download = getWorkOrderPdfFilename(
+        workOrderData?.takeoffs?.[0]?.title || workOrderData?.wo_number || workOrderId,
+        workOrderData?.wo_number || workOrderId,
+        Boolean(workOrderData?.isPickup)
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -159,7 +164,7 @@ export default function WorkOrderViewContent({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `takeoff-${workOrderData.takeoffs[0].title || takeoffId}.pdf`;
+      link.download = getTakeoffPdfFilename(workOrderData.takeoffs[0].title || takeoffId);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -187,7 +192,10 @@ export default function WorkOrderViewContent({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `work-order-takeoff-${workOrderData?.wo_number || workOrderId}.pdf`;
+      link.download = getBillingPacketPdfFilename(
+        workOrderData?.takeoffs?.[0]?.title || workOrderData?.wo_number || workOrderId,
+        workOrderData?.wo_number || workOrderId
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

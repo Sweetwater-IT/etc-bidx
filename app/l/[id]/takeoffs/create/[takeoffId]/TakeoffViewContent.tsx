@@ -14,6 +14,7 @@ import { TakeoffViewCard } from "@/app/l/components/TakeoffViewCard";
 import { ReturnInventoryCard } from "@/app/l/components/ReturnInventoryCard";
 import type { SignMaterial } from "@/utils/signMaterial";
 import { formatLocalDateForDisplay } from "@/lib/local-date";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 
 interface Props {
   jobId: string;
@@ -139,7 +140,7 @@ export default function TakeoffViewContent({ jobId, takeoffId, isViewMode = fals
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `takeoff-${takeoff?.title || 'untitled'}.pdf`;
+      link.download = getTakeoffPdfFilename(takeoff?.title || 'untitled');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

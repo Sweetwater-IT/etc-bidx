@@ -24,6 +24,7 @@ import { EstimateBidQuote, Quote, StraightSaleQuote, ToProjectQuote } from './ty
 import { Check, Edit2, Loader, Loader2, X } from 'lucide-react';
 import { restorePointerEvents } from '@/lib/pointer-events-fix';
 import { logQuoteNavigationDebug } from '@/lib/log-quote-navigation-debug';
+import { getQuotePdfFilename } from '@/utils/pdfFilename';
 import SelectBid from '@/components/SelectBid';
 import SelectJob from '@/components/SelectJob';
 import CustomerSelect from './components/CustomerSelector';
@@ -744,7 +745,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
       const formData = new FormData()
       formData.append("quoteId", quoteId.toString())
       formData.append("uniqueIdentifier", quoteId.toString())
-      formData.append("file", new File([pdfBlob], `Quote-${quoteId}.pdf`, { type: "application/pdf" }))
+      formData.append("file", new File([pdfBlob], getQuotePdfFilename(quoteId), { type: "application/pdf" }))
 
       const filesToUpload = files.filter((f) => quoteMetadata?.selectedfilesids?.includes(f.id))
 
@@ -790,7 +791,7 @@ export default function QuoteFormContent({ showInitialAdminState = false, edit }
 
       const link = document.createElement("a")
       link.href = blobUrl
-      link.download = `Quote-${quoteId}.pdf`
+      link.download = getQuotePdfFilename(quoteId)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

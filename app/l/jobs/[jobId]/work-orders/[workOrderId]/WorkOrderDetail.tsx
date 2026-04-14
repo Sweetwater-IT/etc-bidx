@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { QuantityInput } from "@/components/ui/quantity-input";
+import { getBillingPacketPdfFilename } from "@/utils/pdfFilename";
 
 import {
   Dialog,
@@ -870,7 +871,10 @@ const WorkOrderDetail = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `CombinedWO_${workOrder.wo_number || "WO"}_${new Date().toISOString().split("T")[0]}.pdf`;
+      a.download = getBillingPacketPdfFilename(
+        workOrder.title || workOrder.wo_number || workOrder.id,
+        workOrder.wo_number || workOrder.id
+      );
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Combined PDF downloaded");

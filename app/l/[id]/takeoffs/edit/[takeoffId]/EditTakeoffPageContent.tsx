@@ -8,6 +8,7 @@ import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { toast } from "sonner";
 import { formatTakeoffPageTitle } from "@/app/l/utils/pageTitles";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 
 interface EditTakeoffPageContentProps {
   jobId: string;
@@ -38,7 +39,7 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `takeoff-${takeoff?.title || 'untitled'}.pdf`;
+      link.download = getTakeoffPdfFilename(takeoff?.title || 'untitled');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

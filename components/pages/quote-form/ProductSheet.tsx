@@ -23,6 +23,7 @@ import { QuoteItem } from "@/types/IQuoteItem";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
 import { useState } from "react";
 import { QuantityInput } from "@/components/ui/quantity-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 async function createQuoteItem(item: QuoteItem) {
   console.log('recibo', item);
@@ -383,26 +384,20 @@ export function ProductSheet({
             <Label className="text-[15px] font-medium text-muted-foreground">
               Unit Price
             </Label>
-            <Input
-              type="text"
-              className="bg-background"
-              placeholder="0.00"
-              value={digits.unitPrice ? formatDecimal(digits.unitPrice / 100) : ""}
-              onChange={(e: any) => {
-                const ev = e.nativeEvent;
-                const { inputType } = ev;
-                const data = (ev.data || "").replace(/,/g, "");
-
-                const nextDigits = handleNextDigits(digits.unitPrice, inputType, data);
-
-                setDigits((prev) => ({ ...prev, unitPrice: nextDigits }));
-
-                setNewProduct((prev) => ({
-                  ...prev,
-                  unitPrice: nextDigits / 100,
-                }));
-              }}
-            />
+            <div className="flex h-10 items-center rounded-md border bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+              <span className="border-r px-3 text-sm text-muted-foreground">$</span>
+              <CurrencyInput
+                value={digits.unitPrice}
+                onChange={(nextDigits) => {
+                  setDigits((prev) => ({ ...prev, unitPrice: nextDigits || "0" }));
+                  setNewProduct((prev) => ({
+                    ...prev,
+                    unitPrice: parseInt(nextDigits || "0", 10) / 100,
+                  }));
+                }}
+                className="h-10 w-full cursor-text border-0 bg-transparent pr-3 text-right focus-visible:ring-0"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <Label className="text-[15px] font-medium text-muted-foreground">

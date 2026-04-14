@@ -17,6 +17,7 @@ import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalRe
 import ReactPDF from '@react-pdf/renderer'
 import BidProposalWorksheet from "../../create/BidProposalWorksheet";
 import { Quote } from "@/types/MPTEquipmentCost";
+import { getQuotePdfFilename } from "@/utils/pdfFilename";
 
 
 export interface ContactInfo {
@@ -114,7 +115,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
       formData.append("uniqueIdentifier", quote.id.toString());
       formData.append(
         "file",
-        new File([pdfBlob], `Quote-${quote.quote_number}.pdf`, { type: "application/pdf" })
+        new File([pdfBlob], getQuotePdfFilename(quote.id), { type: "application/pdf" })
       );
 
       const filesToUpload = quote?.files?.filter((f) =>

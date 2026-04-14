@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { Check, Package, Plus, Trash2, ChevronsUpDown, AlertTriangle, CalendarIcon, ExternalLink, Loader2 } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { dateToLocalDateString, parseMaybeLocalDate } from "@/lib/local-date";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 import {
   Dialog,
   DialogContent,
@@ -1252,7 +1253,7 @@ export const CreateTakeoffForm = ({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `takeoff-${title || 'untitled'}.pdf`;
+      link.download = getTakeoffPdfFilename(title || 'untitled');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

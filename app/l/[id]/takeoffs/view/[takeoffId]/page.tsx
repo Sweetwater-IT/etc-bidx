@@ -15,6 +15,7 @@ import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { ProjectFooter } from "@/components/ProjectFooter";
 import { formatTakeoffPageTitle, getWorkTypeLabel } from "@/app/l/utils/pageTitles";
 import { generateReturnTakeoffPdf } from "@/app/l/utils/generateReturnTakeoffPdf";
+import { getTakeoffPdfFilename } from "@/utils/pdfFilename";
 
 type ReturnInventoryItem = {
   product_name: string;
@@ -351,7 +352,7 @@ function TakeoffViewPageHeader({ jobId, takeoffId, jobName }: { jobId: string; t
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `takeoff-${takeoff?.title || 'untitled'}.pdf`;
+      link.download = getTakeoffPdfFilename(takeoff?.title || 'untitled');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

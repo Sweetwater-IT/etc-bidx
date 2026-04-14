@@ -3,6 +3,7 @@ export interface QuoteItem {
   itemNumber: string;
   description: string;
   uom: string;
+  availableUoms?: string[];
   notes: string;
   quantity: number;
   unitPrice: number;
