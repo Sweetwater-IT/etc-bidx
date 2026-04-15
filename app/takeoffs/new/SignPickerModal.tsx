@@ -1095,7 +1095,7 @@ const SignPickerModal = ({
                                     onClick={() => handleVariantSelected(variant)}
                                     className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
                                 >
-                                    <div className="font-medium">{variant.label || variant.name}</div>
+                                     <div className="font-medium">{variant.label}</div>
                                     <div className="mt-1 text-xs text-muted-foreground">
                                         {variant.description || 'Use this kit variant.'}
                                     </div>
@@ -1228,18 +1228,18 @@ const SignPickerModal = ({
                                                         <SelectTrigger className="w-full">
                                                             <SelectValue placeholder="Choose structure" />
                                                         </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="4' T-III RIGHT">4' T-III RIGHT</SelectItem>
-                                                            <SelectItem value="4' T-III LEFT">4' T-III LEFT</SelectItem>
-                                                            <SelectItem value="6' T-III RIGHT">6' T-III RIGHT</SelectItem>
-                                                            <SelectItem value="6' T-III LEFT">6' T-III LEFT</SelectItem>
-                                                            <SelectItem value="H-FOOT">H-FOOT</SelectItem>
-                                                            <SelectItem value="8' POST">8' POST</SelectItem>
-                                                            <SelectItem value="10' POST">10' POST</SelectItem>
-                                                            <SelectItem value="12' POST">12' POST</SelectItem>
-                                                            <SelectItem value="14' POST">14' POST</SelectItem>
-                                                            <SelectItem value="LOOSE">LOOSE</SelectItem>
-                                                        </SelectContent>
+                                                         <SelectContent>
+                                                             <SelectItem value="4' T-III RIGHT">4' T-III RIGHT</SelectItem>
+                                                             <SelectItem value="4' T-III LEFT">4' T-III LEFT</SelectItem>
+                                                             <SelectItem value="6' T-III RIGHT">6' T-III RIGHT</SelectItem>
+                                                             <SelectItem value="6' T-III LEFT">6' T-III LEFT</SelectItem>
+                                                             <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                                             <SelectItem value="8' POST">8' POST</SelectItem>
+                                                             <SelectItem value="10' POST">10' POST</SelectItem>
+                                                             <SelectItem value="12' POST">12' POST</SelectItem>
+                                                             <SelectItem value="14' POST">14' POST</SelectItem>
+                                                             <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                                         </SelectContent>
                                                     </Select>
                                                 </div>
                                             </div>
