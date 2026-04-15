@@ -1553,25 +1553,25 @@ export function SignOrderDetailsSheet({
               </div>
 
               <Separator />
-              <div className='flex justify-end gap-2 p-4 px-6'>
+              <div className='flex justify-end gap-2 p-2 px-4'>
                 <Button
                   variant='outline'
-                  onClick={() => setDrawerView(contactEditorReturnView)}
-                  disabled={isSubmittingContact}
+                  onClick={() => handleSheetOpenChange(false)}
+                  disabled={isSavingDetails}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => void handleSubmitContact()}
-                  disabled={isSubmittingContact}
+                  onClick={() => void handleSave()}
+                  disabled={
+                    isSavingDetails || !areAllRequiredFieldsFilled()
+                  }
                 >
-                  {isSubmittingContact
-                    ? drawerView === 'contact-edit'
-                      ? 'Saving...'
-                      : 'Creating...'
-                    : drawerView === 'contact-edit'
-                      ? 'Save Contact'
-                      : 'Create Contact'}
+                  {isSavingDetails
+                    ? 'Creating...'
+                    : isCreateMode
+                      ? 'Create Sign Order'
+                      : 'Save Changes'}
                 </Button>
               </div>
             </>
