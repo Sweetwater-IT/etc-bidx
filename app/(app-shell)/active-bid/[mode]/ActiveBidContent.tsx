@@ -54,6 +54,7 @@ function ActiveBidContent({ mode }: { mode: string }) {
     const searchParams = useSearchParams();
 
     const bidId = searchParams?.get('bidId')
+    const bidType = searchParams?.get('type')
 
     useEffect(() => {
 
@@ -61,7 +62,10 @@ function ActiveBidContent({ mode }: { mode: string }) {
             startLoading();
 
             if (bidId && bidId !== '') {
-                const response = await fetchActiveBidById(bidId)
+                const response = await fetchActiveBidById(
+                    bidId,
+                    bidType === 'available-job'
+                )
 
                 if (!response) {
                     toast.error('Error retrieving estimate status and contractor')
@@ -77,7 +81,7 @@ function ActiveBidContent({ mode }: { mode: string }) {
         if (mode !== 'new') {
             getEstimateMetadata();
         }
-    }, [mode])
+    }, [bidId, bidType, mode, startLoading, stopLoading])
 
     return (
         <div className="flex flex-1 flex-col bg-[#F9FAFC]">

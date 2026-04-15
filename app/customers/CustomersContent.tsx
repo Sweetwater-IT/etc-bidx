@@ -163,9 +163,14 @@ const CustomersContent = () => {
     [searchParams]
   )
   const selectedIdFromUrl = Number.parseInt(currentParams.get('selectedId') || '', 10)
+  const selectedContactIdFromUrl = Number.parseInt(
+    currentParams.get('selectedContactId') || '',
+    10
+  )
 
   const [customers, setCustomers] = useState<CustomerListItem[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null)
   const [contacts, setContacts] = useState<CustomerContactRecord[]>([])
   const [linkedJobs, setLinkedJobs] = useState<JobDocument[]>([])
@@ -186,6 +191,7 @@ const CustomersContent = () => {
   const [deletingContact, setDeletingContact] = useState(false)
   const [deletingCustomer, setDeletingCustomer] = useState(false)
   const customerButtonRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const contactCardRefs = useRef<Record<number, HTMLDivElement | null>>({})
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true)
@@ -326,6 +332,11 @@ const CustomersContent = () => {
 
     if (Number.isFinite(selectedIdFromUrl) && selectedIdFromUrl > 0) {
       setSelectedId(selectedIdFromUrl)
+      setSelectedContactId(
+        Number.isFinite(selectedContactIdFromUrl) && selectedContactIdFromUrl > 0
+          ? selectedContactIdFromUrl
+          : null
+      )
       return
     }
 
@@ -346,8 +357,9 @@ const CustomersContent = () => {
 
     if (firstMatch?.id) {
       setSelectedId(firstMatch.id)
+      setSelectedContactId(null)
     }
-  }, [customers, search, selectedIdFromUrl])
+  }, [customers, search, selectedContactIdFromUrl, selectedIdFromUrl])
 
   useEffect(() => {
     const nextParams = new URLSearchParams(currentParams.toString())
@@ -359,6 +371,12 @@ const CustomersContent = () => {
       nextParams.delete('selectedId')
     }
 
+    if (selectedId && selectedContactId) {
+      nextParams.set('selectedContactId', String(selectedContactId))
+    } else {
+      nextParams.delete('selectedContactId')
+    }
+
     const nextQuery = nextParams.toString()
     const currentQuery = currentParams.toString()
 
@@ -367,7 +385,7 @@ const CustomersContent = () => {
         scroll: false,
       })
     }
-  }, [currentParams, pathname, router, selectedId])
+  }, [currentParams, pathname, router, selectedContactId, selectedId])
 
   useEffect(() => {
     if (!selectedId) {
@@ -376,12 +394,33 @@ const CustomersContent = () => {
       setLinkedJobs([])
       setLinkedQuotes([])
       setLinkedSignOrders([])
+      setSelectedContactId(null)
       setEditing(false)
       return
     }
 
     fetchCustomerDetails(selectedId)
   }, [fetchCustomerDetails, selectedId])
+
+  useEffect(() => {
+    if (!selectedCustomer || !selectedContactId) {
+      return
+    }
+
+    const selectedContactExists = contacts.some(contact => contact.id === selectedContactId)
+    if (!selectedContactExists) {
+      setSelectedContactId(null)
+      return
+    }
+
+    const selectedContactCard = contactCardRefs.current[selectedContactId]
+    if (selectedContactCard) {
+      selectedContactCard.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      })
+    }
+  }, [contacts, selectedContactId, selectedCustomer])
 
   const filteredCustomers = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -513,6 +552,7 @@ const CustomersContent = () => {
       }
 
       setSelectedId(nextCustomer.id)
+      setSelectedContactId(null)
       setEditing(false)
       customerButtonRefs.current[index]?.focus()
     },
@@ -571,6 +611,7 @@ const CustomersContent = () => {
                       type='button'
                       onClick={() => {
                         setSelectedId(customer.id)
+                        setSelectedContactId(null)
                         setEditing(false)
                       }}
                       onKeyDown={event => {
@@ -861,7 +902,14 @@ const CustomersContent = () => {
                 {contacts.map(contact => (
                   <div
                     key={contact.id}
-                    className='group rounded-lg border border-border/60 bg-card p-3'
+                    ref={element => {
+                      contactCardRefs.current[contact.id] = element
+                    }}
+                    className={`group rounded-lg border bg-card p-3 transition-colors ${
+                      selectedContactId === contact.id
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border/60'
+                    }`}
                   >
                     <div className='flex items-start justify-between gap-3'>
                       <div className='min-w-0'>

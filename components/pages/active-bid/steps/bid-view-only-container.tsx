@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import AdminInfoViewOnly from './admin-info-view-only'
 import BidItemsViewOnly from './bid-items-view-only'
 import { Button } from '@/components/ui/button'
@@ -57,6 +57,7 @@ const BidViewOnlyContainer = () => {
   const { user } = useAuth();
   const searchParams = useSearchParams()
   const bidId = searchParams?.get('bidId')
+  const bidType = searchParams?.get('type')
   const [contractor, setContractor] = useState<Customer>()
   const [files, setFiles] = useState<FileMetadata[]>([])
   const [subcontractor, setSubcontractor] = useState<{
@@ -83,7 +84,7 @@ const BidViewOnlyContainer = () => {
     getCustomers()
   }, [getCustomers])
 
-  const getFiles = async () => {
+  const getFiles = useCallback(async () => {
     const fileResponse = await fetchFileMetadataByFolder(
       Number(bidId),
       'bid_estimates'
@@ -93,13 +94,15 @@ const BidViewOnlyContainer = () => {
     } else {
       toast.error("Couldn't fetch files for this bid: " + fileResponse.error)
     }
-  }
+  }, [bidId])
 
   useEffect(() => {
     const fetchBidData = async () => {
       if (!bidId) return
       try {
-        const response = await fetch(`/api/active-bids/${bidId}`)
+        const response = await fetch(
+          `/api/active-bids/${bidId}${bidType === 'available-job' ? '?type=available-job' : ''}`
+        )
         if (response.ok) {
           const result = await response.json()
 
@@ -121,7 +124,7 @@ const BidViewOnlyContainer = () => {
     }
 
     fetchBidData()
-  }, [bidId])
+  }, [bidId, bidType])
 
 
   const fileUploadProps = useFileUpload({
@@ -149,7 +152,7 @@ const BidViewOnlyContainer = () => {
 
   useEffect(() => {
     getFiles()
-  }, [])
+  }, [getFiles])
 
   useEffect(() => {
     const fetchContractors = async () => {

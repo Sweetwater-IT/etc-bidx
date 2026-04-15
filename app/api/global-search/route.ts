@@ -28,6 +28,8 @@ interface SearchSection {
   seeAllTarget: string;
 }
 
+type ScopedSearchCategory = "bid" | "quote" | "sign-order" | "contract";
+
 function buildSearchTarget(pathname: string, params: Record<string, string | number | undefined>) {
   const searchParams = new URLSearchParams();
 
@@ -54,6 +56,82 @@ function dedupeById<T extends { id: string }>(items: T[]) {
     if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
+  });
+}
+
+function addScopedCategoryMatch(
+  matches: Map<number, Set<ScopedSearchCategory>>,
+  customerId: number | null | undefined,
+  category: ScopedSearchCategory
+) {
+  if (typeof customerId !== "number" || Number.isNaN(customerId)) {
+    return;
+  }
+
+  const existing = matches.get(customerId) ?? new Set<ScopedSearchCategory>();
+  existing.add(category);
+  matches.set(customerId, existing);
+}
+
+function buildActiveBidViewTarget(id: number, isAvailableJob = false) {
+  return buildSearchTarget("/active-bid/view", {
+    bidId: id,
+    type: isAvailableJob ? "available-job" : undefined,
+    tuckSidebar: "true",
+    fullscreen: "true",
+    defaultEditable: "false",
+  });
+}
+
+function getScopedSearchConfig(category: ScopedSearchCategory) {
+  switch (category) {
+    case "bid":
+      return {
+        label: "Bids",
+        subtitle: "Open filtered bids results",
+        target: (query: string) => buildSearchTarget("/bid-list", { activeBidSearch: query }),
+      };
+    case "quote":
+      return {
+        label: "Quotes",
+        subtitle: "Open filtered quotes results",
+        target: (query: string) => buildSearchTarget("/quotes", { search: query }),
+      };
+    case "sign-order":
+      return {
+        label: "Sign Orders",
+        subtitle: "Open filtered sign orders results",
+        target: (query: string) => buildSearchTarget("/takeoffs/sign-shop-orders", { search: query }),
+      };
+    case "contract":
+      return {
+        label: "Contracts",
+        subtitle: "Open filtered contracts results",
+        target: (query: string) => buildSearchTarget("/l/contracts", { search: query }),
+      };
+  }
+}
+
+function buildScopedSearchItems(
+  entityIdPrefix: "customer" | "contact",
+  entityId: number,
+  entityLabel: string,
+  scopedQuery: string,
+  matches: Set<ScopedSearchCategory> | undefined
+): SearchResultItem[] {
+  if (!matches || matches.size === 0) {
+    return [];
+  }
+
+  return Array.from(matches).map((category) => {
+    const config = getScopedSearchConfig(category);
+    return {
+      id: `${entityIdPrefix}-${entityId}-${category}`,
+      title: `${entityLabel} in ${config.label}`,
+      subtitle: config.subtitle,
+      meta: config.label.slice(0, -1),
+      target: config.target(scopedQuery),
+    };
   });
 }
 
@@ -152,7 +230,7 @@ export async function GET(request: NextRequest) {
       matchingCustomerIds.length > 0
         ? supabase
             .from("quotes_customers")
-            .select("quote_id")
+            .select("quote_id, contractor_id")
             .in("contractor_id", matchingCustomerIds)
             .limit(500)
         : Promise.resolve({ data: [], error: null }),
@@ -179,6 +257,20 @@ export async function GET(request: NextRequest) {
           .filter((value): value is number => typeof value === "number")
       )
     );
+    const quoteCustomerIdsMap = new Map<number, number[]>();
+    (matchingQuoteIdsResult.data || []).forEach((row) => {
+      if (typeof row.quote_id !== "number" || typeof row.contractor_id !== "number") {
+        return;
+      }
+
+      const existing = quoteCustomerIdsMap.get(row.quote_id) ?? [];
+      if (!existing.includes(row.contractor_id)) {
+        existing.push(row.contractor_id);
+      }
+      quoteCustomerIdsMap.set(row.quote_id, existing);
+    });
+
+    const scopedCategoryMatches = new Map<number, Set<ScopedSearchCategory>>();
 
     const [availableBidsResult, activeBidsResult, jobsResult, contractsResult, signOrdersResult, quotesResult] =
       await Promise.all([
@@ -237,7 +329,7 @@ export async function GET(request: NextRequest) {
           title: item.contract_number || `Bid ${item.id}`,
           subtitle: [item.owner, item.county, item.location].filter(Boolean).join(" • ") || "Open bid",
           meta: "Open Bid",
-          target: buildSearchTarget("/bid-board", { availableSearch: query }),
+          target: buildActiveBidViewTarget(item.id, true),
         })),
       ...(activeBidsResult.data || [])
         .filter((item) => item.archived !== true)
@@ -258,12 +350,16 @@ export async function GET(request: NextRequest) {
         })
         .map((item) => {
           const contractNumber = String(item.admin_data?.contractNumber || "");
-          const matchedByCustomer = matchesCustomerName(
-            matchingCustomerNames,
-            item.contractor_name,
-            item.subcontractor_name
-          );
-          const matchedByContractNumber = includesQuery(contractNumber, normalizedQuery);
+          customers.forEach((customer) => {
+            const formattedCustomerName = formatCustomerName(customer).toLowerCase();
+            if (
+              [item.contractor_name, item.subcontractor_name].some((field) =>
+                String(field || "").toLowerCase().includes(formattedCustomerName)
+              )
+            ) {
+              addScopedCategoryMatch(scopedCategoryMatches, customer.id, "bid");
+            }
+          });
 
           return {
             id: `active-${item.id}`,
@@ -277,15 +373,7 @@ export async function GET(request: NextRequest) {
                 .filter(Boolean)
                 .join(" • ") || "Active bid",
             meta: "Active Bid",
-            target:
-              matchedByCustomer && !matchedByContractNumber
-                ? buildSearchTarget("/bid-list", { activeBidSearch: query })
-                : buildSearchTarget("/active-bid/view", {
-                    bidId: item.id,
-                    tuckSidebar: "true",
-                    fullscreen: "true",
-                    defaultEditable: "false",
-                  }),
+            target: buildActiveBidViewTarget(item.id),
           };
         }),
     ]);
@@ -346,8 +434,12 @@ export async function GET(request: NextRequest) {
         ].some((field) => includesQuery(field, normalizedQuery))
       )
       .map((item) => {
-        const matchedByCustomer = matchesCustomerName(matchingCustomerNames, item.customer_name);
-        const matchedByContractNumber = includesQuery(item.contract_number, normalizedQuery);
+        customers.forEach((customer) => {
+          const formattedCustomerName = formatCustomerName(customer).toLowerCase();
+          if (String(item.customer_name || "").toLowerCase().includes(formattedCustomerName)) {
+            addScopedCategoryMatch(scopedCategoryMatches, customer.id, "contract");
+          }
+        });
 
         return {
           id: String(item.id),
@@ -357,10 +449,7 @@ export async function GET(request: NextRequest) {
               .filter(Boolean)
               .join(" • ") || "Contract pipeline item",
           meta: item.contract_status || item.project_status || undefined,
-          target:
-            matchedByCustomer && !matchedByContractNumber
-              ? buildSearchTarget("/l/contracts", { search: query })
-              : `/l/contracts/view/${item.id}`,
+          target: `/l/contracts/view/${item.id}`,
         };
       });
 
@@ -381,11 +470,7 @@ export async function GET(request: NextRequest) {
       })
       .map((item) => {
         const customerName = customerNameMap.get(item.contractor_id) || null;
-        const matchedByCustomer = matchesCustomerName(matchingCustomerNames, customerName);
-        const matchedByOrderNumber =
-          includesQuery(item.order_number, normalizedQuery) ||
-          includesQuery(item.contract_number, normalizedQuery) ||
-          includesQuery(item.job_number, normalizedQuery);
+        addScopedCategoryMatch(scopedCategoryMatches, item.contractor_id, "sign-order");
 
         return {
           id: String(item.id),
@@ -400,10 +485,7 @@ export async function GET(request: NextRequest) {
               .filter(Boolean)
               .join(" • ") || "Sign order",
           meta: item.status || undefined,
-          target:
-            matchedByCustomer && !matchedByOrderNumber
-              ? buildSearchTarget("/takeoffs/sign-shop-orders", { search: query })
-              : `/takeoffs/sign-order/view/${item.id}`,
+          target: `/takeoffs/sign-order/view/${item.id}`,
         };
       });
 
@@ -424,14 +506,19 @@ export async function GET(request: NextRequest) {
         );
       })
       .map((item) => {
-        const matchedByCustomer = matchesCustomerName(
-          matchingCustomerNames,
-          item.customer_name,
-          item.customer_contact
-        );
-        const matchedByQuoteNumber =
-          includesQuery(item.quote_number, normalizedQuery) ||
-          includesQuery(item.etc_job_number, normalizedQuery);
+        quoteCustomerIdsMap.get(item.id)?.forEach((customerId) => {
+          addScopedCategoryMatch(scopedCategoryMatches, customerId, "quote");
+        });
+        customers.forEach((customer) => {
+          const formattedCustomerName = formatCustomerName(customer).toLowerCase();
+          if (
+            [item.customer_name, item.customer_contact].some((field) =>
+              String(field || "").toLowerCase().includes(formattedCustomerName)
+            )
+          ) {
+            addScopedCategoryMatch(scopedCategoryMatches, customer.id, "quote");
+          }
+        });
 
         return {
           id: String(item.id),
@@ -441,41 +528,63 @@ export async function GET(request: NextRequest) {
               .filter(Boolean)
               .join(" • ") || "Quote",
           meta: item.status || item.type_quote || undefined,
-          target:
-            matchedByCustomer && !matchedByQuoteNumber
-              ? buildSearchTarget("/quotes", { search: query })
-              : `/quotes/view/${item.id}`,
+          target: `/quotes/view/${item.id}`,
         };
       });
 
-    const allCustomerItems = customers.map((item) => ({
-      id: String(item.id),
-      title: formatCustomerName(item),
-      subtitle:
-        [item.customer_number ? `#${item.customer_number}` : null, item.main_phone]
-          .filter(Boolean)
-          .join(" • ") || "Customer",
-      target: buildSearchTarget("/customers", { search: query, selectedId: item.id }),
-    }));
+    const allCustomerItems = customers.flatMap((item) => {
+      const customerLabel = formatCustomerName(item);
+      return [
+        {
+          id: String(item.id),
+          title: customerLabel,
+          subtitle:
+            [item.customer_number ? `#${item.customer_number}` : null, item.main_phone]
+              .filter(Boolean)
+              .join(" • ") || "Customer",
+          target: buildSearchTarget("/customers", { search: query, selectedId: item.id }),
+        },
+        ...buildScopedSearchItems(
+          "customer",
+          item.id,
+          customerLabel,
+          customerLabel,
+          scopedCategoryMatches.get(item.id)
+        ),
+      ];
+    });
 
-    const allContactItems = contacts.map((item) => ({
-      id: String(item.id),
-      title: item.name || `Contact ${item.id}`,
-      subtitle:
-        [
-          customerNameMap.get(item.contractor_id) || null,
-          item.role,
-          item.email,
-          item.phone,
-        ]
-          .filter(Boolean)
-          .join(" • ") || "Customer contact",
-      target: buildSearchTarget("/customers", {
-        search: query,
-        selectedId: item.contractor_id,
-        selectedContactId: item.id,
-      }),
-    }));
+    const allContactItems = contacts.flatMap((item) => {
+      const contactLabel =
+        item.name?.trim() || item.email?.trim() || item.phone?.trim() || `Contact ${item.id}`;
+      return [
+        {
+          id: String(item.id),
+          title: contactLabel,
+          subtitle:
+            [
+              customerNameMap.get(item.contractor_id) || null,
+              item.role,
+              item.email,
+              item.phone,
+            ]
+              .filter(Boolean)
+              .join(" • ") || "Customer contact",
+          target: buildSearchTarget("/customers", {
+            search: query,
+            selectedId: item.contractor_id,
+            selectedContactId: item.id,
+          }),
+        },
+        ...buildScopedSearchItems(
+          "contact",
+          item.id,
+          contactLabel,
+          contactLabel,
+          scopedCategoryMatches.get(item.contractor_id)
+        ),
+      ];
+    });
 
     const sections = [
       {

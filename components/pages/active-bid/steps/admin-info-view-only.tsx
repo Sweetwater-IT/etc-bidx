@@ -14,6 +14,7 @@ const AdminInfoViewOnly = () => {
 
     const searchParams = useSearchParams();
     const id = searchParams?.get('bidId')
+    const bidType = searchParams?.get('type')
 
     const { adminData, dispatch } = useEstimate();
 
@@ -31,7 +32,10 @@ const AdminInfoViewOnly = () => {
         const fetchData = async () => {
             startLoading();
             if (id) {
-                const data = await fetchActiveBidById(id);
+                const data = await fetchActiveBidById(
+                    id,
+                    bidType === 'available-job'
+                );
                 const bidNotes: INote[] = data.notes.map(note => ({
                     text: note.text,
                     timestamp: new Date(note.created_at).getTime()
@@ -51,7 +55,7 @@ const AdminInfoViewOnly = () => {
         }
 
         fetchData();
-    }, [dispatch])
+    }, [bidType, dispatch, id, startLoading, stopLoading])
 
 
     const formatDate = (date: Date | string | null | undefined): string => {

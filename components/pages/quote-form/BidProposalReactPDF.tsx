@@ -292,7 +292,7 @@ export const BidProposalReactPDF: React.FC<Props> = ({
               <Text style={styles.centerText}>3162 Unionville Pike</Text>
               <Text style={styles.centerText}>Hatfield, PA 19440</Text>
               <Text style={styles.centerText}>O: 215.997.8801</Text>
-              <Text style={[styles.centerText]}>Email:
+              <Text style={[styles.centerText]}>Email:{" "}
                 <Text style={{ color: 'blue' }}>
                   estimating@establishedtraffic.com</Text>
               </Text>
