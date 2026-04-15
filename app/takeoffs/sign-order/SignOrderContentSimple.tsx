@@ -34,22 +34,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { AuthAdminApi } from '@supabase/supabase-js'
 import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
-import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { useMemo } from 'react';
 import { pdf } from '@react-pdf/renderer';
-import dynamic from 'next/dynamic';
-
-const PDFViewer = dynamic(
-  () => import('@react-pdf/renderer').then(mod => ({ default: mod.PDFViewer })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[700px] bg-gray-100 animate-pulse flex items-center justify-center">
-        Loading PDF preview...
-      </div>
-    )
-  }
-);
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 
@@ -131,6 +117,10 @@ export default function SignOrderContentSimple({
 
   const [loadingNotes, setLoadingNotes] = useState(false)
   const signCount = draft.signs.length
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
 
   const setAdminInfo = (
     updater:
@@ -778,6 +768,115 @@ export default function SignOrderContentSimple({
     }
   };
 
+  useEffect(() => {
+    const handleWindowError = (event: ErrorEvent) => {
+      logSignOrderDebug('sign_order_window_error', {
+        message: event.message,
+        filename: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        stack: event.error instanceof Error ? event.error.stack : undefined
+      })
+    }
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason =
+        event.reason instanceof Error
+          ? {
+              message: event.reason.message,
+              stack: event.reason.stack
+            }
+          : String(event.reason)
+
+      logSignOrderDebug('sign_order_unhandled_rejection', { reason })
+    }
+
+    window.addEventListener('error', handleWindowError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener('error', handleWindowError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    let nextUrl: string | null = null
+
+    const generatePreview = async () => {
+      setIsPreviewLoading(true)
+      setPreviewError(null)
+
+      try {
+        const blob = await pdf(
+          <SignOrderWorksheetPDF
+            adminInfo={adminInfo}
+            signList={signList}
+            mptRental={mptRental}
+            notes={draft.notes}
+          />
+        ).toBlob()
+
+        if (cancelled) {
+          return
+        }
+
+        nextUrl = URL.createObjectURL(blob)
+        setPreviewUrl(previousUrl => {
+          if (previousUrl) {
+            URL.revokeObjectURL(previousUrl)
+          }
+          previewUrlRef.current = nextUrl
+          return nextUrl
+        })
+
+        logSignOrderDebug('sign_order_preview_generated', {
+          signCount: signList.length,
+          noteCount: draft.notes.length,
+          blobSize: blob.size
+        })
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to generate PDF preview'
+
+        console.error('[SignOrderContentSimple] Error generating inline PDF preview:', error)
+        logSignOrderDebug('sign_order_preview_generation_failed', {
+          signCount: signList.length,
+          noteCount: draft.notes.length,
+          contractNumber: adminInfo.contractNumber || null,
+          error: message,
+          stack: error instanceof Error ? error.stack : undefined
+        })
+
+        if (!cancelled) {
+          setPreviewError(message)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPreviewLoading(false)
+        } else if (nextUrl) {
+          URL.revokeObjectURL(nextUrl)
+        }
+      }
+    }
+
+    generatePreview()
+
+    return () => {
+      cancelled = true
+    }
+  }, [adminInfo, draft.notes, mptRental, signList])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+        previewUrlRef.current = null
+      }
+    }
+  }, [])
+
   return mptRental.phases.length > 0 ? (
     <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
       <PageHeaderWithSaving
@@ -867,14 +966,26 @@ export default function SignOrderContentSimple({
       <div className="border-t-4 border-gray-300 mt-6">
         <h2 className="text-xl font-bold px-6 py-4 bg-gray-50">Sign Order PDF</h2>
         <div className="w-full">
-          <PDFViewer width="100%" height={700}>
-            <SignOrderWorksheetPDF
-              adminInfo={adminInfo}
-              signList={signList}
-              mptRental={mptRental}
-              notes={draft.notes}
+          {isPreviewLoading && !previewUrl ? (
+            <div className="h-[700px] bg-gray-100 animate-pulse flex items-center justify-center">
+              Loading PDF preview...
+            </div>
+          ) : previewError ? (
+            <div className="flex h-[700px] items-center justify-center bg-gray-100 px-6 text-center text-sm text-red-600">
+              Unable to load the PDF preview right now. You can still use Download PDF, and this error was logged for review.
+            </div>
+          ) : previewUrl ? (
+            <iframe
+              key={previewUrl}
+              src={previewUrl}
+              title="Sign Order PDF Preview"
+              className="h-[700px] w-full bg-white"
             />
-          </PDFViewer>
+          ) : (
+            <div className="flex h-[700px] items-center justify-center bg-gray-100 text-sm text-muted-foreground">
+              No PDF preview available yet.
+            </div>
+          )}
         </div>
       </div>
     </div>
