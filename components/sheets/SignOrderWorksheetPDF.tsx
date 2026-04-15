@@ -20,10 +20,10 @@ function getEquipmentTotalsFromSigns(signList: SignItem[]): Record<string, numbe
 
   signList.forEach(sign => {
     // Add bLights (barricade lights)
-    totals.BLights += sign.bLights || 0
+    totals.BLights += (sign.bLights || 0) * (sign.quantity || 0)
 
     // Add covers
-    totals.covers += sign.cover ? 1 : 0
+    totals.covers += sign.covers ?? (sign.cover ? sign.quantity || 0 : 0)
 
     // Map structure to equipment type
     const structure = (sign.displayStructure || sign.associated_structure || '').toLowerCase()
@@ -59,6 +59,7 @@ export interface SignItem {
   displayStructure?: string
   bLights?: number
   cover?: boolean
+  covers?: number
   associated_structure?: string
 }
 
@@ -258,12 +259,35 @@ const safeDateString = (date: string | Date | undefined) => {
   return d instanceof Date && !isNaN(d.getTime()) ? d.toLocaleDateString() : '-'
 }
 
-const formatContactSummary = (contact: any) => {
+const formatCustomerContact = (contact: any) => {
   if (!contact) {
     return '-'
   }
 
-  return [contact.name, contact.email, contact.phone].filter(Boolean).join(' / ') || '-'
+  return contact.name || [contact.email, contact.phone].filter(Boolean).join(' / ') || '-'
+}
+
+function getConnectedEquipmentTotals(
+  mptRental: MPTRentalEstimating | undefined,
+  signList: SignItem[]
+) {
+  if (mptRental?.phases?.length) {
+    const totalsByEquipment = getEquipmentTotalsPerPhase(mptRental)
+    const connectedTotals = {
+      fourFootTypeIII: totalsByEquipment.fourFootTypeIII?.totalQuantity ?? 0,
+      hStand: totalsByEquipment.hStand?.totalQuantity ?? 0,
+      post: totalsByEquipment.post?.totalQuantity ?? 0,
+      covers: totalsByEquipment.covers?.totalQuantity ?? 0,
+      BLights: totalsByEquipment.BLights?.totalQuantity ?? 0
+    }
+
+    const hasConnectedValues = Object.values(connectedTotals).some(value => value > 0)
+    if (hasConnectedValues) {
+      return connectedTotals
+    }
+  }
+
+  return getEquipmentTotalsFromSigns(signList)
 }
 
 const Footer = ({
@@ -330,8 +354,14 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
       primarySignId: item.primarySignId ?? '-',
       displayStructure: item.displayStructure ?? '-',
       bLights: item.bLights ?? 0,
-      cover: !!item?.cover
+      cover: !!item?.cover,
+      covers: item.covers ?? (item.cover ? item.quantity ?? 0 : 0)
     }));
+
+  const equipmentTotals = useMemo(
+    () => getConnectedEquipmentTotals(mptRental, safeSignList),
+    [mptRental, safeSignList]
+  )
     
   return (
     <Document key={contentKey}>
@@ -360,7 +390,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               </View>
               <View style={[styles.headerCell, styles.lastCell]}>
                 <Text style={styles.label}>Customer Contact:</Text>
-                <Text style={styles.value}>{formatContactSummary(adminInfo.contact)}</Text>
+                <Text style={styles.value}>{formatCustomerContact(adminInfo.contact)}</Text>
               </View>
             </View>
             <View style={styles.headerRow}>
@@ -466,24 +496,24 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
           <View style={{ flex: 0.33 }}>
             <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
             <View style={styles.equipmentRow}>
-              <Text style={styles.equipmentCell}>4' TYPE III =</Text>
-              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).fourFootTypeIII)}</Text>
+              <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(equipmentTotals.fourFootTypeIII)}</Text>
             </View>
             <View style={styles.equipmentRow}>
               <Text style={styles.equipmentCell}>H-STANDS =</Text>
-              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).hStand)}</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(equipmentTotals.hStand)}</Text>
             </View>
             <View style={styles.equipmentRow}>
               <Text style={styles.equipmentCell}>POSTS =</Text>
-              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).post)}</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(equipmentTotals.post)}</Text>
             </View>
             <View style={styles.equipmentRow}>
               <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).BLights)}</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(equipmentTotals.BLights)}</Text>
             </View>
             <View style={styles.equipmentRow}>
               <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
-              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).covers)}</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(equipmentTotals.covers)}</Text>
             </View>
           </View>
           <View style={styles.notesContainer}>
