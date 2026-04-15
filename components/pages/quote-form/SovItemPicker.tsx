@@ -112,29 +112,13 @@ export function SovItemPicker({
       <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="h-9 w-full justify-start bg-transparent text-left text-sm font-normal">
-            {valueLabel || "Search or add a product..."}
+            {valueLabel || "Add an item"}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[520px] p-0" sideOffset={6}>
           <div className="max-h-[420px] overflow-auto rounded-md border">
             <div className="sticky top-0 z-20 border-b bg-background/95 p-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               <div className="flex flex-col gap-3">
-                <div className="rounded-md border border-[#16335A]/15 bg-[#16335A]/5 p-2">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
-                    Custom
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="justify-start gap-2 bg-background"
-                    onClick={() => {
-                      setCustomDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Custom Item
-                  </Button>
-                </div>
                 <Input
                   placeholder="Search item #, display #, description, or category…"
                   value={search}
@@ -152,6 +136,19 @@ export function SovItemPicker({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                <TableRow
+                  className="cursor-pointer border-b border-[#16335A]/15 bg-[#16335A]/5 transition-colors hover:bg-[#16335A]/8"
+                  onClick={() => {
+                    setCustomDialogOpen(true)
+                  }}
+                >
+                  <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Custom Item
+                    </div>
+                  </TableCell>
+                </TableRow>
                 {groupedItems.map((group) => (
                   <Fragment key={group.heading}>
                     <TableRow className="border-t border-[#16335A]/15 bg-[#16335A]/5 hover:bg-[#16335A]/5 data-[state=selected]:bg-[#16335A]/5">

@@ -13,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
-import { SovItemPicker } from "./SovItemPicker";
 import { getSovPickerItemUomOptions } from "@/hooks/use-sov-picker-items";
 
 export default function QuoteItemRow({
@@ -158,23 +157,6 @@ export default function QuoteItemRow({
           : item.availableUoms,
   };
 
-  const handleProductSelect = (product: any) => {
-    setSelectingItemId(null);
-
-    handleItemUpdate(item.id, "fullItem", {
-      ...item,
-      itemNumber: product.display_item_number || product.item_number,
-      description: product.display_name || product.description,
-      uom: product.uom,
-      notes: product.notes || "",
-      availableUoms: getSovPickerItemUomOptions(product),
-    });
-
-    setOpenProductSheet(true);
-    setEditingItemId(item.id);
-    setEditingSubItemId(null);
-  };
-
   return (
     <>
       <div
@@ -184,25 +166,22 @@ export default function QuoteItemRow({
         }}
       >
         <div className="w-[150px]">
-          <SovItemPicker
-            open={selectingItemId === item.id}
-            onOpenChange={(open) => {
-              setSelectingItemId(open ? item.id : null)
-
-              if (!open && !item.itemNumber && !item.description) {
-                handleRemoveItem(item.id)
-              }
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 w-full justify-start bg-transparent text-left text-sm font-normal"
+            onClick={() => {
+              setOpenProductSheet(true);
+              setEditingItemId(null);
+              setEditingSubItemId(null);
             }}
-            valueLabel={
-              item.itemNumber
-                ? `${item.itemNumber}`
-                : loading
-                  ? "Loading items..."
-                  : "Search or add a product..."
-            }
-            onSelect={handleProductSelect}
-            contractNumber={contractNumber}
-          />
+          >
+            {item.itemNumber
+              ? `${item.itemNumber}`
+              : loading
+                ? "Loading items..."
+                : "Add an item"}
+          </Button>
 
         </div>
 
@@ -367,6 +346,8 @@ export default function QuoteItemRow({
         setProductInput={() => undefined}
         setEditingItemId={setEditingItemId}
         setEditingSubItemId={setEditingSubItemId}
+        initialStep={isEditing || isEditingSubItemForRow ? "configure" : "pick"}
+        contractNumber={contractNumber}
       />
     </>
   );

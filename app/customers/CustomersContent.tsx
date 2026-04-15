@@ -38,6 +38,7 @@ import {
 import { CustomerModal } from '@/components/CustomerModal'
 import { CustomerContactModal } from '@/components/CustomerContactModal'
 import { useTableSearchState } from '@/hooks/use-table-search-state'
+import { PagePrimaryHeader } from '@/components/page-primary-header'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -520,26 +521,17 @@ const CustomersContent = () => {
 
   return (
     <div className='flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]'>
-      <header className='shrink-0 border-b bg-card'>
-        <div className='mx-auto flex h-14 max-w-[1600px] items-center justify-between px-6'>
-          <div className='flex items-center gap-2.5'>
-            <div className='rounded bg-primary p-1.5'>
-            <Building2 className='h-5 w-5 text-primary-foreground' />
-          </div>
-          <div>
-            <h1 className='text-lg font-bold leading-none tracking-tight'>Customers</h1>
-            <p className='mt-0.5 text-xs text-muted-foreground'>
-              {customers.length} customer{customers.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-
-        <Button onClick={() => setNewDialogOpen(true)} className='gap-2'>
-          <Plus className='h-4 w-4' />
-          New Customer
-        </Button>
-        </div>
-      </header>
+      <PagePrimaryHeader
+        icon={<Building2 className='h-5 w-5' />}
+        title='Customers'
+        subtitle={`${customers.length} customer${customers.length !== 1 ? 's' : ''}`}
+        actions={
+          <Button size='sm' onClick={() => setNewDialogOpen(true)} className='h-9 gap-2 font-semibold shadow-sm'>
+            <Plus className='h-4 w-4' />
+            New Customer
+          </Button>
+        }
+      />
 
       <div className='@container/main flex flex-1 min-h-0 flex-col overflow-auto'>
         <div className='mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-12 gap-4 px-6 py-6'>

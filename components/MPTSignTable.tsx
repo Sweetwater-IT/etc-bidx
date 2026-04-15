@@ -29,6 +29,7 @@ import { Fragment, useEffect, useState, useRef } from 'react';
 import SignPickerModal, { SignPickerModalResult } from "@/components/sign-picker-modal";
 import { PrimarySign, SecondarySign } from "@/types/MPTEquipment";
 import { QuantityInput } from "@/components/ui/quantity-input";
+import { useSignEditorSession } from "@/hooks/use-sign-editor-session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -210,8 +211,9 @@ export const MPTSignTable = ({
   const [signsLoading, setSignsLoading] = useState(false);
 
   // SignPickerModal state
-  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
-  const [signPickerOpen, setSignPickerOpen] = useState(false);
+  const signEditor = useSignEditorSession<PrimarySign | SecondarySign>();
+  const localSign = signEditor.draft;
+  const signPickerOpen = signEditor.open;
   const isTypeIIISection = sectionTitle.toLowerCase().includes('type iii');
   const [pendingDelete, setPendingDelete] = useState<{ type: "row" | "secondary"; rowId: string; secondaryId?: string } | null>(null);
 
@@ -605,10 +607,7 @@ export const MPTSignTable = ({
   };
 
   const handleSignPickerOpenChange = (open: boolean) => {
-    setSignPickerOpen(open);
-    if (!open) {
-      setLocalSign(undefined);
-    }
+    signEditor.handleOpenChange(open);
   };
 
   // Handle save from SignPickerModal
@@ -658,8 +657,7 @@ export const MPTSignTable = ({
     }
 
     // Reset localSign after selection
-    setLocalSign(undefined);
-    setSignPickerOpen(false);
+    signEditor.close();
   };
 
   const renderCell = (row: MPTSignRow, column: { key: string; label: string; width: string }) => {
@@ -688,8 +686,7 @@ export const MPTSignTable = ({
                   description: row.signDescription || '',
                   substrate: 'Plastic',
                 };
-                setLocalSign(primarySign);
-                setSignPickerOpen(true);
+                signEditor.startEdit(primarySign);
               }}
               disabled={disabled}
             >
@@ -1031,8 +1028,7 @@ export const MPTSignTable = ({
                                         description: sec.signDescription || '',
                                         substrate: 'Plastic',
                                       };
-                                      setLocalSign(secondarySign);
-                                      setSignPickerOpen(true);
+                                      signEditor.startEdit(secondarySign);
                                     }}
                                     disabled={disabled}
                                   >

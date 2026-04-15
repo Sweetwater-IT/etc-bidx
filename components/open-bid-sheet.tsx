@@ -3,8 +3,6 @@
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,13 +56,13 @@ import {
   AvailableJobServices,
 } from "@/data/available-jobs";
 import { formatDate } from "@/lib/formatUTCDate";
-import { Separator } from "./ui/separator";
 import { useAuth } from "@/contexts/auth-context";
 import { RequestorSelector } from "./requestor-selector";
 import { OwnerSelector } from "./OwnerSelector";
 import { CountySelector } from "./CountySelector";
 import { LettingDateSelector } from "./LettingDateSelector";
 import { DueDateSelector } from "./DueDateSelector";
+import { SheetFrame } from "@/components/sheet-frame";
 
 interface OpenBidSheetProps {
   open: boolean;
@@ -498,21 +496,57 @@ export function OpenBidSheet({
         side="right"
         className="w-[400px] sm:w-[540px] flex flex-col p-0"
       >
-        <div className="flex flex-col gap-2 relative z-10 bg-background">
-          <SheetHeader className="p-6 pb-4">
-            <SheetTitle>
-              {job ? "Edit Open Bid" : "Create a new Open Bid"}
-            </SheetTitle>
-          </SheetHeader>
-          <Separator className="w-full -mt-2" />
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="-mt-4 flex flex-col overflow-y-auto h-full"
+        <SheetFrame
+          title={job ? "Edit Open Bid" : "Create a new Open Bid"}
+          bodyClassName="overflow-hidden p-0"
+          footer={
+            <div className="flex flex-col gap-2 w-full">
+              {!areAllRequiredFieldsFilled() && (
+                <div className="flex items-center text-sm gap-2 text-amber-500">
+                  <AlertCircle size={14} />
+                  <span>
+                    Please fill in all required fields before proceeding.
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center gap-2 h-full">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  type="button"
+                  onClick={() => handleOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  type="submit"
+                  form="open-bid-sheet-form"
+                  disabled={
+                    isSubmitting ||
+                    (!job && !areAllRequiredFieldsFilled()) ||
+                    !isValid
+                  }
+                >
+                  {isSubmitting
+                    ? job
+                      ? "Updating..."
+                      : "Creating..."
+                    : job
+                      ? "Update"
+                      : "Create"}
+                </Button>
+              </div>
+            </div>
+          }
         >
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-6 p-6">
+          <form
+            id="open-bid-sheet-form"
+            onSubmit={handleSubmit}
+            className="flex h-full min-h-0 flex-col"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 w-full">
                   <Label className="text-sm font-medium text-muted-foreground">
@@ -799,48 +833,9 @@ export function OpenBidSheet({
                 </div>
               </div>
             </div>
-          </div>
-
-          <Separator />
-          <div className="p-4 pt-4 flex items-center justify-center">
-            <div className="flex flex-col gap-2 w-full">
-              {!areAllRequiredFieldsFilled() && (
-                <div className="flex items-center mt-2 text-sm gap-2 text-amber-500">
-                  <AlertCircle size={14} />
-                  <span>
-                    Please fill in all required fields before proceeding.
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between items-center gap-2 h-full">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => handleOpenChange(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1"
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    (!job && !areAllRequiredFieldsFilled()) ||
-                    !isValid
-                  }
-                >
-                  {isSubmitting
-                    ? job
-                      ? "Updating..."
-                      : "Creating..."
-                    : job
-                      ? "Update"
-                      : "Create"}
-                </Button>
-              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </SheetFrame>
       </SheetContent>
     </Sheet>
   );

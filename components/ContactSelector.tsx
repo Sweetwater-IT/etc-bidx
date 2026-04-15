@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Check, ChevronsUpDown, Pencil, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ import {
 import { Customer } from "@/types/Customer"
 import { cn } from "@/lib/utils"
 import { CustomerContactModal } from "@/components/CustomerContactModal"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 export interface ContactOption {
   id: number
@@ -125,6 +126,11 @@ export function ContactSelector({
   const [open, setOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const interactionRef = useRef({
+    wheel: false,
+    scroll: false,
+    touch: false,
+  })
 
   const contacts = useMemo(() => getContacts(customer), [customer])
 
@@ -148,7 +154,15 @@ export function ContactSelector({
 
   return (
     <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+          interactionRef.current = { wheel: false, scroll: false, touch: false }
+          restorePointerEvents()
+        }}
+        modal={false}
+      >
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -166,18 +180,42 @@ export function ContactSelector({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent
+          align="start"
+          className="z-[70] w-[var(--radix-popover-trigger-width)] p-0"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            restorePointerEvents()
+          }}
+        >
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandList>
+            <CommandList
+              className="max-h-[240px] overflow-y-auto overflow-x-hidden overscroll-contain"
+              onWheelCapture={(event) => {
+                event.stopPropagation()
+                restorePointerEvents()
+                interactionRef.current.wheel = true
+              }}
+              onScrollCapture={(event) => {
+                event.stopPropagation()
+                interactionRef.current.scroll = true
+              }}
+              onTouchMoveCapture={(event) => {
+                event.stopPropagation()
+                restorePointerEvents()
+                interactionRef.current.touch = true
+              }}
+            >
               <CommandEmpty>{emptyMessage}</CommandEmpty>
-              <CommandGroup className="max-h-[240px] overflow-y-auto">
+              <CommandGroup>
                 {customer && (
                   <CommandItem
                     value="__add_new_contact__"
                     className="font-medium text-primary"
                     onSelect={() => {
                       setOpen(false)
+                      restorePointerEvents()
                       setCreateOpen(true)
                     }}
                   >
@@ -193,6 +231,7 @@ export function ContactSelector({
                     onSelect={async () => {
                       await onSelectContact(contact)
                       setOpen(false)
+                      restorePointerEvents()
                     }}
                   >
                     <Check

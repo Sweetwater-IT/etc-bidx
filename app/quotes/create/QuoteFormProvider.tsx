@@ -173,7 +173,8 @@ const createEmptyQuoteItem = (): QuoteItem => ({
   isCustom: false,
   is_tax_percentage: false,
   quote_id: null,
-  tax: null
+  tax: null,
+  created: false,
 });
 
 export default function QuoteFormProvider({

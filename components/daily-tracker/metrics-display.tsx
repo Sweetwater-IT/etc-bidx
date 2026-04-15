@@ -497,51 +497,59 @@ export function MetricsDisplay({ data, dateRange }: MetricsDisplayProps) {
     <div className="space-y-6">
       {hasData && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="space-y-1 text-right">
-            <div className="text-sm font-medium text-muted-foreground flex items-center justify-end gap-2">
-              <Package className="h-4 w-4" />
-              Total Signs Produced
-            </div>
-            <div className="font-bold text-3xl">{metrics.totalSigns.toLocaleString()}</div>
-          </div>
+          <Card className="border bg-card shadow-sm">
+            <CardContent className="p-6 text-right">
+              <div className="text-sm font-medium text-muted-foreground flex items-center justify-end gap-2">
+                <Package className="h-4 w-4" />
+                Total Signs Produced
+              </div>
+              <div className="mt-2 font-bold text-3xl">{metrics.totalSigns.toLocaleString()}</div>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-1 text-right">
-            <div className="text-sm font-medium text-muted-foreground flex items-center justify-end gap-2">
-              <Layers className="h-4 w-4" />
-              Total Square Footage
-            </div>
-            <div className="font-bold text-3xl">
-              {metrics.totalSqft.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-            </div>
-            <p className="text-muted-foreground text-xs">sq ft</p>
-          </div>
+          <Card className="border bg-card shadow-sm">
+            <CardContent className="p-6 text-right">
+              <div className="text-sm font-medium text-muted-foreground flex items-center justify-end gap-2">
+                <Layers className="h-4 w-4" />
+                Total Square Footage
+              </div>
+              <div className="mt-2 font-bold text-3xl">
+                {metrics.totalSqft.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              </div>
+              <p className="mt-1 text-muted-foreground text-xs">sq ft</p>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-1 text-right">
-            <div className="text-sm font-medium text-green-600 flex items-center justify-end gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Sale Signs
-            </div>
-            <div className="font-bold text-3xl">{metrics.totalSaleSigns.toLocaleString()}</div>
-            <p className="text-muted-foreground text-xs">
-              {metrics.totalSaleSqft.toLocaleString(undefined, {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              })}{" "}
-              sq ft
-            </p>
-          </div>
+          <Card className="border bg-card shadow-sm">
+            <CardContent className="p-6 text-right">
+              <div className="text-sm font-medium text-green-600 flex items-center justify-end gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Sale Signs
+              </div>
+              <div className="mt-2 font-bold text-3xl">{metrics.totalSaleSigns.toLocaleString()}</div>
+              <p className="mt-1 text-muted-foreground text-xs">
+                {metrics.totalSaleSqft.toLocaleString(undefined, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })}{" "}
+                sq ft
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-1 text-right">
-            <div className="text-sm font-medium text-blue-600 flex items-center justify-end gap-2">
-              <Grid3x3 className="h-4 w-4" />
-              MPT Signs
-            </div>
-            <div className="font-bold text-3xl">{metrics.totalMptSigns.toLocaleString()}</div>
-            <p className="text-muted-foreground text-xs">
-              {metrics.totalMptSqft.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{" "}
-              sq ft
-            </p>
-          </div>
+          <Card className="border bg-card shadow-sm">
+            <CardContent className="p-6 text-right">
+              <div className="text-sm font-medium text-blue-600 flex items-center justify-end gap-2">
+                <Grid3x3 className="h-4 w-4" />
+                MPT Signs
+              </div>
+              <div className="mt-2 font-bold text-3xl">{metrics.totalMptSigns.toLocaleString()}</div>
+              <p className="mt-1 text-muted-foreground text-xs">
+                {metrics.totalMptSqft.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{" "}
+                sq ft
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 

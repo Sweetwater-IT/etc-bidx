@@ -118,9 +118,36 @@ describe('API Endpoint', () => {
 The following npm scripts are available for running tests:
 
 - `npm test`: Run all Jest tests
+- `npm run test:e2e`: Run Playwright end-to-end tests
+- `npm run test:e2e:headed`: Run Playwright in headed mode
+- `npm run test:e2e:ui`: Open the Playwright UI runner
 - `npm run test:components`: Run component tests only
 - `npm run test:api`: Run API tests only
 - `npm run test:all`: Run both component and API tests
+
+## Playwright E2E Tests
+
+Playwright is the replacement for Cypress in this repo.
+
+### Key Files
+
+- `playwright.config.ts`: Shared Playwright configuration
+- `playwright/tests/`: End-to-end specs
+
+### Current Baseline
+
+The initial smoke coverage focuses on app entry/auth behavior:
+
+- unauthenticated visit to `/` redirects to `/password-entry`
+- `/password-entry` shows the login CTA
+
+### Recommended Next E2E Targets
+
+1. Global search modal open/close and section routing
+2. Quote create page loads and row-item sheet behavior
+3. Active bid create/edit fullscreen shell behavior
+4. Sign order add-sign modal open, search, and selection
+5. Takeoff PDF / work order PDF download trigger behavior
 
 ## Adding New Tests
 

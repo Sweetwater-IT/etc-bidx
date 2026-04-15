@@ -35,7 +35,17 @@ const fetcher = async (url: string): Promise<SovPickerResponse> => {
 }
 
 const normalize = (value: string | null | undefined) => String(value || '').trim().toUpperCase()
-const GROUP_ORDER = ['CUSTOM', 'DELIVERY', 'SERVICE', 'RENTAL', 'SALE'] as const
+const GROUP_ORDER = [
+  'DELIVERY',
+  'SERVICE',
+  'LANE CLOSURE',
+  'FLAGGING',
+  'MPT',
+  'RENTAL',
+  'SALE',
+  'PERMANENT SIGN',
+  'CUSTOM',
+] as const
 
 function normalizeUom(uom: string) {
   const trimmed = uom.trim().replace(/\s+/g, ' ')
@@ -79,8 +89,21 @@ function getGroupHeading(item: SovPickerItem) {
   const normalizedWorkType = normalize(item.work_type)
   if (normalizedWorkType === 'DELIVERY') return 'DELIVERY'
   if (normalizedWorkType === 'SERVICE') return 'SERVICE'
+  if (normalizedWorkType === 'LANE CLOSURE' || normalizedWorkType === 'LANE_CLOSURE') {
+    return 'LANE CLOSURE'
+  }
+  if (normalizedWorkType === 'FLAGGING') return 'FLAGGING'
+  if (normalizedWorkType === 'MPT') return 'MPT'
   if (normalizedWorkType === 'RENTAL') return 'RENTAL'
   if (normalizedWorkType === 'SALE') return 'SALE'
+  if (
+    normalizedWorkType === 'PERMANENT SIGN' ||
+    normalizedWorkType === 'PERMANENT SIGNS' ||
+    normalizedWorkType === 'PERMANENT_SIGN' ||
+    normalizedWorkType === 'PERMANENT_SIGNS'
+  ) {
+    return 'PERMANENT SIGN'
+  }
 
   return normalizedWorkType || 'OTHER'
 }

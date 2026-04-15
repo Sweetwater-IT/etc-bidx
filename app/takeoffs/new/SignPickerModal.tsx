@@ -27,7 +27,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSignCatalog } from '@/hooks/use-sign-catalog';
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { PrimarySign, SecondarySign, SheetingType, EquipmentType, SignDesignation, structureMap, DisplayStructures, AssociatedStructures, PataKit, PtsKit, KitVariant } from '@/types/MPTEquipment';
@@ -36,15 +36,19 @@ import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 
-export interface RuntimeSignPickerModalProps {
+export interface SharedSignPickerModalProps {
     open: boolean;
-    onOpenChange: Dispatch<SetStateAction<boolean>>;
+    onOpenChange: (open: boolean) => void;
     mode: 'create' | 'edit';
     sign: PrimarySign | SecondarySign;
     currentPhase?: number;
     isTakeoff?: boolean;
     isSignOrder?: boolean;
     useSegmentedPicker?: boolean;
+    enableKitTabs?: boolean;
+    sheetingOptions?: string[];
+    onSaveResult?: (sign: PrimarySign | SecondarySign) => void;
+    showMptOptions?: boolean;
 }
 
 // Type guard to check if sign is SecondarySign
@@ -79,6 +83,8 @@ const SIGN_ORDER_B_LIGHT_OPTIONS = [
 const SIGN_ORDER_SELECTED_CARD_CLASSES = "border-emerald-500/20 bg-emerald-500/5 text-emerald-700";
 const SIGN_ORDER_UNSELECTED_CARD_CLASSES = "border-border hover:bg-muted/50";
 
+type SignOrderStep = 'designation' | 'dimension' | 'configuration' | 'kit-variant' | 'kit-configuration';
+
 function PickerEmptyState({
     title,
     description,
@@ -96,7 +102,20 @@ function PickerEmptyState({
     );
 }
 
-const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase = 0, isTakeoff = true, isSignOrder, useSegmentedPicker = false }: RuntimeSignPickerModalProps) => {
+const SignPickerModal = ({
+    open,
+    onOpenChange,
+    mode,
+    sign,
+    currentPhase = 0,
+    isTakeoff = true,
+    isSignOrder,
+    useSegmentedPicker = false,
+    enableKitTabs = true,
+    sheetingOptions,
+    onSaveResult,
+    showMptOptions = true,
+}: SharedSignPickerModalProps) => {
     const { dispatch, mptRental } = useSignRuntime();
     const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign>({ ...sign });
     const [filteredSigns, setFilteredSigns] = useState<SignDesignation[]>([]);
@@ -110,7 +129,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
     const [selectedKitTypeForVariant, setSelectedKitTypeForVariant] = useState<'pata' | 'pts' | null>(null);
     const [kitVariantOpen, setKitVariantOpen] = useState(false);
     const [kitSignConfigurations, setKitSignConfigurations] = useState<any[]>([]);
-    const [signOrderStep, setSignOrderStep] = useState<'designation' | 'dimension' | 'configuration'>('designation');
+    const [signOrderStep, setSignOrderStep] = useState<SignOrderStep>('designation');
     const [activePickerTab, setActivePickerTab] = useState<'mutcd' | 'pata' | 'pts'>('mutcd');
     const [mutcdSearch, setMutcdSearch] = useState('');
     const [pataSearch, setPataSearch] = useState('');
@@ -121,6 +140,11 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
     const isSegmentedPickerFlow = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary);
     const isSegmentedPickerConfigOnly = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary && !isCustom);
     const showSubstrateField = Boolean(isTakeoff || isSignOrder);
+    const showKitTabsInPicker = isSegmentedPickerFlow && enableKitTabs;
+    const shouldSyncRuntime = !onSaveResult;
+    const availableSheetingOptions = sheetingOptions?.length
+        ? sheetingOptions
+        : [...SIGN_ORDER_SHEETING_OPTIONS];
     // Get primary sign if this is a secondary sign
     const primarySign = isSecondary
         ? mptRental.phases[currentPhase]?.signs.find(s => s.id === sign.primarySignId) as PrimarySign
@@ -139,6 +163,8 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
 
     // Helper to update all secondary sign quantities
     const updateSecondarySignQuantities = (primarySignId: string, newQuantity: number) => {
+        if (!shouldSyncRuntime) return;
+
         const secondarySigns = getSecondarySignsForPrimary(primarySignId);
 
         secondarySigns.forEach((secondarySign) => {
@@ -156,12 +182,16 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
 
     // Helper to get current equipment quantity for a specific type
     const getCurrentEquipmentQuantity = (equipmentType: EquipmentType): number => {
+        if (!shouldSyncRuntime) return 0;
+
         const currentPhaseData = mptRental.phases[currentPhase];
         return currentPhaseData.standardEquipment[equipmentType]?.quantity || 0;
     };
 
     // Helper to update equipment quantity
     const updateEquipmentQuantity = (equipmentType: EquipmentType, newQuantity: number) => {
+        if (!shouldSyncRuntime) return;
+
         dispatch({
             type: "ADD_MPT_ITEM_NOT_SIGN",
             payload: {
@@ -404,7 +434,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
         const updatedSign = { ...localSign, [field]: value };
 
         // Special handling for equipment-related fields (only for primary signs)
-        if (!isSecondary) {
+        if (!isSecondary && shouldSyncRuntime) {
             if (field === 'displayStructure') {
                 const newStructure = structureMap[value];
                 (updatedSign as PrimarySign).associatedStructure = newStructure;
@@ -558,7 +588,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
             bLightsColor: nextBLightsColor,
         };
 
-        if (!isSecondary) {
+        if (!isSecondary && shouldSyncRuntime) {
             handleBLightsChange(nextBLights, updatedSign.quantity);
         }
 
@@ -619,14 +649,14 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
         });
 
         setKitSignConfigurations(configurations);
-        setKitStepperOpen(true);
+        setSignOrderStep('kit-configuration');
     };
 
     const handleKitSelect = (kit: PataKit | PtsKit, kitType: 'pata' | 'pts') => {
         if (kit.has_variants && kit.variants.length > 0) {
             setSelectedKitForVariant(kit);
             setSelectedKitTypeForVariant(kitType);
-            setKitVariantOpen(true);
+            setSignOrderStep('kit-variant');
             return;
         }
 
@@ -637,7 +667,6 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
         if (!selectedKitForVariant || !selectedKitTypeForVariant) return;
 
         const variantKit = applyKitVariant(selectedKitForVariant, variant);
-        setKitVariantOpen(false);
         setSelectedKitForVariant(null);
         setSelectedKitTypeForVariant(null);
         openKitStepper(variantKit);
@@ -666,17 +695,20 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                 stiffener: config.stiffener,
             };
 
-            dispatch({
-                type: 'ADD_MPT_SIGN',
-                payload: {
-                    phaseNumber: currentPhase,
-                    sign: newSign,
-                },
-            });
+            if (onSaveResult) {
+                onSaveResult(newSign);
+            } else {
+                dispatch({
+                    type: 'ADD_MPT_SIGN',
+                    payload: {
+                        phaseNumber: currentPhase,
+                        sign: newSign,
+                    },
+                });
+            }
         });
 
         // Close the modal and reset
-        setKitStepperOpen(false);
         setSelectedKit(null);
         setKitSignConfigurations([]);
         onOpenChange(false);
@@ -714,14 +746,6 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
     const totalPataCount = apiData?.pataKits?.length ?? 0;
     const totalPtsCount = apiData?.ptsKits?.length ?? 0;
     const modalTitle = mode === 'create' ? 'Add Sign' : 'Edit Sign';
-    const modalStepDescription = isSegmentedPickerFlow
-        ? signOrderStep === 'designation'
-            ? 'Choose a MUTCD sign, custom sign, or PATA/PTS kit.'
-            : signOrderStep === 'dimension'
-                ? `Choose a size for ${localSign.designation || 'this sign'}.`
-                : 'Review and update the sign details before saving.'
-        : `Review and update the ${isCustom ? 'custom sign' : 'sign'} details before saving.`;
-
     const handleSave = () => {
         logSignOrderDebug('sign_configuration_save_clicked', {
             mode,
@@ -744,7 +768,9 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
             };
         }
 
-        if (mode === 'create') {
+        if (onSaveResult) {
+            onSaveResult(signToSave);
+        } else if (mode === 'create') {
             dispatch({
                 type: 'ADD_MPT_SIGN',
                 payload: {
@@ -789,9 +815,6 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                 <div className="relative z-10 shrink-0 bg-background">
                     <DialogHeader className="p-6 pb-4 text-left">
                         <DialogTitle>{modalTitle}</DialogTitle>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                            {modalStepDescription}
-                        </p>
                         {isSecondary && primarySign && (
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-md text-sm">
                                 Secondary sign associated with primary sign: {primarySign.designation || "Unknown"}
@@ -803,10 +826,10 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                 {isSegmentedPickerFlow && signOrderStep === 'designation' && (
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                         <Tabs value={activePickerTab} onValueChange={(value) => setActivePickerTab(value as 'mutcd' | 'pata' | 'pts')} className="flex flex-col gap-4">
-                            <TabsList className="grid w-full grid-cols-3">
+                            <TabsList className={cn("grid w-full", showKitTabsInPicker ? "grid-cols-3" : "grid-cols-1")}>
                                 <TabsTrigger value="mutcd">MUTCD Signs ({totalMutcdCount})</TabsTrigger>
-                                <TabsTrigger value="pata">PATA Kits ({totalPataCount})</TabsTrigger>
-                                <TabsTrigger value="pts">PTS Kits ({totalPtsCount})</TabsTrigger>
+                                {showKitTabsInPicker && <TabsTrigger value="pata">PATA Kits ({totalPataCount})</TabsTrigger>}
+                                {showKitTabsInPicker && <TabsTrigger value="pts">PTS Kits ({totalPtsCount})</TabsTrigger>}
                             </TabsList>
 
                             <TabsContent value="mutcd" className="space-y-4">
@@ -849,7 +872,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         </div>
                                     </div>
                                 </button>
-                                {filteredSigns.length === 0 ? (
+                                {isLoading ? (
+                                    <PickerEmptyState
+                                        title="Loading MUTCD signs"
+                                        description="Fetching the current sign catalog."
+                                    />
+                                ) : filteredSigns.length === 0 ? (
                                     <PickerEmptyState
                                         title="No matching MUTCD signs"
                                         description={mutcdSearch.trim()
@@ -893,6 +921,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                 )}
                             </TabsContent>
 
+                            {showKitTabsInPicker && (
                             <TabsContent value="pata" className="space-y-4">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -907,7 +936,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         className="pl-10"
                                     />
                                 </div>
-                                {filteredPataKits.length === 0 ? (
+                                {isLoading ? (
+                                    <PickerEmptyState
+                                        title="Loading PATA kits"
+                                        description="Fetching available PATA kit configurations."
+                                    />
+                                ) : filteredPataKits.length === 0 ? (
                                     <PickerEmptyState
                                         title="No matching PATA kits"
                                         description={pataSearch.trim()
@@ -944,7 +978,9 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     ))
                                 )}
                             </TabsContent>
+                            )}
 
+                            {showKitTabsInPicker && (
                             <TabsContent value="pts" className="space-y-4">
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -959,7 +995,12 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         className="pl-10"
                                     />
                                 </div>
-                                {filteredPtsKits.length === 0 ? (
+                                {isLoading ? (
+                                    <PickerEmptyState
+                                        title="Loading PTS kits"
+                                        description="Fetching available PTS kit configurations."
+                                    />
+                                ) : filteredPtsKits.length === 0 ? (
                                     <PickerEmptyState
                                         title="No matching PTS kits"
                                         description={ptsSearch.trim()
@@ -996,6 +1037,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     ))
                                 )}
                             </TabsContent>
+                            )}
                         </Tabs>
                     </div>
                 )}
@@ -1037,6 +1079,223 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                         </div>
                     </div>
                 )}
+                {isSegmentedPickerFlow && signOrderStep === 'kit-variant' && (
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <div className="font-medium">{selectedKitForVariant?.code || 'Kit'}</div>
+                            <div className="text-sm text-muted-foreground">
+                                {selectedKitForVariant?.description || 'Choose a kit variant to continue.'}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {selectedKitForVariant?.variants.map((variant) => (
+                                <button
+                                    key={variant.id}
+                                    type="button"
+                                    onClick={() => handleVariantSelected(variant)}
+                                    className="w-full rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                                >
+                                    <div className="font-medium">{variant.label || variant.name}</div>
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                        {variant.description || 'Use this kit variant.'}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {isSegmentedPickerFlow && signOrderStep === 'kit-configuration' && (
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <div className="font-medium">
+                                Configure {selectedKit?.code || 'Kit'} signs
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Review each sign in the kit and update the details before saving them to the order.
+                            </div>
+                        </div>
+
+                        {kitSignConfigurations.length === 0 ? (
+                            <PickerEmptyState
+                                title="No kit signs to configure"
+                                description="Choose a different kit or return to the sign selector."
+                            />
+                        ) : (
+                            kitSignConfigurations.map((config, index) => (
+                                <div key={`${config.designation}-${index}`} className="rounded-lg border bg-card">
+                                    <div className="border-b px-4 py-4">
+                                        <div className="font-medium">
+                                            Sign {index + 1}: {config.designation}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {config.description || 'No description'}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 px-4 py-4">
+                                        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                <div>
+                                                    <Label className="mb-2 block text-sm font-medium">Dimensions</Label>
+                                                    <Select
+                                                        value={`${config.width}x${config.height}`}
+                                                        onValueChange={(value) => {
+                                                            const [width, height] = value.split('x').map(Number);
+                                                            const updatedConfigs = [...kitSignConfigurations];
+                                                            updatedConfigs[index] = { ...config, width, height };
+                                                            setKitSignConfigurations(updatedConfigs);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {(config.availableDimensions || []).map((dim: any) => (
+                                                                <SelectItem key={`${dim.width}x${dim.height}`} value={`${dim.width}x${dim.height}`}>
+                                                                    {dim.width}&quot; x {dim.height}&quot;
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div>
+                                                    <Label className="mb-2 block text-sm font-medium">Sheeting</Label>
+                                                    <Select
+                                                        value={config.sheeting}
+                                                        onValueChange={(value) => {
+                                                            const updatedConfigs = [...kitSignConfigurations];
+                                                            updatedConfigs[index] = { ...config, sheeting: value };
+                                                            setKitSignConfigurations(updatedConfigs);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="HI">HI</SelectItem>
+                                                            <SelectItem value="DG">DG</SelectItem>
+                                                            <SelectItem value="FYG">FYG</SelectItem>
+                                                            <SelectItem value="TYPEXI">Type XI</SelectItem>
+                                                            <SelectItem value="Special">Special</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                <div>
+                                                    <Label className="mb-2 block text-sm font-medium">Substrate</Label>
+                                                    <Select
+                                                        value={config.substrate}
+                                                        onValueChange={(value) => {
+                                                            const updatedConfigs = [...kitSignConfigurations];
+                                                            updatedConfigs[index] = { ...config, substrate: value };
+                                                            setKitSignConfigurations(updatedConfigs);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder="Select substrate" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                                            <SelectItem value="Aluminum-Composite">Aluminum Composite</SelectItem>
+                                                            <SelectItem value="Plastic">Plastic</SelectItem>
+                                                            {isSignOrder && (
+                                                                <>
+                                                                    <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                                    <SelectItem value="Face">Face</SelectItem>
+                                                                </>
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div>
+                                                    <Label className="mb-2 block text-sm font-medium">Structure</Label>
+                                                    <Select
+                                                        value={config.displayStructure}
+                                                        onValueChange={(value) => {
+                                                            const updatedConfigs = [...kitSignConfigurations];
+                                                            updatedConfigs[index] = {
+                                                                ...config,
+                                                                displayStructure: value,
+                                                                associatedStructure: structureMap[value]
+                                                            };
+                                                            setKitSignConfigurations(updatedConfigs);
+                                                        }}
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder="Choose structure" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="4' T-III RIGHT">4' T-III RIGHT</SelectItem>
+                                                            <SelectItem value="4' T-III LEFT">4' T-III LEFT</SelectItem>
+                                                            <SelectItem value="6' T-III RIGHT">6' T-III RIGHT</SelectItem>
+                                                            <SelectItem value="6' T-III LEFT">6' T-III LEFT</SelectItem>
+                                                            <SelectItem value="H-FOOT">H-FOOT</SelectItem>
+                                                            <SelectItem value="8' POST">8' POST</SelectItem>
+                                                            <SelectItem value="10' POST">10' POST</SelectItem>
+                                                            <SelectItem value="12' POST">12' POST</SelectItem>
+                                                            <SelectItem value="14' POST">14' POST</SelectItem>
+                                                            <SelectItem value="LOOSE">LOOSE</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-end gap-6">
+                                                <div className="flex items-center gap-2">
+                                                    <Checkbox
+                                                        checked={Boolean(config.cover)}
+                                                        onCheckedChange={(checked) => {
+                                                            const updatedConfigs = [...kitSignConfigurations];
+                                                            updatedConfigs[index] = { ...config, cover: checked };
+                                                            setKitSignConfigurations(updatedConfigs);
+                                                        }}
+                                                        id={`kit-cover-${index}`}
+                                                    />
+                                                    <Label htmlFor={`kit-cover-${index}`} className="text-sm font-medium">
+                                                        Include cover
+                                                    </Label>
+                                                </div>
+                                                {isTakeoff && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            checked={Boolean(config.stiffener)}
+                                                            onCheckedChange={(checked) => {
+                                                                const updatedConfigs = [...kitSignConfigurations];
+                                                                updatedConfigs[index] = { ...config, stiffener: checked };
+                                                                setKitSignConfigurations(updatedConfigs);
+                                                            }}
+                                                            id={`kit-stiffener-${index}`}
+                                                        />
+                                                        <Label htmlFor={`kit-stiffener-${index}`} className="text-sm font-medium">
+                                                            Include stiffener
+                                                        </Label>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <Label className="mb-2 block text-sm font-medium">Quantity</Label>
+                                            <QuantityInput
+                                                value={config.quantity || 1}
+                                                onChange={(value) => {
+                                                    const updatedConfigs = [...kitSignConfigurations];
+                                                    updatedConfigs[index] = { ...config, quantity: value };
+                                                    setKitSignConfigurations(updatedConfigs);
+                                                }}
+                                                min={1}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )}
                 {(!isSegmentedPickerFlow || signOrderStep === 'configuration') && (
                 <div className="flex-1 overflow-y-auto space-y-6 px-6 py-4">
                     {/* Custom Sign Toggle */}
@@ -1056,6 +1315,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
 
                     {/* Designation Section */}
                     {isSegmentedPickerConfigOnly ? (
+                        <>
                         <div className="rounded-lg border bg-muted/30 p-4">
                             <Label className="text-base font-semibold mb-2.5 block">
                                 Sign Selection
@@ -1074,7 +1334,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         </span>
                                     )}
                                 </div>
-                                <div className="grid flex-1 grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                                <div className="grid flex-1 grid-cols-1 gap-4 text-sm md:grid-cols-2">
                                     <div>
                                         <div className="text-muted-foreground">Designation</div>
                                         <div className="font-medium">{localSign.designation || '-'}</div>
@@ -1087,19 +1347,9 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                                 : '-'}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div className="text-muted-foreground">Quantity</div>
-                                        <div className="pt-1">
-                                            <QuantityInput
-                                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 1}
-                                                onChange={(value) => handleSignUpdate("quantity", value)}
-                                                min={1}
-                                                disabled={isSecondary}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
+                            {showMptOptions && (
                             <div className="mt-4 flex flex-wrap items-end gap-6 border-t border-border/60 pt-4">
                                 <div className="flex items-center gap-2">
                                     <Checkbox
@@ -1132,7 +1382,18 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     </div>
                                 )}
                             </div>
+                            )}
                         </div>
+                        <div>
+                            <Label className="text-sm font-medium mb-2 block">Quantity</Label>
+                            <QuantityInput
+                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 1}
+                                onChange={(value) => handleSignUpdate("quantity", value)}
+                                min={1}
+                                disabled={isSecondary}
+                            />
+                        </div>
+                        </>
                     ) : (
                         <div>
                             <Label className="text-base font-semibold mb-2.5 block">
@@ -1222,7 +1483,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                                         ))}
                                                     </CommandGroup>
                                                 )}
-                                                {filteredPataKits.length > 0 && (
+                                                {enableKitTabs && filteredPataKits.length > 0 && (
                                                     <CommandGroup heading="PATA Kits">
                                                         {filteredPataKits.map((kit) => (
                                                             <CommandItem
@@ -1249,7 +1510,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                                         ))}
                                                     </CommandGroup>
                                                 )}
-                                                {filteredPtsKits.length > 0 && (
+                                                {enableKitTabs && filteredPtsKits.length > 0 && (
                                                     <CommandGroup heading="PTS Kits">
                                                         {filteredPtsKits.map((kit) => (
                                                             <CommandItem
@@ -1284,7 +1545,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                         </div>
                     )}
 
-                    {!isSecondary && (
+                    {!isSecondary && showMptOptions && (
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Structure</Label>
                             {isSegmentedPickerFlow ? (
@@ -1374,7 +1635,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                         <Label className="text-sm font-medium mb-2 block">Sheeting</Label>
                         {isSegmentedPickerFlow ? (
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                                {SIGN_ORDER_SHEETING_OPTIONS.map((option) => {
+                                {availableSheetingOptions.map((option) => {
                                     const selected = (localSign.sheeting || "HI") === option;
                                     return (
                                         <button
@@ -1403,7 +1664,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {SIGN_ORDER_SHEETING_OPTIONS.map((option) => (
+                                    {availableSheetingOptions.map((option) => (
                                         <SelectItem key={option} value={option}>
                                             {option === "TYPEXI" ? "Type XI" : option}
                                         </SelectItem>
@@ -1419,27 +1680,39 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                             <>
                                 <div>
                                     <Label className="text-sm font-medium mb-2 block">Width</Label>
-                                    <Input
-                                        type="number"
-                                        value={localSign.width || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("width", parseFloat(e.target.value) || 0)
-                                        }
-                                        min={0}
-                                        step="0.1"
-                                    />
+                                    <div className="flex items-center overflow-hidden rounded-md border border-input bg-background">
+                                        <Input
+                                            type="number"
+                                            value={localSign.width || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("width", parseFloat(e.target.value) || 0)
+                                            }
+                                            min={0}
+                                            step="0.1"
+                                            className="border-0 shadow-none focus-visible:ring-0"
+                                        />
+                                        <div className="border-l bg-muted px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Inches
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium mb-2 block">Height</Label>
-                                    <Input
-                                        type="number"
-                                        value={localSign.height || ""}
-                                        onChange={(e) =>
-                                            handleSignUpdate("height", parseFloat(e.target.value) || 0)
-                                        }
-                                        min={0}
-                                        step="0.1"
-                                    />
+                                    <div className="flex items-center overflow-hidden rounded-md border border-input bg-background">
+                                        <Input
+                                            type="number"
+                                            value={localSign.height || ""}
+                                            onChange={(e) =>
+                                                handleSignUpdate("height", parseFloat(e.target.value) || 0)
+                                            }
+                                            min={0}
+                                            step="0.1"
+                                            className="border-0 shadow-none focus-visible:ring-0"
+                                        />
+                                        <div className="border-l bg-muted px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Inches
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         ) : isSegmentedPickerConfigOnly ? (
@@ -1529,7 +1802,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                 </div>
                             )}
 
-                            {showSubstrateField && !isSegmentedPickerConfigOnly && (
+                            {showMptOptions && showSubstrateField && !isSegmentedPickerConfigOnly && (
                                 <div className="flex flex-wrap items-end gap-6 pb-2">
                                     <div className="flex items-center gap-2">
                                         <Checkbox
@@ -1564,19 +1837,8 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                 </div>
                             )}
 
-                            {isSegmentedPickerFlow ? (
+                            {showMptOptions && isSegmentedPickerFlow ? (
                                 <div className="space-y-4">
-                                    {!isSegmentedPickerConfigOnly && (
-                                        <div>
-                                            <Label className="text-sm font-medium mb-2 block">Quantity</Label>
-                                            <QuantityInput
-                                                value={isSecondary && primarySign ? primarySign.quantity : localSign.quantity || 1}
-                                                onChange={(value) => handleSignUpdate("quantity", value)}
-                                                min={1}
-                                                disabled={isSecondary}
-                                            />
-                                        </div>
-                                    )}
                                     <div>
                                         <Label className="text-sm font-medium mb-2 block">B Lights</Label>
                                         <div className="space-y-2">
@@ -1623,7 +1885,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
+                            ) : showMptOptions ? (
                                 <>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -1664,7 +1926,7 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                                         </div>
                                     )}
                                 </>
-                            )}
+                            ) : null}
 
                         </>
                     )}
@@ -1682,7 +1944,17 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                         <Button
                             variant="outline"
                             onClick={() => {
-                                if (signOrderStep === 'configuration') {
+                                if (signOrderStep === 'kit-configuration') {
+                                    if (selectedKit?.has_variants && selectedKit.variants.length > 0) {
+                                        setSignOrderStep('kit-variant');
+                                    } else {
+                                        setSignOrderStep('designation');
+                                    }
+                                } else if (signOrderStep === 'kit-variant') {
+                                    setSignOrderStep('designation');
+                                    setSelectedKitForVariant(null);
+                                    setSelectedKitTypeForVariant(null);
+                                } else if (signOrderStep === 'configuration') {
                                     setSignOrderStep(availableDimensions.length > 1 ? 'dimension' : 'designation');
                                 } else {
                                     setSignOrderStep('designation');
@@ -1695,6 +1967,11 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
                     <Button variant="outline" onClick={handleCancel}>
                         Cancel
                     </Button>
+                    {isSegmentedPickerFlow && signOrderStep === 'kit-configuration' && (
+                        <Button onClick={handleKitStepperComplete} disabled={!kitSignConfigurations.length}>
+                            Add All Signs to Order
+                        </Button>
+                    )}
                     {(!isSegmentedPickerFlow || signOrderStep === 'configuration') && (
                         <Button onClick={handleSave} disabled={(localSign.quantity < 1 || localSign.width < 1 || localSign.height < 1)}>
                             Save Sign
@@ -1915,4 +2192,4 @@ const RuntimeSignPickerModal = ({ open, onOpenChange, mode, sign, currentPhase =
     );
 };
 
-export default RuntimeSignPickerModal;
+export default SignPickerModal;

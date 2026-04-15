@@ -3,8 +3,6 @@
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +30,7 @@ import { restorePointerEvents } from '@/lib/pointer-events-fix'
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
 import { CustomerSelector } from '@/components/CustomerSelector'
 import { ContactSelector } from '@/components/ContactSelector'
+import { SheetFrame } from '@/components/sheet-frame'
 
 interface IContact {
   id: number
@@ -848,14 +847,8 @@ export function SignOrderDetailsSheet({
             })
           }}
         >
-          <div className='flex flex-col gap-2 relative z-10 bg-background'>
-            <SheetHeader className='p-6 pb-4'>
-              <SheetTitle>{sheetTitle}</SheetTitle>
-            </SheetHeader>
-            <Separator className='w-full -mt-2' />
-          </div>
-
-          {drawerView === 'details' && (
+          <SheetFrame title={sheetTitle} bodyClassName='overflow-hidden p-0'>
+            {drawerView === 'details' && (
             <>
               <div className='flex-1 min-h-0 overflow-y-auto px-6 py-4'>
                 <div className='space-y-6'>
@@ -1583,6 +1576,7 @@ export function SignOrderDetailsSheet({
               </div>
             </>
           )}
+          </SheetFrame>
         </SheetContent>
       </Sheet>
     </>

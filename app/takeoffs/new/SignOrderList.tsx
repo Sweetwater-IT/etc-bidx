@@ -43,6 +43,7 @@ import {
 import '@/components/pages/active-bid/signs/no-spinner.css';
 import SelectJobOrBid from './SelectJobOrBid';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
+import { useSignEditorSession } from '@/hooks/use-sign-editor-session';
 
 const SIGN_COLUMNS = [
   { key: 'designation', title: 'Designation' },
@@ -105,9 +106,10 @@ export function SignOrderList({
 }: Props) {
   const { mptRental, dispatch } = useSignRuntime();
   const [squareFootageTotal, setSquareFootageTotal] = useState<number>(0);
-  const [localSign, setLocalSign] = useState<PrimarySign | SecondarySign | undefined>();
-  const [open, setOpen] = useState<boolean>(false);
-  const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const signEditor = useSignEditorSession<PrimarySign | SecondarySign>();
+  const localSign = signEditor.draft;
+  const open = signEditor.open;
+  const mode = signEditor.mode;
 
   // Sign orders use a single modal with internal steps: designation -> dimension -> configuration.
 
@@ -119,10 +121,8 @@ export function SignOrderList({
       signId: localSign?.id ?? null,
       designation: localSign?.designation ?? null,
     });
-    setLocalSign(undefined);
-    setOpen(false);
-    setMode('create');
-  }, [currentPhase, localSign?.designation, localSign?.id, mode]);  
+    signEditor.close();
+  }, [currentPhase, localSign?.designation, localSign?.id, mode, signEditor]);
 
   const getCurrentEquipmentQuantity = useCallback((equipmentType: EquipmentType): number => {
     const currentPhaseData = mptRental.phases[currentPhase];
@@ -205,9 +205,7 @@ export function SignOrderList({
         existingSigns: mptRental.phases[currentPhase]?.signs.length ?? 0,
         jobNumber: jobNumber ?? null,
       });
-      setLocalSign(defaultSign);
-      setMode('create');
-      setOpen(true);
+      signEditor.startCreate(defaultSign);
     } catch (error) {
       console.error('Error in handleSignAddition:', error);
       logSignOrderDebug('add_new_sign_failed', {
@@ -215,7 +213,7 @@ export function SignOrderList({
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [currentPhase, jobNumber, mptRental.phases]);
+  }, [currentPhase, jobNumber, mptRental.phases, signEditor]);
 
   const getSecondarySignsForPrimary = useCallback((primarySignId: string): SecondarySign[] => {
     const desiredPhase = mptRental.phases[currentPhase];
@@ -311,11 +309,9 @@ export function SignOrderList({
       const latestSign = mptRental.phases[currentPhase].signs[mptRental.phases[currentPhase].signs.length - 1];
       if (onlyTable && latestSign && latestSign.quantity === 0) {
         console.log('Opening SignPickerModal for latest sign in onlyTable mode:', latestSign.id);
-        setLocalSign(latestSign);
-        setMode('edit');
-        setOpen(true);
+        signEditor.startEdit(latestSign);
     }
-  }, [mptRental.phases, currentPhase, onlyTable]);
+  }, [mptRental.phases, currentPhase, onlyTable, signEditor]);
 
   useEffect(() => {
     logSignOrderDebug('sign_order_list_state_changed', {
@@ -544,9 +540,7 @@ export function SignOrderList({
                                   <DropdownMenuItem
                                     onClick={() => {
                                       console.log('Editing sign:', sign.id);
-                                      setLocalSign({ ...sign });
-                                      setOpen(true);
-                                      setMode('edit');
+                                      signEditor.startEdit({ ...sign });
                                     }}
                                   >
                                     <Pencil className="h-4 w-4 mr-2" />
@@ -576,9 +570,7 @@ export function SignOrderList({
                                                 description: '',
                                                 substrate: 'Plastic',
                                               };
-                                              setLocalSign({ ...defaultSecondary });
-                                              setMode('create');
-                                              setOpen(true);
+                                              signEditor.startCreate({ ...defaultSecondary });
                                             }}
                                           >
                                             <Plus className="h-4 w-4 mr-2" />
@@ -607,9 +599,7 @@ export function SignOrderList({
                                                         primarySignId: sign.id,
                                                         quantity: sign.quantity,
                                                       };
-                                                      setLocalSign(duplicated);
-                                                      setMode('create');
-                                                      setOpen(true);
+                                                      signEditor.startCreate(duplicated);
                                                     }}
                                                   >
                                                     <div
@@ -674,7 +664,11 @@ export function SignOrderList({
         {localSign && open && (
           <SignPickerModal
             open={open}
-            onOpenChange={handleClose}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) {
+                handleClose();
+              }
+            }}
             mode={mode}
             sign={localSign}
             currentPhase={currentPhase}

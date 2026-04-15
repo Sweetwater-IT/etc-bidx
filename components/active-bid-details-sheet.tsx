@@ -4,9 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import {
   EyeIcon,
@@ -44,13 +41,13 @@ import { createClient } from "@supabase/supabase-js";
 import { Customer } from "@/types/Customer";
 import { updateBid } from "@/lib/api-client";
 import { toast } from "sonner";
-import { Separator } from "./ui/separator";
 import { QuoteNotes } from "./pages/quote-form/QuoteNotes";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { calculateFlaggingCostSummary } from "@/lib/mptRentalHelperFunctions";
 import { useEstimate } from "@/contexts/EstimateContext";
 import { defaultFlaggingObject } from "@/types/default-objects/defaultFlaggingObject";
+import { SheetFrame } from "@/components/sheet-frame";
 
 interface ActiveBidDetailsSheetProps {
   open: boolean;
@@ -506,16 +503,17 @@ export function ActiveBidDetailsSheet({
         side="right"
         className="w-[400px] sm:w-[540px] flex flex-col p-0"
       >
-        <div className="flex flex-col gap-2 relative z-10 bg-background">
-          <SheetHeader className="p-6 pb-4">
-            <div className="flex justify-between items-center">
-              <SheetTitle>
+        <SheetFrame
+          title={
+            <div className="flex items-center justify-between gap-3">
+              <div>
                 Active bid
                 {bid?.originalContractNumber
                   ? `: ${bid.originalContractNumber}`
                   : ""}
-              </SheetTitle>
-              <span
+              </div>
+              <button
+                type="button"
                 className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-md flex items-center gap-1 text-nowrap cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -523,17 +521,34 @@ export function ActiveBidDetailsSheet({
                   if (bid && onViewBidSummary) {
                     onViewBidSummary(bid);
                   }
-                }}>
+                }}
+              >
                 View bid summary <EyeIcon className="h-3 w-3" />
-              </span>
+              </button>
             </div>
-          </SheetHeader>
-          <Separator className="w-full -mt-2" />
-        </div>
-
-        <div className="flex flex-col overflow-y-auto h-full">
-          <div className="flex-1 p-6 pt-3">
-            <div className="space-y-5">
+          }
+          bodyClassName="overflow-hidden p-0"
+          footer={
+            <div className="flex justify-between gap-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEdit} disabled={saving} className="flex-1">
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {hasChanges
+                  ? "Update"
+                  : "Edit"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex-1 overflow-y-auto px-6 pb-4 pt-3">
+              <div className="space-y-5">
               <div className="flex">
                 <div className="space-y-1 w-1/2">
                   <Label className="font-semibold">
@@ -829,35 +844,18 @@ export function ActiveBidDetailsSheet({
               {/* Rental Value */}
 
             </div>
-          </div>
-          <div className="w-full">
-            <QuoteNotes
-              notes={notesInfo}
-              onSave={(note: INote) => handleSaveNote(note)}
-              onEdit={handleEditNotes}
-              onDelete={handleDelete}
-              title="Notes"
-            />
-          </div>
-
-          <SheetFooter className="px-4 py-4 border-t flex gap-2 sticky bottom-0 bg-background z-10">
-            <div className="flex justify-between gap-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleCancel}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleEdit} disabled={saving} className="flex-1">
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {hasChanges
-                  ? "Update"
-                  : "Edit"}
-              </Button>
+            <div className="w-full border-t bg-background px-6 py-4">
+              <QuoteNotes
+                notes={notesInfo}
+                onSave={(note: INote) => handleSaveNote(note)}
+                onEdit={handleEditNotes}
+                onDelete={handleDelete}
+                title="Notes"
+              />
             </div>
-          </SheetFooter>
+          </div>
         </div>
+        </SheetFrame>
       </SheetContent>
     </Sheet>
   );

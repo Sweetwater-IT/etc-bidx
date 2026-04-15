@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
@@ -18,16 +18,6 @@ enum UOM_TYPES {
   EA_MO = "EA/MO",
   EA_DAY = "EA/DAY",
   HR = "HR",
-}
-
-// --- Endpoints ---
-async function createQuoteItem(item: QuoteItem) {
-  const res = await fetch("/api/quotes/quoteItems", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(item),
-  });
-  return res.json();
 }
 
 async function updateQuoteItem(item: QuoteItem) {
@@ -49,6 +39,29 @@ async function updateQuoteItem(item: QuoteItem) {
 async function deleteQuoteItem(itemId: string) {
   const res = await fetch(`/api/quotes/quoteItems/${itemId}`, { method: "DELETE" });
   return res.json();
+}
+
+function createEmptyQuoteRow(quoteId: number | null): QuoteItem {
+  return {
+    quote_id: quoteId,
+    id: generateUniqueId(),
+    itemNumber: "",
+    description: "",
+    uom: "",
+    quantity: 0,
+    unitPrice: 0,
+    discount: 0,
+    discountType: "dollar",
+    notes: "",
+    associatedItems: [],
+    is_tax_percentage: false,
+    tax: 0,
+    created: false,
+  };
+}
+
+function isPlaceholderRow(item: QuoteItem) {
+  return !item.itemNumber && !item.description;
 }
 
 export function QuoteItems() {
@@ -82,6 +95,7 @@ export function QuoteItems() {
 
   const totalValueCalculation = () => {
     return quoteItems
+      .filter((item) => !isPlaceholderRow(item))
       .reduce((sum, item) => {
         const unitPrice = calculateCompositeUnitPrice(item);
         const basePrice = (item.quantity || 0) * unitPrice;
@@ -94,29 +108,18 @@ export function QuoteItems() {
       .toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const handleAddNewItem = async () => {
-    const newId = generateUniqueId();
-    const newItem: QuoteItem = {
-      quote_id: quoteId,
-      id: newId,
-      itemNumber: "",
-      description: "",
-      uom: "",
-      quantity: 0,
-      unitPrice: 0,
-      discount: 0,
-      discountType: "dollar",
-      notes: "",
-      associatedItems: [],
-      is_tax_percentage: false,
-      tax: 0,
-    };
-
-    const response = await createQuoteItem(newItem);
-    if (response.success) {
-      setQuoteItems((prevItems) => [...prevItems, { ...response.item, created: false }]);
-      setSelectingItemId(response.item.id);
+  const ensureTrailingEmptyRow = (items: QuoteItem[]) => {
+    if (items.some(isPlaceholderRow)) {
+      return items;
     }
+
+    return [...items, createEmptyQuoteRow(quoteId)];
+  };
+
+  const handleAddNewItem = async () => {
+    const newItem = createEmptyQuoteRow(quoteId);
+    setQuoteItems((prevItems) => [...prevItems, newItem]);
+    setSelectingItemId(String(newItem.id));
   };
 
   const handleItemUpdate = async (
@@ -135,10 +138,16 @@ export function QuoteItems() {
       return item;
     });
 
-    setQuoteItems(updatedItems);
+    const normalizedItems = ensureTrailingEmptyRow(updatedItems);
+    setQuoteItems(normalizedItems);
 
     const parsedId = Number(updatedItem?.id);
-    if (updatedItem && !isNaN(parsedId) && isFinite(parsedId)) {
+    if (
+      updatedItem &&
+      !isPlaceholderRow(updatedItem) &&
+      !isNaN(parsedId) &&
+      isFinite(parsedId)
+    ) {
       await updateQuoteItem(updatedItem);
     }
 
@@ -151,13 +160,17 @@ export function QuoteItems() {
     const parsedId = Number(itemId);
 
     if (isNaN(parsedId)) {
-      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+      setQuoteItems((prevItems) =>
+        ensureTrailingEmptyRow(prevItems.filter((item) => String(item.id) !== itemId))
+      );
       return;
     }
 
     const response = await deleteQuoteItem(itemId);
     if (response.success) {
-      setQuoteItems((prevItems) => prevItems.filter((item) => item.id !== itemId));
+      setQuoteItems((prevItems) =>
+        ensureTrailingEmptyRow(prevItems.filter((item) => String(item.id) !== itemId))
+      );
     }
   };
 
@@ -334,7 +347,7 @@ export function QuoteItems() {
         </Button>
 
         <div className="text-right text-sm">
-          <div>Total Items: {quoteItems.length}</div>
+          <div>Total Items: {quoteItems.filter((item) => !isPlaceholderRow(item)).length}</div>
           <div className="font-medium">Total Value: ${totalValueCalculation()}</div>
         </div>
       </div>

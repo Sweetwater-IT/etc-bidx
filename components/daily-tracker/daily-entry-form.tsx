@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
+import { DateField } from "@/components/DateField"
 import { Check, ChevronLeft, ChevronRight } from "lucide-react"
 import type React from "react"
 import { useState, useEffect } from "react"
@@ -513,19 +514,16 @@ export function DailyEntryForm({ onSubmit, onCancel }: DailyEntryFormProps) {
         <Label htmlFor="date" className="text-sm font-medium text-muted-foreground">
           DATE
         </Label>
-        <div className="flex gap-3 items-end">
-          <Input 
-            id="date" 
-            type="date" 
-            value={date} 
-            onChange={(e) => {
-              // e.target.value is already in YYYY-MM-DD local timezone format
-              const selectedDate = e.target.value
+        <div className="flex max-w-xs gap-3 items-end">
+          <DateField
+            id="date"
+            value={date}
+            onChange={(selectedDate) => {
               console.log("[v0] Date selected from picker:", selectedDate)
               setDate(selectedDate)
             }}
-            required 
-            className="max-w-xs focus:ring-blue-200 focus:border-blue-600" 
+            className="focus:ring-blue-200 focus:border-blue-600"
+            placeholder="Select report date"
           />
         </div>
       </div>

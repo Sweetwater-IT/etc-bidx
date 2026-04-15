@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ import {
 import { Customer } from "@/types/Customer"
 import { cn } from "@/lib/utils"
 import { CustomerModal } from "@/components/CustomerModal"
+import { restorePointerEvents } from "@/lib/pointer-events-fix"
 
 interface CustomerSelectorProps {
   customers: Customer[]
@@ -59,6 +60,11 @@ export function CustomerSelector({
 }: CustomerSelectorProps) {
   const [open, setOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const interactionRef = useRef({
+    wheel: false,
+    scroll: false,
+    touch: false,
+  })
 
   const filteredCustomers = useMemo(
     () => [...customers].sort((a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name)),
@@ -67,7 +73,15 @@ export function CustomerSelector({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+          interactionRef.current = { wheel: false, scroll: false, touch: false }
+          restorePointerEvents()
+        }}
+        modal={false}
+      >
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -83,18 +97,42 @@ export function CustomerSelector({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent
+          align="start"
+          className="z-[70] w-[var(--radix-popover-trigger-width)] p-0"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            restorePointerEvents()
+          }}
+        >
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandList>
+            <CommandList
+              className="max-h-[240px] overflow-y-auto overflow-x-hidden overscroll-contain"
+              onWheelCapture={(event) => {
+                event.stopPropagation()
+                restorePointerEvents()
+                interactionRef.current.wheel = true
+              }}
+              onScrollCapture={(event) => {
+                event.stopPropagation()
+                interactionRef.current.scroll = true
+              }}
+              onTouchMoveCapture={(event) => {
+                event.stopPropagation()
+                restorePointerEvents()
+                interactionRef.current.touch = true
+              }}
+            >
               <CommandEmpty>{emptyMessage}</CommandEmpty>
-              <CommandGroup className="max-h-[240px] overflow-y-auto">
+              <CommandGroup>
                 {onCustomerCreated && (
                   <CommandItem
                     value="__add_new_customer__"
                     className="font-medium text-primary"
                     onSelect={() => {
                       setOpen(false)
+                      restorePointerEvents()
                       setCreateOpen(true)
                     }}
                   >
@@ -110,6 +148,7 @@ export function CustomerSelector({
                     onSelect={async () => {
                       await onSelectCustomer(customer)
                       setOpen(false)
+                      restorePointerEvents()
                     }}
                   >
                     <Check

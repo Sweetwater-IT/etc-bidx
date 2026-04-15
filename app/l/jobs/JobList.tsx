@@ -44,6 +44,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { format } from "date-fns";
+import { PagePrimaryHeader } from "@/components/page-primary-header";
 
 type SortField =
   | "etcJobNumber"
@@ -427,28 +428,21 @@ const JobList = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
-      <header className="shrink-0 border-b bg-card">
-        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded bg-primary">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Job List</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {signedJobs.length} signed job{signedJobs.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
+      <PagePrimaryHeader
+        icon={<FileText className="h-5 w-5" />}
+        title="Job List"
+        subtitle={`${signedJobs.length} signed job${signedJobs.length !== 1 ? "s" : ""}`}
+        actions={
           <Button
-            className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            size="sm"
+            className="h-9 gap-2 bg-[#16335A] font-semibold text-white shadow-sm hover:bg-[#122947]"
             onClick={handleExportJobList}
           >
             <ExternalLink className="h-4 w-4" />
             Export Job List
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="@container/main flex flex-1 min-h-0 flex-col overflow-auto">
         <div className="max-w-[1600px] mx-auto w-full px-6 py-6">

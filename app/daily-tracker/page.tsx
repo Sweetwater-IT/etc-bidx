@@ -22,6 +22,7 @@ import { useProductivityData } from "@/hooks/daily-tracker/use-productivity-data
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SiteHeader } from "@/components/site-header"
+import { PagePrimaryHeader } from "@/components/page-primary-header"
 import { ChevronDown, Plus, Upload, MoreHorizontal, FileText } from "lucide-react"
 import type { ProductivityEntry } from "@/types/daily-tracker/productivity"
 
@@ -211,31 +212,21 @@ export default function DailyTrackerDashboard() {
       <SidebarInset className="h-full min-h-0 overflow-hidden">
         <SiteHeader showTitleBlock={false} />
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
-          <header className="shrink-0 border-b bg-card">
-            <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-6">
-              <div className="flex items-center gap-2.5">
-                <div className="rounded bg-primary p-1.5">
-                  <FileText className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">
-                    Daily Tracker
-                  </h1>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {data.length} entr{data.length === 1 ? "y" : "ies"} recorded
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => router.push("/daily-tracker/daily-entry")} className="gap-2">
+          <PagePrimaryHeader
+            icon={<FileText className="h-5 w-5" />}
+            title="Daily Tracker"
+            subtitle={`${data.length} entr${data.length === 1 ? "y" : "ies"} recorded`}
+            actions={
+              <>
+                <Button size="sm" className="h-9 gap-2 font-semibold shadow-sm" onClick={() => router.push("/daily-tracker/daily-entry")}>
                   <Plus className="h-4 w-4" />
                   New
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" size="sm" className="h-9 gap-2 font-semibold shadow-sm">
                       Import
-                      <ChevronDown className="ml-2 h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -249,9 +240,9 @@ export default function DailyTrackerDashboard() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-            </div>
-          </header>
+              </>
+            }
+          />
 
           <div className="@container/main flex flex-1 min-h-0 flex-col overflow-auto">
             <div className="mx-auto w-full max-w-[1600px] px-6 py-6">

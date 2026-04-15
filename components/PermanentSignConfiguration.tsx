@@ -11,6 +11,7 @@ import SignPickerModal, { SignPickerModalResult } from "@/components/sign-picker
 import { PrimarySign } from "@/types/MPTEquipment";
 import { createClient } from '@supabase/supabase-js';
 import { QuantityInput } from "@/components/ui/quantity-input";
+import { useSignEditorSession } from "@/hooks/use-sign-editor-session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,8 +102,9 @@ export const PermanentSignConfiguration = ({
   const [loading, setLoading] = useState(true);
 
   // SignPickerModal state
-  const [localSign, setLocalSign] = useState<PrimarySign | undefined>();
-  const [signPickerOpen, setSignPickerOpen] = useState(false);
+  const signEditor = useSignEditorSession<PrimarySign>();
+  const localSign = signEditor.draft;
+  const signPickerOpen = signEditor.open;
   const [showApplyMaterialDialog, setShowApplyMaterialDialog] = useState(false);
 
   // Search state
@@ -176,15 +178,11 @@ export const PermanentSignConfiguration = ({
 
     onSignRowsChange(itemNumber, updatedRows);
 
-    setLocalSign(undefined);
-    setSignPickerOpen(false);
+    signEditor.close();
   };
 
   const handleSignPickerOpenChange = (open: boolean) => {
-    setSignPickerOpen(open);
-    if (!open) {
-      setLocalSign(undefined);
-    }
+    signEditor.handleOpenChange(open);
   };
 
   if (loading) {
@@ -453,8 +451,7 @@ const PermanentSignTable = ({
                             substrate: 'Aluminum',
                           };
                           (primarySign as any).itemNumber = item.item_number;
-                          setLocalSign(primarySign);
-                          setSignPickerOpen(true);
+                          signEditor.startEdit(primarySign);
                         }}
                         disabled={disabled}
                       >
