@@ -87,6 +87,21 @@ interface SignItem {
   dimensions?: string // Computed field for display
 }
 
+interface RawSignData {
+  id?: string
+  designation?: string
+  description?: string
+  width?: number | string
+  height?: number | string
+  quantity?: number | string
+  sheeting?: string
+  structure?: string
+  displayStructure?: string
+  bLights?: number | string
+  covers?: number | string
+  primarySignId?: string
+}
+
 // Helper function to determine branch based on ID (temporary solution)
 const determineBranch = (id: number): string => {
   if (id < 100) return 'Hatfield'
@@ -299,7 +314,7 @@ export default function SignOrderViewContent() {
         // Process signs data from the JSONB field
         if (data.data.signs) {
           try {
-            const signsData = data.data.signs
+            const signsData: Record<string, RawSignData> = data.data.signs
 
             // Convert the signs data to the format expected by EstimateContext
             const signsArray = Array.isArray(signsData)
@@ -358,20 +373,20 @@ export default function SignOrderViewContent() {
             }
 
             const signItemsArray: SignItem[] = Object.entries(signsData).map(
-              ([id, signData]: [string, any], index) => {
-                const primarySign = signData.primarySignId
+              ([, signData], index) => {
+                const primarySign: RawSignData | undefined = signData.primarySignId
                   ? Object.values(signsData).find(
-                      (candidate: any) => candidate?.id === signData.primarySignId
+                      (candidate) => candidate.id === signData.primarySignId
                     )
-                  : null
+                  : undefined
 
                 return {
                   id: index + 1,
                   designation: signData.designation || 'N/A',
                   description: signData.description || 'N/A',
-                  width: signData.width || 0,
-                  height: signData.height || 0,
-                  quantity: signData.quantity || 1,
+                  width: Number(signData.width) || 0,
+                  height: Number(signData.height) || 0,
+                  quantity: Number(signData.quantity) || 1,
                   sheeting: signData.sheeting || 'N/A',
                   structure:
                     signData.displayStructure ||
@@ -382,7 +397,7 @@ export default function SignOrderViewContent() {
                   bLights: Number(signData.bLights) || 0,
                   covers: Number(signData.covers) || 0,
                   primarySignId: signData.primarySignId,
-                  dimensions: `${signData.width || 0}" x ${signData.height || 0
+                  dimensions: `${Number(signData.width) || 0}" x ${Number(signData.height) || 0
                     }"`
                 }
               }
