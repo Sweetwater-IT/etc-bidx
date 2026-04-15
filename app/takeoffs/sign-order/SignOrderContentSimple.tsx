@@ -45,7 +45,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { FileDown } from 'lucide-react';
 
 // Dynamic PDFViewer to avoid SSR issues
 const PDFViewer = dynamic(
@@ -741,54 +740,6 @@ export default function SignOrderContentSimple({
     }
   }
 
-  const handleDownloadPdf = async () => {
-    console.log('[SignOrderContentSimple] handleDownloadPdf called', {
-      signOrderId,
-      signCount: signList.length,
-      adminInfo: {
-        contractNumber: adminInfo?.contractNumber,
-        customer: adminInfo?.customer?.name,
-        requestor: adminInfo?.requestor?.name
-      },
-      mptRental: mptRental?.phases?.length
-    });
-    
-    try {
-      console.log('[SignOrderContentSimple] Preparing PDF element');
-      const pdfElement = (
-        <SignOrderWorksheetPDF
-          adminInfo={adminInfo || {
-            ...defaultAdminInfo,
-            startDate: undefined,
-            endDate: undefined
-          }}
-          signList={signList || []}
-          mptRental={mptRental}
-          notes={draft.notes || []}
-        />
-      );
-
-      console.log('[SignOrderContentSimple] Generating PDF blob');
-      const blob = await pdf(pdfElement).toBlob();
-      console.log('[SignOrderContentSimple] PDF blob generated', { size: blob.size, type: blob.type });
-
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'sign-order.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-      console.log('[SignOrderContentSimple] PDF download triggered successfully');
-    } catch (error) {
-      console.error('[SignOrderContentSimple] Error generating PDF:', error);
-      toast.error('Error generating PDF');
-    }
-  };
-
   useEffect(() => {
     const handleWindowError = (event: ErrorEvent) => {
       logSignOrderDebug('sign_order_window_error', {
@@ -973,14 +924,6 @@ export default function SignOrderContentSimple({
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
           />
-          {/* Sign Order PDF Preview - Full Width Below */}
-          <div className="bg-gray-100 p-6 rounded-lg">
-            <div className="flex justify-end mb-4">
-              <Button onClick={handleDownloadPdf}>
-                Download PDF
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
       {/* PDF Preview Accordion */}
@@ -1000,13 +943,9 @@ export default function SignOrderContentSimple({
                   <p className="text-sm text-red-600 mb-4">
                     Unable to load the PDF preview right now.
                   </p>
-                  <p className="text-xs text-muted-foreground mb-4">
+                  <p className="text-xs text-muted-foreground">
                     {previewError}
                   </p>
-                  <Button onClick={handleDownloadPdf} className="flex items-center gap-2">
-                    <FileDown className="h-4 w-4" />
-                    Download PDF Instead
-                  </Button>
                 </div>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
@@ -1024,12 +963,6 @@ export default function SignOrderContentSimple({
                   </PDFViewer>
                 </div>
               )}
-              <div className="flex justify-end mt-4">
-                <Button onClick={handleDownloadPdf} className="flex items-center gap-2">
-                  <FileDown className="h-4 w-4" />
-                  Download PDF
-                </Button>
-              </div>
             </div>
           </AccordionContent>
         </AccordionItem>
