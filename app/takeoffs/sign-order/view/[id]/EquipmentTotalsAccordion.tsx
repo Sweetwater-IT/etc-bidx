@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, MoreVertical, Pencil } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { EquipmentType, labelMapping, lightAndDrumList, standardEquipmentList } from "@/types/MPTEquipment";
 import { useSignRuntime } from "@/hooks/use-sign-runtime";
 import { getAssociatedSignEquipment } from "@/lib/mptRentalHelperFunctions";
@@ -28,29 +28,38 @@ interface AssociatedSignTotals {
   ACLights: number;
 }
 
-const EquipmentTotalsAccordion = () => {
+interface EquipmentTotalsAccordionProps {
+  initialTotals?: AssociatedSignTotals;
+}
+
+const defaultTotals: AssociatedSignTotals = {
+  fourFootTypeIII: 0,
+  hStand: 0,
+  post: 0,
+  covers: 0,
+  BLights: 0,
+  ACLights: 0
+};
+
+const EquipmentTotalsAccordion = ({ initialTotals }: EquipmentTotalsAccordionProps) => {
 
   const { mptRental, dispatch } = useSignRuntime();
 
   const [editingMode, setEditingMode] = useState<boolean>(false);
-  const [equipmentTotals, setEquipmentTotals] = useState<AssociatedSignTotals>({
-    fourFootTypeIII: 0,
-    hStand: 0,
-    post: 0,
-    covers: 0,
-    BLights: 0,
-    ACLights: 0
-  });
+  const [equipmentTotals, setEquipmentTotals] = useState<AssociatedSignTotals>(initialTotals || defaultTotals);
   
-  // Calculate equipment totals whenever mptRental changes
+  // Initialize or update equipment totals when signs change or initialTotals are provided
   useEffect(() => {
-
-    if (mptRental?.phases?.[0]) {
+    // If we have initialTotals from sign list, use those (they are computed from the DB sign list)
+    if (initialTotals) {
+      setEquipmentTotals(initialTotals);
+    } else if (mptRental?.phases?.[0]) {
+      // Otherwise, calculate from mptRental (for editing pages that use the context directly)
       const equipTotals = getAssociatedSignEquipment(mptRental.phases[0]);
       console.log('EquipmentTotalsAccordion useEffect - calculated equipment totals:', equipTotals);
       setEquipmentTotals(equipTotals);
     }
-  }, [mptRental?.phases?.[0]?.signs]); 
+  }, [mptRental?.phases?.[0]?.signs, initialTotals]); 
 
   const handleEditClick = () => {
     setEditingMode(!editingMode)

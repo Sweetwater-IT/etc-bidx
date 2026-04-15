@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -186,6 +186,39 @@ export default function SignOrderViewContent() {
       sortable: false
     }
   ]
+
+  // Compute equipment totals from signItems (which has structure resolved from primary signs)
+  const signEquipmentTotals = useMemo(() => {
+    const totals = {
+      fourFootTypeIII: 0,
+      hStand: 0,
+      post: 0,
+      covers: 0,
+      BLights: 0,
+      ACLights: 0
+    }
+
+    signItems.forEach(item => {
+      // Add bLights (barricade lights)
+      totals.BLights += item.bLights
+
+      // Add covers
+      totals.covers += item.covers
+
+      // Map structure to equipment type
+      const structure = item.structure?.toLowerCase() || ''
+      if (structure.includes('fourfoot') || structure.includes('typeiii') || structure.includes('type iii')) {
+        totals.fourFootTypeIII += item.quantity
+      } else if (structure.includes('hstand') || structure.includes('h-stand') || structure.includes('h stand')) {
+        totals.hStand += item.quantity
+      } else if (structure.includes('post')) {
+        totals.post += item.quantity
+      }
+    })
+
+    console.log('Computed sign equipment totals:', totals)
+    return totals
+  }, [signItems])
 
   // Validation function (same as SignOrderContentSimple)
   const isOrderInvalid = (): boolean => {
@@ -739,7 +772,7 @@ export default function SignOrderViewContent() {
 
               {/* Equipment Totals - Takes 1/3 of the row */}
               <div className='min-w-0 flex flex-col gap-y-2'>
-                <EquipmentTotalsAccordion key={signItems.length} />
+                <EquipmentTotalsAccordion key={signItems.length} initialTotals={signEquipmentTotals} />
                 <FileViewingContainer files={files} onFilesChange={setFiles} />
               </div>
             </div>
