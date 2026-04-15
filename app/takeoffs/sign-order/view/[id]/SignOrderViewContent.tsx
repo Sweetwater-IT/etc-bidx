@@ -624,7 +624,7 @@ export default function SignOrderViewContent() {
               Edit
             </Button>
             <Button variant='outline' onClick={handleExport}>
-              Export
+              Export PDF
             </Button>
             <Button variant='outline' onClick={() => setOpenEmailDialog(true)}>
               Send Email
