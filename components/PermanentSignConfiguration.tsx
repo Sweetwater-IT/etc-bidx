@@ -277,7 +277,7 @@ export const PermanentSignConfiguration = ({
                       onRowsChange={(rows) => onSignRowsChange(itemNumber, rows)}
                       disabled={disabled}
                       defaultMaterial={defaultSignMaterial}
-                      setLocalSign={setLocalSign}
+                      setLocalSign={signEditor.setDraft}
                       setSignPickerOpen={handleSignPickerOpenChange}
                     />
                   ) : (
@@ -451,7 +451,8 @@ const PermanentSignTable = ({
                             substrate: 'Aluminum',
                           };
                           (primarySign as any).itemNumber = item.item_number;
-                          signEditor.startEdit(primarySign);
+                          setLocalSign(primarySign);
+                          setSignPickerOpen(true);
                         }}
                         disabled={disabled}
                       >

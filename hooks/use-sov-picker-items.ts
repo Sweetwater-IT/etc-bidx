@@ -7,6 +7,7 @@ export type SovPickerItem = {
   display_item_number?: string | null
   description: string
   display_name?: string | null
+  notes?: string | null
   work_type?: string | null
   uom: string
   uom_1?: string | null

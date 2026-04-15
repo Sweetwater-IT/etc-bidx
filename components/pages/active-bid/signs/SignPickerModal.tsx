@@ -4,6 +4,7 @@ import SharedSignPickerModal, {
   SharedSignPickerModalProps,
 } from '@/app/takeoffs/new/SignPickerModal';
 import {
+  DisplayStructures,
   PrimarySign,
   SecondarySign,
   structureMap,
@@ -68,6 +69,9 @@ const formatBLights = (sign: PrimarySign | SecondarySign): string => {
   return `${sign.bLights}${colorKey}`;
 };
 
+const isDisplayStructure = (value?: string): value is DisplayStructures =>
+  typeof value === 'string' && value in structureMap;
+
 const adaptInitialSign = ({
   initialSign,
   initialStructureType,
@@ -82,7 +86,10 @@ const adaptInitialSign = ({
   }
 
   const { bLights, bLightsColor } = parseBLights(initialBLights);
-  const displayStructure = initialStructureType || initialSign.displayStructure || 'LOOSE';
+  const displayStructure =
+    (isDisplayStructure(initialStructureType) && initialStructureType) ||
+    initialSign.displayStructure ||
+    'LOOSE';
 
   return {
     ...initialSign,
