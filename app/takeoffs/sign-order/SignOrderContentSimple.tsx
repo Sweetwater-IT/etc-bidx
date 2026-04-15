@@ -38,6 +38,27 @@ import { useMemo } from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
+import dynamic from 'next/dynamic';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { FileDown } from 'lucide-react';
+
+// Dynamic PDFViewer to avoid SSR issues
+const PDFViewer = dynamic(
+  () => import('@react-pdf/renderer').then(mod => ({ default: mod.PDFViewer })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[600px] bg-gray-100 animate-pulse flex items-center justify-center rounded-lg">
+        Loading PDF preview...
+      </div>
+    )
+  }
+);
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
@@ -962,32 +983,57 @@ export default function SignOrderContentSimple({
           </div>
         </div>
       </div>
-      {/* Full Screen PDF Viewer Section */}
-      <div className="border-t-4 border-gray-300 mt-6">
-        <h2 className="text-xl font-bold px-6 py-4 bg-gray-50">Sign Order PDF</h2>
-        <div className="w-full">
-          {isPreviewLoading && !previewUrl ? (
-            <div className="h-[700px] bg-gray-100 animate-pulse flex items-center justify-center">
-              Loading PDF preview...
+      {/* PDF Preview Accordion */}
+      <Accordion type="single" collapsible className="w-full border-t-4 border-gray-300 mt-6">
+        <AccordionItem value="pdf-preview">
+          <AccordionTrigger className="px-6 py-4 bg-gray-50 hover:no-underline">
+            <h2 className="text-xl font-bold text-left">Sign Order PDF Preview</h2>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="w-full p-4">
+              {isPreviewLoading ? (
+                <div className="h-[600px] bg-gray-100 animate-pulse flex items-center justify-center rounded-lg">
+                  Loading PDF preview...
+                </div>
+              ) : previewError ? (
+                <div className="flex flex-col items-center justify-center h-[600px] bg-gray-100 px-6 text-center rounded-lg">
+                  <p className="text-sm text-red-600 mb-4">
+                    Unable to load the PDF preview right now.
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {previewError}
+                  </p>
+                  <Button onClick={handleDownloadPdf} className="flex items-center gap-2">
+                    <FileDown className="h-4 w-4" />
+                    Download PDF Instead
+                  </Button>
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <PDFViewer
+                    height={600}
+                    width="100%"
+                    className="rounded-lg"
+                  >
+                    <SignOrderWorksheetPDF
+                      adminInfo={adminInfo}
+                      signList={signList}
+                      mptRental={mptRental}
+                      notes={draft.notes}
+                    />
+                  </PDFViewer>
+                </div>
+              )}
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleDownloadPdf} className="flex items-center gap-2">
+                  <FileDown className="h-4 w-4" />
+                  Download PDF
+                </Button>
+              </div>
             </div>
-          ) : previewError ? (
-            <div className="flex h-[700px] items-center justify-center bg-gray-100 px-6 text-center text-sm text-red-600">
-              Unable to load the PDF preview right now. You can still use Download PDF, and this error was logged for review.
-            </div>
-          ) : previewUrl ? (
-            <iframe
-              key={previewUrl}
-              src={previewUrl}
-              title="Sign Order PDF Preview"
-              className="h-[700px] w-full bg-white"
-            />
-          ) : (
-            <div className="flex h-[700px] items-center justify-center bg-gray-100 text-sm text-muted-foreground">
-              No PDF preview available yet.
-            </div>
-          )}
-        </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   ) : (
     <></>
