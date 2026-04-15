@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, LayoutGrid, List, ArrowUpDown, MoreHorizontal, FileText, Clock,
-  RotateCcw, CheckCircle2, ChevronRight, ChevronLeft, ArrowLeft,
+  RotateCcw, CheckCircle2, ChevronRight, ChevronLeft,
   Upload, File, X, AlertTriangle, Trash2, Lock, Eye, ExternalLink, Loader2, Check, ChevronsUpDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +43,7 @@ import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 import { cn } from "@/lib/utils";
 import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
 import { useTableSearchState } from "@/hooks/use-table-search-state";
+import { PagePrimaryHeader } from "@/components/page-primary-header";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -653,27 +654,31 @@ const ContractManager = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
-      {/* Header */}
-      <header className="shrink-0 border-b bg-card">
-        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/l/jobs")} className="h-8 w-8">
-              <ArrowLeft className="h-4 w-4" />
+      <PagePrimaryHeader
+        sticky
+        icon={<FileText className="h-5 w-5" />}
+        title="Contract Manager"
+        subtitle={`${pipelineJobs.length} active contract${pipelineJobs.length !== 1 ? "s" : ""}`}
+        actions={
+          <>
+            <Button variant="outline" className="gap-2" onClick={() => void handleExportContracts()}>
+              <ExternalLink className="h-4 w-4" />
+              Export Contracts
             </Button>
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 rounded bg-primary">
-                <FileText className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-foreground leading-none">Contract Manager</h1>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {pipelineJobs.length} active contract{pipelineJobs.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden lg:flex items-center gap-2">
+            <Button
+              onClick={() => router.push("/l/contracts/new")}
+              className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
+            >
+              <Plus className="h-4 w-4" />
+              New Contract
+            </Button>
+          </>
+        }
+      />
+
+      <div className="shrink-0 border-y bg-card/60">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-6 py-3">
+          <div className="hidden lg:flex items-center gap-2">
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={customerOpen} className="h-9 w-[220px] justify-between text-xs font-normal">
@@ -883,32 +888,15 @@ const ContractManager = () => {
                   Clear all
                 </Button>
               )}
-            </div>
-            <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
-              <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button onClick={() => setViewMode("list")} className={`p-1.5 rounded transition-colors ${viewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-            <Button
-              onClick={() => router.push("/l/contracts/new")}
-              className="gap-2 bg-[#16335A] text-white shadow-sm hover:bg-[#122947]"
-            >
-              <Plus className="h-4 w-4" />
-              New Contract
-            </Button>
           </div>
-        </div>
-      </header>
-
-      <div className="shrink-0 border-y bg-card/60">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-end px-6 py-3">
-          <Button variant="outline" className="gap-2" onClick={() => void handleExportContracts()}>
-                <ExternalLink className="h-4 w-4" />
-                Export Contracts
-              </Button>
+          <div className="flex items-center border rounded-md bg-muted/30 p-0.5">
+            <button onClick={() => setViewMode("kanban")} className={`p-1.5 rounded transition-colors ${viewMode === "kanban" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button onClick={() => setViewMode("list")} className={`p-1.5 rounded transition-colors ${viewMode === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 

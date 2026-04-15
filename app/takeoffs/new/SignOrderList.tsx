@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy, Repeat } from 'lucide-react';
+import { ChevronRight, MoreVertical, Pencil, Plus, Trash2, Copy } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { useSignRuntime } from '@/hooks/use-sign-runtime';
 import { toast } from 'sonner';
@@ -222,6 +222,49 @@ export function SignOrderList({
       (s): s is SecondarySign => 'primarySignId' in s && s.primarySignId === primarySignId
     );
   }, [mptRental.phases, currentPhase]);
+
+  const duplicateSign = useCallback((sign: PrimarySign | SecondarySign) => {
+    if ('primarySignId' in sign) {
+      const parentSign = mptRental.phases[currentPhase].signs.find(
+        candidate => candidate.id === sign.primarySignId
+      ) as PrimarySign | undefined;
+
+      const duplicatedSecondary: SecondarySign = {
+        ...sign,
+        id: generateUniqueId(),
+        primarySignId: sign.primarySignId,
+        quantity: parentSign?.quantity ?? sign.quantity,
+      };
+
+      signEditor.startCreate(duplicatedSecondary);
+      return;
+    }
+
+    const duplicatedPrimary: PrimarySign = {
+      ...sign,
+      id: generateUniqueId(),
+    };
+
+    signEditor.startCreate(duplicatedPrimary);
+  }, [currentPhase, mptRental.phases, signEditor]);
+
+  const createCustomSecondarySign = useCallback((primarySign: PrimarySign) => {
+    const customSecondary: SecondarySign = {
+      id: generateUniqueId(),
+      primarySignId: primarySign.id,
+      designation: '',
+      width: 0,
+      height: 0,
+      quantity: primarySign.quantity,
+      sheeting: primarySign.sheeting,
+      isCustom: true,
+      description: '',
+      substrate: primarySign.substrate || 'Plastic',
+      stiffener: primarySign.stiffener,
+    };
+
+    signEditor.startCreate(customSecondary);
+  }, [signEditor]);
 
   const updateSecondarySignQuantities = useCallback((primarySignId: string, newQuantity: number) => {
     const secondarySigns = getSecondarySignsForPrimary(primarySignId);
@@ -546,6 +589,14 @@ export function SignOrderList({
                                     <Pencil className="h-4 w-4 mr-2" />
                                     Edit
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      duplicateSign(sign as PrimarySign | SecondarySign);
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    Duplicate Sign
+                                  </DropdownMenuItem>
                                   {Object.hasOwn(sign, 'associatedStructure') && (
                                     <>
                                       <DropdownMenuSub>
@@ -565,10 +616,11 @@ export function SignOrderList({
                                                 width: 0,
                                                 height: 0,
                                                 quantity: sign.quantity,
-                                                sheeting: 'HI',
+                                                sheeting: sign.sheeting,
                                                 isCustom: false,
                                                 description: '',
-                                                substrate: 'Plastic',
+                                                substrate: sign.substrate || 'Plastic',
+                                                stiffener: sign.stiffener,
                                               };
                                               signEditor.startCreate({ ...defaultSecondary });
                                             }}
@@ -576,44 +628,14 @@ export function SignOrderList({
                                             <Plus className="h-4 w-4 mr-2" />
                                             New Secondary Sign
                                           </DropdownMenuItem>
-
-                                          <DropdownMenuSub>
-                                            <DropdownMenuSubTrigger>
-                                              <Repeat className="h-4 w-4 mr-4" />
-                                              Duplicate Existing Sign
-                                            </DropdownMenuSubTrigger>
-
-                                            <DropdownMenuSubContent>
-                                              {(shopMode && shopSigns ? shopSigns : mptRental.phases[currentPhase].signs)
-                                                .filter(s => 'primarySignId' in s)
-                                                .filter((secondary, index, self) =>
-                                                  index === self.findIndex(s => s.designation === secondary.designation)
-                                                )
-                                                .map((secondary, i, arr) => (
-                                                  <DropdownMenuItem
-                                                    key={secondary.id}
-                                                    onClick={() => {
-                                                      const duplicated = {
-                                                        ...secondary,
-                                                        id: generateUniqueId(),
-                                                        primarySignId: sign.id,
-                                                        quantity: sign.quantity,
-                                                      };
-                                                      signEditor.startCreate(duplicated);
-                                                    }}
-                                                  >
-                                                    <div
-                                                      className={`flex w-full flex-col pb-4 ${i !== arr.length - 1 ? 'border-b border-gray-300' : ''}`}
-                                                    >
-                                                      <p>
-                                                        {(secondary.designation + ` (${secondary.width}x${secondary.height})`) || `Secondary #${secondary.id}`}
-                                                      </p>
-                                                      <p>{secondary.description}</p>
-                                                    </div>
-                                                  </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuSubContent>
-                                          </DropdownMenuSub>
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              createCustomSecondarySign(sign as PrimarySign);
+                                            }}
+                                          >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Custom Secondary Sign
+                                          </DropdownMenuItem>
                                         </DropdownMenuSubContent>
                                       </DropdownMenuSub>
                                     </>

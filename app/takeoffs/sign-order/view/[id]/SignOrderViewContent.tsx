@@ -83,6 +83,7 @@ interface SignItem {
   structure: string
   bLights: number
   covers: number
+  primarySignId?: string
   dimensions?: string // Computed field for display
 }
 
@@ -358,6 +359,12 @@ export default function SignOrderViewContent() {
 
             const signItemsArray: SignItem[] = Object.entries(signsData).map(
               ([id, signData]: [string, any], index) => {
+                const primarySign = signData.primarySignId
+                  ? Object.values(signsData).find(
+                      (candidate: any) => candidate?.id === signData.primarySignId
+                    )
+                  : null
+
                 return {
                   id: index + 1,
                   designation: signData.designation || 'N/A',
@@ -366,9 +373,15 @@ export default function SignOrderViewContent() {
                   height: signData.height || 0,
                   quantity: signData.quantity || 1,
                   sheeting: signData.sheeting || 'N/A',
-                  structure: signData.structure || 'N/A',
+                  structure:
+                    signData.displayStructure ||
+                    signData.structure ||
+                    primarySign?.displayStructure ||
+                    primarySign?.structure ||
+                    'N/A',
                   bLights: Number(signData.bLights) || 0,
                   covers: Number(signData.covers) || 0,
+                  primarySignId: signData.primarySignId,
                   dimensions: `${signData.width || 0}" x ${signData.height || 0
                     }"`
                 }

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Check, ChevronsUpDown, Search, Plus, Package } from "lucide-react";
+import { AlertCircle, Check, ChevronsUpDown, Search, Plus, Package, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     Popover,
@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 import { restorePointerEvents } from '@/lib/pointer-events-fix';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export interface SharedSignPickerModalProps {
     open: boolean;
@@ -103,6 +104,52 @@ function PickerEmptyState({
     );
 }
 
+function PickerLoadingState({
+    title,
+    description,
+    showKitPreview = false,
+}: {
+    title: string;
+    description: string;
+    showKitPreview?: boolean;
+}) {
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border bg-muted/20 px-5 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-sm font-semibold text-foreground">{title}</div>
+                        <p className="text-sm text-muted-foreground">{description}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="rounded-lg border bg-card p-4">
+                        <div className="flex items-start gap-3">
+                            <Skeleton className="h-14 w-14 rounded-md" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-28 rounded-md" />
+                                <Skeleton className="h-3 w-3/4 rounded-md" />
+                                {showKitPreview ? (
+                                    <Skeleton className="h-3 w-20 rounded-md" />
+                                ) : (
+                                    <Skeleton className="h-3 w-16 rounded-md" />
+                                )}
+                            </div>
+                            <Skeleton className="h-3 w-12 rounded-md" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 const SignPickerModal = ({
     open,
     onOpenChange,
@@ -138,10 +185,10 @@ const SignPickerModal = ({
     const { catalog: apiData, isLoading, error: signCatalogError } = useSignCatalog();
 
     const isSecondary = isSecondarySign(sign);
-    const isSegmentedPickerFlow = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary);
-    const isSegmentedPickerConfigOnly = Boolean((isSignOrder || useSegmentedPicker) && !isSecondary && !isCustom);
+    const isSegmentedPickerFlow = Boolean(isSignOrder || useSegmentedPicker);
+    const isSegmentedPickerConfigOnly = Boolean((isSignOrder || useSegmentedPicker) && !isCustom);
     const showSubstrateField = Boolean(isTakeoff || isSignOrder);
-    const showKitTabsInPicker = isSegmentedPickerFlow && enableKitTabs;
+    const showKitTabsInPicker = isSegmentedPickerFlow && enableKitTabs && !isSecondary;
     const shouldSyncRuntime = !onSaveResult;
     const availableSheetingOptions = sheetingOptions?.length
         ? sheetingOptions
@@ -898,7 +945,7 @@ const SignPickerModal = ({
                                     </div>
                                 </button>
                                 {isLoading ? (
-                                    <PickerEmptyState
+                                    <PickerLoadingState
                                         title="Loading MUTCD signs"
                                         description="Fetching the current sign catalog."
                                     />
@@ -962,9 +1009,10 @@ const SignPickerModal = ({
                                     />
                                 </div>
                                 {isLoading ? (
-                                    <PickerEmptyState
+                                    <PickerLoadingState
                                         title="Loading PATA kits"
                                         description="Fetching available PATA kit configurations."
+                                        showKitPreview
                                     />
                                 ) : filteredPataKits.length === 0 ? (
                                     <PickerEmptyState
@@ -1021,9 +1069,10 @@ const SignPickerModal = ({
                                     />
                                 </div>
                                 {isLoading ? (
-                                    <PickerEmptyState
+                                    <PickerLoadingState
                                         title="Loading PTS kits"
                                         description="Fetching available PTS kit configurations."
+                                        showKitPreview
                                     />
                                 ) : filteredPtsKits.length === 0 ? (
                                     <PickerEmptyState
@@ -1409,6 +1458,16 @@ const SignPickerModal = ({
                             </div>
                             )}
                         </div>
+                        {isSecondary && primarySign && (
+                            <div className="rounded-lg border bg-blue-50/70 p-4 text-sm text-blue-900">
+                                <div className="font-medium">Inherited structure</div>
+                                <div className="mt-1 text-blue-800/80">
+                                    This secondary sign stays on the same structure as the primary sign:
+                                    {" "}
+                                    {primarySign.displayStructure || "LOOSE"}.
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <Label className="text-sm font-medium mb-2 block">Quantity</Label>
                             <QuantityInput
@@ -1769,64 +1828,64 @@ const SignPickerModal = ({
                         )}
                     </div>
 
+                    {showSubstrateField && (
+                        <div>
+                            <Label className="text-sm font-medium mb-2 block">
+                                Substrate
+                            </Label>
+                            {isSegmentedPickerFlow ? (
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                                    {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
+                                        if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
+                                            return null;
+                                        }
+                                        const selected = localSign.substrate === option;
+                                        return (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                onClick={() => handleSignUpdate("substrate", option)}
+                                                className={cn(
+                                                    "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                                                    selected
+                                                        ? SIGN_ORDER_SELECTED_CARD_CLASSES
+                                                        : SIGN_ORDER_UNSELECTED_CARD_CLASSES
+                                                )}
+                                            >
+                                                {option === "Aluminum-Composite" ? "Aluminum Composite" : option}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <Select
+                                    value={localSign.substrate}
+                                    onValueChange={(value) => handleSignUpdate("substrate", value)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select substrate" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Aluminum">Aluminum</SelectItem>
+                                        <SelectItem value="Aluminum-Composite">
+                                            Aluminum Composite
+                                        </SelectItem>
+                                        <SelectItem value="Plastic">Plastic</SelectItem>
+                                        {isSignOrder && (
+                                            <>
+                                                <SelectItem value="Roll Up">Roll Up</SelectItem>
+                                                <SelectItem value="Face">Face</SelectItem>
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
+                    )}
+
                     {/* Primary Sign Specific Fields */}
                     {!isSecondary && (
                         <>
-                            {showSubstrateField && (
-                                <div>
-                                    <Label className="text-sm font-medium mb-2 block">
-                                        Substrate
-                                    </Label>
-                                    {isSegmentedPickerFlow ? (
-                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                                            {SIGN_ORDER_SUBSTRATE_OPTIONS.map((option) => {
-                                                if (!isSignOrder && (option === "Roll Up" || option === "Face")) {
-                                                    return null;
-                                                }
-                                                const selected = localSign.substrate === option;
-                                                return (
-                                                    <button
-                                                        key={option}
-                                                        type="button"
-                                                        onClick={() => handleSignUpdate("substrate", option)}
-                                                        className={cn(
-                                                            "rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                                                            selected
-                                                                ? SIGN_ORDER_SELECTED_CARD_CLASSES
-                                                                : SIGN_ORDER_UNSELECTED_CARD_CLASSES
-                                                        )}
-                                                    >
-                                                        {option === "Aluminum-Composite" ? "Aluminum Composite" : option}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <Select
-                                            value={localSign.substrate}
-                                            onValueChange={(value) => handleSignUpdate("substrate", value)}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select substrate" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Aluminum">Aluminum</SelectItem>
-                                                <SelectItem value="Aluminum-Composite">
-                                                    Aluminum Composite
-                                                </SelectItem>
-                                                <SelectItem value="Plastic">Plastic</SelectItem>
-                                                {isSignOrder && (
-                                                    <>
-                                                        <SelectItem value="Roll Up">Roll Up</SelectItem>
-                                                        <SelectItem value="Face">Face</SelectItem>
-                                                    </>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                </div>
-                            )}
-
                             {showMptOptions && showSubstrateField && !isSegmentedPickerConfigOnly && (
                                 <div className="flex flex-wrap items-end gap-6 pb-2">
                                     <div className="flex items-center gap-2">
