@@ -36,7 +36,7 @@ import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { useMemo } from 'react';
-import { pdf } from '@react-pdf/renderer';
+import { pdf, PDFViewer } from '@react-pdf/renderer';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 
@@ -824,21 +824,28 @@ export default function SignOrderContentSimple({
             onEdit={handleEditNote}
             onDelete={handleDeleteNote}
           />
-          <div className="bg-[#F4F5F7] p-6 rounded-lg">
-            <div className="flex justify-end">
+          {/* Sign Order PDF Preview - Full Width Below */}
+          <div className="bg-gray-100 p-6 rounded-lg">
+            <div className="flex justify-end mb-4">
               <Button onClick={handleDownloadPdf}>
                 Download PDF
               </Button>
             </div>
-            <div className="min-h-[1000px] overflow-y-auto bg-white p-6 mt-4 max-w-[900px]">
-              <SignOrderWorksheet
-                adminInfo={adminInfo}
-                signList={signList}
-                mptRental={mptRental}
-                notes={draft.notes}
-              />
-            </div>
           </div>
+        </div>
+      </div>
+      {/* Full Screen PDF Viewer Section */}
+      <div className="border-t-4 border-gray-300 mt-6">
+        <h2 className="text-xl font-bold px-6 py-4 bg-gray-50">Sign Order PDF</h2>
+        <div className="w-full">
+          <PDFViewer width="100%" height={700}>
+            <SignOrderWorksheetPDF
+              adminInfo={adminInfo}
+              signList={signList}
+              mptRental={mptRental}
+              notes={draft.notes}
+            />
+          </PDFViewer>
         </div>
       </div>
     </div>
