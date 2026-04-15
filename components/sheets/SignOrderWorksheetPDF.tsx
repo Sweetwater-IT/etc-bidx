@@ -8,6 +8,39 @@ import { Note } from "@/components/pages/quote-form/QuoteNotes";
 import { safeNumber } from "@/lib/safe-number";
 import { getEquipmentTotalsPerPhase } from "@/lib/mptRentalHelperFunctions";
 
+// Helper function to compute equipment totals from signs
+function getEquipmentTotalsFromSigns(signList: SignItem[]): Record<string, number> {
+  const totals = {
+    fourFootTypeIII: 0,
+    hStand: 0,
+    post: 0,
+    covers: 0,
+    BLights: 0
+  }
+
+  signList.forEach(sign => {
+    // Add bLights (barricade lights)
+    totals.BLights += sign.bLights || 0
+
+    // Add covers
+    totals.covers += sign.cover ? 1 : 0
+
+    // Map structure to equipment type
+    const structure = (sign.displayStructure || sign.associated_structure || '').toLowerCase()
+    const quantity = sign.quantity || 0
+
+    if (structure.includes('fourfoot') || structure.includes('typeiii') || structure.includes('type iii')) {
+      totals.fourFootTypeIII += quantity
+    } else if (structure.includes('hstand') || structure.includes('h-stand') || structure.includes('h stand')) {
+      totals.hStand += quantity
+    } else if (structure.includes('post')) {
+      totals.post += quantity
+    }
+  })
+
+  return totals
+}
+
 export interface SignItem {
   designation: string
   description: string
@@ -429,61 +462,43 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               }
             </View>
           </View>
-          {/* EQUIPMENT SUMMARY */}
-          <View style={styles.equipmentContainer}>
-            <View style={{ flex: 0.33 }}>
-              <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>4&apos; TYPE III =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).fourFootTypeIII.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>H-STANDS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).hStand.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>V/P&apos;S =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).HIVP.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).BLights.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>SANDBAGS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sandbag.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>POSTS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).post.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>6&apos; WINGS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).sixFootWings.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>METAL STANDS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).metalStands.totalQuantity)}</Text>
-              </View>
-              <View style={styles.equipmentRow}>
-                <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
-                <Text style={styles.equipmentCellRight}>{mptRental && safeNumber(getEquipmentTotalsPerPhase(mptRental).covers.totalQuantity)}</Text>
-              </View>
+          {/* EQUIPMENT SUMMARY - Use sign-based totals */}
+          <View style={{ flex: 0.33 }}>
+            <Text style={styles.equipmentTitle}>EQUIPMENT SUMMARY</Text>
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentCell}>4' TYPE III =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).fourFootTypeIII)}</Text>
             </View>
-            <View style={styles.notesContainer}>
-              {
-                notes.map((note, idx) => (
-                  <View style={styles.notesRow} key={idx}>
-                    <Text>{note.text}</Text>
-                    <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
-                  </View>
-                ))
-              }
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentCell}>H-STANDS =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).hStand)}</Text>
+            </View>
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentCell}>POSTS =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).post)}</Text>
+            </View>
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentCell}>B-LIGHTS =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).BLights)}</Text>
+            </View>
+            <View style={styles.equipmentRow}>
+              <Text style={styles.equipmentCell}>C-LIGHTS =</Text>
+              <Text style={styles.equipmentCellRight}>{safeNumber(getEquipmentTotalsFromSigns(safeSignList).covers)}</Text>
             </View>
           </View>
-          {/* Footer */}
-          <Footer pageNumber={1} totalPages={1} />
+          <View style={styles.notesContainer}>
+            {
+              notes.map((note, idx) => (
+                <View style={styles.notesRow} key={idx}>
+                  <Text>{note.text}</Text>
+                  <Text style={styles.notesDate}>{formatDateTime(note.timestamp)}</Text>
+                </View>
+              ))
+            }
+          </View>
         </View>
+        {/* Footer */}
+        <Footer pageNumber={1} totalPages={1} />
       </Page>
     </Document>
   )

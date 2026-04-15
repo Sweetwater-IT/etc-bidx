@@ -29,6 +29,14 @@ import type { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrde
 
 export type OrderTypes = 'sale' | 'rental' | 'permanent signs'
 
+export interface SignOrderContact {
+  id: number
+  name: string
+  role: string
+  email: string
+  phone: string
+}
+
 export interface SignOrderAdminInformation {
   requestor: User | null
   customer: Customer | null
@@ -41,6 +49,7 @@ export interface SignOrderAdminInformation {
   contractNumber: string
   startDate?: Date
   endDate?: Date
+  contact?: SignOrderContact | null
 }
 
 interface SignOrder {
@@ -341,7 +350,8 @@ export default function SignOrderViewContent() {
             customerNumber: data.data.contractor_id || 1
           },
           isSubmitting: false,
-          orderType: ordersData
+          orderType: ordersData,
+          contact: data.data.contact || null
         })
 
         // Process signs data from the JSONB field
