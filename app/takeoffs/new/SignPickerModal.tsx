@@ -830,13 +830,10 @@ const SignPickerModal = ({
 
     return (
         <>
-        <Dialog modal={false} open={open} onOpenChange={handleDialogOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent
                 className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
                 onCloseAutoFocus={() => {
-                    restorePointerEvents();
-                }}
-                onOpenAutoFocus={() => {
                     restorePointerEvents();
                 }}
             >
@@ -2008,7 +2005,7 @@ const SignPickerModal = ({
                 </div>
 
             </DialogContent>
-        </Dialog>,
+        </Dialog>
 
         {/* Kit Stepper Modal */}
         <Dialog open={kitStepperOpen} onOpenChange={setKitStepperOpen}>
