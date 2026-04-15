@@ -731,7 +731,19 @@ export default function SignOrderContentSimple({
   }
 
   const handleDownloadPdf = async () => {
+    console.log('[SignOrderContentSimple] handleDownloadPdf called', {
+      signOrderId,
+      signCount: signList.length,
+      adminInfo: {
+        contractNumber: adminInfo?.contractNumber,
+        customer: adminInfo?.customer?.name,
+        requestor: adminInfo?.requestor?.name
+      },
+      mptRental: mptRental?.phases?.length
+    });
+    
     try {
+      console.log('[SignOrderContentSimple] Preparing PDF element');
       const pdfElement = (
         <SignOrderWorksheetPDF
           adminInfo={adminInfo || {
@@ -745,7 +757,10 @@ export default function SignOrderContentSimple({
         />
       );
 
+      console.log('[SignOrderContentSimple] Generating PDF blob');
       const blob = await pdf(pdfElement).toBlob();
+      console.log('[SignOrderContentSimple] PDF blob generated', { size: blob.size, type: blob.type });
+
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement('a');
@@ -756,8 +771,9 @@ export default function SignOrderContentSimple({
       document.body.removeChild(a);
 
       setTimeout(() => URL.revokeObjectURL(url), 100);
+      console.log('[SignOrderContentSimple] PDF download triggered successfully');
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('[SignOrderContentSimple] Error generating PDF:', error);
       toast.error('Error generating PDF');
     }
   };
