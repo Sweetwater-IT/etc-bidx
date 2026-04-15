@@ -926,8 +926,8 @@ export default function SignOrderContentSimple({
           />
         </div>
       </div>
-      {/* PDF Preview Accordion */}
-      <Accordion type="single" collapsible className="w-full border-t-4 border-gray-300 mt-6">
+      {/* PDF Preview Accordion - Hidden on sign order create page */}
+      <Accordion type="single" collapsible className="hidden w-full border-t-4 border-gray-300 mt-6">
         <AccordionItem value="pdf-preview">
           <AccordionTrigger className="px-6 py-4 bg-gray-50 hover:no-underline">
             <h2 className="text-xl font-bold text-left">Sign Order PDF Preview</h2>
