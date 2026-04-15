@@ -36,7 +36,20 @@ import SignOrderWorksheetPDF from '@/components/sheets/SignOrderWorksheetPDF'
 import { SignItem as WorksheetSignItem } from '@/components/sheets/SignOrderWorksheetPDF'
 import SignOrderWorksheet from '@/components/sheets/SignOrderWorksheet'
 import { useMemo } from 'react';
-import { pdf, PDFViewer } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
+import dynamic from 'next/dynamic';
+
+const PDFViewer = dynamic(
+  () => import('@react-pdf/renderer').then(mod => ({ default: mod.PDFViewer })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[700px] bg-gray-100 animate-pulse flex items-center justify-center">
+        Loading PDF preview...
+      </div>
+    )
+  }
+);
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
 import { PrimarySign, SecondarySign } from '@/types/MPTEquipment'
 
