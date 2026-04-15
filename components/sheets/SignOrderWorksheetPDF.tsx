@@ -225,6 +225,14 @@ const safeDateString = (date: string | Date | undefined) => {
   return d instanceof Date && !isNaN(d.getTime()) ? d.toLocaleDateString() : '-'
 }
 
+const formatContactSummary = (contact: any) => {
+  if (!contact) {
+    return '-'
+  }
+
+  return [contact.name, contact.email, contact.phone].filter(Boolean).join(' / ') || '-'
+}
+
 const Footer = ({
   pageNumber,
   totalPages
@@ -319,7 +327,7 @@ const SignOrderWorksheetPDF: React.FC<Props> = ({
               </View>
               <View style={[styles.headerCell, styles.lastCell]}>
                 <Text style={styles.label}>Customer Contact:</Text>
-                <Text style={styles.value}>{adminInfo.customer?.phones[0] || '-'}</Text>
+                <Text style={styles.value}>{formatContactSummary(adminInfo.contact)}</Text>
               </View>
             </View>
             <View style={styles.headerRow}>

@@ -18,6 +18,7 @@ import ReactPDF from '@react-pdf/renderer'
 import BidProposalWorksheet from "../../create/BidProposalWorksheet";
 import { Quote } from "@/types/MPTEquipmentCost";
 import { getQuotePdfFilename } from "@/utils/pdfFilename";
+import { PagePrimaryHeader } from "@/components/page-primary-header";
 
 
 export interface ContactInfo {
@@ -62,6 +63,23 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
         setQuote({
           ...data,
+          customer_name:
+            data.customer?.name ||
+            data.customer?.displayName ||
+            data.customer_name ||
+            "",
+          customer_contact:
+            data.contact?.name ||
+            data.customer_contact ||
+            "",
+          customer_email:
+            data.contact?.email ||
+            data.customer_email ||
+            "",
+          customer_phone:
+            data.contact?.phone ||
+            data.customer_phone ||
+            "",
           items: data.items?.map((item: any) => ({
             id: item.id ?? crypto.randomUUID(),
             description: item.description || "N/A",
@@ -290,88 +308,86 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     <>
       <SiteHeader paddingTop={12} marginBottom={6}>
       </SiteHeader>
-        <div className="flex w-full px-8 items-center justify-between">
-          <div className="flex w-full flex-col items-center gap-3">
-            <div className="flex w-full flex-row items-center justify-between">
-              <div className="flex flex-row items-center gap-2">
-                <Button
-                  role="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.push(backToQuotesHref)}
-                  className="rounded-full flex flex-row"
-                >
-                  <ArrowLeft className="h-6 w-6" />
+      <PagePrimaryHeader
+        sticky
+        icon={<FileText className="h-5 w-5" />}
+        title={`Quote ${quote?.quote_number}`}
+        subtitle={
+          <>
+            <Button
+              role="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(backToQuotesHref)}
+              className="h-auto px-0 text-xs"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Quotes
+            </Button>
+            <Badge
+              variant="outline"
+              className={`flex items-center rounded-2xl gap-2 text-sm px-3 py-1 ${getStatusStyles(quote?.status ?? '')}`}
+            >
+              {quote?.status || "N/A"}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size={'sm'} className="flex items-center gap-2">
+                  {quote?.status}
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
-                <p>Back to Quotes</p>
-
-              </div>
-              <div className="flex flex-row items-center gap-2">
-                <Button
-                  role="button"
-                  onClick={handleEditQuote}
-                  className="bg-primary text-white hover:bg-primary/90"
-                >
-                  Edit Quote
-                </Button>
-
-                <Button role="button"
-                  variant="outline" size={'sm'} onClick={() => handleDownload('quote')}>
-                  <Download />
-                  {downloading ? (
-                    <>
-                      <p>Downloading </p>
-                      <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                    </>
-                  ) : (
-                    "Download Quote"
-                  )}
-                </Button>
-                {
-                  quote.status === 'Accepted' &&
-                  <Button variant="outline" size={'sm'} onClick={() => handleDownload('saleTicket')}>
-                    <Download />
-                    {downloading ? (
-                      <>
-                        <p>Downloading </p>
-                        <Loader className="animate-spin w-5 h-5 text-gray-600" />
-                      </>
-                    ) : (
-                      "Download Sale Ticket"
-                    )}
-                  </Button>
-                }
-              </div>
-            </div>
-
-            <div className="flex w-full flex-row items-center justify-start gap-4">
-              <h2 className="text-3xl font-semibold">Quote {quote?.quote_number}</h2>
-              <Badge
-                variant="outline"
-                className={`flex items-center rounded-2xl gap-2 text-sm px-3 py-1 ${getStatusStyles(quote?.status ?? '')}`}
-              >
-                {quote?.status || "N/A"}
-              </Badge>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size={'sm'} className="flex items-center gap-2">
-                    {quote?.status}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {["Sent", "Declined", "Accepted"].map((s) => (
-                    <DropdownMenuItem key={s} onClick={() => onStatusChange(s)}>
-                      {s}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-          </div>
-        </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {["Sent", "Declined", "Accepted"].map((s) => (
+                  <DropdownMenuItem key={s} onClick={() => onStatusChange(s)}>
+                    {s}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              role="button"
+              onClick={handleEditQuote}
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              Edit Quote
+            </Button>
+            <Button
+              role="button"
+              variant="outline"
+              size={'sm'}
+              onClick={() => handleDownload('quote')}
+            >
+              <Download />
+              {downloading ? (
+                <>
+                  <p>Downloading </p>
+                  <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                </>
+              ) : (
+                "Download Quote"
+              )}
+            </Button>
+            {quote.status === 'Accepted' && (
+              <Button variant="outline" size={'sm'} onClick={() => handleDownload('saleTicket')}>
+                <Download />
+                {downloading ? (
+                  <>
+                    <p>Downloading </p>
+                    <Loader className="animate-spin w-5 h-5 text-gray-600" />
+                  </>
+                ) : (
+                  "Download Sale Ticket"
+                )}
+              </Button>
+            )}
+          </>
+        }
+      />
         {/* <div className="p-6">
           <p className="font-bold mb-2 text-[20px]">Customer Quote Link</p>
           <div className="w-full flex flex-row gap-4 items-center">

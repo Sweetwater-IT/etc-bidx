@@ -13,15 +13,10 @@ import { Flagging } from '@/types/TFlagging'
 import { safeNumber } from '@/lib/safe-number'
 import {
   getAssociatedSignEquipment,
-  calculateEquipmentCostSummary,
-  calculateLaborCostSummary,
-  calculateTotalSignCostSummary,
-  getEquipmentTotalsPerPhase,
-  returnPhaseTotals,
-  returnSignTotalsByPhase,
   returnSignTotalsSquareFootage
 } from '@/lib/mptRentalHelperFunctions'
 import { defaultMPTObject } from '@/types/default-objects/defaultMPTObject'
+import { labelMapping } from '@/types/MPTEquipment'
 
 interface Props {
   adminData: any
@@ -314,6 +309,33 @@ const SignOrderBidSummaryPDF = ({
     </View>
   )
 
+  const equipmentSummaryRows = (() => {
+    if (!mptRental?.phases?.length) {
+      return []
+    }
+
+    const totals = mptRental.phases.reduce<Record<string, number>>((acc, phase) => {
+      const associated = getAssociatedSignEquipment(phase)
+      const standardEquipment = phase.standardEquipment ?? {}
+
+      Object.entries(standardEquipment).forEach(([key, item]) => {
+        acc[key] = (acc[key] ?? 0) + safeNumber(item?.quantity)
+      })
+
+      acc.fourFootTypeIII = (acc.fourFootTypeIII ?? 0) + associated.fourFootTypeIII
+      acc.hStand = (acc.hStand ?? 0) + associated.hStand
+      acc.post = (acc.post ?? 0) + associated.post
+      acc.covers = (acc.covers ?? 0) + associated.covers
+      acc.BLights = (acc.BLights ?? 0) + associated.BLights
+
+      return acc
+    }, {})
+
+    return Object.entries(totals)
+      .filter(([, quantity]) => quantity > 0)
+      .sort(([a], [b]) => (labelMapping[a] || a).localeCompare(labelMapping[b] || b))
+  })()
+
   // Equipment Summary Section
   const EquipmentSummary = () => (
     <View style={{ flex: 1, marginTop: 16, flexDirection: 'row', gap: 16 }}>
@@ -322,8 +344,24 @@ const SignOrderBidSummaryPDF = ({
         <Text style={{ fontWeight: 'bold', fontSize: 10, marginBottom: 4 }}>
           Equipment Summary
         </Text>
-        {/* Add your equipment summary table or content here, e.g. list of equipment, quantities, etc. */}
-        <Text style={{ fontSize: 10 }}>[Equipment summary content here]</Text>
+        {equipmentSummaryRows.length > 0 ? (
+          equipmentSummaryRows.map(([key, quantity]) => (
+            <View
+              key={key}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid #d4d4d8',
+                paddingVertical: 3,
+              }}
+            >
+              <Text style={{ fontSize: 10 }}>{labelMapping[key] || key}</Text>
+              <Text style={{ fontSize: 10 }}>{quantity}</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={{ fontSize: 10 }}>No equipment totals available.</Text>
+        )}
       </View>
       {/* Notes Section */}
       <View style={{ flex: 1, paddingLeft: 16 }}>

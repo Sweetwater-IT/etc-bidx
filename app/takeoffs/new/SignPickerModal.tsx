@@ -35,6 +35,7 @@ import { generateUniqueId } from '@/components/pages/active-bid/signs/generate-s
 import { Separator } from '@/components/ui/separator';
 import { QuantityInput } from '@/components/ui/quantity-input';
 import { logSignOrderDebug } from '@/lib/log-sign-order-debug';
+import { restorePointerEvents } from '@/lib/pointer-events-fix';
 
 export interface SharedSignPickerModalProps {
     open: boolean;
@@ -711,7 +712,7 @@ const SignPickerModal = ({
         // Close the modal and reset
         setSelectedKit(null);
         setKitSignConfigurations([]);
-        onOpenChange(false);
+        closeModal();
     };
 
     // Get available dimensions for the selected designation
@@ -746,6 +747,25 @@ const SignPickerModal = ({
     const totalPataCount = apiData?.pataKits?.length ?? 0;
     const totalPtsCount = apiData?.ptsKits?.length ?? 0;
     const modalTitle = mode === 'create' ? 'Add Sign' : 'Edit Sign';
+    const closeModal = () => {
+        onOpenChange(false);
+        restorePointerEvents();
+        window.requestAnimationFrame(() => {
+            restorePointerEvents();
+        });
+    };
+
+    const handleDialogOpenChange = (nextOpen: boolean) => {
+        onOpenChange(nextOpen);
+
+        if (!nextOpen) {
+            restorePointerEvents();
+            window.requestAnimationFrame(() => {
+                restorePointerEvents();
+            });
+        }
+    };
+
     const handleSave = () => {
         logSignOrderDebug('sign_configuration_save_clicked', {
             mode,
@@ -794,7 +814,7 @@ const SignPickerModal = ({
                 }
             });
         }
-        onOpenChange(false);
+        closeModal();
     };
 
     const handleCancel = () => {
@@ -805,13 +825,21 @@ const SignPickerModal = ({
             signId: localSign?.id ?? null,
             designation: localSign?.designation ?? null,
         });
-        onOpenChange(false);
+        closeModal();
     };
 
     return (
         <>
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <Dialog modal={false} open={open} onOpenChange={handleDialogOpenChange}>
+            <DialogContent
+                className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
+                onCloseAutoFocus={() => {
+                    restorePointerEvents();
+                }}
+                onOpenAutoFocus={() => {
+                    restorePointerEvents();
+                }}
+            >
                 <div className="relative z-10 shrink-0 bg-background">
                     <DialogHeader className="p-6 pb-4 text-left">
                         <DialogTitle>{modalTitle}</DialogTitle>

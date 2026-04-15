@@ -31,6 +31,7 @@ import { logSignOrderDebug } from '@/lib/log-sign-order-debug'
 import { CustomerSelector } from '@/components/CustomerSelector'
 import { ContactSelector } from '@/components/ContactSelector'
 import { SheetFrame } from '@/components/sheet-frame'
+import { DateField } from '@/components/DateField'
 
 interface IContact {
   id: number
@@ -77,6 +78,16 @@ const CONTACT_ROLE_OPTIONS = [
   'FIELD / SUPERVISOR',
   'OTHER'
 ] as const
+
+function parseDateInput(value: string): Date | null {
+  if (!value) {
+    return null
+  }
+
+  const [year, month, day] = value.split('-').map(Number)
+  const parsed = new Date(year, month - 1, day)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
 
 function normalizeCustomer(customer: any): Customer {
   const displayName =
@@ -973,13 +984,15 @@ export function SignOrderDetailsSheet({
                       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                         <div className='space-y-2 mt-auto'>
                           <Label>Order Date</Label>
-                          <Input
-                            type='date'
+                          <DateField
+                            value={localOrderDate}
+                            onChange={value => {
+                              const nextDate = parseDateInput(value)
+                              if (nextDate) {
+                                setLocalOrderDate(nextDate)
+                              }
+                            }}
                             placeholder='Select a date'
-                            value={localOrderDate.toISOString().split('T')[0]}
-                            onChange={e =>
-                              setLocalOrderDate(new Date(e.target.value))
-                            }
                           />
                         </div>
 
@@ -987,16 +1000,11 @@ export function SignOrderDetailsSheet({
                           <Label>
                             Need Date <span className='text-red-600'>*</span>
                           </Label>
-                          <Input
-                            type='date'
-                            value={
-                              localNeedDate
-                                ? localNeedDate.toISOString().split('T')[0]
-                                : ''
-                            }
-                            onChange={e =>
-                              setLocalNeedDate(new Date(e.target.value))
-                            }
+                          <DateField
+                            value={localNeedDate}
+                            onChange={value => {
+                              setLocalNeedDate(parseDateInput(value))
+                            }}
                             placeholder='Select a date'
                           />
                         </div>
@@ -1050,30 +1058,22 @@ export function SignOrderDetailsSheet({
                       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                         <div className='space-y-2'>
                           <Label>Start Date</Label>
-                          <Input
-                            type='date'
-                            value={
-                              localStartDate
-                                ? localStartDate.toISOString().split('T')[0]
-                                : new Date().toISOString().split('T')[0]
-                            }
-                            onChange={e =>
-                              setLocalStartDate(new Date(e.target.value))
-                            }
+                          <DateField
+                            value={localStartDate}
+                            onChange={value => {
+                              setLocalStartDate(parseDateInput(value) ?? undefined)
+                            }}
+                            placeholder='Select a date'
                           />
                         </div>
                         <div className='space-y-2'>
                           <Label>End Date</Label>
-                          <Input
-                            type='date'
-                            value={
-                              localEndDate
-                                ? localEndDate.toISOString().split('T')[0]
-                                : new Date().toISOString().split('T')[0]
-                            }
-                            onChange={e =>
-                              setLocalEndDate(new Date(e.target.value))
-                            }
+                          <DateField
+                            value={localEndDate}
+                            onChange={value => {
+                              setLocalEndDate(parseDateInput(value) ?? undefined)
+                            }}
+                            placeholder='Select a date'
                           />
                         </div>
                       </div>

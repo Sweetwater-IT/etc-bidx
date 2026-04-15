@@ -463,6 +463,25 @@ const SignShopContent = ({ id }: Props) => {
         contractNumber:
           signOrder?.contract_number || signOrder?.contractNumber || '-',
         estimator: signOrder?.requestor || '-',
+        customer: {
+          name: signOrder?.contractors?.name || signOrder?.customer?.name || '-'
+        },
+        contact:
+          [
+            signOrder?.contact?.name,
+            signOrder?.contact?.email,
+            signOrder?.contact?.phone
+          ]
+            .filter(Boolean)
+            .join(' / ') || '-',
+        orderType: [
+          signOrder?.sale ? 'Sale' : null,
+          signOrder?.rental ? 'Rental' : null,
+          signOrder?.perm_signs ? 'Permanent Signs' : null
+        ]
+          .filter(Boolean)
+          .join(', '),
+        notes: signOrder?.notes || '-',
         county: { name: signOrder?.branch || '-' },
         srRoute: '-',
         location: '-',
