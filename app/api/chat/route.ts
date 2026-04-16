@@ -632,6 +632,12 @@ export async function POST(request: NextRequest) {
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const sessionId = typeof body.sessionId === "string" && body.sessionId.trim() ? body.sessionId : "default";
 
+    console.info("[api/chat] request received", {
+      sessionId,
+      hasMessage: Boolean(message),
+      messagePreview: message.slice(0, 120),
+    });
+
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }

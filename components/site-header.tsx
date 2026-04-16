@@ -66,6 +66,30 @@ export function SiteHeader({
     router.push(route);
   };
 
+  const handleChatToggle = React.useCallback(() => {
+    const nextState = !isChatOpen;
+
+    console.info("[chat] header sparkle clicked", {
+      pathname,
+      currentState: isChatOpen,
+      nextState,
+    });
+
+    toggleChat();
+
+    void fetch("/api/chat/toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "site-header",
+        pathname,
+        nextState,
+      }),
+    }).catch((error) => {
+      console.error("[chat] failed to log toggle event", error);
+    });
+  }, [isChatOpen, pathname, toggleChat]);
+
   const findTitle = (items: any[]): string | undefined => {
     for (const item of items) {
       if (item.url === pathname) return item.title || item.name;
@@ -161,8 +185,14 @@ export function SiteHeader({
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
           </button>
           <button
-            className={`rounded-lg p-2 hover:bg-muted transition-colors ${isChatOpen ? "bg-primary/10 text-primary" : ""}`}
-            onClick={toggleChat}
+            type="button"
+            className={`rounded-lg p-2 transition-colors ${
+              isChatOpen
+                ? "bg-foreground text-background hover:bg-foreground/90"
+                : "text-foreground hover:bg-muted"
+            }`}
+            onClick={handleChatToggle}
+            aria-pressed={isChatOpen}
             aria-label={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
             title={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
           >

@@ -3,7 +3,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { useChat } from "@/contexts/chat-context";
-import { ChatPanel } from "@/components/chat/ChatPanel";
 import * as React from "react";
 
 // Inner component that uses both Sidebar and Chat contexts
@@ -27,7 +26,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     <>
       <AppSidebar variant="inset" />
       <SidebarInset>{children}</SidebarInset>
-      <ChatPanel />
     </>
   );
 }

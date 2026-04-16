@@ -31,6 +31,10 @@ export function ChatPanel() {
     }
   }, []);
 
+  React.useEffect(() => {
+    console.info("[chat] panel visibility changed", { isChatOpen });
+  }, [isChatOpen]);
+
   const handleSend = async (message: string) => {
     const userMessage: ChatMessageType = {
       id: crypto.randomUUID(),
@@ -42,6 +46,11 @@ export function ChatPanel() {
     setIsLoading(true);
 
     try {
+      console.info("[chat] sending message", {
+        sessionId: sessionIdRef.current ?? "default",
+        messagePreview: message.slice(0, 120),
+      });
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,6 +65,11 @@ export function ChatPanel() {
       }
 
       const data = (await response.json()) as ChatResponse;
+      console.info("[chat] received response", {
+        messageId: data.message.id,
+        role: data.message.role,
+      });
+
       const assistantMessage: ChatMessageType = {
         id: data.message.id || crypto.randomUUID(),
         role: "assistant",
@@ -67,6 +81,7 @@ export function ChatPanel() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
+      console.error("[chat] request failed", error);
       const errorMessage: ChatMessageType = {
         id: crypto.randomUUID(),
         role: "assistant",
