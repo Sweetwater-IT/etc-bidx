@@ -2,7 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import { ChatProvider, useChat } from "@/contexts/chat-context";
+import { useChat } from "@/contexts/chat-context";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import * as React from "react";
 
@@ -47,9 +47,7 @@ export default function AppShellLayout({
         } as React.CSSProperties
       }
     >
-      <ChatProvider>
-        <AppShellContent>{children}</AppShellContent>
-      </ChatProvider>
+      <AppShellContent>{children}</AppShellContent>
     </SidebarProvider>
   );
 }
