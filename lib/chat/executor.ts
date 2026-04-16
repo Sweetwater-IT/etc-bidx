@@ -2,6 +2,7 @@ import * as bidsActions from "./actions/bids";
 import * as contractsActions from "./actions/contracts";
 import * as customersActions from "./actions/customers";
 import * as quotesActions from "./actions/quotes";
+import * as signsActions from "./actions/signs";
 import { ActionResult } from "./types";
 import { getEntityFromTool, getOperationFromTool, getToolByName, getToolCapability } from "./tools";
 
@@ -65,6 +66,10 @@ const ACTION_MAP: Record<string, ActionFn> = {
     bidsActions.createActiveBid(input as Parameters<typeof bidsActions.createActiveBid>[0]),
   update_active_bid: (input) =>
     bidsActions.updateActiveBid(String(input.id), input as Parameters<typeof bidsActions.updateActiveBid>[1]),
+
+  search_signs: (input) =>
+    signsActions.searchSigns(input as Parameters<typeof signsActions.searchSigns>[0]),
+  get_sign: (input) => signsActions.getSign(String(input.id)),
 };
 
 function unsupportedToolResult(toolName: string): ActionResult {

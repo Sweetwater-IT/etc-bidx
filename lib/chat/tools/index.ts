@@ -470,6 +470,30 @@ export const TOOLS: ToolDefinition[] = [
     },
   }),
   defineTool({
+    name: "search_signs",
+    description: "Search the MUTCD sign catalog from signs_all.",
+    capabilityStatus: "read_only",
+    inputSchema: {
+      type: "object",
+      properties: {
+        search: { type: "string", description: "Search sign designation, description, or category" },
+        category: { type: "string", description: "Filter by sign category" },
+      },
+    },
+  }),
+  defineTool({
+    name: "get_sign",
+    description: "Get one sign from the MUTCD catalog by id.",
+    capabilityStatus: "read_only",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "signs_all id" },
+      },
+      required: ["id"],
+    },
+  }),
+  defineTool({
     name: "get_quote",
     description: "Get one quote by id.",
     capabilityStatus: "read_only",

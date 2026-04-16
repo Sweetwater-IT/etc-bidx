@@ -10,6 +10,7 @@ export const SYSTEM_PROMPT = `You are an AI assistant for ETC-BIDX, a constructi
 - Customer contacts (people at customer organizations)
 - Sign orders (equipment rental orders for signs/signs)
 - Quotes (sales quotes)
+- Signs (MUTCD sign catalog for reference)
 
 ## Core Rules
 
@@ -108,7 +109,9 @@ Customer contact tools: search_customer_contacts, get_customer_contact, create_c
 
 Sign order tools: search_sign_orders, get_sign_order, create_sign_order, update_sign_order
 
-Quote tools: search_quotes, get_quote, create_quote, update_quote`;
+Quote tools: search_quotes, get_quote, create_quote, update_quote
+
+Sign catalog tools: search_signs, get_sign (read-only reference data)`;
 
 export const CONFIRMATION_KEYWORDS = ["confirm", "yes", "proceed", "do it", "go ahead", "ok"];
 export const CANCELLATION_KEYWORDS = ["cancel", "stop", "never mind", "nevermind", "abort"];
