@@ -15,7 +15,7 @@ export default function ContractsPage() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset className="h-full min-h-0 overflow-hidden">
+      <SidebarInset className="min-w-0 bg-slate-50">
         <SiteHeader showTitleBlock={false} />
         <ContractManager />
       </SidebarInset>

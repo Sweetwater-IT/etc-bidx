@@ -15,6 +15,8 @@ import {
   IconUser,
   IconFileText,
 } from "@tabler/icons-react";
+import { Sparkles } from "lucide-react";
+import { useChat } from "@/contexts/chat-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +48,7 @@ export function SiteHeader({
   const router = useRouter();
   const { signOut } = useAuth();
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const { isChatOpen, toggleChat } = useChat();
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -156,6 +159,14 @@ export function SiteHeader({
           <button className="relative rounded-lg p-2 hover:bg-muted">
             <IconBell className="size-5" />
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
+          </button>
+          <button
+            className={`rounded-lg p-2 hover:bg-muted transition-colors ${isChatOpen ? "bg-primary/10 text-primary" : ""}`}
+            onClick={toggleChat}
+            aria-label={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
+            title={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
+          >
+            <Sparkles className="size-5" />
           </button>
           <button className="rounded-lg p-2 hover:bg-muted" onClick={() => signOut()}>
             <IconPower className="size-5" />

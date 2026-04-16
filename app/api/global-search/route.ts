@@ -536,7 +536,7 @@ export async function GET(request: NextRequest) {
       const customerLabel = formatCustomerName(item);
       return [
         {
-          id: String(item.id),
+          id: `customer-${item.id}`,
           title: customerLabel,
           subtitle:
             [item.customer_number ? `#${item.customer_number}` : null, item.main_phone]
@@ -559,7 +559,7 @@ export async function GET(request: NextRequest) {
         item.name?.trim() || item.email?.trim() || item.phone?.trim() || `Contact ${item.id}`;
       return [
         {
-          id: String(item.id),
+          id: `contact-${item.id}`,
           title: contactLabel,
           subtitle:
             [
