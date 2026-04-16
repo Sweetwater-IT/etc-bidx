@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { SiteHeader } from "@/components/site-header";
 import { toast } from "sonner";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -306,8 +305,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   
   return (
     <>
-      <SiteHeader paddingTop={12} marginBottom={6}>
-      </SiteHeader>
       <PagePrimaryHeader
         sticky
         icon={<FileText className="h-5 w-5" />}
