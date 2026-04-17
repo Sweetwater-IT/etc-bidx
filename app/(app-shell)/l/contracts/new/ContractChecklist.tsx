@@ -1024,11 +1024,17 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         <ContractSaveDocument
           documents={documents}
           projectInfo={projectInfo}
-          jobId={routeId}
+          jobId={contractId}
           onAddDocuments={handleAddDocuments}
           onRemoveDocument={requestRemoveDocument}
           onUpdateCategory={handleUpdateDocumentCategory}
           onRenameDocument={handleRenameDocument}
+          onAppendDocument={(document) => setDocuments((prev) => [...prev, document])}
+          currentUser={{
+            name: user?.user_metadata?.name || user?.email?.split("@")[0] || "Established Traffic Control",
+            email: user?.email || "info@establishedtraffic.com",
+            role: user?.user_metadata?.role || "ETC Team",
+          }}
           readOnly={forceReadOnly}
         />
 

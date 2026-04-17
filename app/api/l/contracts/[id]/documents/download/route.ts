@@ -21,6 +21,7 @@ export async function GET(
       .from("documents_l")
       .select("file_path, file_name")
       .eq("id", documentId)
+      .eq("job_id", contractId)
       .maybeSingle();
 
     if (docL) {
