@@ -284,6 +284,12 @@ function buildSignOrderPayload(input: SignOrderWriteInput, id?: string) {
 }
 
 export async function searchQuotes(params: QuoteSearchInput): Promise<ActionResult> {
+  console.info("[chat/actions/quotes] searchQuotes called", {
+    params,
+    search: params.search,
+    timestamp: new Date().toISOString(),
+  });
+
   try {
     let query = supabase
       .from("quotes")
@@ -309,10 +315,25 @@ export async function searchQuotes(params: QuoteSearchInput): Promise<ActionResu
       );
     }
 
+    console.info("[chat/actions/quotes] executing query", { search: params.search });
+
     const { data, error, count } = await query.range(start, start + pageSize - 1);
+
+    console.info("[chat/actions/quotes] query completed", {
+      error,
+      count,
+      resultCount: data?.length || 0,
+      sampleData: data?.slice(0, 3).map(r => ({ id: r.id, quote_number: r.quote_number, customer_name: r.customer_name })),
+    });
+
     if (error) throw error;
 
     const items = (data || []).map(mapQuoteListItem);
+
+    console.info("[chat/actions/quotes] returning items", {
+      itemCount: items.length,
+      total: count || 0,
+    });
 
     return {
       success: true,
@@ -323,6 +344,11 @@ export async function searchQuotes(params: QuoteSearchInput): Promise<ActionResu
       data: { items, total: count ?? items.length, page, pageSize },
     };
   } catch (error) {
+    console.error("[chat/actions/quotes] searchQuotes failed", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      params,
+    });
+
     return {
       success: false,
       entityType: "quote",

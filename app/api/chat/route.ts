@@ -729,25 +729,31 @@ export async function POST(request: NextRequest) {
       } else {
         const result = await executeTool(intent.toolName, intent.params);
         executedResult = result;
-        const deterministicText =
-          result.operation === "search" ? formatSearchResults(result) : formatExecutedResult(result);
-        if (hasXaiKey()) {
-          const grokReply = await callGrok(
-            [{ role: "user", content: message }],
-            [
-              SYSTEM_PROMPT,
-              "",
-              "You are summarizing a tool result for the user.",
-              "Do not invent facts beyond the provided result.",
-              `Tool: ${intent.toolName}`,
-              `Result summary: ${result.summary}`,
-              `Success: ${String(result.success)}`,
-              `Structured result:\n${JSON.stringify(result.data ?? {}, null, 2)}`,
-            ].join("\n")
-          );
-          responseMessage = makeMessage(grokReply || deterministicText);
+
+        // Always use deterministic formatting for search operations to prevent hallucinations
+        if (result.operation === "search") {
+          responseMessage = makeMessage(formatSearchResults(result));
         } else {
-          responseMessage = makeMessage(deterministicText);
+          // For non-search operations, Grok can help with formatting
+          const deterministicText = formatExecutedResult(result);
+          if (hasXaiKey()) {
+            const grokReply = await callGrok(
+              [{ role: "user", content: message }],
+              [
+                SYSTEM_PROMPT,
+                "",
+                "You are summarizing a tool result for the user.",
+                "Do not invent facts beyond the provided result.",
+                `Tool: ${intent.toolName}`,
+                `Result summary: ${result.summary}`,
+                `Success: ${String(result.success)}`,
+                `Structured result:\n${JSON.stringify(result.data ?? {}, null, 2)}`,
+              ].join("\n")
+            );
+            responseMessage = makeMessage(grokReply || deterministicText);
+          } else {
+            responseMessage = makeMessage(deterministicText);
+          }
         }
       }
     }
