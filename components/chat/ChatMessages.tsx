@@ -5,16 +5,30 @@ import { ChatMessage, ChatMessage as ChatMessageType } from "./ChatMessage";
 
 interface ChatMessagesProps {
   messages: ChatMessageType[];
+  isLoading?: boolean;
 }
 
-export function ChatMessages({ messages }: ChatMessagesProps) {
+function ThinkingIndicator() {
+  return (
+    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+      <div className="flex gap-1">
+        <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+        <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+        <span className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+      </div>
+      <span>Thinking...</span>
+    </div>
+  );
+}
+
+export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
         <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -51,6 +65,11 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
       {messages.map((message) => (
         <ChatMessage key={message.id} message={message} />
       ))}
+      {isLoading && (
+        <div className="flex items-center py-2">
+          <ThinkingIndicator />
+        </div>
+      )}
       <div ref={messagesEndRef} />
     </div>
   );

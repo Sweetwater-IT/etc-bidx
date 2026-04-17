@@ -113,7 +113,7 @@ export function ChatPanel() {
         aria-label="AI Assistant chat"
       >
         <ChatHeader />
-        <ChatMessages messages={messages} />
+        <ChatMessages messages={messages} isLoading={isLoading} />
         <ChatInput onSend={handleSend} disabled={isLoading} />
       </div>
     </>
