@@ -107,7 +107,7 @@ export function ChatPanel() {
       />
 
       <div
-        className="fixed right-0 top-0 h-full w-full sm:w-[440px] bg-background border-l z-50 flex flex-col shadow-xl transition-transform duration-300 ease-in-out"
+        className="fixed right-0 top-11 h-[calc(100vh-2.75rem)] w-full sm:w-[440px] bg-background border-l z-50 flex flex-col shadow-xl transition-transform duration-300 ease-in-out"
         role="dialog"
         aria-modal="true"
         aria-label="AI Assistant chat"
