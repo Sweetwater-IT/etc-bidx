@@ -9,14 +9,7 @@ import {
   IconBell,
   IconPower,
   IconPlus,
-  IconBriefcase,
-  IconClipboard,
-  IconBuilding,
-  IconUser,
-  IconFileText,
 } from "@tabler/icons-react";
-import { Sparkles } from "lucide-react";
-import { useChat } from "@/contexts/chat-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +41,6 @@ export function SiteHeader({
   const router = useRouter();
   const { signOut } = useAuth();
   const [searchOpen, setSearchOpen] = React.useState(false);
-  const { isChatOpen, toggleChat } = useChat();
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -65,30 +57,6 @@ export function SiteHeader({
   const handleNewItem = (route: string) => {
     router.push(route);
   };
-
-  const handleChatToggle = React.useCallback(() => {
-    const nextState = !isChatOpen;
-
-    console.info("[chat] header sparkle clicked", {
-      pathname,
-      currentState: isChatOpen,
-      nextState,
-    });
-
-    toggleChat();
-
-    void fetch("/api/chat/toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source: "site-header",
-        pathname,
-        nextState,
-      }),
-    }).catch((error) => {
-      console.error("[chat] failed to log toggle event", error);
-    });
-  }, [isChatOpen, pathname, toggleChat]);
 
   const findTitle = (items: any[]): string | undefined => {
     for (const item of items) {
@@ -129,7 +97,7 @@ export function SiteHeader({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {quickActions.map((action, idx) => (
+          {quickActions.map((action) => (
             <React.Fragment key={action.route}>
               <DropdownMenuItem onClick={() => handleNewItem(action.route)}>
                 <action.icon className="size-4 mr-2" />
@@ -183,20 +151,6 @@ export function SiteHeader({
           <button className="relative rounded-lg p-2 hover:bg-muted">
             <IconBell className="size-5" />
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
-          </button>
-          <button
-            type="button"
-            className={`rounded-lg p-2 transition-colors ${
-              isChatOpen
-                ? "bg-foreground text-background hover:bg-foreground/90"
-                : "text-foreground hover:bg-muted"
-            }`}
-            onClick={handleChatToggle}
-            aria-pressed={isChatOpen}
-            aria-label={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
-            title={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
-          >
-            <Sparkles className="size-5" />
           </button>
           <button className="rounded-lg p-2 hover:bg-muted" onClick={() => signOut()}>
             <IconPower className="size-5" />

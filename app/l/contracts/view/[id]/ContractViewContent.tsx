@@ -243,7 +243,7 @@ export default function ContractViewContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-slate-50">
         <div className="py-16 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -256,7 +256,7 @@ export default function ContractViewContent() {
 
   if (!contract || !projectInfo) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-slate-50">
         <div className="py-16 flex items-center justify-center">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Contract not found</p>
@@ -275,7 +275,7 @@ export default function ContractViewContent() {
   const jobName = projectInfo?.etcJobNumber?.toString() || contract.project_name || "Untitled Project";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       <StickyPageHeader
         backLabel="Contracts"
         onBack={() => router.push("/l/contracts")}

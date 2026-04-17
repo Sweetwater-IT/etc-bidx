@@ -55,7 +55,7 @@ import {
   AvailableJob,
   AvailableJobServices,
 } from "@/data/available-jobs";
-import { formatDate } from "@/lib/formatUTCDate";
+import { formatDate, parseDateInput, toISODateString } from "@/lib/formatUTCDate";
 import { useAuth } from "@/contexts/auth-context";
 import { RequestorSelector } from "./requestor-selector";
 import { OwnerSelector } from "./OwnerSelector";
@@ -210,8 +210,8 @@ export function OpenBidSheet({
       setLocation(job.location);
       setPlatform(job.platform);
       setStatus(job.status as "Bid" | "No Bid" | "Unset");
-      setLettingDate(job.lettingDate ? new Date(job.lettingDate) : undefined);
-      setDueDate(job.dueDate ? new Date(job.dueDate) : undefined);
+      setLettingDate(parseDateInput(job.lettingDate) ?? undefined);
+      setDueDate(parseDateInput(job.dueDate) ?? undefined);
       setDbe(job.dbe != null ? job.dbe.toString() : "");
       setStateRoute(job.stateRoute || "");
       setSelectedServices(job.services);
@@ -331,18 +331,13 @@ export function OpenBidSheet({
 
       const today = new Date().toISOString().split("T")[0];
 
-      // Use ISO date format (YYYY-MM-DD) directly to avoid timezone issues
-      const formattedLettingDate = lettingDate
-        ? lettingDate.toISOString().split('T')[0]
-        : today;
-      const formattedDueDate = dueDate
-        ? dueDate.toISOString().split('T')[0]
-        : today;
+      const formattedLettingDate = toISODateString(lettingDate) || today;
+      const formattedDueDate = toISODateString(dueDate) || today;
 
       console.log('Submitting dates:', {
-        lettingDate: lettingDate ? lettingDate.toISOString() : null,
+        lettingDate: toISODateString(lettingDate) || null,
         formattedLettingDate,
-        dueDate: dueDate ? dueDate.toISOString() : null,
+        dueDate: toISODateString(dueDate) || null,
         formattedDueDate
       });
 
@@ -659,7 +654,7 @@ export function OpenBidSheet({
                   <LettingDateSelector
                     id="letting-date"
                     value={lettingDate}
-                    onChange={value => setLettingDate(value ? new Date(value) : undefined)}
+                    onChange={value => setLettingDate(parseDateInput(value) ?? undefined)}
                     className="h-10"
                   />
                   {/* <Popover open={openStates.lettingDate} onOpenChange={(open) => setOpenStates(prev => ({ ...prev, lettingDate: open }))}>
@@ -697,7 +692,7 @@ export function OpenBidSheet({
                   <DueDateSelector
                     id="due-date"
                     value={dueDate}
-                    onChange={value => setDueDate(value ? new Date(value) : undefined)}
+                    onChange={value => setDueDate(parseDateInput(value) ?? undefined)}
                     className="h-10"
                   />
                   {/* </PopoverTrigger>

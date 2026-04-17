@@ -9,8 +9,8 @@ export default async function ActiveBidPage({params} : {params : any}) {
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
-      {mode === 'view' && <SiteHeader showTitleBlock={false} />}
-      <div className={`flex flex-1 flex-col ${mode === 'view' ? '' : 'md:mt-0'}`}>
+      <div className="flex flex-1 flex-col bg-[#F9FAFC]">
+        {mode === 'view' && <SiteHeader showTitleBlock={false} />}
         <ActiveBidContent mode={mode}/>
       </div>
     </Suspense>

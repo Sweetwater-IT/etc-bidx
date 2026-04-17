@@ -216,10 +216,10 @@ const ActiveBidHeader = ({ mode, status, createdAt }: Props) => {
       <PagePrimaryHeader
         sticky
         icon={<BriefcaseBusiness className='h-5 w-5' />}
-        title={`Bid: ${adminData.location || adminData.contractNumber || 'Untitled Bid'}`}
+        title={`Bid: ${adminData.contractNumber || 'Untitled Bid'}`}
         subtitle={
           <>
-            {adminData.contractNumber && <span className='truncate'>{adminData.contractNumber}</span>}
+            {adminData.location && <span className='truncate'>{adminData.location}</span>}
             {createdAt && <span>Created {createdAt}</span>}
             {status && (
               <Badge

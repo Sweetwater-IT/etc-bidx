@@ -314,13 +314,14 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             <Button
               role="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => router.push(backToQuotesHref)}
-              className="h-auto px-0 text-xs"
+              className="rounded-full"
+              aria-label="Back to Quotes"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Quotes
+              <ArrowLeft className="h-5 w-5" />
             </Button>
+            <span>Back to Quotes</span>
             <Badge
               variant="outline"
               className={`flex items-center rounded-2xl gap-2 text-sm px-3 py-1 ${getStatusStyles(quote?.status ?? '')}`}

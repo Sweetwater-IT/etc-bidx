@@ -11,7 +11,7 @@ import { type JobPageData } from "@/app/jobs/_components/JobPageContent";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/formatUTCDate";
+import { formatDate, parseDateInput, toISODateString } from "@/lib/formatUTCDate";
 
 interface EditActiveBidSheetProps {
   open: boolean;
@@ -34,29 +34,9 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
         permSignValue: bid.permSignValue || '',
         rentalValue: bid.rentalValue || ''
       });
-      try {
-        setLettingDate((bid.lettingDate && bid.lettingDate !== '-') ? 
-          new Date(bid.lettingDate) : undefined);
-      } catch (e) {
-        console.error("Invalid letting date format:", bid.lettingDate);
-        setLettingDate(undefined);
-      }
-      
-      try {
-        setStartDate((bid.startDate && bid.startDate !== '-') ? 
-          new Date(bid.startDate) : undefined);
-      } catch (e) {
-        console.error("Invalid start date format:", bid.startDate);
-        setStartDate(undefined);
-      }
-      
-      try {
-        setEndDate((bid.endDate && bid.endDate !== '-') ? 
-          new Date(bid.endDate) : undefined);
-      } catch (e) {
-        console.error("Invalid end date format:", bid.endDate);
-        setEndDate(undefined);
-      }
+      setLettingDate(parseDateInput(bid.lettingDate) ?? undefined);
+      setStartDate(parseDateInput(bid.startDate) ?? undefined);
+      setEndDate(parseDateInput(bid.endDate) ?? undefined);
     } else {
       setFormData({});
       setLettingDate(undefined);
@@ -79,7 +59,7 @@ export function EditActiveBidSheet({ open, onOpenChange, bid, onSuccess }: EditA
     
     setFormData(prev => ({
       ...prev,
-      [field]: date ? date.toISOString() : undefined
+      [field]: toISODateString(date) || undefined
     }));
   };
 

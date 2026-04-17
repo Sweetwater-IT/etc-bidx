@@ -19,6 +19,9 @@ interface JobDetailsSheetProps {
 export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }: JobDetailsSheetProps & {
   onNavigate?: (direction: 'up' | 'down') => void
 }) {
+  const formattedLettingDate = formatDate(job?.lettingDate)
+  const formattedDueDate = formatDate(job?.dueDate)
+
   useEffect(() => {
     if (!open) return
 
@@ -103,18 +106,14 @@ export function JobDetailsSheet({ open, onOpenChange, job, onEdit, onNavigate }:
               <div className="space-y-1 w-full">
                 <Label className="font-medium">Letting Date</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.lettingDate ? formatDate(job.lettingDate) : '-'}
-                  {job?.lettingDate ? (() => {
-                    console.log('JobDetailsSheet - Raw letting date:', job.lettingDate, 'Formatted:', formatDate(job.lettingDate));
-                    return null;
-                  })() : null}
+                  {formattedLettingDate || '-'}
                 </div>
               </div>
 
               <div className="space-y-1 w-full">
                 <Label className="font-medium">Due Date</Label>
                 <div className="text-sm text-muted-foreground">
-                  {job?.dueDate ? formatDate(job.dueDate) : '-'}
+                  {formattedDueDate || '-'}
                 </div>
               </div>
             </div>
