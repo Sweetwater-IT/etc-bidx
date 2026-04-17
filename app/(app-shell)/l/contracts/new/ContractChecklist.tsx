@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Lock, Pencil, StickyNote } from "lucide-react";
 import type { JobProjectInfo } from "@/types/job";
+import type { ContractDocument } from "@/types/document";
 import { ChecklistHeader } from "@/app/l/components/ChecklistHeader";
 import { ProjectInfoFields } from "@/app/l/components/ProjectInfoFields";
 import { SOVTable, type SOVTableHandle } from "@/components/SOVTable";
@@ -28,18 +29,6 @@ import { useAuth } from "@/contexts/auth-context";
 
 
 type DocumentCategory = ContractDocumentCategory;
-
-interface ContractDocument {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  category: DocumentCategory;
-  associatedItemId?: string;
-  associatedItemLabel?: string;
-  uploadedAt: string;
-  filePath: string;
-}
 
 const composeName = (firstName?: string | null, lastName?: string | null, fallback?: string | null) => {
   const combined = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ").trim();
