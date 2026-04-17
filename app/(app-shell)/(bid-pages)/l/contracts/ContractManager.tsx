@@ -652,7 +652,7 @@ const ContractManager = () => {
 
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[#F9FAFB]">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#F9FAFB]">
       <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -935,11 +935,7 @@ const ContractManager = () => {
         </div>
       </div>
 
-      <main
-        className={`mx-auto flex w-full max-w-[1600px] flex-1 min-h-0 flex-col px-6 py-6 ${
-          viewMode === "kanban" ? "overflow-hidden" : "overflow-y-auto"
-        }`}
-      >
+      <main className="mx-auto flex w-full max-w-[1600px] min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">
         {viewMode === "kanban" ? (
           <KanbanView
             stages={PIPELINE_STAGES}
@@ -1689,27 +1685,31 @@ const ListView = ({
   }
 
   return (
-    <Tabs defaultValue={stages[0]?.id} className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        {stages.map((stage) => (
-          <TabsTrigger key={stage.id} value={stage.id} className="flex items-center gap-2">
-            <stage.icon className="h-4 w-4" />
-            <span className="hidden sm:inline">{stage.shortLabel}</span>
-            <Badge variant="secondary" className="ml-1 text-xs">
-              {(jobsByStage[stage.id] || []).length}
-            </Badge>
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {stages.map((stage) => (
-        <TabsContent key={stage.id} value={stage.id} className="mt-6">
-          <ContractTable
-            stage={stage}
-            jobs={jobsByStage[stage.id] || []}
-          />
-        </TabsContent>
-      ))}
-    </Tabs>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Tabs defaultValue={stages[0]?.id} className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <TabsList className="grid w-full shrink-0 grid-cols-3">
+          {stages.map((stage) => (
+            <TabsTrigger key={stage.id} value={stage.id} className="flex items-center gap-2">
+              <stage.icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{stage.shortLabel}</span>
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {(jobsByStage[stage.id] || []).length}
+              </Badge>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {stages.map((stage) => (
+            <TabsContent key={stage.id} value={stage.id} className="mt-6">
+              <ContractTable
+                stage={stage}
+                jobs={jobsByStage[stage.id] || []}
+              />
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
+    </div>
   );
 };
 

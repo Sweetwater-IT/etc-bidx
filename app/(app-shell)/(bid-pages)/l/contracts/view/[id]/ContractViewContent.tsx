@@ -241,8 +241,8 @@ export default function ContractViewContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="py-16 flex items-center justify-center">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+        <div className="flex flex-1 items-center justify-center px-4 py-16">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-sm text-muted-foreground">Loading contract...</p>
@@ -254,8 +254,8 @@ export default function ContractViewContent() {
 
   if (!contract || !projectInfo) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="py-16 flex items-center justify-center">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+        <div className="flex flex-1 items-center justify-center px-4 py-16">
           <div className="text-center">
             <p className="text-sm text-muted-foreground">Contract not found</p>
             <button
@@ -273,7 +273,7 @@ export default function ContractViewContent() {
   const jobName = projectInfo?.etcJobNumber?.toString() || contract.project_name || "Untitled Project";
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-slate-50">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
       <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
@@ -303,9 +303,9 @@ export default function ContractViewContent() {
         </div>
       </header>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <div className="@container/main flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden">
-          <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-8 px-4 py-4 md:gap-6 md:px-6 md:py-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="@container/main flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden">
+          <div className="mx-auto flex w-full max-w-7xl min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-y-auto px-4 py-4 md:gap-6 md:px-6 md:py-6">
 
         {/* Project Information */}
         <div className="rounded-lg border bg-card shadow-sm">
