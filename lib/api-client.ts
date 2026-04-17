@@ -1,5 +1,5 @@
-import { createQuoteEmailHtml } from '@/app/quotes/create/ProposalHTML';
-import { AttachmentNames, QuoteStatus, TermsNames } from '@/app/quotes/create/QuoteFormProvider';
+import { createQuoteEmailHtml } from '@/app/(app-shell)/quotes/create/ProposalHTML';
+import { AttachmentNames, QuoteStatus, TermsNames } from '@/app/(app-shell)/quotes/create/QuoteFormProvider';
 import { OrderTypes } from '@/app/takeoffs/sign-order/SignOrderContentSimple';
 import { PaymentTerms } from '@/components/pages/quote-form/QuoteAdminInformation';
 import { Customer } from '@/types/Customer';

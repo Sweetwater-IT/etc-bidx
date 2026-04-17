@@ -3,14 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/ui/dropzone";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { toast } from "sonner";
 import { FileMetadata } from "@/types/FileTypes";
 import FileViewingContainer from "@/components/file-viewing-container";
 import { fetchAssociatedFiles } from "@/lib/api-client";
-import { PdfPreviewDialog } from "@/app/quotes/create/components/ModalPreviewPdf";
+import { PdfPreviewDialog } from "@/app/(app-shell)/quotes/create/components/ModalPreviewPdf";
 
 export function QuoteAdditionalFiles({ useButton, setFiles, files, quoteData, handleFileSelect, setQuoteData }: { setFiles: any, files: any[], quoteData?: any, handleFileSelect: (field: any) => void; setQuoteData: (prev: any) => void; useButton: boolean; }) {
   const { quoteId } = useQuoteForm();

@@ -1,7 +1,7 @@
 "use client";
 
 import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-stable-id";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { useCustomers } from "@/hooks/use-customers";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

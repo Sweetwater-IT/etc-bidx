@@ -1,7 +1,6 @@
 "use client";
 
 import { DataTable } from "@/components/data-table";
-import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { QUOTE_CREATOR_SEGMENTS } from "@/lib/quote-creator-segments";
@@ -207,9 +206,7 @@ export default function QuotesPage() {
   };
 
   return (
-    <>
-      <SiteHeader showTitleBlock={false} />
-      <div className="flex flex-1 flex-col bg-[#F9FAFB]">
+    <div className="flex flex-1 flex-col bg-[#F9FAFB]">
         <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-3">
@@ -266,6 +263,5 @@ export default function QuotesPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }

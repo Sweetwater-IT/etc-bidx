@@ -43,7 +43,6 @@ import { uploadContractDocuments } from "@/lib/upload-contract-documents";
 import { cn } from "@/lib/utils";
 import { exportContractListToExcel } from "@/lib/exportContractListToExcel";
 import { useTableSearchState } from "@/hooks/use-table-search-state";
-import { PagePrimaryHeader } from "@/components/page-primary-header";
 
 import ContractManagerEmptyState from "./ContractManagerEmptyState";
 
@@ -653,14 +652,23 @@ const ContractManager = () => {
 
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#F9FAFB]">
-      <PagePrimaryHeader
-        sticky
-        icon={<FileText className="h-5 w-5" />}
-        title="Contract Manager"
-        subtitle={`${pipelineJobs.length} active contract${pipelineJobs.length !== 1 ? "s" : ""}`}
-        actions={
-          <>
+    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-[#F9FAFB]">
+      <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold tracking-tight text-foreground">
+                Contract Manager
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {pipelineJobs.length} active contract{pipelineJobs.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button variant="outline" className="gap-2" onClick={() => void handleExportContracts()}>
               <ExternalLink className="h-4 w-4" />
               Export Contracts
@@ -672,9 +680,9 @@ const ContractManager = () => {
               <Plus className="h-4 w-4" />
               New Contract
             </Button>
-          </>
-        }
-      />
+          </div>
+        </div>
+      </header>
 
       <div className="shrink-0 border-y bg-card/60">
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-6 py-3">

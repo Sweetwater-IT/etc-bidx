@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { BidProposalReactPDF } from "./BidProposalReactPDF";
 import { defaultAdminObject } from "@/types/default-objects/defaultAdminData";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { PaymentTerms } from "./AdminInformationSheet";
 import { PDFViewer } from "@react-pdf/renderer";
 

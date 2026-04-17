@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Pencil, ChevronRight, StickyNote } from "lucide-react";
+import { ArrowLeft, Pencil, StickyNote } from "lucide-react";
 import { toast } from "sonner";
-import { PageTitleBlock } from "@/app/l/components/PageTitleBlock";
-import { StickyPageHeader } from "@/app/l/components/StickyPageHeader";
 import { SOVTable } from "@/components/SOVTable";
 import { QuoteNotes, type Note } from "@/components/pages/quote-form/QuoteNotes";
 import { ContractSaveDocument } from "@/app/l/components/ContractSaveDocument";
@@ -275,39 +273,39 @@ export default function ContractViewContent() {
   const jobName = projectInfo?.etcJobNumber?.toString() || contract.project_name || "Untitled Project";
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StickyPageHeader
-        backLabel="Contracts"
-        onBack={() => router.push("/l/contracts")}
-        showBackButton={false}
-        leftContent={
-          <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
-            <button
-              type="button"
+    <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-slate-50">
+      <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => router.push("/l/contracts")}
-              className="whitespace-nowrap transition-colors hover:text-foreground"
+              className="rounded-full"
             >
-              Contracts
-            </button>
-            <ChevronRight className="h-3 w-3 shrink-0" />
-            <span className="whitespace-nowrap font-medium text-foreground">
-              Contract for {jobName}
-            </span>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-foreground">
+                View Contract
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Contract for {jobName}
+              </p>
+            </div>
           </div>
-        }
-        rightContent={
-          <Button variant="outline" size="sm" onClick={handleEdit}>
-            <Pencil className="h-3.5 w-3.5 mr-1.5" />
-            Edit
-          </Button>
-        }
-      />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              Edit
+            </Button>
+          </div>
+        </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <PageTitleBlock
-          title={`Contract for ${jobName}`}
-          description="Review contract details, schedule of values, and supporting documents."
-        />
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        <div className="@container/main flex min-w-0 flex-1 flex-col gap-2 overflow-x-hidden">
+          <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-8 px-4 py-4 md:gap-6 md:px-6 md:py-6">
 
         {/* Project Information */}
         <div className="rounded-lg border bg-card shadow-sm">
@@ -559,6 +557,8 @@ export default function ContractViewContent() {
             </div>
           }
         />
+          </div>
+        </div>
       </div>
     </div>
   );

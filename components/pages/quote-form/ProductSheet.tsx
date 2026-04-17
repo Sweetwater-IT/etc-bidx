@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useEffect, useMemo, useState, Fragment } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "@/types/IQuoteItem";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
 import { QuantityInput } from "@/components/ui/quantity-input";

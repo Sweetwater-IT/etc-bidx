@@ -10,7 +10,7 @@ import { Trash2, Pencil, MoreVertical, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQuoteForm } from "@/app/quotes/create/QuoteFormProvider";
+import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { restorePointerEvents } from "@/lib/pointer-events-fix";
 import { getSovPickerItemUomOptions } from "@/hooks/use-sov-picker-items";

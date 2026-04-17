@@ -9,7 +9,7 @@ import {
 } from '@react-pdf/renderer';
 import { QuoteItem } from '@/types/IQuoteItem';
 import { Customer } from '@/types/Customer';
-import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/quotes/create/types';
+import { ToProjectQuote, EstimateBidQuote, StraightSaleQuote } from '@/app/(app-shell)/quotes/create/types';
 
 interface Props {
   items: QuoteItem[];
