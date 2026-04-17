@@ -1,6 +1,6 @@
 import { AdminData } from "../TAdminData";
 import { Customer } from "../Customer";
-import { TermsNames } from "../../app/quotes/create/QuoteFormProvider";
+import { TermsNames } from "../../app/(app-shell)/quotes/create/QuoteFormProvider";
 import { QuoteItem } from "../IQuoteItem";
 
 export const defaultAdminObject: AdminData = {
