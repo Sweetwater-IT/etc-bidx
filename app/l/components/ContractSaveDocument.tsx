@@ -87,6 +87,7 @@ interface ContractSaveDocumentProps {
 
 export const ContractSaveDocument = ({
   documents,
+  projectInfo,
   jobId,
   onAddDocuments,
   onRemoveDocument,

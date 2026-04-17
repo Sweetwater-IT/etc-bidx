@@ -923,7 +923,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   }
 
   return (
-    <div className="min-w-0 bg-slate-50">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
       <NewRecordStickyPageHeader
         backLabel="Contracts"
         onBack={async () => {
@@ -958,7 +958,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
 
       {/* Signed contract info banner */}
       {isSigned && (
-        <div className="mx-auto max-w-7xl min-w-0 px-4 pt-3">
+        <div className="mx-auto w-full max-w-7xl min-w-0 shrink-0 px-4 pt-3">
           <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
             <Lock className="h-4 w-4 text-primary shrink-0" />
             <p className="text-xs text-primary font-medium">
@@ -968,97 +968,101 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
         </div>
       )}
 
-      <div className="mx-auto max-w-7xl min-w-0 px-4 py-8 sm:py-12 space-y-8">
-        <ChecklistHeader title={checklistTitle} description={checklistDescription} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl min-w-0 px-4 py-8 sm:py-10">
+          <div className="space-y-8">
+            <ChecklistHeader title={checklistTitle} description={checklistDescription} />
 
-        {/* Admin Info — always editable */}
-        <ProjectInfoFields
-          projectInfo={projectInfo}
-          onChange={handleProjectInfoChange}
-          onProjectNameBlur={handleProjectNameBlur}
-          contractSigned={isSigned}
-          showValidation={showValidation}
-          readOnly={isReadOnly}
-          contractRow={contractRow}
-          hideNotesSection
-        />
+            {/* Admin Info — always editable */}
+            <ProjectInfoFields
+              projectInfo={projectInfo}
+              onChange={handleProjectInfoChange}
+              onProjectNameBlur={handleProjectNameBlur}
+              contractSigned={isSigned}
+              showValidation={showValidation}
+              readOnly={isReadOnly}
+              contractRow={contractRow}
+              hideNotesSection
+            />
 
-        {/* Schedule of Values */}
-        <div className="min-w-0">
-          <SOVTable
-            ref={sovTableRef}
-            contractId={contractId}
-            readOnly={false}
-            onEditAttempt={isSigned && !changeOrderApproved ? handleSovEditAttempt : undefined}
-            isSignedContract={isSigned}
-            changeOrderApproved={changeOrderApproved}
-          />
-          {isSigned && !changeOrderApproved && (
-            <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
-              <p className="text-xs text-warning font-medium">
-                This contract is signed. SOV changes require a Change Order.
-              </p>
-            </div>
-          )}
-          {isSigned && changeOrderApproved && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-              <p className="text-xs text-green-800 font-medium">
-                ✓ Change Order approved. SOV editing is now enabled.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Documents & Forms */}
-        <ContractSaveDocument
-          documents={documents}
-          projectInfo={projectInfo}
-          jobId={contractId}
-          onAddDocuments={handleAddDocuments}
-          onRemoveDocument={requestRemoveDocument}
-          onUpdateCategory={handleUpdateDocumentCategory}
-          onRenameDocument={handleRenameDocument}
-          onAppendDocument={(document) => setDocuments((prev) => [...prev, document])}
-          currentUser={{
-            name: user?.user_metadata?.name || user?.email?.split("@")[0] || "Established Traffic Control",
-            email: user?.email || "info@establishedtraffic.com",
-            role: user?.user_metadata?.role || "ETC Team",
-          }}
-          readOnly={forceReadOnly}
-        />
-
-        <QuoteNotes
-          title="Additional Notes"
-          notes={contractNotes}
-          loading={contractNotesLoading}
-          onSave={handleAddContractNote}
-          onEdit={handleEditContractNote}
-          onDelete={handleDeleteContractNote}
-          submitLabel="Save"
-          updateLabel="Save"
-          actionAlignment="right"
-          addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
-          submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
-          containerClassName="bg-card"
-          addButtonInHeader
-          headerContent={
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="rounded-md bg-violet-500/10 p-1.5">
-                  <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+            {/* Schedule of Values */}
+            <div className="min-w-0">
+              <SOVTable
+                ref={sovTableRef}
+                contractId={contractId}
+                readOnly={false}
+                onEditAttempt={isSigned && !changeOrderApproved ? handleSovEditAttempt : undefined}
+                isSignedContract={isSigned}
+                changeOrderApproved={changeOrderApproved}
+              />
+              {isSigned && !changeOrderApproved && (
+                <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
+                  <p className="text-xs text-warning font-medium">
+                    This contract is signed. SOV changes require a Change Order.
+                  </p>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Additional Notes
-                </span>
-              </div>
+              )}
+              {isSigned && changeOrderApproved && (
+                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                  <p className="text-xs text-green-800 font-medium">
+                    ✓ Change Order approved. SOV editing is now enabled.
+                  </p>
+                </div>
+              )}
             </div>
-          }
-          emptyState={
-            <div className="text-xs italic text-muted-foreground">
-              No notes yet. Use &quot;Add Note&quot; to get started.
-            </div>
-          }
-        />
+
+            {/* Documents & Forms */}
+            <ContractSaveDocument
+              documents={documents}
+              projectInfo={projectInfo}
+              jobId={contractId}
+              onAddDocuments={handleAddDocuments}
+              onRemoveDocument={requestRemoveDocument}
+              onUpdateCategory={handleUpdateDocumentCategory}
+              onRenameDocument={handleRenameDocument}
+              onAppendDocument={(document) => setDocuments((prev) => [...prev, document])}
+              currentUser={{
+                name: user?.user_metadata?.name || user?.email?.split("@")[0] || "Established Traffic Control",
+                email: user?.email || "info@establishedtraffic.com",
+                role: user?.user_metadata?.role || "ETC Team",
+              }}
+              readOnly={forceReadOnly}
+            />
+
+            <QuoteNotes
+              title="Additional Notes"
+              notes={contractNotes}
+              loading={contractNotesLoading}
+              onSave={handleAddContractNote}
+              onEdit={handleEditContractNote}
+              onDelete={handleDeleteContractNote}
+              submitLabel="Save"
+              updateLabel="Save"
+              actionAlignment="right"
+              addButtonClassName="h-7 bg-[#16335A] px-2.5 text-[10px] font-semibold uppercase tracking-wide text-white hover:bg-[#122947]"
+              submitButtonClassName="bg-[#16335A] text-white hover:bg-[#122947]"
+              containerClassName="bg-card"
+              addButtonInHeader
+              headerContent={
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-md bg-violet-500/10 p-1.5">
+                      <StickyNote className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Additional Notes
+                    </span>
+                  </div>
+                </div>
+              }
+              emptyState={
+                <div className="text-xs italic text-muted-foreground">
+                  No notes yet. Use &quot;Add Note&quot; to get started.
+                </div>
+              }
+            />
+          </div>
+        </div>
       </div>
 
       {/* Navigation blocker dialog */}

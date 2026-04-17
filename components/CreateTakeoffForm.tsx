@@ -1716,7 +1716,6 @@ export const CreateTakeoffForm = ({
           </div>
         </div>
       </div>
-
       {/* Work Type Specific Content */}
       {workType === "MPT" && (
         <div className={TAKEOFF_PANEL_MAX_WIDTH_CLASS}>
