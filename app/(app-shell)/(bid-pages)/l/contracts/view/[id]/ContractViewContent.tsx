@@ -273,7 +273,7 @@ export default function ContractViewContent() {
   const jobName = projectInfo?.etcJobNumber?.toString() || contract.project_name || "Untitled Project";
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-slate-50">
       <header className="sticky top-11 z-30 shrink-0 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">

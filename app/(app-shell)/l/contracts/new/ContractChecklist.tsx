@@ -923,7 +923,7 @@ const ContractChecklist = ({ forceReadOnly = false }: { forceReadOnly?: boolean 
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-slate-50">
       <NewRecordStickyPageHeader
         backLabel="Contracts"
         onBack={async () => {
