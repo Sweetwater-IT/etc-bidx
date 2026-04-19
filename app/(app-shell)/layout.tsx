@@ -4,8 +4,22 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import * as React from "react";
+import { usePathname } from "next/navigation";
+import { FullPageWorkflowFrame } from "@/app/takeoffs/sign-order/layout";
+
+const FULL_PAGE_WORKFLOW_PATHS = new Set([
+  "/active-bid/new",
+  "/quotes/create",
+]);
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isFullPageWorkflow = pathname ? FULL_PAGE_WORKFLOW_PATHS.has(pathname) : false;
+
+  if (isFullPageWorkflow) {
+    return <FullPageWorkflowFrame>{children}</FullPageWorkflowFrame>;
+  }
+
   return (
     <>
       <AppSidebar variant="inset" />

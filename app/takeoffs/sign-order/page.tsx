@@ -3,24 +3,25 @@
 import { SignOrderBuilderProvider } from "@/contexts/SignOrderBuilderContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import SignOrderContentSimple from "./SignOrderContentSimple";
+import { FullPageWorkflowFrame } from "./layout";
 
 export default function CreateSignOrderPage() {
-    return (
-        <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 68)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
-        >
-            <div className="flex h-screen w-screen flex-col">
-                <div className="flex-1 overflow-auto">
-                    <SignOrderBuilderProvider>
-                        <SignOrderContentSimple />
-                    </SignOrderBuilderProvider>
-                </div>
-            </div>
-        </SidebarProvider>
-    );
+  return (
+    <SidebarProvider
+      className="h-svh overflow-hidden"
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 68)",
+          "--sidebar-width-icon": "calc(var(--spacing) * 16)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <FullPageWorkflowFrame>
+        <SignOrderBuilderProvider>
+          <SignOrderContentSimple />
+        </SignOrderBuilderProvider>
+      </FullPageWorkflowFrame>
+    </SidebarProvider>
+  );
 }
