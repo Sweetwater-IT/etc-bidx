@@ -67,6 +67,19 @@ const EMPTY_CUSTOM_DRAFT: CustomDraft = {
   uom: "EA",
 };
 
+const CUSTOM_UOM_OPTIONS = ["EA", "LS", "SF", "LF", "EA/WK", "EA/DAY", "HR"] as const;
+const CUSTOM_WORK_TYPE_OPTIONS = [
+  "DELIVERY",
+  "SERVICE",
+  "LANE CLOSURE",
+  "FLAGGING",
+  "MPT",
+  "RENTAL",
+  "SALE",
+  "PERMANENT SIGN",
+  "CUSTOM",
+] as const;
+
 export function ProductSheet({
   open,
   onOpenChange,
@@ -457,10 +470,10 @@ export function ProductSheet({
                     </TableHeader>
                     <TableBody>
                       <TableRow
-                        className="cursor-pointer border-b border-[#16335A]/15 bg-[#16335A]/5 transition-colors hover:bg-[#16335A]/8"
+                        className="cursor-pointer border-b border-border/40 transition-colors hover:bg-[#16335A]/6 data-[state=selected]:bg-[#16335A]/8"
                         onClick={() => setEditorStep("custom")}
                       >
-                        <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
+                        <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-foreground/85">
                           <div className="flex items-center gap-2">
                             <Plus className="h-4 w-4" />
                             Add Custom Item
@@ -739,23 +752,43 @@ export function ProductSheet({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="custom-item-work-type">Work Type</Label>
-                    <Input
-                      id="custom-item-work-type"
+                    <Select
                       value={customDraft.workType}
-                      onChange={(event) =>
-                        setCustomDraft((prev) => ({ ...prev, workType: event.target.value.toUpperCase() }))
+                      onValueChange={(value) =>
+                        setCustomDraft((prev) => ({ ...prev, workType: value }))
                       }
-                    />
+                    >
+                      <SelectTrigger id="custom-item-work-type" className="bg-background">
+                        <SelectValue placeholder="Select work type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CUSTOM_WORK_TYPE_OPTIONS.map((workType) => (
+                          <SelectItem key={workType} value={workType}>
+                            {formatWorkTypeLabel(workType)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="custom-item-uom">UOM</Label>
-                    <Input
-                      id="custom-item-uom"
+                    <Select
                       value={customDraft.uom}
-                      onChange={(event) =>
-                        setCustomDraft((prev) => ({ ...prev, uom: event.target.value.toUpperCase() }))
+                      onValueChange={(value) =>
+                        setCustomDraft((prev) => ({ ...prev, uom: value }))
                       }
-                    />
+                    >
+                      <SelectTrigger id="custom-item-uom" className="bg-background">
+                        <SelectValue placeholder="Select UOM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CUSTOM_UOM_OPTIONS.map((uom) => (
+                          <SelectItem key={uom} value={uom}>
+                            {uom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 {duplicateCustomItem && (

@@ -1,4 +1,14 @@
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,6 +47,8 @@ export default function QuoteItemRow({
 }: any) {
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { quoteMetadata } = useQuoteForm()
   // Keep the editor open if this row or one of its subitems is actively being edited.
   // This comment intentionally marks the latest branch tip while we verify the quote item editor path.
@@ -155,6 +167,17 @@ export default function QuoteItemRow({
         : matchedSovItem
           ? getSovPickerItemUomOptions(matchedSovItem)
           : item.availableUoms,
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await handleRemoveItem(item.id);
+      setDeleteDialogOpen(false);
+    } finally {
+      setIsDeleting(false);
+      restorePointerEvents();
+    }
   };
 
   return (
@@ -313,7 +336,14 @@ export default function QuoteItemRow({
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleRemoveItem(item.id)}>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setActionMenuOpen(false);
+                  restorePointerEvents();
+                  setDeleteDialogOpen(true);
+                }}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -349,6 +379,32 @@ export default function QuoteItemRow({
         initialStep={isEditing || isEditingSubItemForRow ? "configure" : "pick"}
         contractNumber={contractNumber}
       />
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (isDeleting) return;
+          setDeleteDialogOpen(nextOpen);
+          if (!nextOpen) {
+            restorePointerEvents();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete quote item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove {item.itemNumber || "this item"} from the quote.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleConfirmDelete()} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
