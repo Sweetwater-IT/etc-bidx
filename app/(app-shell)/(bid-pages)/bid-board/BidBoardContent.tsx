@@ -2151,9 +2151,9 @@ export function BidBoardContent() {
     };
 
     const content = (
-        <div className={`flex flex-1 flex-col ${isAvailableJobs || isActiveBids ? "bg-[#F9FAFB]" : ""}`}>
+        <div className={`flex h-full min-h-0 flex-1 flex-col overflow-hidden ${isAvailableJobs || isActiveBids ? "bg-[#F9FAFB]" : ""}`}>
             {isAvailableJobs && (
-                <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
+                <header data-page-sticky-header="true" className="sticky top-11 z-30 shrink-0 border-b bg-card">
                     <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
@@ -2197,7 +2197,7 @@ export function BidBoardContent() {
                 </header>
             )}
             {isActiveBids && (
-                <header className="sticky top-11 z-30 shrink-0 border-b bg-card">
+                <header data-page-sticky-header="true" className="sticky top-11 z-30 shrink-0 border-b bg-card">
                     <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">
@@ -2231,7 +2231,7 @@ export function BidBoardContent() {
                 </header>
             )}
 
-            <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="@container/main flex min-h-0 flex-1 flex-col overflow-auto">
                 <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-3">

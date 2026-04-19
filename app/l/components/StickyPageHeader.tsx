@@ -3,7 +3,6 @@
 import { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChatTriggerButton } from "@/components/chat/ChatTriggerButton";
 
 interface StickyPageHeaderProps {
   backLabel: string;
@@ -40,7 +39,6 @@ export function StickyPageHeader({
           {leftContent ? <div className="min-w-0 flex-1">{leftContent}</div> : null}
         </div>
         <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
-          <ChatTriggerButton source="sticky-page-header" />
           {rightContent}
         </div>
       </div>

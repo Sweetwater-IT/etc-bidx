@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChatTriggerButton } from "@/components/chat/ChatTriggerButton";
 
 interface NewRecordStickyPageHeaderProps {
   backLabel: string;
@@ -100,7 +99,6 @@ export function NewRecordStickyPageHeader({
               {saveStatusMessage}
             </div>
           )}
-          <ChatTriggerButton source="new-record-sticky-page-header" />
           {additionalButtons}
           <Button
             onClick={onDone}
