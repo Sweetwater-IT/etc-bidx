@@ -1,9 +1,9 @@
 "use client";
 
 import { SignOrderBuilderProvider } from "@/contexts/SignOrderBuilderContext";
+import { FullPageWorkflowFrame } from "@/components/full-page-workflow-frame";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import SignOrderContentSimple from "./SignOrderContentSimple";
-import { FullPageWorkflowFrame } from "./layout";
 
 export default function CreateSignOrderPage() {
   return (

@@ -1,11 +1,11 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { FullPageWorkflowFrame } from "@/components/full-page-workflow-frame";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { FullPageWorkflowFrame } from "@/app/takeoffs/sign-order/layout";
 
 const FULL_PAGE_WORKFLOW_PATHS = new Set([
   "/active-bid/new",
