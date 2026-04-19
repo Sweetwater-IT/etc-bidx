@@ -1,4 +1,3 @@
-import { SiteHeader } from "@/components/site-header";
 import { Suspense } from "react";
 import ActiveBidContent from "./ActiveBidContent";
 
@@ -10,7 +9,6 @@ export default async function ActiveBidPage({params} : {params : any}) {
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-64">Loading...</div>}>
       <div className="flex flex-1 flex-col bg-[#F9FAFC]">
-        {mode === 'view' && <SiteHeader showTitleBlock={false} />}
         <ActiveBidContent mode={mode}/>
       </div>
     </Suspense>

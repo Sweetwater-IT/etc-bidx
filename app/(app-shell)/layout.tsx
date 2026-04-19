@@ -1,6 +1,7 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { useChat } from "@/contexts/chat-context";
 import * as React from "react";
@@ -25,7 +26,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppSidebar variant="inset" />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="h-full min-h-0 overflow-hidden">
+        <SiteHeader showTitleBlock={false} />
+        {children}
+      </SidebarInset>
     </>
   );
 }
@@ -37,6 +41,7 @@ export default function AppShellLayout({
 }) {
   return (
     <SidebarProvider
+      className="h-svh overflow-hidden"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 68)",

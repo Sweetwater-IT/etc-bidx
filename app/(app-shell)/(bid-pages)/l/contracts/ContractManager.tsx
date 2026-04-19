@@ -1260,7 +1260,7 @@ const KanbanView = ({
     <div
       ref={boardRef}
       data-contract-kanban-board
-      className="flex h-full min-h-0 overflow-hidden gap-2.5"
+      className="flex min-h-0 min-w-0 flex-1 gap-2.5 overflow-hidden"
     >
       {stages.map((stage) => {
         const valid = isValidTarget(stage.id);
