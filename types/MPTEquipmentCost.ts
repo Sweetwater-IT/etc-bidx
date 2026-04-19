@@ -1,4 +1,4 @@
-import { ContactInfo } from "@/app/(app-shell)/(bid-pages)/quotes/view/[id]/QuoteViewContent"
+import { ContactInfo } from "@/app/(app-shell)/quotes/view/[id]/QuoteViewContent"
 
 export type MPTEquipmentCost = {
     cost : number
