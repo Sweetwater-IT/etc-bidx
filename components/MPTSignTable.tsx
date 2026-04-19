@@ -91,6 +91,8 @@ const B_LIGHT_OPTIONS = [
 ];
 
 const roundToTwo = (value: number) => Math.round(value * 100) / 100;
+const getDimensionLabel = (width?: number, height?: number) =>
+  width && height ? `${width}" x ${height}"` : "";
 
 const cloneSecondarySign = (secondarySign: any, primarySignId: string, quantity: number) => ({
   ...secondarySign,
@@ -708,7 +710,7 @@ export const MPTSignTable = ({
         return (
           <Input
             className="h-8 text-xs w-full"
-            value={row.dimensionLabel}
+            value={row.dimensionLabel || getDimensionLabel(row.width, row.height)}
             onChange={(e) => updateRow(row.id, { dimensionLabel: e.target.value })}
             placeholder="e.g. 48x96"
             disabled={disabled || !!row.signDesignation}
@@ -1044,7 +1046,9 @@ export const MPTSignTable = ({
                                   disabled={disabled}
                                 />
                               ) : column.key === 'dimensions' ? (
-                                <span className="text-[11px] text-muted-foreground">{sec.dimensionLabel || "—"}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {sec.dimensionLabel || getDimensionLabel(sec.width, sec.height) || "—"}
+                                </span>
                               ) : column.key === 'sheeting' ? (
                                 <Select
                                   value={sec.sheeting || 'HI'}

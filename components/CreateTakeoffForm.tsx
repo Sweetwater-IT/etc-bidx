@@ -278,6 +278,39 @@ const TYPE_III_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key =
 const TRAILBLAZER_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "trailblazers")?.structures || []);
 const SIGN_STAND_STRUCTURES = new Set(MPT_SECTIONS.find((section) => section.key === "sign_stands")?.structures || []);
 
+const formatDimensionLabel = (width: unknown, height: unknown) => {
+  const normalizedWidth = Number(width || 0);
+  const normalizedHeight = Number(height || 0);
+
+  if (normalizedWidth > 0 && normalizedHeight > 0) {
+    return `${normalizedWidth}" x ${normalizedHeight}"`;
+  }
+
+  return "";
+};
+
+const hydrateDimensionLabels = (rows: Record<string, MPTSignRow[]> = {}) =>
+  Object.fromEntries(
+    Object.entries(rows).map(([sectionKey, sectionRows]) => [
+      sectionKey,
+      (sectionRows || []).map((row) => ({
+        ...row,
+        width: Number(row.width || 0),
+        height: Number(row.height || 0),
+        dimensionLabel:
+          row.dimensionLabel || formatDimensionLabel(row.width, row.height),
+        secondarySigns: (row.secondarySigns || []).map((secondary: any) => ({
+          ...secondary,
+          width: Number(secondary.width || 0),
+          height: Number(secondary.height || 0),
+          dimensionLabel:
+            secondary.dimensionLabel ||
+            formatDimensionLabel(secondary.width, secondary.height),
+        })),
+      })),
+    ])
+  ) as Record<string, MPTSignRow[]>;
+
 const formatDateTimeLabel = (value?: string | null) => {
   if (!value) return "—";
   const parsed = new Date(value);
@@ -719,7 +752,7 @@ export const CreateTakeoffForm = ({
       setIsMultiDayJob(Boolean(draftTakeoff.is_multi_day_job));
       setEndDate(draftTakeoff.end_date || "");
       setActiveSections(draftTakeoff.active_sections || []);
-      setSignRows(draftTakeoff.sign_rows || {});
+      setSignRows(hydrateDimensionLabels(draftTakeoff.sign_rows || {}));
       setDefaultSignMaterial(draftTakeoff.default_sign_material || DEFAULT_SIGN_MATERIAL);
       // Load permanent signs data
       setActivePermanentItems(draftTakeoff.active_permanent_items || []);
