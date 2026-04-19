@@ -688,7 +688,7 @@ const SignPickerModal = ({
                 substrate: 'Plastic' as const,
                 associatedStructure: 'none' as const,
                 displayStructure: 'LOOSE' as const,
-                bLights: 0,
+                bLights: Number(content.blight_quantity || 0),
                 cover: false,
                 stiffener: false,
                 description: signData?.description || '',
@@ -1187,6 +1187,11 @@ const SignPickerModal = ({
                             <div className="text-sm text-muted-foreground">
                                 Review each sign in the kit and update the details before saving them to the order.
                             </div>
+                            {selectedKit?.selectedVariant?.bLights ? (
+                                <div className="mt-3 inline-flex items-center rounded-md border bg-background/70 px-3 py-1.5 text-xs text-muted-foreground">
+                                    Kit B-Lights: {selectedKit.selectedVariant.bLights}
+                                </div>
+                            ) : null}
                         </div>
 
                         {kitSignConfigurations.length === 0 ? (
@@ -1198,11 +1203,20 @@ const SignPickerModal = ({
                             kitSignConfigurations.map((config, index) => (
                                 <div key={`${config.designation}-${index}`} className="rounded-lg border bg-card">
                                     <div className="border-b px-4 py-4">
-                                        <div className="font-medium">
-                                            Sign {index + 1}: {config.designation}
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                            {config.description || 'No description'}
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <div className="font-medium">
+                                                    Sign {index + 1}: {config.designation}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {config.description || 'No description'}
+                                                </div>
+                                            </div>
+                                            {config.bLights > 0 ? (
+                                                <div className="shrink-0 rounded-md border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+                                                    B-Lights: {config.bLights}
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </div>
 
