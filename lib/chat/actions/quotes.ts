@@ -371,8 +371,8 @@ export async function getQuote(id: string): Promise<ActionResult> {
         )
       `;
 
-    let data = null;
-    let error = null;
+    let data: any = null;
+    let error: unknown = null;
     const numericId = Number(id);
 
     if (Number.isFinite(numericId)) {
