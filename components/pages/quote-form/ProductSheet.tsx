@@ -89,9 +89,8 @@ export function ProductSheet({
 }) {
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   const [isSaving, setIsSaving] = useState(false)
-  const [editorStep, setEditorStep] = useState<"pick" | "configure">(initialStep === "pick" ? "pick" : "configure")
+  const [editorStep, setEditorStep] = useState<"pick" | "configure" | "custom">(initialStep === "pick" ? "pick" : "configure")
   const [selectorSearch, setSelectorSearch] = useState("")
-  const [customDialogOpen, setCustomDialogOpen] = useState(false)
   const [customDraft, setCustomDraft] = useState<CustomDraft>(EMPTY_CUSTOM_DRAFT)
   const [savingCustom, setSavingCustom] = useState(false)
   const [draftAvailableUoms, setDraftAvailableUoms] = useState<string[]>(
@@ -135,7 +134,6 @@ export function ProductSheet({
     if (open) {
       setEditorStep(initialStep === "pick" ? "pick" : "configure");
       setSelectorSearch("");
-      setCustomDialogOpen(false);
       setCustomDraft(EMPTY_CUSTOM_DRAFT);
       setDraftAvailableUoms(
         Array.isArray(item?.availableUoms) && item.availableUoms.length > 0
@@ -296,9 +294,9 @@ export function ProductSheet({
       }
 
       await refresh();
-      setCustomDialogOpen(false);
       setCustomDraft(EMPTY_CUSTOM_DRAFT);
       handleProductSelect(result.item);
+      setEditorStep("configure");
       toast.success(`Custom SOV item ${result.item.item_number} created`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create custom SOV item");
@@ -421,12 +419,18 @@ export function ProductSheet({
           <div className="shrink-0 px-6 pt-6">
             <DialogHeader>
               <DialogTitle className="text-sm">
-                {editorStep === "pick" ? "Choose SOV Item" : "Configure Quote Item"}
+                {editorStep === "pick"
+                  ? "Choose SOV Item"
+                  : editorStep === "custom"
+                    ? "Add Custom Item"
+                    : "Configure Quote Item"}
               </DialogTitle>
               <DialogDescription>
                 {editorStep === "pick"
                   ? "Search the SOV master table and choose the line item you want to add."
-                  : "Review the row values before saving them into the quote."}
+                  : editorStep === "custom"
+                    ? "Create a reusable custom SOV item without leaving this dialog."
+                    : "Review the row values before saving them into the quote."}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -454,7 +458,7 @@ export function ProductSheet({
                     <TableBody>
                       <TableRow
                         className="cursor-pointer border-b border-[#16335A]/15 bg-[#16335A]/5 transition-colors hover:bg-[#16335A]/8"
-                        onClick={() => setCustomDialogOpen(true)}
+                        onClick={() => setEditorStep("custom")}
                       >
                         <TableCell colSpan={3} className="py-2 text-[11px] font-semibold uppercase tracking-wide text-[#16335A]">
                           <div className="flex items-center gap-2">
@@ -709,15 +713,77 @@ export function ProductSheet({
                 </div>
               </div>
             )}
+
+            {editorStep === "custom" && (
+              <div className="space-y-4 pb-2">
+                <div className="space-y-2">
+                  <Label htmlFor="custom-item-number">Item Number</Label>
+                  <Input
+                    id="custom-item-number"
+                    value={customDraft.itemNumber}
+                    onChange={(event) =>
+                      setCustomDraft((prev) => ({ ...prev, itemNumber: event.target.value.toUpperCase() }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-item-description">Description</Label>
+                  <Input
+                    id="custom-item-description"
+                    value={customDraft.description}
+                    onChange={(event) =>
+                      setCustomDraft((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-item-work-type">Work Type</Label>
+                    <Input
+                      id="custom-item-work-type"
+                      value={customDraft.workType}
+                      onChange={(event) =>
+                        setCustomDraft((prev) => ({ ...prev, workType: event.target.value.toUpperCase() }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-item-uom">UOM</Label>
+                    <Input
+                      id="custom-item-uom"
+                      value={customDraft.uom}
+                      onChange={(event) =>
+                        setCustomDraft((prev) => ({ ...prev, uom: event.target.value.toUpperCase() }))
+                      }
+                    />
+                  </div>
+                </div>
+                {duplicateCustomItem && (
+                  <p className="text-sm text-destructive">
+                    A custom item with this item number already exists.
+                  </p>
+                )}
+                {!contractNumber && (
+                  <p className="text-sm text-muted-foreground">
+                    Select a project or estimate with a contract number before saving a shared custom SOV item.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex shrink-0 justify-end gap-3 border-t bg-background px-6 py-4">
-            {editorStep === "configure" && (
-              <Button type="button" variant="outline" onClick={() => setEditorStep("pick")} disabled={isSaving}>
+            {(editorStep === "configure" || editorStep === "custom") && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditorStep("pick")}
+                disabled={isSaving || savingCustom}
+              >
                 Back
               </Button>
             )}
-            <Button type="button" variant="outline" onClick={closeSheet} disabled={isSaving}>
+            <Button type="button" variant="outline" onClick={closeSheet} disabled={isSaving || savingCustom}>
               Cancel
             </Button>
             {editorStep === "configure" && (
@@ -725,89 +791,21 @@ export function ProductSheet({
                 {isSaving ? "Saving..." : "Save Product"}
               </Button>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={customDialogOpen} onOpenChange={setCustomDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Custom Item</DialogTitle>
-            <DialogDescription>
-              Create a reusable custom SOV item for quotes and future reuse.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="custom-item-number">Item Number</Label>
-              <Input
-                id="custom-item-number"
-                value={customDraft.itemNumber}
-                onChange={(event) =>
-                  setCustomDraft((prev) => ({ ...prev, itemNumber: event.target.value.toUpperCase() }))
+            {editorStep === "custom" && (
+              <Button
+                type="button"
+                onClick={() => void handleCustomSave()}
+                disabled={
+                  savingCustom ||
+                  !customDraft.itemNumber.trim() ||
+                  !customDraft.description.trim() ||
+                  !contractNumber ||
+                  Boolean(duplicateCustomItem)
                 }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="custom-item-description">Description</Label>
-              <Input
-                id="custom-item-description"
-                value={customDraft.description}
-                onChange={(event) =>
-                  setCustomDraft((prev) => ({ ...prev, description: event.target.value }))
-                }
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="custom-item-work-type">Work Type</Label>
-                <Input
-                  id="custom-item-work-type"
-                  value={customDraft.workType}
-                  onChange={(event) =>
-                    setCustomDraft((prev) => ({ ...prev, workType: event.target.value.toUpperCase() }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="custom-item-uom">UOM</Label>
-                <Input
-                  id="custom-item-uom"
-                  value={customDraft.uom}
-                  onChange={(event) =>
-                    setCustomDraft((prev) => ({ ...prev, uom: event.target.value.toUpperCase() }))
-                  }
-                />
-              </div>
-            </div>
-            {duplicateCustomItem && (
-              <p className="text-sm text-destructive">
-                A custom item with this item number already exists.
-              </p>
+              >
+                {savingCustom ? "Saving..." : "Save Custom Item"}
+              </Button>
             )}
-            {!contractNumber && (
-              <p className="text-sm text-muted-foreground">
-                Select a project or estimate with a contract number before saving a shared custom SOV item.
-              </p>
-            )}
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => setCustomDialogOpen(false)} disabled={savingCustom}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleCustomSave()}
-              disabled={
-                savingCustom ||
-                !customDraft.itemNumber.trim() ||
-                !customDraft.description.trim() ||
-                !contractNumber ||
-                Boolean(duplicateCustomItem)
-              }
-            >
-              {savingCustom ? "Saving..." : "Save Custom Item"}
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
