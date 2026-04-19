@@ -239,6 +239,9 @@ function parseContractFields(message: string): Record<string, unknown> {
 function parseQuoteFields(message: string): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
   const email = extractEmail(message);
+  const createQuoteWithItemMatch = message.match(
+    /\b(?:create|add|new)\s+(?:a\s+)?quote\s+for\s+(.+?)\s+for\s+([A-Z0-9-]+)\s+(\d+(?:\.\d+)?)\s+([A-Z][A-Z0-9 /_-]*?)\s+for\s+\$?([\d,]+(?:\.\d+)?)/i
+  );
 
   const customerIdMatch = message.match(/\bcustomer\s+(\d+)\b/i);
   if (customerIdMatch?.[1]) fields.customerId = customerIdMatch[1];
@@ -254,6 +257,7 @@ function parseQuoteFields(message: string): Record<string, unknown> {
 
   const customerName = extractQuotedOrTrailing(message, "customer name") ?? extractQuotedOrTrailing(message, "customer");
   if (customerName) fields.customerName = customerName;
+  if (!fields.customerName && createQuoteWithItemMatch?.[1]) fields.customerName = createQuoteWithItemMatch[1].trim();
 
   const customerContact = extractQuotedOrTrailing(message, "contact") ?? extractQuotedOrTrailing(message, "point of contact");
   if (customerContact) fields.customerContact = customerContact;
@@ -280,6 +284,24 @@ function parseQuoteFields(message: string): Record<string, unknown> {
 
   const paymentTerms = extractQuotedOrTrailing(message, "payment terms");
   if (paymentTerms) fields.paymentTerms = paymentTerms;
+
+  const itemNumber =
+    extractQuotedOrTrailing(message, "item number") ??
+    extractQuotedOrTrailing(message, "sov item") ??
+    createQuoteWithItemMatch?.[2];
+  if (itemNumber) fields.itemNumber = itemNumber.trim().toUpperCase();
+
+  const quantityMatch = message.match(/\bquantity\s+(?:of\s+)?(\d+(?:\.\d+)?)\b/i);
+  const quantity = quantityMatch?.[1] ?? createQuoteWithItemMatch?.[3];
+  if (quantity) fields.quantity = Number(quantity);
+
+  const explicitUom = extractQuotedOrTrailing(message, "uom");
+  const uom = explicitUom ?? createQuoteWithItemMatch?.[4];
+  if (uom) fields.uom = uom.trim().toUpperCase();
+
+  const unitPriceMatch = message.match(/\b(?:unit price|price)\s+(?:of\s+)?\$?([\d,]+(?:\.\d+)?)\b/i);
+  const unitPrice = unitPriceMatch?.[1] ?? createQuoteWithItemMatch?.[5];
+  if (unitPrice) fields.unitPrice = Number(String(unitPrice).replace(/,/g, ""));
 
   return fields;
 }
@@ -491,6 +513,15 @@ function getMissingFields(toolName: string, input: Record<string, unknown>): str
     missing.push("At least one field to update");
   }
 
+  if (toolName === "create_quote" && input.itemNumber !== undefined) {
+    for (const key of ["uom", "quantity", "unitPrice"]) {
+      const value = input[key];
+      if (value === undefined || value === null || value === "") {
+        missing.push(key);
+      }
+    }
+  }
+
   return missing;
 }
 
@@ -587,6 +618,7 @@ function helpText(): string {
     '- "show contract 17"',
     '- "update contract 17 set contract status to APPROVED"',
     '- "find quotes for york county"',
+    '- "create a quote for 3 C Drilling for 0901-0001 1 LUMP SUM for $3500"',
     '- "create sign order for contractor 42 with contract number 2026-18"',
     '- "show available bids in dauphin county"',
     '- "update active bid 15 set status to won"',

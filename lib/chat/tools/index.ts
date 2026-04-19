@@ -507,7 +507,7 @@ export const TOOLS: ToolDefinition[] = [
   }),
   defineTool({
     name: "create_quote",
-    description: "Create a quote draft.",
+    description: "Create a quote draft, optionally with one quote item from sov_items.",
     capabilityStatus: "write_requires_confirmation",
     inputSchema: {
       type: "object",
@@ -524,6 +524,10 @@ export const TOOLS: ToolDefinition[] = [
         body: { type: "string", description: "Email body" },
         notes: { type: "string", description: "Internal quote notes" },
         paymentTerms: { type: "string", description: "Payment terms" },
+        itemNumber: { type: "string", description: "SOV item number such as 0901-0001" },
+        uom: { type: "string", description: "Quote item UOM such as LUMP SUM or EA" },
+        quantity: { type: "number", description: "Quote item quantity" },
+        unitPrice: { type: "number", description: "Quote item unit price in dollars" },
       },
     },
   }),

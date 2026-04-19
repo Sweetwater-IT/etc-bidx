@@ -207,7 +207,7 @@ export default function QuotesPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#F9FAFB]">
-        <header data-page-sticky-header="true" className="sticky top-11 z-30 shrink-0 border-b bg-card">
+        <header data-page-sticky-header="true" className="sticky top-0 z-30 shrink-0 border-b bg-card">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">

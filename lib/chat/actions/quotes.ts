@@ -1,5 +1,7 @@
 import { PATCH as patchQuoteRoute, POST as postQuoteRoute } from "@/app/api/quotes/route";
+import { POST as postQuoteItemRoute } from "@/app/api/quotes/quoteItems/route";
 import { POST as postSignOrderRoute } from "@/app/api/sign-orders/route";
+import { getPrimaryUom } from "@/lib/server/sov/masterItems";
 import { supabase } from "@/lib/supabase";
 import { ActionResult, RecordSummary } from "../types";
 import { invokeJsonRoute } from "./route-utils";
@@ -36,6 +38,10 @@ type QuoteWriteInput = {
   etcJobNumber?: string;
   customerJobNumber?: string;
   contactId?: string;
+  itemNumber?: string;
+  uom?: string;
+  quantity?: number;
+  unitPrice?: number;
 };
 
 type SignOrderSearchInput = {
@@ -178,6 +184,96 @@ function buildQuoteWritePayload(input: QuoteWriteInput) {
     etc_job_number: input.etcJobNumber ?? null,
     customer_job_number: input.customerJobNumber ?? null,
   };
+}
+
+function normalizeCustomerName(value: string | null | undefined) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+async function resolveCustomerIdByName(customerName: string) {
+  const trimmed = customerName.trim();
+  if (!trimmed) return null;
+
+  const exactResult = await supabase
+    .from("contractors")
+    .select("id, name, display_name")
+    .or(`name.ilike.${trimmed},display_name.ilike.${trimmed}`)
+    .eq("is_deleted", false)
+    .limit(5);
+
+  if (exactResult.error) throw exactResult.error;
+
+  const exactMatches = (exactResult.data || []).filter((row: any) => {
+    const normalized = normalizeCustomerName(trimmed);
+    return (
+      normalizeCustomerName(row.display_name) === normalized ||
+      normalizeCustomerName(row.name) === normalized
+    );
+  });
+
+  if (exactMatches.length === 1) {
+    return {
+      id: String(exactMatches[0].id),
+      name: exactMatches[0].display_name || exactMatches[0].name || trimmed,
+    };
+  }
+
+  const partialResult = await supabase
+    .from("contractors")
+    .select("id, name, display_name")
+    .or(`name.ilike.%${trimmed}%,display_name.ilike.%${trimmed}%`)
+    .eq("is_deleted", false)
+    .limit(5);
+
+  if (partialResult.error) throw partialResult.error;
+
+  const partialMatches = partialResult.data || [];
+  if (partialMatches.length === 1) {
+    return {
+      id: String(partialMatches[0].id),
+      name: partialMatches[0].display_name || partialMatches[0].name || trimmed,
+    };
+  }
+
+  if (partialMatches.length > 1) {
+    throw new Error(
+      `Customer "${trimmed}" is ambiguous. Matches: ${partialMatches
+        .map((row: any) => row.display_name || row.name || `Customer #${row.id}`)
+        .join(", ")}`
+    );
+  }
+
+  throw new Error(`Could not find customer "${trimmed}"`);
+}
+
+async function resolveSovItem(itemNumber: string) {
+  const normalized = itemNumber.trim().toUpperCase();
+  const { data, error } = await supabase
+    .from("sov_items")
+    .select("id, item_number, display_item_number, description, display_name, uom_1, uom_2, uom_3, uom_4, uom_5, uom_6, uom_7")
+    .or(`item_number.eq.${normalized},display_item_number.eq.${normalized}`)
+    .limit(5);
+
+  if (error) throw error;
+
+  const matches = (data || []).filter((row: any) => {
+    return (
+      String(row.item_number || "").trim().toUpperCase() === normalized ||
+      String(row.display_item_number || "").trim().toUpperCase() === normalized
+    );
+  });
+
+  if (matches.length === 0) {
+    throw new Error(`Could not find SOV item "${normalized}"`);
+  }
+
+  return matches[0];
+}
+
+function getAllowedUoms(item: Record<string, any>) {
+  return [item.uom_1, item.uom_2, item.uom_3, item.uom_4, item.uom_5, item.uom_6, item.uom_7]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
 }
 
 function mapQuoteRecord(row: Record<string, any>, adminData: Record<string, any> | null) {
@@ -440,13 +536,90 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
       };
     }
 
-    const payload = buildQuoteWritePayload(input);
+    const quoteInput: QuoteWriteInput = { ...input };
+
+    if (!quoteInput.customerId && quoteInput.customerName?.trim()) {
+      const resolvedCustomer = await resolveCustomerIdByName(quoteInput.customerName);
+      if (resolvedCustomer) {
+        quoteInput.customerId = resolvedCustomer.id;
+        quoteInput.customerName = resolvedCustomer.name;
+      }
+    }
+
+    let createdLineItem: {
+      itemNumber: string;
+      uom: string;
+      quantity: number;
+      unitPrice: number;
+      description: string;
+    } | null = null;
+
+    if (quoteInput.itemNumber) {
+      if (quoteInput.quantity === undefined || quoteInput.uom === undefined || quoteInput.unitPrice === undefined) {
+        return {
+          success: false,
+          entityType: "quote",
+          operation: "create",
+          capabilityStatus: "write_requires_confirmation",
+          summary: "Quote item creation needs item number, quantity, UOM, and unit price",
+          error: "Missing one or more of itemNumber, quantity, uom, or unitPrice",
+        };
+      }
+
+      const sovItem = await resolveSovItem(quoteInput.itemNumber);
+      const allowedUoms = getAllowedUoms(sovItem);
+      const normalizedRequestedUom = String(quoteInput.uom).trim().toUpperCase();
+      const normalizedAllowedUoms = allowedUoms.map((uom) => uom.toUpperCase());
+
+      if (normalizedAllowedUoms.length > 0 && !normalizedAllowedUoms.includes(normalizedRequestedUom)) {
+        return {
+          success: false,
+          entityType: "quote",
+          operation: "create",
+          capabilityStatus: "write_requires_confirmation",
+          summary: `UOM ${quoteInput.uom} is not valid for ${quoteInput.itemNumber}`,
+          error: `Allowed UOMs for ${quoteInput.itemNumber}: ${allowedUoms.join(", ")}`,
+        };
+      }
+
+      createdLineItem = {
+        itemNumber: String(sovItem.display_item_number || sovItem.item_number || quoteInput.itemNumber).trim(),
+        uom: normalizedAllowedUoms.includes(normalizedRequestedUom)
+          ? allowedUoms[normalizedAllowedUoms.indexOf(normalizedRequestedUom)]
+          : String(quoteInput.uom),
+        quantity: Number(quoteInput.quantity),
+        unitPrice: Number(quoteInput.unitPrice),
+        description: String(sovItem.display_name || sovItem.description || sovItem.item_number || quoteInput.itemNumber).trim(),
+      };
+
+      if (!quoteInput.typeQuote) {
+        quoteInput.typeQuote = "straight_sale";
+      }
+    }
+
+    const payload = buildQuoteWritePayload(quoteInput);
     const response = await invokeJsonRoute<{ data: { id: number; quote_number: string | null } }>(
       postQuoteRoute as unknown as (request: Request) => Promise<Response>,
       "http://local/api/quotes",
       "POST",
       payload
     );
+
+    if (createdLineItem) {
+      await invokeJsonRoute(
+        postQuoteItemRoute as unknown as (request: Request) => Promise<Response>,
+        "http://local/api/quotes/quoteItems",
+        "POST",
+        {
+          quote_id: response.data.id,
+          itemNumber: createdLineItem.itemNumber,
+          description: createdLineItem.description,
+          uom: createdLineItem.uom,
+          quantity: createdLineItem.quantity,
+          unitPrice: createdLineItem.unitPrice,
+        }
+      );
+    }
 
     const recordId = String(response.data.id);
     return {
@@ -455,9 +628,18 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
       operation: "create",
       capabilityStatus: "write_requires_confirmation",
       recordId,
-      summary: `Created ${response.data.quote_number || `quote #${recordId}`}`,
+      summary: createdLineItem
+        ? `Created ${response.data.quote_number || `quote #${recordId}`} with ${createdLineItem.itemNumber}`
+        : `Created ${response.data.quote_number || `quote #${recordId}`}`,
       targetPath: quoteTargetPath(recordId),
-      data: { id: response.data.id, quoteNumber: response.data.quote_number },
+      data: {
+        id: response.data.id,
+        quoteNumber: response.data.quote_number,
+        itemNumber: createdLineItem?.itemNumber ?? null,
+        quantity: createdLineItem?.quantity ?? null,
+        uom: createdLineItem?.uom ?? null,
+        unitPrice: createdLineItem?.unitPrice ?? null,
+      },
     };
   } catch (error) {
     return {
