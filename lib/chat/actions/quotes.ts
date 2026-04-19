@@ -525,6 +525,14 @@ export async function getQuote(id: string): Promise<ActionResult> {
 
 export async function createQuote(input: QuoteWriteInput): Promise<ActionResult> {
   try {
+    console.info("[chat/actions/quotes] createQuote called", {
+      input,
+      hasCustomerId: Boolean(input.customerId),
+      hasCustomerName: Boolean(input.customerName),
+      hasEstimateId: Boolean(input.estimateId),
+      hasJobId: Boolean(input.jobId),
+      hasItemNumber: Boolean(input.itemNumber),
+    });
     if (!input.customerId && !input.customerName && !input.estimateId && !input.jobId) {
       return {
         success: false,
@@ -539,10 +547,14 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
     const quoteInput: QuoteWriteInput = { ...input };
 
     if (!quoteInput.customerId && quoteInput.customerName?.trim()) {
+      console.info("[chat/actions/quotes] resolving customer", {
+        customerName: quoteInput.customerName,
+      });
       const resolvedCustomer = await resolveCustomerIdByName(quoteInput.customerName);
       if (resolvedCustomer) {
         quoteInput.customerId = resolvedCustomer.id;
         quoteInput.customerName = resolvedCustomer.name;
+        console.info("[chat/actions/quotes] customer resolved", resolvedCustomer);
       }
     }
 
@@ -567,6 +579,12 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
       }
 
       const sovItem = await resolveSovItem(quoteInput.itemNumber);
+      console.info("[chat/actions/quotes] sov item resolved", {
+        requestedItemNumber: quoteInput.itemNumber,
+        sovItemId: sovItem.id,
+        itemNumber: sovItem.item_number,
+        displayItemNumber: sovItem.display_item_number,
+      });
       const allowedUoms = getAllowedUoms(sovItem);
       const normalizedRequestedUom = String(quoteInput.uom).trim().toUpperCase();
       const normalizedAllowedUoms = allowedUoms.map((uom) => uom.toUpperCase());
@@ -598,6 +616,7 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
     }
 
     const payload = buildQuoteWritePayload(quoteInput);
+    console.info("[chat/actions/quotes] creating quote payload", payload);
     const response = await invokeJsonRoute<{ data: { id: number; quote_number: string | null } }>(
       postQuoteRoute as unknown as (request: Request) => Promise<Response>,
       "http://local/api/quotes",
@@ -606,6 +625,10 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
     );
 
     if (createdLineItem) {
+      console.info("[chat/actions/quotes] creating quote item", {
+        quoteId: response.data.id,
+        createdLineItem,
+      });
       await invokeJsonRoute(
         postQuoteItemRoute as unknown as (request: Request) => Promise<Response>,
         "http://local/api/quotes/quoteItems",
@@ -622,6 +645,11 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
     }
 
     const recordId = String(response.data.id);
+    console.info("[chat/actions/quotes] createQuote success", {
+      recordId,
+      quoteNumber: response.data.quote_number,
+      createdLineItem,
+    });
     return {
       success: true,
       entityType: "quote",
@@ -642,6 +670,10 @@ export async function createQuote(input: QuoteWriteInput): Promise<ActionResult>
       },
     };
   } catch (error) {
+    console.error("[chat/actions/quotes] createQuote failed", {
+      input,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return {
       success: false,
       entityType: "quote",

@@ -89,6 +89,11 @@ function unsupportedToolResult(toolName: string): ActionResult {
 
 export async function executeTool(toolName: string, input: Record<string, unknown>): Promise<ActionResult> {
   const tool = getToolByName(toolName);
+  console.info("[chat/executor] dispatch", {
+    toolName,
+    input,
+    toolRegistered: Boolean(tool),
+  });
   if (!tool) {
     return {
       success: false,
@@ -107,11 +112,25 @@ export async function executeTool(toolName: string, input: Record<string, unknow
 
   try {
     const result = await actionFn(input);
+    console.info("[chat/executor] result", {
+      toolName,
+      success: result.success,
+      summary: result.summary,
+      error: result.error ?? null,
+      recordId: result.recordId ?? null,
+      targetPath: result.targetPath ?? null,
+      data: result.data ?? null,
+    });
     return {
       ...result,
       capabilityStatus: result.capabilityStatus ?? tool.capabilityStatus,
     };
   } catch (error) {
+    console.error("[chat/executor] failure", {
+      toolName,
+      input,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return {
       success: false,
       entityType: getEntityFromTool(toolName),

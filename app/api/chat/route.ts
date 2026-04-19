@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeTool, hasTool } from "@/lib/chat/executor";
 import { SYSTEM_PROMPT, isCancellation, isConfirmation } from "@/lib/chat/prompt";
 import { ActionResult, ChatMessage, ChatResponse, ToolProposal } from "@/lib/chat/types";
+import { supabase } from "@/lib/supabase";
 import {
   TOOLS,
   getEntityFromTool,
@@ -38,6 +39,44 @@ function makeMessage(content: string): ChatMessage {
     content,
     timestamp: new Date(),
   };
+}
+
+function logChatStage(
+  requestId: string,
+  stage: string,
+  details: Record<string, unknown> = {}
+) {
+  console.info(`[api/chat][${requestId}] ${stage}`, details);
+}
+
+type CustomerOption = {
+  id: string;
+  name: string;
+};
+
+async function findCustomerOptionsByName(customerName: string): Promise<CustomerOption[]> {
+  const trimmed = customerName.trim();
+  if (!trimmed) return [];
+
+  const { data, error } = await supabase
+    .from("contractors")
+    .select("id, name, display_name")
+    .or(`name.ilike.%${trimmed}%,display_name.ilike.%${trimmed}%`)
+    .eq("is_deleted", false)
+    .limit(3);
+
+  if (error) {
+    console.error("[api/chat] customer option lookup failed", {
+      customerName: trimmed,
+      error: error.message,
+    });
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: String(row.id),
+    name: row.display_name || row.name || `Customer #${row.id}`,
+  }));
 }
 
 function hasXaiKey() {
@@ -239,9 +278,13 @@ function parseContractFields(message: string): Record<string, unknown> {
 function parseQuoteFields(message: string): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
   const email = extractEmail(message);
-  const createQuoteWithItemMatch = message.match(
-    /\b(?:create|add|new)\s+(?:a\s+)?quote\s+for\s+(.+?)\s+for\s+([A-Z0-9-]+)\s+(\d+(?:\.\d+)?)\s+([A-Z][A-Z0-9 /_-]*?)\s+for\s+\$?([\d,]+(?:\.\d+)?)/i
-  );
+  const createQuoteWithItemMatch =
+    message.match(
+      /\b(?:create|add|new)\s+(?:a\s+)?quote\s+for\s+(.+?)\s+for\s+([A-Z0-9-]+)\s*,?\s*(\d+(?:\.\d+)?)\s+([A-Z][A-Z0-9 /_-]*?)\s*,?\s*(?:for\s+)?\$?([\d,]+(?:\.\d+)?)/i
+    ) ??
+    message.match(
+      /\b(?:create|add|new)\s+(?:a\s+)?quote\s+for\s+(.+?)\s+with\s+item\s+([A-Z0-9-]+)\s*,?\s*(\d+(?:\.\d+)?)\s+([A-Z][A-Z0-9 /_-]*?)\s*,?\s*(?:for\s+)?\$?([\d,]+(?:\.\d+)?)/i
+    );
 
   const customerIdMatch = message.match(/\bcustomer\s+(\d+)\b/i);
   if (customerIdMatch?.[1]) fields.customerId = customerIdMatch[1];
@@ -428,7 +471,7 @@ function parseActiveBidFields(message: string): Record<string, unknown> {
 
 function parseIntent(message: string): ParsedIntent | null {
   const lower = message.toLowerCase();
-  const id = extractId(message);
+  const detectedId = extractId(message);
 
   const entityMatchers: Array<{ pattern: RegExp; base: string }> = [
     { pattern: /\bcustomer contacts?\b|\bcontacts?\b/i, base: "customer_contact" },
@@ -457,16 +500,16 @@ function parseIntent(message: string): ParsedIntent | null {
   if (entity.base === "sign_order") params = parseSignOrderFields(message);
   if (entity.base === "available_bid") params = parseAvailableBidFields(message);
   if (entity.base === "active_bid") params = parseActiveBidFields(message);
-  if (id) params.id = id;
 
   if (createVerb) {
     return { toolName: `create_${entity.base}`, params };
   }
+  if (detectedId) params.id = detectedId;
   if (updateVerb) {
     return { toolName: `update_${entity.base}`, params };
   }
-  if ((getVerb && id) || (!searchVerb && id)) {
-    return { toolName: `get_${entity.base}`, params: { id } };
+  if ((getVerb && detectedId) || (!searchVerb && detectedId)) {
+    return { toolName: `get_${entity.base}`, params: { id: detectedId } };
   }
   if (searchVerb || getVerb || lower.includes("all ")) {
     const search = extractSearchPhrase(message, entity.pattern);
@@ -522,6 +565,15 @@ function getMissingFields(toolName: string, input: Record<string, unknown>): str
     }
   }
 
+  if (
+    toolName === "create_quote" &&
+    Array.isArray(input.customerOptions) &&
+    input.customerOptions.length > 1 &&
+    !input.customerId
+  ) {
+    missing.push("customer selection");
+  }
+
   return missing;
 }
 
@@ -537,8 +589,26 @@ async function buildProposal(toolName: string, input: Record<string, unknown>): 
     }
   }
 
+  if (
+    toolName === "create_quote" &&
+    typeof proposalInput.customerName === "string" &&
+    !proposalInput.customerId
+  ) {
+    const customerOptions = await findCustomerOptionsByName(proposalInput.customerName);
+
+    if (customerOptions.length === 1) {
+      proposalInput.customerId = customerOptions[0].id;
+      proposalInput.customerName = customerOptions[0].name;
+      delete proposalInput.customerOptions;
+    } else if (customerOptions.length > 1) {
+      proposalInput.customerOptions = customerOptions;
+    } else {
+      delete proposalInput.customerOptions;
+    }
+  }
+
   const fields = Object.entries(proposalInput)
-    .filter(([key]) => key !== "clientVersion")
+    .filter(([key]) => key !== "clientVersion" && key !== "customerOptions")
     .map(([key, value]) => ({
       key,
       label: proposalFieldLabel(key),
@@ -572,25 +642,36 @@ function formatSearchResults(result: ActionResult): string {
   if (items.length === 0) return `${summary}\n\nNo results found.`;
 
   return `${summary}\n\n${items
-    .map((item) => `• **${item.label}**${item.secondary ? ` - ${item.secondary}` : ""}${item.status ? ` [${item.status}]` : ""} (ID: ${item.id})`)
+    .map((item) => `- ${item.label}${item.secondary ? ` - ${item.secondary}` : ""}${item.status ? ` [${item.status}]` : ""} (ID: ${item.id})`)
     .join("\n")}`;
 }
 
 function formatProposalText(proposal: ToolProposal): string {
-  const lines = [`**Proposed ${proposal.operation}: ${proposal.entityType.replace(/_/g, " ")}**`];
+  const entityLabel = proposal.entityType.replace(/_/g, " ");
+  const lines = [`Ready to ${proposal.operation} ${entityLabel}.`];
+  const customerOptions = Array.isArray(proposal.input.customerOptions)
+    ? (proposal.input.customerOptions as CustomerOption[])
+    : [];
 
   if (proposal.fields.length > 0) {
-    lines.push("", "**Fields:**");
+    lines.push("", "Details:");
     for (const field of proposal.fields) {
       lines.push(`- ${field.label}: ${field.value === "" || field.value === undefined ? "[empty]" : String(field.value)}`);
     }
   }
 
+  if (customerOptions.length > 1) {
+    lines.push("", "I found multiple matching customers. Press the number for the one you want:");
+    customerOptions.forEach((option, index) => {
+      lines.push(`- ${index + 1} for ${option.name}`);
+    });
+  }
+
   if (proposal.missingFields.length > 0) {
-    lines.push("", `Missing before execution: ${proposal.missingFields.join(", ")}`);
-    lines.push("Reply with more details to refine this proposal, or say cancel.");
+    lines.push("", `Still needed before I can do it: ${proposal.missingFields.join(", ")}.`);
+    lines.push(customerOptions.length > 1 ? "Reply with 1, 2, or 3, or say cancel." : "Reply with the missing details, or say cancel.");
   } else {
-    lines.push("", 'Reply "confirm" to execute this change, or say cancel.');
+    lines.push("", 'Reply confirm to carry it out, or say cancel.');
   }
 
   return lines.join("\n");
@@ -598,9 +679,9 @@ function formatProposalText(proposal: ToolProposal): string {
 
 function formatExecutedResult(result: ActionResult): string {
   if (!result.success) {
-    return `❌ ${result.summary}${result.error ? `\n\n${result.error}` : ""}`;
+    return `I couldn't complete that.\n\n- ${result.summary}${result.error ? `\n- ${result.error}` : ""}`;
   }
-  return `✅ ${result.summary}${result.recordId ? `\n\nRecord ID: ${result.recordId}` : ""}`;
+  return `${result.summary}${result.recordId ? `\n\n- Record ID: ${result.recordId}` : ""}`;
 }
 
 function helpText(): string {
@@ -655,6 +736,8 @@ async function grokProposalReply(state: ChatState, proposal: ToolProposal, lates
     "- asks only for the still-missing required details, or",
     "- tells the user the proposal is ready and they can confirm.",
     "Do not claim the action is executed.",
+    "Do not use markdown bolding or headings.",
+    "Use plain conversational text and simple dash bullets only when needed.",
   ].join("\n"));
 }
 
@@ -663,8 +746,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const sessionId = typeof body.sessionId === "string" && body.sessionId.trim() ? body.sessionId : "default";
+    const requestId = crypto.randomUUID().slice(0, 8);
 
-    console.info("[api/chat] request received", {
+    logChatStage(requestId, "request received", {
       sessionId,
       hasMessage: Boolean(message),
       messagePreview: message.slice(0, 120),
@@ -680,26 +764,85 @@ export async function POST(request: NextRequest) {
     let pendingProposal = state.pendingProposal;
     let executedResult;
 
+    logChatStage(requestId, "state loaded", {
+      sessionId,
+      hasPendingProposal: Boolean(pendingProposal),
+      pendingTool: pendingProposal?.toolName ?? null,
+      pendingMissingFields: pendingProposal?.missingFields ?? [],
+      historyCount: state.messages.length,
+    });
+
     if (pendingProposal && isCancellation(message)) {
+      logChatStage(requestId, "pending proposal cancelled", {
+        toolName: pendingProposal.toolName,
+      });
       pendingProposal = null;
       responseMessage = makeMessage("Cancelled the pending change.");
     } else if (pendingProposal && isConfirmation(message)) {
+      logChatStage(requestId, "confirmation received", {
+        toolName: pendingProposal.toolName,
+        missingFields: pendingProposal.missingFields,
+        input: pendingProposal.input,
+      });
       if (pendingProposal.missingFields.length > 0) {
         responseMessage = makeMessage(
           `I still need these details before I can execute: ${pendingProposal.missingFields.join(", ")}.`
         );
       } else {
+        logChatStage(requestId, "executing pending proposal", {
+          toolName: pendingProposal.toolName,
+          input: pendingProposal.input,
+        });
         const result = await executeTool(pendingProposal.toolName, pendingProposal.input);
+        logChatStage(requestId, "pending proposal executed", {
+          toolName: pendingProposal.toolName,
+          success: result.success,
+          summary: result.summary,
+          error: result.error ?? null,
+          recordId: result.recordId ?? null,
+          targetPath: result.targetPath ?? null,
+          data: result.data ?? null,
+        });
         executedResult = result;
         pendingProposal = null;
         responseMessage = makeMessage(formatExecutedResult(result));
       }
     } else if (pendingProposal) {
+      let refinedFields: Record<string, unknown> = {};
+      const customerOptions = Array.isArray(pendingProposal.input.customerOptions)
+        ? (pendingProposal.input.customerOptions as CustomerOption[])
+        : [];
+      const selectionMatch = message.match(/^(?:option\s*)?([1-3])$/i);
+
+      if (
+        pendingProposal.toolName === "create_quote" &&
+        customerOptions.length > 1 &&
+        selectionMatch
+      ) {
+        const optionIndex = Number(selectionMatch[1]) - 1;
+        const selectedOption = customerOptions[optionIndex];
+        if (selectedOption) {
+          refinedFields = {
+            customerId: selectedOption.id,
+            customerName: selectedOption.name,
+            customerOptions: undefined,
+          };
+        }
+      }
+
       const refinement = parseIntent(message);
-      const refinedFields =
-        refinement && refinement.toolName === pendingProposal.toolName
-          ? refinement.params
-          : parseRefinementForTool(pendingProposal.toolName, message);
+      if (Object.keys(refinedFields).length === 0) {
+        refinedFields =
+          refinement && refinement.toolName === pendingProposal.toolName
+            ? refinement.params
+            : parseRefinementForTool(pendingProposal.toolName, message);
+      }
+
+      logChatStage(requestId, "refining pending proposal", {
+        pendingTool: pendingProposal.toolName,
+        refinementTool: refinement?.toolName ?? null,
+        refinedFields,
+      });
 
       if (Object.keys(refinedFields).length === 0) {
         if (hasXaiKey()) {
@@ -717,6 +860,12 @@ export async function POST(request: NextRequest) {
         pendingProposal = await buildProposal(pendingProposal.toolName, {
           ...pendingProposal.input,
           ...refinedFields,
+        });
+        logChatStage(requestId, "pending proposal rebuilt", {
+          toolName: pendingProposal.toolName,
+          input: pendingProposal.input,
+          missingFields: pendingProposal.missingFields,
+          summary: pendingProposal.summary,
         });
         if (hasXaiKey()) {
           const grokReply = await grokProposalReply(state, pendingProposal, message);
@@ -736,8 +885,14 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const intent = parseIntent(message);
+      logChatStage(requestId, "intent parsed", {
+        intent: intent ?? null,
+      });
 
       if (!intent || !hasTool(intent.toolName)) {
+        logChatStage(requestId, "no tool matched", {
+          intent: intent ?? null,
+        });
         if (hasXaiKey()) {
           const grokReply = await grokFallbackReply(state, message);
           responseMessage = makeMessage(
@@ -750,6 +905,12 @@ export async function POST(request: NextRequest) {
         }
       } else if (requiresConfirmation(intent.toolName)) {
         pendingProposal = await buildProposal(intent.toolName, intent.params);
+        logChatStage(requestId, "proposal built", {
+          toolName: pendingProposal.toolName,
+          input: pendingProposal.input,
+          missingFields: pendingProposal.missingFields,
+          summary: pendingProposal.summary,
+        });
         if (hasXaiKey()) {
           const grokReply = await grokProposalReply(state, pendingProposal, message);
           responseMessage = makeMessage(
@@ -759,7 +920,20 @@ export async function POST(request: NextRequest) {
           responseMessage = makeMessage(formatProposalText(pendingProposal));
         }
       } else {
+        logChatStage(requestId, "executing immediate tool", {
+          toolName: intent.toolName,
+          input: intent.params,
+        });
         const result = await executeTool(intent.toolName, intent.params);
+        logChatStage(requestId, "immediate tool executed", {
+          toolName: intent.toolName,
+          success: result.success,
+          summary: result.summary,
+          error: result.error ?? null,
+          recordId: result.recordId ?? null,
+          targetPath: result.targetPath ?? null,
+          data: result.data ?? null,
+        });
         executedResult = result;
 
         // Always use deterministic formatting for search operations to prevent hallucinations
@@ -802,9 +976,21 @@ export async function POST(request: NextRequest) {
       executedResult,
     };
 
+    logChatStage(requestId, "response ready", {
+      pendingTool: pendingProposal?.toolName ?? null,
+      executed: executedResult
+        ? {
+            success: executedResult.success,
+            summary: executedResult.summary,
+            recordId: executedResult.recordId ?? null,
+          }
+        : null,
+      responsePreview: responseMessage.content.slice(0, 200),
+    });
+
     return NextResponse.json(payload);
   } catch (error) {
-    console.error("Chat API error:", error);
+    console.error("[api/chat] fatal error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
