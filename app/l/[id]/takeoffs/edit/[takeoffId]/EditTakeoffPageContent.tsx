@@ -84,41 +84,42 @@ export default function EditTakeoffPageContent({ jobId, takeoffId }: EditTakeoff
     );
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/l/${jobId}/takeoffs/view/${takeoffId}`}>Takeoff</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{jobLabel}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+  const breadcrumb = (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/l/contracts/view/${jobId}`}>Contract</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/l/${jobId}`}>Job</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/l/${jobId}/takeoffs/view/${takeoffId}`}>Takeoff</BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>{jobLabel}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
 
-      <CreateTakeoffForm
-        jobId={jobId}
-        onBack={handleBack}
-        draftTakeoff={takeoff}
-        backLabel="Takeoff"
-        mode="edit"
-        pageTitle={formatTakeoffPageTitle({
-          workType: takeoff?.work_type,
-          isPickup: takeoff?.is_pickup,
-          jobLabel,
-        })}
-        pageDescription={`Edit takeoff details, work types, materials, and scheduling information for ${jobLabel}.`}
-      />
-    </div>
+  return (
+    <CreateTakeoffForm
+      jobId={jobId}
+      onBack={handleBack}
+      draftTakeoff={takeoff}
+      backLabel="Takeoff"
+      mode="edit"
+      pageTitle={formatTakeoffPageTitle({
+        workType: takeoff?.work_type,
+        isPickup: takeoff?.is_pickup,
+        jobLabel,
+      })}
+      pageDescription={`Edit takeoff details, work types, materials, and scheduling information for ${jobLabel}.`}
+      contentStart={breadcrumb}
+    />
   );
 }

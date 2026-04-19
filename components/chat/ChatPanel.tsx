@@ -23,6 +23,7 @@ export function ChatPanel() {
   const { isChatOpen, closeChat } = useChat();
   const [messages, setMessages] = React.useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [topOffset, setTopOffset] = React.useState(44);
   const sessionIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -33,6 +34,45 @@ export function ChatPanel() {
 
   React.useEffect(() => {
     console.info("[chat] panel visibility changed", { isChatOpen });
+  }, [isChatOpen]);
+
+  React.useEffect(() => {
+    if (!isChatOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const measureTopOffset = () => {
+      const globalHeader = document.querySelector<HTMLElement>("[data-global-site-header='true']");
+      const pageHeaders = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-page-sticky-header='true']")
+      );
+
+      const globalBottom = globalHeader
+        ? Math.round(globalHeader.getBoundingClientRect().bottom)
+        : 44;
+
+      const visiblePageHeader = [...pageHeaders]
+        .reverse()
+        .find((header) => {
+          const rect = header.getBoundingClientRect();
+          return rect.height > 0 && rect.bottom > 0;
+        });
+
+      const pageHeaderBottom = visiblePageHeader
+        ? Math.round(visiblePageHeader.getBoundingClientRect().bottom)
+        : globalBottom;
+
+      setTopOffset(Math.max(globalBottom, pageHeaderBottom));
+    };
+
+    measureTopOffset();
+    window.addEventListener("resize", measureTopOffset);
+    window.addEventListener("scroll", measureTopOffset, true);
+
+    return () => {
+      window.removeEventListener("resize", measureTopOffset);
+      window.removeEventListener("scroll", measureTopOffset, true);
+    };
   }, [isChatOpen]);
 
   const handleSend = async (message: string) => {
@@ -107,7 +147,11 @@ export function ChatPanel() {
       />
 
       <div
-        className="fixed right-0 top-11 h-[calc(100vh-2.75rem)] w-full sm:w-[440px] bg-background border-l z-50 flex flex-col shadow-xl transition-transform duration-300 ease-in-out"
+        className="fixed right-0 w-full sm:w-[440px] bg-background border-l z-50 flex flex-col shadow-xl transition-transform duration-300 ease-in-out"
+        style={{
+          top: `${topOffset}px`,
+          height: `calc(100vh - ${topOffset}px)`,
+        }}
         role="dialog"
         aria-modal="true"
         aria-label="AI Assistant chat"

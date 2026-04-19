@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useJobFromDB } from "@/hooks/useJobFromDB";
 import { useAuth } from "@/contexts/auth-context";
@@ -52,6 +52,7 @@ interface Props {
   mode?: "create" | "edit";
   pageTitle?: string;
   pageDescription?: string;
+  contentStart?: ReactNode;
 }
 
 type AdditionalItem = {
@@ -368,6 +369,7 @@ export const CreateTakeoffForm = ({
   mode = "create",
   pageTitle,
   pageDescription,
+  contentStart,
 }: Props) => {
   const router = useRouter();
   const { data: dbJob, isLoading } = useJobFromDB(jobId);
@@ -1365,7 +1367,7 @@ export const CreateTakeoffForm = ({
   }
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-slate-50">
       <NewRecordStickyPageHeader
         backLabel={backLabel}
         onBack={onBack}
@@ -1377,7 +1379,9 @@ export const CreateTakeoffForm = ({
         additionalButtons={undefined}
       />
 
-      <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl min-[1921px]:max-w-[calc(100vw-272px-24px)] px-4 py-8 space-y-6">
+      {contentStart}
       <PageTitleBlock title={resolvedPageTitle} description={resolvedPageDescription} />
 
       {/* Project Info */}
@@ -2670,6 +2674,7 @@ export const CreateTakeoffForm = ({
         </DialogContent>
       </Dialog>
 
+        </div>
       </div>
     </div>
   );

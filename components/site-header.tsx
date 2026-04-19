@@ -114,7 +114,10 @@ export function SiteHeader({
   return (
     <>
       <GlobalSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
-      <header className="h-11 border-b bg-card px-3 sticky top-0 z-20 flex items-center justify-between">
+      <header
+        data-global-site-header="true"
+        className="h-11 border-b bg-card px-3 sticky top-0 z-20 flex items-center justify-between"
+      >
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1 max-w-xl">

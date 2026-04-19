@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChatTriggerButton } from "@/components/chat/ChatTriggerButton";
 
 interface StickyPageHeaderProps {
   backLabel: string;
@@ -20,7 +21,10 @@ export function StickyPageHeader({
   showBackButton = true,
 }: StickyPageHeaderProps) {
   return (
-    <header className="sticky top-11 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
+    <header
+      data-page-sticky-header="true"
+      className="sticky top-11 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85"
+    >
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3 min-w-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {showBackButton ? (
@@ -35,11 +39,10 @@ export function StickyPageHeader({
           ) : null}
           {leftContent ? <div className="min-w-0 flex-1">{leftContent}</div> : null}
         </div>
-        {rightContent ? (
-          <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
-            {rightContent}
-          </div>
-        ) : null}
+        <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
+          <ChatTriggerButton source="sticky-page-header" />
+          {rightContent}
+        </div>
       </div>
     </header>
   );
