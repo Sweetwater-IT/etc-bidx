@@ -1,0 +1,7 @@
+interface:
+  display_name: "ETC-BIDX Orders And Products"
+  short_description: "Quotes, sign orders, and signs"
+  default_prompt: "Use $etc-bidx-orders-products to find quotes, manage sign orders, or answer sign product questions from the ETC-BIDX catalog."
+
+policy:
+  allow_implicit_invocation: true

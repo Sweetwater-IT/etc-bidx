@@ -1,0 +1,7 @@
+interface:
+  display_name: "ETC-BIDX Contracts"
+  short_description: "Contract lookup and contract Q&A"
+  default_prompt: "Use $etc-bidx-contracts to find ETC-BIDX contracts, answer contract questions, or propose safe contract updates."
+
+policy:
+  allow_implicit_invocation: true

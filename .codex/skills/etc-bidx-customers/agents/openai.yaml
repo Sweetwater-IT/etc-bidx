@@ -1,0 +1,7 @@
+interface:
+  display_name: "ETC-BIDX Customers"
+  short_description: "Customer and contact operations"
+  default_prompt: "Use $etc-bidx-customers to find customers, review contacts, answer customer questions, or propose customer and contact updates."
+
+policy:
+  allow_implicit_invocation: true

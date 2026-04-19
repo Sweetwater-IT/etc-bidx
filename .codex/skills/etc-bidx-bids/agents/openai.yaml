@@ -1,0 +1,7 @@
+interface:
+  display_name: "ETC-BIDX Bids"
+  short_description: "Bid board and active bid operations"
+  default_prompt: "Use $etc-bidx-bids to find, review, or propose updates to ETC-BIDX available bids and active bids."
+
+policy:
+  allow_implicit_invocation: true
