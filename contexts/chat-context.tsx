@@ -7,15 +7,12 @@ interface ChatContextType {
   openChat: () => void;
   closeChat: () => void;
   toggleChat: () => void;
-  previousSidebarState: "expanded" | "collapsed" | null;
-  setPreviousSidebarState: (state: "expanded" | "collapsed" | null) => void;
 }
 
 const ChatContext = React.createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = React.useState(false);
-  const [previousSidebarState, setPreviousSidebarState] = React.useState<"expanded" | "collapsed" | null>(null);
 
   const openChat = React.useCallback(() => {
     setIsChatOpen(true);
@@ -36,8 +33,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         openChat,
         closeChat,
         toggleChat,
-        previousSidebarState,
-        setPreviousSidebarState,
       }}
     >
       {children}

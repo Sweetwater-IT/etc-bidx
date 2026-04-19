@@ -362,20 +362,46 @@ export async function searchQuotes(params: QuoteSearchInput): Promise<ActionResu
 
 export async function getQuote(id: string): Promise<ActionResult> {
   try {
-    const { data, error } = await supabase
-      .from("quotes")
-      .select(`
+    const selectClause = `
         *,
         quote_items(*),
         quote_recipients(*),
         quotes_customers(
           contractors(id, name, display_name)
         )
-      `)
-      .eq("id", Number(id))
-      .single();
+      `;
+
+    let data = null;
+    let error = null;
+    const numericId = Number(id);
+
+    if (Number.isFinite(numericId)) {
+      const byIdResult = await supabase
+        .from("quotes")
+        .select(selectClause)
+        .eq("id", numericId)
+        .maybeSingle();
+
+      data = byIdResult.data;
+      error = byIdResult.error;
+    }
+
+    if (!data) {
+      const normalizedQuoteNumber = id.toUpperCase().startsWith("Q-") ? id.toUpperCase() : `Q-${id}`;
+      const byQuoteNumberResult = await supabase
+        .from("quotes")
+        .select(selectClause)
+        .eq("quote_number", normalizedQuoteNumber)
+        .maybeSingle();
+
+      data = byQuoteNumberResult.data;
+      error = byQuoteNumberResult.error;
+    }
 
     if (error) throw error;
+    if (!data) {
+      throw new Error(`Quote ${id} was not found`);
+    }
 
     const adminData = await loadQuoteAdminData(data.estimate_id ?? null, data.job_id ?? null);
 

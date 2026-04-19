@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { useChat } from "@/contexts/chat-context";
 
 interface ChatTriggerButtonProps {
@@ -32,17 +31,16 @@ export function ChatTriggerButton({ source }: ChatTriggerButtonProps) {
   }, [isChatOpen, pathname, source, toggleChat]);
 
   return (
-    <Button
+    <button
       type="button"
-      variant={isChatOpen ? "secondary" : "outline"}
-      size="sm"
       onClick={handleClick}
-      className="h-8 gap-1.5"
+      className={`rounded-lg p-2 transition-colors hover:bg-muted ${
+        isChatOpen ? "bg-muted text-foreground" : "text-foreground"
+      }`}
       aria-pressed={isChatOpen}
       aria-label={isChatOpen ? "Close AI assistant" : "Open AI assistant"}
     >
-      <Sparkles className="h-3.5 w-3.5" />
-      AI
-    </Button>
+      <Sparkles className="h-5 w-5" />
+    </button>
   );
 }

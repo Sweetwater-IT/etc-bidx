@@ -2,27 +2,10 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
-import { useChat } from "@/contexts/chat-context";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import * as React from "react";
 
-// Inner component that uses both Sidebar and Chat contexts
 function AppShellContent({ children }: { children: React.ReactNode }) {
-  const { isChatOpen, setPreviousSidebarState } = useChat();
-  const { state: sidebarState, toggleSidebar } = useSidebar();
-
-  // Save sidebar state when chat opens and collapse
-  React.useEffect(() => {
-    if (isChatOpen) {
-      // Save current state before collapsing
-      setPreviousSidebarState(sidebarState);
-      // Collapse the sidebar when chat opens
-      if (sidebarState === "expanded") {
-        toggleSidebar();
-      }
-    }
-  }, [isChatOpen, sidebarState, setPreviousSidebarState, toggleSidebar]);
-
   return (
     <>
       <AppSidebar variant="inset" />
