@@ -6,6 +6,7 @@ interface PagePrimaryHeaderProps {
   subtitle?: ReactNode;
   actions?: ReactNode;
   sticky?: boolean;
+  stickyTopClass?: string;
 }
 
 export function PagePrimaryHeader({
@@ -14,9 +15,17 @@ export function PagePrimaryHeader({
   subtitle,
   actions,
   sticky = false,
+  stickyTopClass = "top-11",
 }: PagePrimaryHeaderProps) {
   return (
-    <header className={sticky ? "sticky top-11 z-30 shrink-0 border-b bg-card" : "shrink-0 border-b bg-card"}>
+    <header
+      data-page-sticky-header={sticky ? "true" : undefined}
+      className={
+        sticky
+          ? `sticky ${stickyTopClass} z-30 shrink-0 border-b bg-card`
+          : "shrink-0 border-b bg-card"
+      }
+    >
       <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 lg:px-6 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           {icon && <div className="rounded-md bg-primary p-2 text-primary-foreground shadow-sm">{icon}</div>}

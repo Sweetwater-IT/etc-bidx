@@ -304,9 +304,10 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   };
   
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#F9FAFB]">
       <PagePrimaryHeader
         sticky
+        stickyTopClass="top-0"
         icon={<FileText className="h-5 w-5" />}
         title={`Quote ${quote?.quote_number}`}
         subtitle={
