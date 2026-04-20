@@ -304,7 +304,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   };
   
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <PagePrimaryHeader
         sticky
         icon={<FileText className="h-5 w-5" />}
@@ -424,9 +424,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             Share this link with your customer so they can view and accept/decline the quote.
           </p>
         </div> */}
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="@container/main flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 md:gap-6 md:px-6 md:py-6">
               <div className="w-full">
               <div className="bg-[#F4F5F7] w-full p-6 rounded-lg">
                 <h2 className="font-bold text-2xl mb-4">Preview</h2>
@@ -509,6 +509,6 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             </div>
           </div>
         </div>
-    </>
+    </div>
   );
 }
