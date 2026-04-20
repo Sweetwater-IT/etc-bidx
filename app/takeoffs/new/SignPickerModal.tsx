@@ -678,12 +678,15 @@ const SignPickerModal = ({
         const configurations = kit.contents.map(content => {
             // Find the sign data for this designation
             const signData = apiData?.signs.find(s => s.designation === content.sign_designation);
+            const availableDimensions = signData?.dimensions || [];
+            const defaultDimension = availableDimensions[0] || { width: 0, height: 0 };
 
             return {
                 designation: content.sign_designation,
                 quantity: content.quantity,
-                width: signData?.dimensions[0]?.width || 0,
-                height: signData?.dimensions[0]?.height || 0,
+                width: defaultDimension.width,
+                height: defaultDimension.height,
+                availableDimensions,
                 sheeting: signData?.sheeting || 'DG',
                 substrate: 'Plastic' as const,
                 associatedStructure: 'none' as const,
