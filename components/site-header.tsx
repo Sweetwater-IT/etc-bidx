@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import React from "react";
 import { GlobalSearchModal } from "@/components/global-search-modal";
-import { ChatTriggerButton } from "@/components/chat/ChatTriggerButton";
 
 interface SiteHeaderProps {
   customTitle?: string;
@@ -156,7 +155,6 @@ export function SiteHeader({
             <IconBell className="size-5" />
             <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500" />
           </button>
-          <ChatTriggerButton source="global-site-header" />
           <button className="rounded-lg p-2 hover:bg-muted" onClick={() => signOut()}>
             <IconPower className="size-5" />
           </button>
