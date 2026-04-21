@@ -99,6 +99,8 @@ export function ProductSheet({
   setEditingItemId,
   setEditingSubItemId,
   contractNumber = null,
+  defaultSignPricePerSquareFoot = 0,
+  defaultFacePricePerSquareFoot = 0,
 }) {
   const { setQuoteItems, quoteId, quoteMetadata } = useQuoteForm()
   const [isSaving, setIsSaving] = useState(false)
@@ -113,6 +115,13 @@ export function ProductSheet({
   )
   const availableUoms = draftAvailableUoms.length > 0 ? draftAvailableUoms : Object.values(UOM_TYPES)
   const { groupedItems, items, loading, refresh } = useSovPickerItems(selectorSearch)
+  const [signDimensions, setSignDimensions] = useState({ width: "", height: "" })
+  const [signDescription, setSignDescription] = useState("")
+  const [signRatePerSquareFoot, setSignRatePerSquareFoot] = useState(0)
+  const [includeMatchingFace, setIncludeMatchingFace] = useState(true)
+  const [faceDescription, setFaceDescription] = useState("")
+  const [faceRatePerSquareFoot, setFaceRatePerSquareFoot] = useState(0)
+  const [faceTaxable, setFaceTaxable] = useState(false)
   const duplicateCustomItem = useMemo(() => {
     const normalizedItemNumber = customDraft.itemNumber.trim().toUpperCase();
     if (!normalizedItemNumber) return null;
@@ -121,6 +130,32 @@ export function ProductSheet({
       (pickerItem) => pickerItem.is_custom && pickerItem.item_number.trim().toUpperCase() === normalizedItemNumber
     ) || null;
   }, [customDraft.itemNumber, items]);
+
+  const isSignItem = newProduct.itemNumber === "SIGN";
+  const isFaceItem = newProduct.itemNumber === "FACE";
+  const isSquareFootSignFlow = isSignItem || isFaceItem;
+
+  const squareFeet = useMemo(() => {
+    const width = Number(signDimensions.width);
+    const height = Number(signDimensions.height);
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+      return 0;
+    }
+    return (width * height) / 144;
+  }, [signDimensions.height, signDimensions.width]);
+
+  const parsedSignMeta = useMemo(() => {
+    const notes = String(item?.notes || "");
+    const widthMatch = notes.match(/Width:\s*([\d.]+)\s*in/i);
+    const heightMatch = notes.match(/Height:\s*([\d.]+)\s*in/i);
+    const rateMatch = notes.match(/Rate:\s*\$([\d,.]+(?:\.\d+)?)\s*per sq ft/i);
+
+    return {
+      width: widthMatch?.[1] || "",
+      height: heightMatch?.[1] || "",
+      rate: rateMatch ? Number(rateMatch[1].replace(/,/g, "")) : null,
+    };
+  }, [item?.notes]);
 
   useEffect(() => {
     if (open) {
@@ -221,6 +256,22 @@ export function ProductSheet({
             : "000",
         });
       }
+
+      setSignDimensions({
+        width: parsedSignMeta.width,
+        height: parsedSignMeta.height,
+      });
+      setSignDescription(item.description || "");
+      setSignRatePerSquareFoot(
+        parsedSignMeta.rate ??
+          (item.itemNumber === "FACE"
+            ? Number(item.unitPrice || defaultFacePricePerSquareFoot || 0)
+            : Number(item.unitPrice || defaultSignPricePerSquareFoot || 0))
+      );
+      setIncludeMatchingFace(item.itemNumber === "SIGN");
+      setFaceDescription(item.description || "");
+      setFaceRatePerSquareFoot(defaultFacePricePerSquareFoot || 0);
+      setFaceTaxable(false);
     } else {
       setNewProduct({
         itemNumber: "",
@@ -238,22 +289,39 @@ export function ProductSheet({
         unitPrice: "000",
         discount: "000",
       });
+      setSignDimensions({ width: "", height: "" });
+      setSignDescription("");
+      setSignRatePerSquareFoot(0);
+      setIncludeMatchingFace(true);
+      setFaceDescription("");
+      setFaceRatePerSquareFoot(0);
+      setFaceTaxable(false);
     }
   }, [
     open,
     initialStep,
     editingSubItemId,
+    UOM_TYPES,
     item.associatedItems,
+    item.availableUoms,
     item.description,
     item.discount,
     item.discountType,
     item.itemNumber,
+    item.is_tax_percentage,
     item.notes,
     item.quantity,
+    item.tax,
     item.unitPrice,
     item.uom,
+    quoteMetadata?.tax,
     setDigits,
     setNewProduct,
+    parsedSignMeta.height,
+    parsedSignMeta.rate,
+    parsedSignMeta.width,
+    defaultFacePricePerSquareFoot,
+    defaultSignPricePerSquareFoot,
   ]);
 
   const closeSheet = () => {
@@ -268,17 +336,40 @@ export function ProductSheet({
   }
 
   const handleProductSelect = (product: SovPickerItem) => {
+    const selectedItemNumber = product.display_item_number || product.item_number;
     setNewProduct((prev) => ({
       ...prev,
-      itemNumber: product.display_item_number || product.item_number,
+      itemNumber: selectedItemNumber,
       description: product.display_name || product.description,
       uom: getSovPickerItemUomOptions(product)[0] || product.uom || "",
       notes: product.notes || prev.notes || "",
     }))
     setDraftAvailableUoms(getSovPickerItemUomOptions(product))
+    if (selectedItemNumber === "SIGN") {
+      setSignRatePerSquareFoot(defaultSignPricePerSquareFoot);
+      setIncludeMatchingFace(true);
+      setFaceRatePerSquareFoot(defaultFacePricePerSquareFoot);
+    }
+    if (selectedItemNumber === "FACE") {
+      setSignRatePerSquareFoot(defaultFacePricePerSquareFoot);
+      setIncludeMatchingFace(false);
+    }
 
     setEditorStep("configure")
   }
+
+  const buildSquareFootNotes = (itemLabel: "SIGN" | "FACE", description: string, rate: number) => {
+    return [
+      `${itemLabel} priced from dimensions`,
+      `Width: ${signDimensions.width} in`,
+      `Height: ${signDimensions.height} in`,
+      `Square feet: ${squareFeet.toFixed(2)}`,
+      `Rate: $${Number(rate || 0).toFixed(2)} per sq ft`,
+      description ? `Details: ${description}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  };
 
   const handleCustomSave = async () => {
     if (savingCustom) return;
@@ -354,6 +445,90 @@ export function ProductSheet({
 
         await handleItemUpdate(item.id, "associatedItems", updatedAssociatedItems);
       } else {
+        if (isSquareFootSignFlow) {
+          const width = Number(signDimensions.width);
+          const height = Number(signDimensions.height);
+
+          if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+            toast.error("Enter width and height before saving.");
+            return;
+          }
+
+          if (!Number.isFinite(Number(signRatePerSquareFoot)) || Number(signRatePerSquareFoot) <= 0) {
+            toast.error("Enter a price per square foot before saving.");
+            return;
+          }
+
+          if (isSignItem && includeMatchingFace && (!Number.isFinite(Number(faceRatePerSquareFoot)) || Number(faceRatePerSquareFoot) <= 0)) {
+            toast.error("Enter a face price per square foot before saving the matching FACE item.");
+            return;
+          }
+
+          const normalizedSquareFeet = Number(squareFeet.toFixed(2));
+          const mainDescription = signDescription.trim() || newProduct.itemNumber;
+          const updatedItem = {
+            ...item,
+            itemNumber: newProduct.itemNumber,
+            description: mainDescription,
+            uom: "SF",
+            quantity: normalizedSquareFeet,
+            unitPrice: Number(Number(signRatePerSquareFoot).toFixed(2)),
+            discountType: newProduct.discountType,
+            discount: Number(newProduct.discount),
+            tax: newProduct.tax ? Number(newProduct.tax) : 0,
+            is_tax_percentage: newProduct.is_tax_percentage,
+            isCustom: false,
+            notes: buildSquareFootNotes(isSignItem ? "SIGN" : "FACE", mainDescription, Number(signRatePerSquareFoot)),
+            availableUoms: ["SF"],
+            quote_id: quoteId || null,
+          };
+
+          if ('created' in updatedItem) {
+            delete updatedItem.created;
+          }
+
+          if (updatedItem?.id && !isNaN(parseInt(updatedItem.id))) {
+            await handleItemUpdate(item.id, "fullItem", updatedItem);
+            needAddItem = false;
+          } else {
+            const { success, item: createdItem } = await createQuoteItem(updatedItem);
+            if (success) {
+              setQuoteItems((prev) => prev.map((entry) => (entry.id === updatedItem.id ? createdItem : entry)));
+            }
+          }
+
+          if (isSignItem && includeMatchingFace) {
+            const facePayload: QuoteItem = {
+              itemNumber: "FACE",
+              description: faceDescription.trim() || mainDescription,
+              uom: "SF",
+              quantity: normalizedSquareFeet,
+              unitPrice: Number(Number(faceRatePerSquareFoot).toFixed(2)),
+              discount: 0,
+              discountType: "dollar",
+              notes: buildSquareFootNotes("FACE", faceDescription.trim() || mainDescription, Number(faceRatePerSquareFoot)),
+              associatedItems: [],
+              isCustom: false,
+              tax: faceTaxable ? (quoteMetadata?.tax_rate ?? 6) : 0,
+              is_tax_percentage: faceTaxable,
+              quote_id: quoteId || null,
+            };
+
+            const { success, item: createdFaceItem } = await createQuoteItem(facePayload);
+            if (success && createdFaceItem) {
+              setQuoteItems((prev) => [...prev.filter((entry) => entry.id !== updatedItem.id), createdFaceItem, updatedItem as QuoteItem]);
+            }
+          }
+
+          setProductInput?.(newProduct.itemNumber);
+          setDigits({
+            unitPrice: "000",
+            discount: "000",
+          });
+          closeSheet();
+          return;
+        }
+
         const updatedItem = {
           ...item,
           itemNumber: newProduct.itemNumber,
@@ -522,6 +697,170 @@ export function ProductSheet({
 
             {editorStep === "configure" && (
               <div className="space-y-4 pb-2">
+                {isSquareFootSignFlow ? (
+                  <>
+                    <div className="grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-4">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</p>
+                        <p className="text-sm font-mono">{newProduct.itemNumber || "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">UOM</p>
+                        <p className="text-sm">SF</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Square Feet</p>
+                        <p className="text-sm">{squareFeet > 0 ? squareFeet.toFixed(2) : "-"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Tax</p>
+                        <p className="text-sm">{newProduct.is_tax_percentage ? `${newProduct.tax || quoteMetadata?.tax_rate || 0}%` : "None"}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[15px] font-medium text-muted-foreground">Width (inches)</Label>
+                        <Input
+                          className="bg-background"
+                          inputMode="numeric"
+                          placeholder="30"
+                          value={signDimensions.width}
+                          onChange={(e) =>
+                            setSignDimensions((prev) => ({ ...prev, width: e.target.value.replace(/[^\d.]/g, "") }))
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[15px] font-medium text-muted-foreground">Height (inches)</Label>
+                        <Input
+                          className="bg-background"
+                          inputMode="numeric"
+                          placeholder="30"
+                          value={signDimensions.height}
+                          onChange={(e) =>
+                            setSignDimensions((prev) => ({ ...prev, height: e.target.value.replace(/[^\d.]/g, "") }))
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 md:col-span-2">
+                        <Label className="text-[15px] font-medium text-muted-foreground">
+                          {isSignItem ? "Sign description" : "Face description"}
+                        </Label>
+                        <Textarea
+                          className="bg-background min-h-[100px]"
+                          placeholder={isSignItem ? "Describe the sign" : "Describe the face"}
+                          value={signDescription}
+                          onChange={(e) => setSignDescription(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[15px] font-medium text-muted-foreground">
+                          {isSignItem ? "Sign" : "Face"} Price per Square Foot
+                        </Label>
+                        <div className="flex h-10 items-center rounded-md border bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+                          <span className="border-r px-3 text-sm text-muted-foreground">$</span>
+                          <CurrencyInput
+                            value={Math.round(Number(signRatePerSquareFoot || 0) * 100).toString()}
+                            onChange={(nextDigits) => setSignRatePerSquareFoot(parseInt(nextDigits || "0", 10) / 100)}
+                            className="h-10 w-full cursor-text border-0 bg-transparent pr-3 text-right focus-visible:ring-0"
+                          />
+                        </div>
+                      </div>
+                      <div className="rounded-md border bg-background p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Calculated Line Total</p>
+                        <p className="mt-1 text-lg font-semibold">
+                          ${(squareFeet * Number(signRatePerSquareFoot || 0)).toFixed(2)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {squareFeet > 0 ? `${squareFeet.toFixed(2)} SF x $${Number(signRatePerSquareFoot || 0).toFixed(2)}` : "Enter dimensions to calculate"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isSignItem && (
+                      <div className="space-y-4 rounded-md border p-4">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            className="w-4 shadow-md"
+                            checked={includeMatchingFace}
+                            onCheckedChange={(checked) => setIncludeMatchingFace(checked === true)}
+                          />
+                          <span className="text-sm text-muted-foreground">Also create matching FACE item</span>
+                        </div>
+
+                        {includeMatchingFace && (
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="flex flex-col gap-1 md:col-span-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <Label className="text-[15px] font-medium text-muted-foreground">Face description</Label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setFaceDescription(signDescription)}
+                                >
+                                  Copy sign description
+                                </Button>
+                              </div>
+                              <Textarea
+                                className="bg-background min-h-[100px]"
+                                placeholder="Describe the matching face"
+                                value={faceDescription}
+                                onChange={(e) => setFaceDescription(e.target.value)}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Label className="text-[15px] font-medium text-muted-foreground">Face Price per Square Foot</Label>
+                              <div className="flex h-10 items-center rounded-md border bg-background transition-colors focus-within:border-[#16335A]/25 focus-within:bg-[#16335A]/5 focus-within:shadow-[0_0_0_1px_rgba(22,51,90,0.15)]">
+                                <span className="border-r px-3 text-sm text-muted-foreground">$</span>
+                                <CurrencyInput
+                                  value={Math.round(Number(faceRatePerSquareFoot || 0) * 100).toString()}
+                                  onChange={(nextDigits) => setFaceRatePerSquareFoot(parseInt(nextDigits || "0", 10) / 100)}
+                                  className="h-10 w-full cursor-text border-0 bg-transparent pr-3 text-right focus-visible:ring-0"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-end gap-3">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  className="w-4 shadow-md"
+                                  checked={faceTaxable}
+                                  onCheckedChange={(checked) => setFaceTaxable(checked === true)}
+                                />
+                                <span className="text-sm text-muted-foreground">Apply tax to FACE</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                FACE total: ${(squareFeet * Number(faceRatePerSquareFoot || 0)).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-1">
+                      <Label className="text-[15px] font-medium text-muted-foreground">Tax</Label>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          className="w-4 shadow-md"
+                          checked={!!newProduct?.is_tax_percentage}
+                          onCheckedChange={(checked) =>
+                            setNewProduct((prev) => ({
+                              ...prev,
+                              is_tax_percentage: !!checked,
+                              tax: checked ? prev.tax || quoteMetadata?.tax_rate || 0 : "",
+                            }))
+                          }
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          Apply tax to {isSignItem ? "SIGN" : "FACE"}?
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
                 <div className="grid gap-3 rounded-md border bg-muted/30 p-3 md:grid-cols-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Item Number</p>
@@ -724,6 +1063,8 @@ export function ProductSheet({
                     }
                   />
                 </div>
+                  </>
+                )}
               </div>
             )}
 

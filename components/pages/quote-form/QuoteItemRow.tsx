@@ -44,6 +44,8 @@ export default function QuoteItemRow({
   selectingItemId,
   setSelectingItemId,
   contractNumber = null,
+  defaultSignPricePerSquareFoot,
+  defaultFacePricePerSquareFoot,
 }: any) {
   const [openProductSheet, setOpenProductSheet] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
@@ -378,6 +380,8 @@ export default function QuoteItemRow({
         setEditingSubItemId={setEditingSubItemId}
         initialStep={isEditing || isEditingSubItemForRow ? "configure" : "pick"}
         contractNumber={contractNumber}
+        defaultSignPricePerSquareFoot={defaultSignPricePerSquareFoot}
+        defaultFacePricePerSquareFoot={defaultFacePricePerSquareFoot}
       />
 
       <AlertDialog

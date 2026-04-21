@@ -9,6 +9,7 @@ import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-s
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SignPricePerSquareFootInput } from "./SignPricePerSquareFootInput";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -70,6 +71,8 @@ export function QuoteItems() {
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
   const [selectingItemId, setSelectingItemId] = useState<string | null>(null);
   const [applyToAll, setApplyToAll] = useState<boolean>(false);
+  const [signPricePerSquareFootAll, setSignPricePerSquareFootAll] = useState<number>(11.15);
+  const [facePricePerSquareFootAll, setFacePricePerSquareFootAll] = useState<number>(0);
 
   // --- Price calculations ---
   const calculateCompositeUnitPrice = (item: QuoteItem) => {
@@ -249,7 +252,7 @@ export function QuoteItems() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Quote Items</h2>
 
-          <div className="flex items-center gap-[50px]">
+          <div className="flex flex-wrap items-center justify-end gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Standard Tax Rate:</span>
               <Input
@@ -266,8 +269,20 @@ export function QuoteItems() {
                 className="h-9 w-16 text-sm"
               />
               <span className="text-sm font-medium">%</span>
-
             </div>
+
+            <SignPricePerSquareFootInput
+              label="Sign"
+              value={signPricePerSquareFootAll}
+              onChange={setSignPricePerSquareFootAll}
+            />
+
+            <SignPricePerSquareFootInput
+              label="Face"
+              value={facePricePerSquareFootAll}
+              onChange={setFacePricePerSquareFootAll}
+            />
+
             <div className="flex flex-row items-center gap-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -337,6 +352,8 @@ export function QuoteItems() {
           calculateCompositeUnitPrice={calculateCompositeUnitPrice}
           calculateExtendedPrice={calculateExtendedPrice}
           contractNumber={quoteMetadata?.ecsm_contract_number ?? null}
+          defaultSignPricePerSquareFoot={signPricePerSquareFootAll}
+          defaultFacePricePerSquareFoot={facePricePerSquareFootAll}
         />
       </div>
 

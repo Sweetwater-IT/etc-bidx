@@ -14,7 +14,9 @@ const FULL_PAGE_WORKFLOW_PATHS = new Set([
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isFullPageWorkflow = pathname ? FULL_PAGE_WORKFLOW_PATHS.has(pathname) : false;
+  const isFullPageWorkflow = pathname
+    ? FULL_PAGE_WORKFLOW_PATHS.has(pathname) || pathname.startsWith("/quotes/edit/")
+    : false;
 
   if (isFullPageWorkflow) {
     return <FullPageWorkflowFrame>{children}</FullPageWorkflowFrame>;

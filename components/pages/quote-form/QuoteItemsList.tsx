@@ -28,6 +28,8 @@ interface QuoteItemsListProps {
   selectingItemId: string | null;
   setSelectingItemId: (id: string | null) => void;
   contractNumber?: string | null;
+  defaultSignPricePerSquareFoot: number;
+  defaultFacePricePerSquareFoot: number;
 }
 
 // QuoteItemsList

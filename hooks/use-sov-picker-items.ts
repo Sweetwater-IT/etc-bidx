@@ -37,6 +37,7 @@ const fetcher = async (url: string): Promise<SovPickerResponse> => {
 
 const normalize = (value: string | null | undefined) => String(value || '').trim().toUpperCase()
 const GROUP_ORDER = [
+  'SIGN',
   'DELIVERY',
   'SERVICE',
   'LANE CLOSURE',
@@ -97,6 +98,7 @@ function getGroupHeading(item: SovPickerItem) {
   if (normalizedWorkType === 'MPT') return 'MPT'
   if (normalizedWorkType === 'RENTAL') return 'RENTAL'
   if (normalizedWorkType === 'SALE') return 'SALE'
+  if (normalizedWorkType === 'SIGN' || normalizedWorkType === 'FACE') return 'SIGN'
   if (
     normalizedWorkType === 'PERMANENT SIGN' ||
     normalizedWorkType === 'PERMANENT SIGNS' ||
