@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
 import { AssociatedItem, QuoteItem } from "@/types/IQuoteItem";
 import { useState } from "react";
@@ -9,7 +9,8 @@ import { generateUniqueId } from "@/components/pages/active-bid/signs/generate-s
 import QuoteItemsList from "./QuoteItemsList";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SignPricePerSquareFootInput } from "./SignPricePerSquareFootInput";
+import { SignPricePerSquareFootEditorDialog } from "./SignPricePerSquareFootEditorDialog";
+import { toast } from "sonner";
 
 enum UOM_TYPES {
   EA = "EA",
@@ -71,6 +72,7 @@ export function QuoteItems() {
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
   const [selectingItemId, setSelectingItemId] = useState<string | null>(null);
   const [applyToAll, setApplyToAll] = useState<boolean>(false);
+  const [pricingEditorOpen, setPricingEditorOpen] = useState(false);
   const [signPricePerSquareFootAll, setSignPricePerSquareFootAll] = useState<number>(11.15);
   const [facePricePerSquareFootAll, setFacePricePerSquareFootAll] = useState<number>(0);
 
@@ -245,9 +247,55 @@ export function QuoteItems() {
     if (parentItem) await updateQuoteItem({ ...parentItem, associatedItems: parentItem.associatedItems?.filter((ai) => ai.id !== subItemId) || [] });
   };
 
+  const applyPricePerSquareFootToItems = async ({ signPrice, facePrice }: { signPrice: number; facePrice: number }) => {
+    const itemsToUpdate = quoteItems.filter((item) => {
+      const normalizedItemNumber = String(item.itemNumber || "").toUpperCase();
+      return normalizedItemNumber === "SIGN" || normalizedItemNumber === "FACE";
+    });
+
+    const updatedItems = itemsToUpdate.map((item) => {
+      const normalizedItemNumber = String(item.itemNumber || "").toUpperCase();
+      const nextUnitPrice = normalizedItemNumber === "SIGN" ? signPrice : facePrice;
+      const notes = String(item.notes || "").replace(/Rate:\s*\$[\d,.]+(?:\.\d+)?\s*per sq ft/i, `Rate: $${nextUnitPrice.toFixed(2)} per sq ft`);
+      return {
+        ...item,
+        unitPrice: nextUnitPrice,
+        notes,
+      };
+    });
+
+    await Promise.all(
+      updatedItems
+        .filter((item) => item.id && !Number.isNaN(Number(item.id)))
+        .map((item) => updateQuoteItem(item))
+    );
+
+    setQuoteItems((prev) =>
+      prev.map((item) => {
+        const match = updatedItems.find((updated) => updated.id === item.id);
+        return match ?? item;
+      })
+    );
+
+    setSignPricePerSquareFootAll(signPrice);
+    setFacePricePerSquareFootAll(facePrice);
+    toast.success("Updated sign and face pricing defaults.");
+  };
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
   // --- Render ---
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
+      <SignPricePerSquareFootEditorDialog
+        open={pricingEditorOpen}
+        onOpenChange={setPricingEditorOpen}
+        initialSignPrice={signPricePerSquareFootAll}
+        initialFacePrice={facePricePerSquareFootAll}
+        onSave={applyPricePerSquareFootToItems}
+      />
+
       <div className="flex flex-col gap-4 border-b px-4 py-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Quote Items</h2>
@@ -271,17 +319,20 @@ export function QuoteItems() {
               <span className="text-sm font-medium">%</span>
             </div>
 
-            <SignPricePerSquareFootInput
-              label="Sign"
-              value={signPricePerSquareFootAll}
-              onChange={setSignPricePerSquareFootAll}
-            />
-
-            <SignPricePerSquareFootInput
-              label="Face"
-              value={facePricePerSquareFootAll}
-              onChange={setFacePricePerSquareFootAll}
-            />
+            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Sign:</span>{" "}
+                <span className="font-medium">{formatCurrency(signPricePerSquareFootAll)}/sq ft</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Face:</span>{" "}
+                <span className="font-medium">{formatCurrency(facePricePerSquareFootAll)}/sq ft</span>
+              </div>
+              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setPricingEditorOpen(true)}>
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+            </div>
 
             <div className="flex flex-row items-center gap-2">
               <div className="flex items-center space-x-2">

@@ -466,6 +466,7 @@ export function ProductSheet({
 
           const normalizedSquareFeet = Number(squareFeet.toFixed(2));
           const mainDescription = signDescription.trim() || newProduct.itemNumber;
+          let savedMainItem: QuoteItem | null = null;
           const updatedItem = {
             ...item,
             itemNumber: newProduct.itemNumber,
@@ -490,9 +491,11 @@ export function ProductSheet({
           if (updatedItem?.id && !isNaN(parseInt(updatedItem.id))) {
             await handleItemUpdate(item.id, "fullItem", updatedItem);
             needAddItem = false;
+            savedMainItem = updatedItem as QuoteItem;
           } else {
             const { success, item: createdItem } = await createQuoteItem(updatedItem);
-            if (success) {
+            if (success && createdItem) {
+              savedMainItem = createdItem;
               setQuoteItems((prev) => prev.map((entry) => (entry.id === updatedItem.id ? createdItem : entry)));
             }
           }
@@ -516,7 +519,13 @@ export function ProductSheet({
 
             const { success, item: createdFaceItem } = await createQuoteItem(facePayload);
             if (success && createdFaceItem) {
-              setQuoteItems((prev) => [...prev.filter((entry) => entry.id !== updatedItem.id), createdFaceItem, updatedItem as QuoteItem]);
+              setQuoteItems((prev) => {
+                const withoutPlaceholder = prev.filter((entry) => entry.id !== updatedItem.id);
+                const nextItems = savedMainItem
+                  ? withoutPlaceholder.map((entry) => (entry.id === savedMainItem?.id ? savedMainItem : entry))
+                  : withoutPlaceholder;
+                return [...nextItems, createdFaceItem];
+              });
             }
           }
 
