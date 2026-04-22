@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Trash2, Pencil, MoreVertical, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ProductSheet } from "./ProductSheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuoteForm } from "@/app/(app-shell)/quotes/create/QuoteFormProvider";
@@ -152,24 +152,30 @@ export default function QuoteItemRow({
     }
   }, [shouldOpenProductSheet, editingSubItemId, item.associatedItems]);
 
-  const matchedSovItem = products?.find((product: any) => {
-    const candidateNumbers = [
-      product?.display_item_number,
-      product?.item_number,
-    ].filter(Boolean);
+  const matchedSovItem = useMemo(() => {
+    return products?.find((product: any) => {
+      const candidateNumbers = [
+        product?.display_item_number,
+        product?.item_number,
+      ].filter(Boolean);
 
-    return candidateNumbers.includes(item.itemNumber);
-  });
+      return candidateNumbers.includes(item.itemNumber);
+    });
+  }, [item.itemNumber, products]);
 
-  const hydratedItem = {
-    ...item,
-    availableUoms:
+  const hydratedItem = useMemo(() => {
+    const availableUoms =
       Array.isArray(item.availableUoms) && item.availableUoms.length > 0
         ? item.availableUoms
         : matchedSovItem
           ? getSovPickerItemUomOptions(matchedSovItem)
-          : item.availableUoms,
-  };
+          : item.availableUoms;
+
+    return {
+      ...item,
+      availableUoms,
+    };
+  }, [item, matchedSovItem]);
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);

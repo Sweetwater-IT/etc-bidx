@@ -703,7 +703,14 @@ export function ProductSheet({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && closeSheet()}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeSheet();
+          }
+        }}
+      >
         <DialogContent className="flex h-[85vh] max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[1100px]">
           <div className="shrink-0 px-6 pt-6">
             <DialogHeader>
