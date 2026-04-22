@@ -319,17 +319,20 @@ export function QuoteItems() {
               <span className="text-sm font-medium">%</span>
             </div>
 
-            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Sign:</span>{" "}
-                <span className="font-medium">{formatCurrency(signPricePerSquareFootAll)}/sq ft</span>
+            <div className="flex items-center gap-2 rounded-md border bg-background/70 px-2.5 py-1.5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="leading-none">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Sign</p>
+                  <p className="mt-1 text-[11px] font-semibold text-foreground">{formatCurrency(signPricePerSquareFootAll)}/sq ft</p>
+                </div>
+                <div className="h-7 w-px bg-border" />
+                <div className="leading-none">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Face</p>
+                  <p className="mt-1 text-[11px] font-semibold text-foreground">{formatCurrency(facePricePerSquareFootAll)}/sq ft</p>
+                </div>
               </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Face:</span>{" "}
-                <span className="font-medium">{formatCurrency(facePricePerSquareFootAll)}/sq ft</span>
-              </div>
-              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setPricingEditorOpen(true)}>
-                <Pencil className="h-4 w-4" />
+              <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-[11px]" onClick={() => setPricingEditorOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" />
                 Edit
               </Button>
             </div>

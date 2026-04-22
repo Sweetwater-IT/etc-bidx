@@ -27,16 +27,47 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSovPickerItems, type SovPickerItem, getSovPickerItemUomOptions } from "@/hooks/use-sov-picker-items";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { logSignQuoteDebug } from "@/lib/log-sign-quote-debug";
 
 async function createQuoteItem(item: QuoteItem) {
-  console.log('recibo', item);
+  const normalizedItemNumber = String(item.itemNumber || "").toUpperCase();
+  if (normalizedItemNumber === "SIGN" || normalizedItemNumber === "FACE") {
+    logSignQuoteDebug("create_quote_item_request", {
+      itemNumber: normalizedItemNumber,
+      quoteId: item.quote_id ?? null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      uom: item.uom,
+      hasNotes: Boolean(item.notes),
+    });
+  }
 
   const res = await fetch("/api/quotes/quoteItems", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(item),
   });
-  return res.json();
+  const result = await res.json();
+
+  if (!res.ok || result?.success === false) {
+    logSignQuoteDebug("create_quote_item_failed", {
+      itemNumber: normalizedItemNumber,
+      quoteId: item.quote_id ?? null,
+      status: res.status,
+      message: result?.message || result?.error || "Unknown error",
+    });
+    throw new Error(result?.message || result?.error || "Failed to create quote item");
+  }
+
+  if (normalizedItemNumber === "SIGN" || normalizedItemNumber === "FACE") {
+    logSignQuoteDebug("create_quote_item_succeeded", {
+      itemNumber: normalizedItemNumber,
+      quoteId: item.quote_id ?? null,
+      createdId: result?.item?.id ?? null,
+    });
+  }
+
+  return result;
 }
 
 function formatWorkTypeLabel(value: string) {
@@ -122,6 +153,7 @@ export function ProductSheet({
   const [faceDescription, setFaceDescription] = useState("")
   const [faceRatePerSquareFoot, setFaceRatePerSquareFoot] = useState(0)
   const [faceTaxable, setFaceTaxable] = useState(false)
+  const [faceDescriptionTouched, setFaceDescriptionTouched] = useState(false)
   const duplicateCustomItem = useMemo(() => {
     const normalizedItemNumber = customDraft.itemNumber.trim().toUpperCase();
     if (!normalizedItemNumber) return null;
@@ -272,6 +304,7 @@ export function ProductSheet({
       setFaceDescription(item.description || "");
       setFaceRatePerSquareFoot(defaultFacePricePerSquareFoot || 0);
       setFaceTaxable(false);
+      setFaceDescriptionTouched(false);
     } else {
       setNewProduct({
         itemNumber: "",
@@ -296,6 +329,7 @@ export function ProductSheet({
       setFaceDescription("");
       setFaceRatePerSquareFoot(0);
       setFaceTaxable(false);
+      setFaceDescriptionTouched(false);
     }
   }, [
     open,
@@ -324,6 +358,11 @@ export function ProductSheet({
     defaultSignPricePerSquareFoot,
   ]);
 
+  useEffect(() => {
+    if (!isSignItem || !includeMatchingFace || faceDescriptionTouched) return;
+    setFaceDescription(signDescription);
+  }, [faceDescriptionTouched, includeMatchingFace, isSignItem, signDescription]);
+
   const closeSheet = () => {
     onOpenChange(false)
     restorePointerEvents()
@@ -349,6 +388,7 @@ export function ProductSheet({
       setSignRatePerSquareFoot(defaultSignPricePerSquareFoot);
       setIncludeMatchingFace(true);
       setFaceRatePerSquareFoot(defaultFacePricePerSquareFoot);
+      setFaceDescriptionTouched(false);
     }
     if (selectedItemNumber === "FACE") {
       setSignRatePerSquareFoot(defaultFacePricePerSquareFoot);
@@ -448,23 +488,50 @@ export function ProductSheet({
         if (isSquareFootSignFlow) {
           const width = Number(signDimensions.width);
           const height = Number(signDimensions.height);
+          const normalizedSquareFeet = Number(squareFeet.toFixed(2));
+
+          logSignQuoteDebug("sign_quote_save_started", {
+            itemNumber: newProduct.itemNumber,
+            quoteId: quoteId ?? null,
+            includeMatchingFace,
+            width,
+            height,
+            squareFeet: normalizedSquareFeet,
+            signRatePerSquareFoot,
+            faceRatePerSquareFoot,
+          });
 
           if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
             toast.error("Enter width and height before saving.");
+            logSignQuoteDebug("sign_quote_save_validation_failed", {
+              reason: "invalid_dimensions",
+              itemNumber: newProduct.itemNumber,
+              width: signDimensions.width,
+              height: signDimensions.height,
+            });
             return;
           }
 
           if (!Number.isFinite(Number(signRatePerSquareFoot)) || Number(signRatePerSquareFoot) <= 0) {
             toast.error("Enter a price per square foot before saving.");
+            logSignQuoteDebug("sign_quote_save_validation_failed", {
+              reason: "invalid_sign_rate",
+              itemNumber: newProduct.itemNumber,
+              signRatePerSquareFoot,
+            });
             return;
           }
 
           if (isSignItem && includeMatchingFace && (!Number.isFinite(Number(faceRatePerSquareFoot)) || Number(faceRatePerSquareFoot) <= 0)) {
             toast.error("Enter a face price per square foot before saving the matching FACE item.");
+            logSignQuoteDebug("sign_quote_save_validation_failed", {
+              reason: "invalid_face_rate",
+              itemNumber: newProduct.itemNumber,
+              faceRatePerSquareFoot,
+            });
             return;
           }
 
-          const normalizedSquareFeet = Number(squareFeet.toFixed(2));
           const mainDescription = signDescription.trim() || newProduct.itemNumber;
           let savedMainItem: QuoteItem | null = null;
           const updatedItem = {
@@ -492,11 +559,21 @@ export function ProductSheet({
             await handleItemUpdate(item.id, "fullItem", updatedItem);
             needAddItem = false;
             savedMainItem = updatedItem as QuoteItem;
+            logSignQuoteDebug("sign_quote_main_item_updated", {
+              itemNumber: updatedItem.itemNumber,
+              quoteId: quoteId ?? null,
+              itemId: updatedItem.id ?? null,
+            });
           } else {
             const { success, item: createdItem } = await createQuoteItem(updatedItem);
             if (success && createdItem) {
               savedMainItem = createdItem;
               setQuoteItems((prev) => prev.map((entry) => (entry.id === updatedItem.id ? createdItem : entry)));
+              logSignQuoteDebug("sign_quote_main_item_created", {
+                itemNumber: createdItem.itemNumber,
+                quoteId: quoteId ?? null,
+                itemId: createdItem.id ?? null,
+              });
             }
           }
 
@@ -525,6 +602,11 @@ export function ProductSheet({
                   ? withoutPlaceholder.map((entry) => (entry.id === savedMainItem?.id ? savedMainItem : entry))
                   : withoutPlaceholder;
                 return [...nextItems, createdFaceItem];
+              });
+              logSignQuoteDebug("sign_quote_face_item_created", {
+                quoteId: quoteId ?? null,
+                signItemId: savedMainItem?.id ?? null,
+                faceItemId: createdFaceItem.id ?? null,
               });
             }
           }
@@ -604,6 +686,16 @@ export function ProductSheet({
       }
 
       closeSheet()
+    } catch (error) {
+      if (isSquareFootSignFlow) {
+        logSignQuoteDebug("sign_quote_save_failed", {
+          itemNumber: newProduct.itemNumber,
+          quoteId: quoteId ?? null,
+          includeMatchingFace,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      toast.error(error instanceof Error ? error.message : "Failed to save quote item");
     } finally {
       setIsSaving(false)
     }
@@ -733,7 +825,7 @@ export function ProductSheet({
                         <Input
                           className="bg-background"
                           inputMode="numeric"
-                          placeholder="30"
+                          placeholder="48 in"
                           value={signDimensions.width}
                           onChange={(e) =>
                             setSignDimensions((prev) => ({ ...prev, width: e.target.value.replace(/[^\d.]/g, "") }))
@@ -745,7 +837,7 @@ export function ProductSheet({
                         <Input
                           className="bg-background"
                           inputMode="numeric"
-                          placeholder="30"
+                          placeholder="36 in"
                           value={signDimensions.height}
                           onChange={(e) =>
                             setSignDimensions((prev) => ({ ...prev, height: e.target.value.replace(/[^\d.]/g, "") }))
@@ -793,7 +885,18 @@ export function ProductSheet({
                           <Checkbox
                             className="w-4 shadow-md"
                             checked={includeMatchingFace}
-                            onCheckedChange={(checked) => setIncludeMatchingFace(checked === true)}
+                            onCheckedChange={(checked) => {
+                              const shouldIncludeFace = checked === true;
+                              setIncludeMatchingFace(shouldIncludeFace);
+
+                              if (shouldIncludeFace) {
+                                setFaceRatePerSquareFoot((currentRate) =>
+                                  currentRate > 0 ? currentRate : defaultFacePricePerSquareFoot
+                                );
+                                setFaceDescriptionTouched(false);
+                                setFaceDescription(signDescription.trim() || faceDescription);
+                              }
+                            }}
                           />
                           <span className="text-sm text-muted-foreground">Also create matching FACE item</span>
                         </div>
@@ -807,7 +910,10 @@ export function ProductSheet({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setFaceDescription(signDescription)}
+                                  onClick={() => {
+                                    setFaceDescription(signDescription);
+                                    setFaceDescriptionTouched(false);
+                                  }}
                                 >
                                   Copy sign description
                                 </Button>
@@ -816,7 +922,10 @@ export function ProductSheet({
                                 className="bg-background min-h-[100px]"
                                 placeholder="Describe the matching face"
                                 value={faceDescription}
-                                onChange={(e) => setFaceDescription(e.target.value)}
+                                onChange={(e) => {
+                                  setFaceDescriptionTouched(true);
+                                  setFaceDescription(e.target.value);
+                                }}
                               />
                             </div>
                             <div className="flex flex-col gap-1">

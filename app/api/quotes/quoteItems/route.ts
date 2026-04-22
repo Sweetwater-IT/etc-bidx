@@ -48,6 +48,18 @@ export async function POST(req: NextRequest) {
         notes,
     } = body;
 
+    const normalizedItemNumber = String(itemNumber || "").toUpperCase();
+    if (normalizedItemNumber === "SIGN" || normalizedItemNumber === "FACE") {
+        console.info("[QuoteItemCreate]", {
+            itemNumber: normalizedItemNumber,
+            quote_id,
+            uom,
+            quantity,
+            unitPrice,
+            is_tax_percentage,
+        });
+    }
+
 
     const { data: mainItem, error: mainError } = await supabase
         .from("quote_items")
@@ -67,7 +79,14 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
 
-    if (mainError) return NextResponse.json({ success: false, message: mainError.message }, { status: 500 });
+    if (mainError) {
+        console.error("[QuoteItemCreate] Failed", {
+            itemNumber: normalizedItemNumber,
+            quote_id,
+            error: mainError.message,
+        });
+        return NextResponse.json({ success: false, message: mainError.message }, { status: 500 });
+    }
 
     const quoteItemId = mainItem.id;
 
@@ -88,9 +107,24 @@ export async function POST(req: NextRequest) {
             )
             .select();
 
-        if (aiError) return NextResponse.json({ success: false, message: aiError.message }, { status: 500 });
+        if (aiError) {
+            console.error("[QuoteItemCreate] Associated items failed", {
+                itemNumber: normalizedItemNumber,
+                quoteItemId,
+                error: aiError.message,
+            });
+            return NextResponse.json({ success: false, message: aiError.message }, { status: 500 });
+        }
 
         associatedItemsData = aiData;
+    }
+
+    if (normalizedItemNumber === "SIGN" || normalizedItemNumber === "FACE") {
+        console.info("[QuoteItemCreate] Success", {
+            itemNumber: normalizedItemNumber,
+            quoteItemId,
+            quote_id,
+        });
     }
 
     return NextResponse.json({
