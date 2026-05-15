@@ -5,7 +5,7 @@ import { DataTable } from "@/components/data-table";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { CardActions } from "@/components/card-actions";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuoteGridView } from "@/types/QuoteGridView";
 import { toast } from "sonner";
@@ -34,8 +34,18 @@ const SEGMENTS = [
 
 export default function QuotesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const initialFilter = searchParams.get("filter") || "all";
+  const initialPage = Number(searchParams.get("page") || "1");
+  const initialPageSize = Number(searchParams.get("pageSize") || "25");
+
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState(
+    SEGMENTS.some((segment) => segment.value === initialFilter)
+      ? initialFilter
+      : "all"
+  );
   const [quoteCounts, setQuoteCounts] = useState({
     all: 0,
     Napoleon: 0,
@@ -47,8 +57,12 @@ export default function QuotesPage() {
     John: 0,
   });
 
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageIndex, setPageIndex] = useState(
+    Number.isFinite(initialPage) && initialPage > 0 ? initialPage - 1 : 0
+  );
+  const [pageSize, setPageSize] = useState(
+    Number.isFinite(initialPageSize) && initialPageSize > 0 ? initialPageSize : 25
+  );
   const [pageCount, setPageCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -141,7 +155,13 @@ export default function QuotesPage() {
   }, [activeFilter, pageIndex, pageSize]);
 
   const handleRowClick = (quote: QuoteGridView) => {
-    router.push(`/quotes/view/${quote.id}`);
+    const params = new URLSearchParams({
+      filter: activeFilter,
+      page: String(pageIndex + 1),
+      pageSize: String(pageSize),
+    });
+
+    router.push(`/quotes/view/${quote.id}?${params.toString()}`);
   };
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { SiteHeader } from "@/components/site-header";
@@ -14,7 +14,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { INote } from "@/types/TEstimate";
 import { useAuth } from "@/contexts/auth-context";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ArrowLeft, Loader, Download, Loader2, FileText, Send } from "lucide-react"
+import { ChevronDown, ArrowLeft, ArrowRight, Loader, Download, Loader2, FileText, Send } from "lucide-react"
 import { BidProposalReactPDF } from "@/components/pages/quote-form/BidProposalReactPDF";
 import ReactPDF from '@react-pdf/renderer'
 import BidProposalWorksheet from "../../create/BidProposalWorksheet";
@@ -26,6 +26,11 @@ export interface ContactInfo {
   name?: string;
   email?: string;
   phone?: string;
+}
+
+interface QuoteNavigatorItem {
+  id: number;
+  quote_number: string;
 }
 
 function formatDateTime(ts: number | string) {
@@ -41,7 +46,10 @@ function formatDateTime(ts: number | string) {
 
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [quoteNavigatorItems, setQuoteNavigatorItems] = useState<QuoteNavigatorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [quoteType, setQuoteType] = useState<'quote' | 'sale_ticket'>('quote');
 
@@ -84,6 +92,44 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     };
     fetchQuote();
   }, [quoteId]);
+
+  useEffect(() => {
+    const fetchQuoteNavigatorItems = async () => {
+      try {
+        const params = new URLSearchParams();
+        const filter = searchParams.get("filter");
+
+        if (filter && filter !== "all") {
+          params.append("created_by", filter);
+        }
+
+        params.append("page", "1");
+        params.append("limit", "10000");
+        params.append("orderBy", "quote_number");
+        params.append("ascending", "true");
+        params.append("detailed", "false");
+
+        const response = await fetch(`/api/quotes?${params.toString()}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Failed to fetch quote navigation");
+        }
+
+        setQuoteNavigatorItems(
+          (data.data || []).map((item: any) => ({
+            id: item.id,
+            quote_number: item.quote_number,
+          }))
+        );
+      } catch (error) {
+        console.error("Error fetching quote navigation:", error);
+        setQuoteNavigatorItems([]);
+      }
+    };
+
+    fetchQuoteNavigatorItems();
+  }, [searchParamsString]);
 
   const handleGenerateAndUpload = async (type: 'saleTicket' | 'quote'): Promise<string | null> => {
     setDownloading(true)
@@ -161,6 +207,78 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const handleEditQuote = () => {
     router.push(`/quotes/edit/${quoteId}`);
   };
+
+  const buildQuotesViewUrl = (targetQuoteId: number) => {
+    const params = new URLSearchParams();
+    const filter = searchParams.get("filter");
+    const page = searchParams.get("page");
+    const pageSize = searchParams.get("pageSize");
+
+    if (filter) params.set("filter", filter);
+    if (page) params.set("page", page);
+    if (pageSize) params.set("pageSize", pageSize);
+
+    const queryString = params.toString();
+    return queryString
+      ? `/quotes/view/${targetQuoteId}?${queryString}`
+      : `/quotes/view/${targetQuoteId}`;
+  };
+
+  const buildQuotesListUrl = () => {
+    const params = new URLSearchParams();
+    const filter = searchParams.get("filter");
+    const page = searchParams.get("page");
+    const pageSize = searchParams.get("pageSize");
+
+    if (filter) params.set("filter", filter);
+    if (page) params.set("page", page);
+    if (pageSize) params.set("pageSize", pageSize);
+
+    const queryString = params.toString();
+    return queryString ? `/quotes?${queryString}` : "/quotes";
+  };
+
+  const handleBackToQuotes = () => {
+    router.push(buildQuotesListUrl());
+  };
+
+  const currentQuoteIndex = quoteNavigatorItems.findIndex((item) => item.id === quoteId);
+  const previousQuote = currentQuoteIndex > 0 ? quoteNavigatorItems[currentQuoteIndex - 1] : null;
+  const nextQuote =
+    currentQuoteIndex >= 0 && currentQuoteIndex < quoteNavigatorItems.length - 1
+      ? quoteNavigatorItems[currentQuoteIndex + 1]
+      : null;
+
+  const navigateToQuote = (targetQuoteId: number | undefined) => {
+    if (!targetQuoteId || targetQuoteId === quoteId) return;
+    router.push(buildQuotesViewUrl(targetQuoteId));
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+      const isEditable =
+        tagName === "input" ||
+        tagName === "textarea" ||
+        target?.isContentEditable;
+
+      if (isEditable) return;
+
+      if (event.key === "ArrowLeft" && previousQuote) {
+        event.preventDefault();
+        navigateToQuote(previousQuote.id);
+      }
+
+      if (event.key === "ArrowRight" && nextQuote) {
+        event.preventDefault();
+        navigateToQuote(nextQuote.id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previousQuote, nextQuote, quoteId, searchParamsString]);
 
   if (loading) {
     return (
@@ -305,7 +423,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
                   role="button"
                   variant="ghost"
                   size="icon"
-                  onClick={() => router.back()}
+                  onClick={handleBackToQuotes}
                   className="rounded-full flex flex-row"
                 >
                   <ArrowLeft className="h-6 w-6" />
@@ -352,6 +470,28 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
             </div>
 
             <div className="flex w-full flex-row items-center justify-start gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigateToQuote(previousQuote?.id)}
+                  disabled={!previousQuote}
+                  aria-label="Previous quote"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigateToQuote(nextQuote?.id)}
+                  disabled={!nextQuote}
+                  aria-label="Next quote"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
               <h2 className="text-3xl font-semibold">Quote {quote?.quote_number}</h2>
               <Badge
                 variant="outline"
