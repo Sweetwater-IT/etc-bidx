@@ -47,7 +47,7 @@ function formatDateTime(ts: number | string) {
 export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const searchParamsString = searchParams.toString();
+  const searchParamsString = searchParams?.toString() || "";
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteNavigatorItems, setQuoteNavigatorItems] = useState<QuoteNavigatorItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,7 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
     const fetchQuoteNavigatorItems = async () => {
       try {
         const params = new URLSearchParams();
-        const filter = searchParams.get("filter");
+        const filter = searchParams?.get("filter");
 
         if (filter && filter !== "all") {
           params.append("created_by", filter);
@@ -210,9 +210,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
   const buildQuotesViewUrl = (targetQuoteId: number) => {
     const params = new URLSearchParams();
-    const filter = searchParams.get("filter");
-    const page = searchParams.get("page");
-    const pageSize = searchParams.get("pageSize");
+    const filter = searchParams?.get("filter");
+    const page = searchParams?.get("page");
+    const pageSize = searchParams?.get("pageSize");
 
     if (filter) params.set("filter", filter);
     if (page) params.set("page", page);
@@ -226,9 +226,9 @@ export default function QuoteViewContent({ quoteId }: { quoteId: any }) {
 
   const buildQuotesListUrl = () => {
     const params = new URLSearchParams();
-    const filter = searchParams.get("filter");
-    const page = searchParams.get("page");
-    const pageSize = searchParams.get("pageSize");
+    const filter = searchParams?.get("filter");
+    const page = searchParams?.get("page");
+    const pageSize = searchParams?.get("pageSize");
 
     if (filter) params.set("filter", filter);
     if (page) params.set("page", page);

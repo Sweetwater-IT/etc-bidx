@@ -36,9 +36,9 @@ export default function QuotesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialFilter = searchParams.get("filter") || "all";
-  const initialPage = Number(searchParams.get("page") || "1");
-  const initialPageSize = Number(searchParams.get("pageSize") || "25");
+  const initialFilter = searchParams?.get("filter") || "all";
+  const initialPage = Number(searchParams?.get("page") || "1");
+  const initialPageSize = Number(searchParams?.get("pageSize") || "25");
 
   const [quotes, setQuotes] = useState<QuoteGridView[]>([]);
   const [activeFilter, setActiveFilter] = useState(
